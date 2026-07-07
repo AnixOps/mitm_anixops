@@ -99,6 +99,7 @@ static void reject_variants_map_to_expected_actions(void)
 	} cases[] = {
 		{"reject", ANIXOPS_REWRITE_REJECT, 0},
 		{"reject-200", ANIXOPS_REWRITE_REJECT_200, 200},
+		{"reject-401", ANIXOPS_REWRITE_REJECT, 401},
 		{"reject-img", ANIXOPS_REWRITE_REJECT_IMG, 200},
 		{"reject-video", ANIXOPS_REWRITE_REJECT_VIDEO, 200},
 		{"reject-dict", ANIXOPS_REWRITE_REJECT_DICT, 200},
@@ -216,7 +217,6 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 {
 	const char *config =
 		"[Rewrite]\n"
-		"^https://auth\\.test reject-401\n"
 		"^https://echo\\.test echo-response text/plain hello\n"
 		"^https://header\\.test url header-add X-Test value\n";
 	anixops_engine_t *engine = anixops_engine_new();
@@ -235,7 +235,7 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 	ANIXOPS_EXPECT_STREQ(message, "ok");
 
 	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_url(engine, "https://auth.test", ANIXOPS_PHASE_REQUEST, &rewrite),
+		anixops_rewrite_evaluate_url(engine, "https://echo.test", ANIXOPS_PHASE_REQUEST, &rewrite),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
 	ANIXOPS_EXPECT_EQ_INT(

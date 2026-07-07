@@ -18,7 +18,8 @@ Implemented:
 - AnixOps-style `[MITM] hostname = ...` parsing.
 - Explicit MITM gate: enabled flag, trusted certificate state, allow/deny host patterns.
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.
-- AnixOps-style `[Rewrite]` URL rules for `302`, `307`, `reject`, `reject-200`, `reject-img`, `reject-video`, `reject-dict`, `reject-array`.
+- AnixOps-style `[Rewrite]` URL rules for `302`, `307`, `reject`, `reject-200`, `reject-401`, `reject-img`,
+  `reject-video`, `reject-dict`, `reject-array`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.
 - JSON path request/response body replacement for already-buffered JSON bodies, using object paths such as `$.enabled`
   and raw JSON literals such as `true`, `null`, objects, arrays, or quoted strings.
