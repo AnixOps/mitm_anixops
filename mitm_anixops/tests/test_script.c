@@ -291,6 +291,22 @@ static void malformed_and_non_http_script_rules_are_ignored_or_rejected(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_script_rule(engine, "cron \"0 * * * *\" script-path=https://x.test/a.js"), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(engine, "= type=http-response, pattern=^https:\\/\\/api\\.test, script-path=https://x.test/a.js"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(engine, "MissingPattern = type=http-response, script-path=https://x.test/a.js"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(engine, "MissingScript = type=http-response, pattern=^https:\\/\\/api\\.test"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(engine, "MalformedAttr = type=http-response, pattern=^https:\\/\\/api\\.test, script-path"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_script_rule(engine, "http-response [ requires-body=1, script-path=https://x.test/a.js"),
 		ANIXOPS_ERR_REGEX);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);

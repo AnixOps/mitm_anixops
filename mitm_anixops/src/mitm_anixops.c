@@ -573,7 +573,22 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 	have_fourth = anixops_next_token(&cursor, fourth, sizeof(fourth));
 	have_fifth = anixops_next_token(&cursor, fifth, sizeof(fifth));
 
-	if (anixops_parse_rewrite_action(second, &action, &status_code)) {
+	if (strcasecmp(second, "url") == 0 && have_third && anixops_parse_rewrite_action(third, &action, &status_code)) {
+		if (anixops_rewrite_action_replaces_body(action)) {
+			if (!have_fourth) {
+				return ANIXOPS_OK;
+			}
+			body_pattern = fourth;
+			replacement = have_fifth ? fifth : "";
+		}
+		else if (anixops_rewrite_action_rewrites_header(action)) {
+			return ANIXOPS_OK;
+		}
+		else {
+			replacement = have_fourth ? fourth : "";
+		}
+	}
+	else if (anixops_parse_rewrite_action(second, &action, &status_code)) {
 		if (anixops_rewrite_action_replaces_body(action)) {
 			if (!have_third) {
 				return ANIXOPS_OK;
@@ -972,6 +987,10 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 			left = trimmed;
 			attrs = eq + 1;
 			anixops_trim_inplace(left);
+			if (left[0] == '\0') {
+				free(copy);
+				return ANIXOPS_OK;
+			}
 			anixops_copy_text(tag, sizeof(tag), left);
 			if (!anixops_extract_attr(attrs, "type", type, sizeof(type)) ||
 				!anixops_parse_script_kind(type, &kind, &phase)) {

@@ -122,6 +122,80 @@ static void reject_variants_map_to_expected_actions(void)
 	}
 }
 
+static void quantumultx_url_prefixed_rewrites_are_supported(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://old\\.test/(.*) url 302 https://new.test/$1"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://ads\\.test url reject-dict"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test url response-body-replace-regex old new"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 3);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://old.test/path", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://new.test/path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://ads.test", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REJECT_DICT);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 200);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test",
+			ANIXOPS_PHASE_RESPONSE,
+			"old value",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "new value");
+
+	anixops_engine_free(engine);
+}
+
+static void unsupported_quantumultx_url_actions_are_ignored(void)
+{
+	const char *config =
+		"[rewrite_local]\n"
+		"^https://json\\.test url request-body-json-replace $.enabled true\n"
+		"^https://header\\.test url header-add X-Test value\n"
+		"^https://echo\\.test url echo-response text/plain hello\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	anixops_header_rewrite_result_t header;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://json.test", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://header.test", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+
+	anixops_engine_free(engine);
+}
+
 static void response_phase_rules_do_not_match_request_phase(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -513,6 +587,18 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 	add_test(tests, count, cap, "rewrite/redirect_307_supports_dollar_capture", redirect_307_supports_dollar_capture);
 	add_test(tests, count, cap, "rewrite/redirect_307_supports_backslash_capture", redirect_307_supports_backslash_capture);
 	add_test(tests, count, cap, "rewrite/reject_variants_map_to_expected_actions", reject_variants_map_to_expected_actions);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/quantumultx_url_prefixed_rewrites_are_supported",
+		quantumultx_url_prefixed_rewrites_are_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/unsupported_quantumultx_url_actions_are_ignored",
+		unsupported_quantumultx_url_actions_are_ignored);
 	add_test(tests, count, cap, "rewrite/response_phase_rules_do_not_match_request_phase", response_phase_rules_do_not_match_request_phase);
 	add_test(tests, count, cap, "rewrite/mock_request_body_rewrites_body_buffer", mock_request_body_rewrites_body_buffer);
 	add_test(tests, count, cap, "rewrite/mock_response_body_rewrites_only_response_phase", mock_response_body_rewrites_only_response_phase);

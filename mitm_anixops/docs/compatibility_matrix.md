@@ -38,6 +38,8 @@ features it understands.
 | --- | --- | --- |
 | URL redirect `302`, `307` | Supported | `anixops_rewrite_evaluate_url` |
 | Reject variants | Supported | `reject`, `reject-200`, `reject-img`, `reject-video`, `reject-dict`, `reject-array` |
+| Quantumult X `url`-prefixed redirect/reject/body-regex rewrites | Supported subset | `quantumultx_url_prefixed_rewrites_are_supported` |
+| Unsupported Quantumult X `url` actions | Ignored | `unsupported_quantumultx_url_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1` and `\1` tests |
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
@@ -57,6 +59,7 @@ features it understands.
 | `tag` | Supported | plugin and Surge tests |
 | `argument=[{Name},...]` | Supported | BiliBili fixture tests |
 | Surge template arguments `{Name}`, `{{{Name}}}` | Supported subset | `surge_style_script_rule_template_is_supported` |
+| Malformed Surge attr-list script rules | Ignored, except invalid regex reports an error | `malformed_and_non_http_script_rules_are_ignored_or_rejected` |
 | Quantumult X `url script-response-body` | Supported subset | snippet and `[rewrite_local]` tests |
 | JavaScript runtime | Out of scope | `docs/script_runtime_contract.md` |
 
