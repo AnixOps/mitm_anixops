@@ -276,7 +276,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.39.0";
+	return "0.40.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1671,6 +1671,11 @@ ANIXOPS_API size_t anixops_engine_argument_count(const anixops_engine_t *engine)
 ANIXOPS_API int anixops_engine_h2_mitm_enabled(const anixops_engine_t *engine)
 {
 	return engine == NULL ? 0 : engine->h2_mitm_enabled;
+}
+
+ANIXOPS_API int anixops_engine_skip_server_cert_verify(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->skip_server_cert_verify;
 }
 
 static char *anixops_strdup(const char *value)

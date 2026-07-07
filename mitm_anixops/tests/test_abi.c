@@ -17,9 +17,9 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.39.0");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.40.0");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 39);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 40);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 0);
 }
 
@@ -145,6 +145,7 @@ static void default_engine_state_is_conservative(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "example.com", 0, &decision), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
 	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_DISABLED);
@@ -167,6 +168,8 @@ static void clear_resets_and_engine_remains_usable(void)
 	anixops_engine_set_mitm_enabled(engine, 1);
 	anixops_engine_set_h2_mitm_enabled(engine, 0);
 	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, "[MITM]\nskip-server-cert-verify = true\n"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 1);
 
 	anixops_engine_clear(engine);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
@@ -174,6 +177,7 @@ static void clear_resets_and_engine_remains_usable(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.example.com", 0, &decision), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_DISABLED);
 

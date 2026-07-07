@@ -148,6 +148,22 @@ static void config_accepts_disable_quic_mitm_key_aliases(void)
 	anixops_engine_free(engine);
 }
 
+static void config_exposes_skip_server_cert_verify(void)
+{
+	const char *config =
+		"[MITM]\n"
+		"hostname = api.example.test\n"
+		"skip-server-cert-verify = true\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 1);
+
+	anixops_engine_free(engine);
+}
+
 static void config_parses_script_and_ignores_unknown_sections(void)
 {
 	const char *config =
@@ -271,6 +287,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_accepts_disable_quic_mitm_key_aliases",
 		config_accepts_disable_quic_mitm_key_aliases);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_exposes_skip_server_cert_verify",
+		config_exposes_skip_server_cert_verify);
 	add_test(
 		tests,
 		count,

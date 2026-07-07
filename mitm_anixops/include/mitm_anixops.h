@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 39
+#define ANIXOPS_VERSION_MINOR 40
 #define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
@@ -207,6 +207,7 @@ ANIXOPS_API size_t anixops_engine_rewrite_rule_count(const anixops_engine_t *eng
 ANIXOPS_API size_t anixops_engine_script_rule_count(const anixops_engine_t *engine);
 ANIXOPS_API size_t anixops_engine_argument_count(const anixops_engine_t *engine);
 ANIXOPS_API int anixops_engine_h2_mitm_enabled(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_skip_server_cert_verify(const anixops_engine_t *engine);
 
 #ifdef __cplusplus
 }

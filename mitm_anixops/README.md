@@ -16,7 +16,8 @@ are tracked in `docs/TODO.md`.
 Implemented:
 
 - AnixOps-style `[MITM] hostname = ...` parsing.
-- Explicit MITM gate: enabled flag, trusted certificate state, allow/deny host patterns.
+- Explicit MITM gate: enabled flag, trusted certificate state, allow/deny host patterns, and adapter-readable
+  `skip-server-cert-verify`.
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.
 - AnixOps-style `[Rewrite]` URL rules for standard redirects `301`, `302`, `303`, `307`, `308`, plus `reject`,
   `reject-200`, `reject-401`, `reject-img`, `reject-tinygif`, `reject-video`, `reject-dict`, `reject-array`, and
