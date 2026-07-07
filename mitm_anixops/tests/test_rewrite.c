@@ -935,6 +935,55 @@ static void json_body_replace_supports_array_index_and_reports_truncation(void)
 	anixops_engine_free(engine);
 }
 
+static void json_body_replace_supports_bracket_string_keys(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[200];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/profile request-body-json-replace $['profile.meta']['name'] '\"test\"'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/items request-body-json-replace $['items'][1]['title'] '\"test\"'"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/profile",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"profile.meta\":{\"name\":\"Alice\",\"id\":7}}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"profile.meta\":{\"name\":\"test\",\"id\":7}}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/items",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"items\":[{\"title\":\"a\"},{\"title\":\"b\"}]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[{\"title\":\"a\"},{\"title\":\"test\"}]}");
+
+	anixops_engine_free(engine);
+}
+
 static void header_rewrite_rules_are_separate_from_url_rewrite(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1186,6 +1235,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/json_body_replace_supports_array_index_and_reports_truncation",
 		json_body_replace_supports_array_index_and_reports_truncation);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/json_body_replace_supports_bracket_string_keys",
+		json_body_replace_supports_bracket_string_keys);
 	add_test(
 		tests,
 		count,

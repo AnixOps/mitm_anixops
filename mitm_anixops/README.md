@@ -21,9 +21,9 @@ Implemented:
 - AnixOps-style `[Rewrite]` URL rules for `302`, `307`, `reject`, `reject-200`, `reject-401`, `reject-img`,
   `reject-video`, `reject-dict`, `reject-array`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.
-- JSON path request/response body replacement for already-buffered JSON bodies, using object paths and array indexes
-  such as `$.enabled` and `$.items[0].title`, with raw JSON literals such as `true`, `null`, objects, arrays, or
-  quoted strings.
+- JSON path request/response body replacement for already-buffered JSON bodies, using object paths, bracket string keys,
+  and array indexes such as `$.enabled`, `$['profile.meta'].name`, and `$.items[0].title`, with raw JSON literals such
+  as `true`, `null`, objects, arrays, or quoted strings.
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
 - Regex capture replacement with `$1` and `\1`.
 - POSIX ERE regex matching with a supported leading `(?i)` case-insensitive prefix and PCRE shorthand classes

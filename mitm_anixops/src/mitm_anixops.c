@@ -186,6 +186,7 @@ static int anixops_json_find_array_element_value(
 	const char **out_value_end);
 static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len);
 static int anixops_json_parse_path_segment(const char **cursor, const char **out_key, size_t *out_key_len);
+static int anixops_json_parse_bracket_key(const char **cursor, const char **out_key, size_t *out_key_len);
 static int anixops_json_parse_array_index(const char **cursor, size_t *out_index);
 static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end);
 static const char *anixops_json_skip_ws(const char *cursor, const char *end);
@@ -214,7 +215,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.10.0";
+	return "0.11.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2750,8 +2751,9 @@ static int anixops_json_find_path_value(
 	const char **out_value_end)
 {
 	const char *cursor;
-	const char *object_start;
-	const char *object_end;
+	const char *value_start;
+	const char *value_end;
+	int parsed_segment = 0;
 	if (body == NULL || path == NULL || out_value_start == NULL || out_value_end == NULL) {
 		return 0;
 	}
@@ -2759,30 +2761,37 @@ static int anixops_json_find_path_value(
 	if (*cursor == '$') {
 		cursor++;
 	}
-	if (*cursor != '.') {
-		return -1;
-	}
-	object_start = body;
-	object_end = body + strlen(body);
+	value_start = body;
+	value_end = body + strlen(body);
 	while (*cursor != '\0') {
 		const char *key;
-		const char *value_start;
-		const char *value_end;
 		size_t key_len;
 		int found;
 
-		if (*cursor != '.') {
-			return -1;
+		if (*cursor == '.') {
+			cursor++;
+			if (!anixops_json_parse_path_segment(&cursor, &key, &key_len)) {
+				return -1;
+			}
+			found = anixops_json_find_member_value(value_start, value_end, key, key_len, &value_start, &value_end);
+			if (!found) {
+				return 0;
+			}
+			parsed_segment = 1;
+			continue;
 		}
-		cursor++;
-		if (!anixops_json_parse_path_segment(&cursor, &key, &key_len)) {
-			return -1;
-		}
-		found = anixops_json_find_member_value(object_start, object_end, key, key_len, &value_start, &value_end);
-		if (!found) {
-			return 0;
-		}
-		while (*cursor == '[') {
+		if (*cursor == '[') {
+			if (cursor[1] == '\'' || cursor[1] == '"') {
+				if (!anixops_json_parse_bracket_key(&cursor, &key, &key_len)) {
+					return -1;
+				}
+				found = anixops_json_find_member_value(value_start, value_end, key, key_len, &value_start, &value_end);
+				if (!found) {
+					return 0;
+				}
+				parsed_segment = 1;
+				continue;
+			}
 			size_t index;
 			if (!anixops_json_parse_array_index(&cursor, &index)) {
 				return -1;
@@ -2791,22 +2800,17 @@ static int anixops_json_find_path_value(
 			if (!found) {
 				return 0;
 			}
+			parsed_segment = 1;
+			continue;
 		}
-		if (*cursor == '\0') {
-			*out_value_start = value_start;
-			*out_value_end = value_end;
-			return 1;
-		}
-		if (*cursor != '.') {
-			return -1;
-		}
-		object_start = anixops_json_skip_ws(value_start, value_end);
-		object_end = value_end;
-		if (object_start >= object_end || *object_start != '{') {
-			return 0;
-		}
+		return -1;
 	}
-	return -1;
+	if (!parsed_segment) {
+		return -1;
+	}
+	*out_value_start = value_start;
+	*out_value_end = value_end;
+	return 1;
 }
 
 static int anixops_json_find_member_value(
@@ -2993,6 +2997,36 @@ static int anixops_json_parse_path_segment(const char **cursor, const char **out
 	*out_key = start;
 	*out_key_len = (size_t)(p - start);
 	*cursor = p;
+	return 1;
+}
+
+static int anixops_json_parse_bracket_key(const char **cursor, const char **out_key, size_t *out_key_len)
+{
+	const char *start;
+	const char *p;
+	char quote;
+	if (cursor == NULL || *cursor == NULL || out_key == NULL || out_key_len == NULL || **cursor != '[') {
+		return 0;
+	}
+	p = *cursor + 1;
+	if (*p != '\'' && *p != '"') {
+		return 0;
+	}
+	quote = *p;
+	p++;
+	start = p;
+	while (*p != '\0' && *p != quote) {
+		if (*p == '\\') {
+			return 0;
+		}
+		p++;
+	}
+	if (p == start || *p != quote || p[1] != ']') {
+		return 0;
+	}
+	*out_key = start;
+	*out_key_len = (size_t)(p - start);
+	*cursor = p + 2;
 	return 1;
 }
 
