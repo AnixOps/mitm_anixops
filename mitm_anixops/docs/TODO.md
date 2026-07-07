@@ -33,8 +33,9 @@ publishing.
   profiles reject ignored rule-shaped lines in supported sections and report regex compilation failures.
 - Exact rewrite/script ordering for all edge cases in larger platform clients. The Alpha C ABI now has
   `anixops_rewrite_build_plan` for URL/body/header/script aggregation, `anixops_rewrite_evaluate_named_header` for
-  case-insensitive single-header lookup, and `anixops_rewrite_apply_headers` for bounded multi-value header-list
-  application, but larger client corpus ordering still needs broader fixtures.
+  case-insensitive single-header lookup, `anixops_rewrite_apply_body_chain` for ordered body rewrite chaining, and
+  `anixops_rewrite_apply_headers` for bounded multi-value header-list application, but larger client corpus ordering
+  still needs broader fixtures.
 - Production `$persistentStore` beyond the Alpha Node runner's JSON file backend: platform namespace policy, locking,
   transaction semantics, quotas, and migration behavior.
 - Production script runtime scheduling beyond the Alpha proxy shim's timeout fail-open path: cancellation, memory limits,

@@ -380,7 +380,7 @@ int anixops_runtime_apply_plan(
 | P0 | Script | LOON `http-request` / `http-response`、request/response header/body、`requires-body`、`argument`、`tag`、`timeout` | script dispatch trace 覆盖四类脚本入口 |
 | P0 | Rewrite | URL redirect/reject、header add/replace/del、body regex/mock/json path 顺序一致 | request/response pipeline replay trace 稳定 |
 | P1 | Surge parser | `.sgmodule` metadata、`#!arguments`、`%APPEND%`、`%INSERT%`、attr-list template | Surge corpus parse 报告无未知 P1 规则 |
-| P1 | Surge body | `[Body Rewrite]` regex chain、`http-request-jq`、`http-response-jq` | jq fixture 输出和 trace 匹配预期 |
+| P1 | Surge body | Alpha 已提供 body rewrite chain API，可按规则顺序串联 `[Body Rewrite]` regex/mock/JSON/JQ body 规则；`http-request-jq`、`http-response-jq` 已解析并可在 `JQ=1` 下执行，后续补更大 Surge corpus trace | jq fixture 输出和 trace 匹配预期 |
 | P1 | Quantumult X parser | `#[rewrite_local]`、`#[rewrite_remote]`、`#[mitm]`、INI section、`url` prefixed actions | QX corpus parse 报告无未知 P1 规则 |
 | P1 | Header semantics | Alpha 已提供单 header name 的 case-insensitive lookup API，并提供 bounded header list 的 multi-value append/replace/delete、regex replace 和 Set-Cookie 独立字段策略 | header matrix fixture 覆盖 request 和 response |
 | P2 | Malformed behavior | Alpha 已覆盖 supported section 中 ignored rule 在 strict profile 下 rejected、portable 下 ignored；后续补 LOON/SURGE/QX 逐规则 malformed 差异 | 同一 malformed corpus 在不同 profile 下输出不同但稳定诊断 |

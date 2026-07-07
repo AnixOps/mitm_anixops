@@ -16,7 +16,7 @@ http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, script-path=https
 `
 
 func TestGoBindingEvaluatesPolicy(t *testing.T) {
-	if Version() != "0.43.0" {
+	if Version() != "0.44.0" {
 		t.Fatalf("Version() = %q", Version())
 	}
 	engine, err := NewEngine()
@@ -166,5 +166,39 @@ func TestGoBindingAppliesHeaderList(t *testing.T) {
 		plan.HeaderRewrites[1].Action != RewriteResponseHeaderReplaceRegex ||
 		plan.HeaderRewrites[2].Action != RewriteResponseHeaderDel {
 		t.Fatalf("unexpected plan headers: %+v", plan.HeaderRewrites)
+	}
+}
+
+func TestGoBindingAppliesBodyChain(t *testing.T) {
+	engine, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	const config = `
+[Rewrite]
+^https:\/\/api\.go\.example\/chain request-body-replace-regex "from=([0-9]+)" "mid=$1"
+^https:\/\/api\.go\.example\/chain request-body-replace-regex "mid=([0-9]+)" "to=$1"
+`
+	if err := engine.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	body, chain, err := engine.ApplyBodyChain("https://api.go.example/chain", PhaseRequest, "from=42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if body != "to=42" {
+		t.Fatalf("body = %q", body)
+	}
+	if !chain.Rewritten || chain.Truncated {
+		t.Fatalf("unexpected chain flags: %+v", chain)
+	}
+	if len(chain.Rewrites) != 2 {
+		t.Fatalf("len(chain.Rewrites) = %d", len(chain.Rewrites))
+	}
+	if chain.Rewrites[0].Action != RewriteRequestBodyReplaceRegex ||
+		chain.Rewrites[1].Action != RewriteRequestBodyReplaceRegex {
+		t.Fatalf("unexpected chain rewrites: %+v", chain.Rewrites)
 	}
 }

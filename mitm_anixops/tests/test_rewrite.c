@@ -1811,6 +1811,100 @@ static void request_body_json_replace_updates_top_level_field(void)
 	anixops_engine_free(engine);
 }
 
+static void body_rewrite_chain_applies_matching_rules_in_order(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_body_rewrite_chain_t chain;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/chain https://other.test 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/chain request-body-replace-regex \"from=([0-9]+)\" \"mid=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/chain request-body-replace-regex \"mid=([0-9]+)\" \"to=$1\""),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(
+			engine,
+			"https://api.test/chain",
+			ANIXOPS_PHASE_REQUEST,
+			"from=42",
+			body,
+			sizeof(body),
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(body, "to=42");
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 2);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 1);
+	ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewrites[0].action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewrites[0].rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "body rewritten");
+	ANIXOPS_EXPECT_EQ_INT(chain.rewrites[1].action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewrites[1].rule_index, 2);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[1].message, "body rewritten");
+
+	anixops_engine_free(engine);
+}
+
+static void legacy_apply_body_keeps_first_body_rule_behavior(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	anixops_body_rewrite_chain_t chain;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/legacy request-body-replace-regex \"from=([0-9]+)\" \"mid=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/legacy request-body-replace-regex \"mid=([0-9]+)\" \"to=$1\""),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/legacy",
+			ANIXOPS_PHASE_REQUEST,
+			"from=42",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(result.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(body, "mid=42");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(
+			engine,
+			"https://api.test/legacy",
+			ANIXOPS_PHASE_REQUEST,
+			"from=42",
+			body,
+			sizeof(body),
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(body, "to=42");
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 2);
+
+	anixops_engine_free(engine);
+}
+
 static void jq_body_rewrite_rules_are_matched_with_fail_open_runtime_gap(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -3001,6 +3095,18 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/request_body_json_replace_updates_top_level_field",
 		request_body_json_replace_updates_top_level_field);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/body_rewrite_chain_applies_matching_rules_in_order",
+		body_rewrite_chain_applies_matching_rules_in_order);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/legacy_apply_body_keeps_first_body_rule_behavior",
+		legacy_apply_body_keeps_first_body_rule_behavior);
 	add_test(
 		tests,
 		count,

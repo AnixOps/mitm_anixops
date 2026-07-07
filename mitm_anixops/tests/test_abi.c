@@ -17,9 +17,9 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.43.0");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.44.0");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 43);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 44);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 0);
 }
 
@@ -28,6 +28,7 @@ static void null_arguments_are_rejected(void)
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_mitm_decision_t mitm;
 	anixops_rewrite_result_t rewrite;
+	anixops_body_rewrite_chain_t body_chain;
 	anixops_header_rewrite_result_t header_rewrite;
 	anixops_header_list_t headers;
 	anixops_header_list_t rewritten_headers;
@@ -73,6 +74,24 @@ static void null_arguments_are_rejected(void)
 		ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_apply_body(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", body, sizeof(body), NULL),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(NULL, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", body, sizeof(body), &body_chain),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(engine, NULL, ANIXOPS_PHASE_REQUEST, "{}", body, sizeof(body), &body_chain),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, NULL, body, sizeof(body), &body_chain),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", NULL, sizeof(body), &body_chain),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", body, 0, &body_chain),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", body, sizeof(body), NULL),
 		ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_evaluate_header(NULL, "https://example.com", ANIXOPS_PHASE_REQUEST, 0, "", &header_rewrite),

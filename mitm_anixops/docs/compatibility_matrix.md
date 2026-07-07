@@ -59,12 +59,12 @@ features it understands.
 | PCRE named capture groups `(?<name>...)`, `(?'name'...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
 | PCRE quoted literals `\Q...\E` | Supported subset | URL, body, header, and script regex test |
 | Empty regex replacement matches | Supported subset | Body/header global replacement tests cover `^`, `$`, and lazy `.*?` normalization without repeated anchor replacement |
-| Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
-| Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
-| Request/response body regex replace | Supported for buffered plain text | POSIX ERE, capture replacement, global replacement, and empty-match tests |
+| Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` and chain-capable `anixops_rewrite_apply_body_chain` |
+| Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` and chain-capable `anixops_rewrite_apply_body_chain` |
+| Request/response body regex replace | Supported for buffered plain text | POSIX ERE, capture replacement, global replacement, empty-match tests, and chain API tests proving previous output feeds the next matching body rule |
 | Request/response body JSON path replace | Supported subset for buffered JSON | `$.field`, `$['field']`, empty, common escaped, and `\uXXXX` bracket keys, nested object path, and positive/negative array index tests |
 | Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq |
-| Alpha proxy body rewrite path | Supported subset | `make script-contract-e2e` verifies buffered request/response body rewrite before script dispatch through the HTTP/1.1 MITM shim |
+| Alpha proxy body rewrite path | Supported subset | `make script-contract-e2e` verifies buffered request/response body rewrite before script dispatch through the HTTP/1.1 MITM shim, which now calls the chain body rewrite API |
 | Request header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Response header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Case-insensitive named header lookup | Supported foundation | `anixops_rewrite_evaluate_named_header` filters rewrite rules by header name using case-insensitive matching; Go/Rust wrappers expose the same helper |
@@ -108,8 +108,8 @@ features it understands.
 | ABI export allowlist | Supported | `ci/abi_exports.txt` checked by `scripts/check.sh` |
 | pkg-config metadata | Supported Alpha packaging | `make pkg-config-check`, relocatable `lib/pkgconfig/mitm_anixops.pc` in `alpha-dist` |
 | CMake package config | Supported Alpha packaging | `make cmake-package-check`, relocatable `lib/cmake/mitm_anixops`; configure/build smoke runs when `cmake` is installed |
-| Go cgo binding | Supported Alpha wrapper | `make go-binding-check`, package `bindings/go/anixops`, pkg-config backed cgo link, includes plan, named-header, and header-list helper coverage |
-| Rust FFI binding | Supported Alpha wrapper | `make rust-binding-check`, crate `bindings/rust/mitm-anixops`, pkg-config backed build script, includes plan, named-header, and header-list helper coverage |
+| Go cgo binding | Supported Alpha wrapper | `make go-binding-check`, package `bindings/go/anixops`, pkg-config backed cgo link, includes plan, body-chain, named-header, and header-list helper coverage |
+| Rust FFI binding | Supported Alpha wrapper | `make rust-binding-check`, crate `bindings/rust/mitm-anixops`, pkg-config backed build script, includes plan, body-chain, named-header, and header-list helper coverage |
 | Thread-safe mutation | Not provided | external synchronization required |
 
 ## Current End-To-End Evidence
@@ -119,14 +119,15 @@ features it understands.
   scan over Loon/Surge/Quantumult X/BiliBili fixtures with sha256 and diagnostic-status checks, optional Node
   script-runtime replay, `$done.body` writeback, and file-backed `$persistentStore`.
 - `make proxy-shim-check`: Alpha HTTP/1.1 CONNECT/TLS proxy shim build smoke test.
-- `make script-contract-e2e`: request/response header/body rewrite and script mutation through the proxy path, including
-  shared `$persistentStore`, script timeout fail-open, gzip/deflate response decode, and identity writeback.
+- `make script-contract-e2e`: request/response header/body-chain rewrite and script mutation through the proxy path,
+  including shared `$persistentStore`, script timeout fail-open, gzip/deflate response decode, and identity writeback.
 - `make pkg-config-check`: staged Alpha-style install layout compiled and executed through `pkg-config`.
 - `make cmake-package-check`: staged Alpha-style install layout checked as a CMake config package, including
   configure/build/run smoke when `cmake` is available.
-- `make go-binding-check`: Go cgo wrapper tests over config load, rewrite, body rewrite, script dispatch, and plan helper.
-- `make rust-binding-check`: Rust FFI wrapper tests over config load, rewrite, body rewrite, script dispatch, and plan
-  helper.
+- `make go-binding-check`: Go cgo wrapper tests over config load, rewrite, body rewrite, body-chain rewrite, script
+  dispatch, and plan helper.
+- `make rust-binding-check`: Rust FFI wrapper tests over config load, rewrite, body rewrite, body-chain rewrite, script
+  dispatch, and plan helper.
 - `make test`: public C ABI unit tests, including the plan builder, representative Loon, Surge, and Quantumult X fixture
   parsing.
 - `make e2e`: local shim plus mihomo, proving library decisions through a proxy path.

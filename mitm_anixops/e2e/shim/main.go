@@ -724,16 +724,21 @@ func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) (
 	}
 	defer C.free(unsafe.Pointer(out))
 
-	var result C.anixops_rewrite_result_t
-	rc := C.anixops_rewrite_apply_body(e.ptr, curl, phase, cbody, out, C.size_t(outCap), &result)
+	var chain C.anixops_body_rewrite_chain_t
+	rc := C.anixops_rewrite_apply_body_chain(e.ptr, curl, phase, cbody, out, C.size_t(outCap), &chain)
 	if rc != C.ANIXOPS_OK {
-		return nil, false, "", fmt.Errorf("anixops_rewrite_apply_body failed: %d", int(rc))
+		return nil, false, "", fmt.Errorf("anixops_rewrite_apply_body_chain failed: %d", int(rc))
 	}
-	message := cStringFromArray(unsafe.Pointer(&result.message[0]))
-	if !rewriteActionIsBody(result.action) {
+	message := "no body rewrite matched"
+	rewriteCount := int(chain.rewrite_count)
+	if rewriteCount > 0 {
+		last := chain.rewrites[rewriteCount-1]
+		message = cStringFromArray(unsafe.Pointer(&last.message[0]))
+	}
+	if rewriteCount == 0 || chain.rewritten == 0 {
 		return body, false, message, nil
 	}
-	if strings.Contains(strings.ToLower(message), "truncated") {
+	if chain.truncated != 0 || strings.Contains(strings.ToLower(message), "truncated") {
 		return body, false, message, nil
 	}
 	rewritten := []byte(C.GoString(out))

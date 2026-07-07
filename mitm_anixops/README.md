@@ -130,7 +130,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.43.0.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.44.0.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
@@ -140,7 +140,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.43.0/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.44.0/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:
@@ -159,7 +159,7 @@ make go-binding-check
 
 The Go package lives under `bindings/go/anixops` and uses `pkg-config: mitm_anixops`, so consumers should point
 `PKG_CONFIG_PATH` at the Alpha package's `lib/pkgconfig` directory. The Alpha wrapper exposes config load, rewrite/body
-evaluation, header-list application, script dispatch, and the aggregated rewrite plan.
+evaluation, body-chain application, header-list application, script dispatch, and the aggregated rewrite plan.
 
 For Rust binding coverage:
 
@@ -170,7 +170,8 @@ make rust-binding-check
 The Rust crate lives under `bindings/rust/mitm-anixops` and uses `pkg-config` from `build.rs`, so consumers should point
 `PKG_CONFIG_PATH` at the Alpha package's `lib/pkgconfig` directory and set `LD_LIBRARY_PATH` to the package `lib`
 directory when running tests against the shared library. The Alpha wrapper exposes rewrite/body evaluation,
-named-header lookup, bounded header-list application, script dispatch, and the aggregated rewrite plan.
+body-chain application, named-header lookup, bounded header-list application, script dispatch, and the aggregated
+rewrite plan.
 
 For optional PCRE2 regex backend coverage:
 
@@ -283,6 +284,16 @@ anixops_rewrite_evaluate_url(engine, "http://google.cn", ANIXOPS_PHASE_REQUEST, 
 
 char body[4096];
 anixops_rewrite_apply_body(engine, "https://api.example.com/mock", ANIXOPS_PHASE_RESPONSE, "{}", body, sizeof(body), &rewrite);
+
+anixops_body_rewrite_chain_t body_chain;
+anixops_rewrite_apply_body_chain(
+    engine,
+    "https://api.example.com/mock",
+    ANIXOPS_PHASE_RESPONSE,
+    "{}",
+    body,
+    sizeof(body),
+    &body_chain);
 
 anixops_header_rewrite_result_t header;
 anixops_rewrite_evaluate_header(engine, "https://api.example.com/mock", ANIXOPS_PHASE_RESPONSE, 0, "old", &header);

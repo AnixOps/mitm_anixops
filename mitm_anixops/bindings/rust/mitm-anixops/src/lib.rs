@@ -9,6 +9,7 @@ const ANIXOPS_MESSAGE_CAP: usize = 256;
 const ANIXOPS_PATTERN_CAP: usize = 256;
 const ANIXOPS_PLAN_HEADER_CAP: usize = 16;
 const ANIXOPS_HEADER_LIST_CAP: usize = 32;
+const ANIXOPS_BODY_CHAIN_CAP: usize = 16;
 
 #[repr(C)]
 struct AnixopsEngine {
@@ -24,6 +25,15 @@ struct AnixopsRewriteResult {
     matched_pattern: [c_char; ANIXOPS_PATTERN_CAP],
     value: [c_char; ANIXOPS_VALUE_CAP],
     message: [c_char; ANIXOPS_MESSAGE_CAP],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct AnixopsBodyRewriteChain {
+    rewrite_count: usize,
+    rewritten: c_int,
+    truncated: c_int,
+    rewrites: [AnixopsRewriteResult; ANIXOPS_BODY_CHAIN_CAP],
 }
 
 #[repr(C)]
@@ -103,6 +113,15 @@ extern "C" {
         out_body_cap: usize,
         out_result: *mut AnixopsRewriteResult,
     ) -> c_int;
+    fn anixops_rewrite_apply_body_chain(
+        engine: *const AnixopsEngine,
+        url: *const c_char,
+        phase: c_int,
+        body: *const c_char,
+        out_body: *mut c_char,
+        out_body_cap: usize,
+        out_chain: *mut AnixopsBodyRewriteChain,
+    ) -> c_int;
     fn anixops_rewrite_evaluate_named_header(
         engine: *const AnixopsEngine,
         url: *const c_char,
@@ -157,6 +176,7 @@ impl Phase {
 pub enum RewriteAction {
     None,
     Redirect302,
+    RequestBodyReplaceRegex,
     ResponseBodyReplaceRegex,
     HeaderDel,
     HeaderAdd,
@@ -174,6 +194,7 @@ impl From<c_int> for RewriteAction {
         match value {
             0 => RewriteAction::None,
             1 => RewriteAction::Redirect302,
+            11 => RewriteAction::RequestBodyReplaceRegex,
             12 => RewriteAction::ResponseBodyReplaceRegex,
             25 => RewriteAction::HeaderDel,
             14 => RewriteAction::HeaderAdd,
@@ -234,6 +255,13 @@ pub struct RewriteResult {
     pub matched_pattern: String,
     pub value: String,
     pub message: String,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyRewriteChain {
+    pub rewrites: Vec<RewriteResult>,
+    pub rewritten: bool,
+    pub truncated: bool,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -349,6 +377,33 @@ impl Engine {
             },
         )?;
         Ok((cstr_from_buf(&out), rewrite_result_from_c(&result)))
+    }
+
+    pub fn apply_body_chain(
+        &self,
+        url: &str,
+        phase: Phase,
+        body: &str,
+    ) -> Result<(String, BodyRewriteChain), Error> {
+        let url = CString::new(url).expect("url must not contain nul bytes");
+        let body_c = CString::new(body).expect("body must not contain nul bytes");
+        let mut chain = empty_body_rewrite_chain();
+        let mut out = vec![0 as c_char; body.len() + ANIXOPS_VALUE_CAP];
+        check_status(
+            "apply_body_chain",
+            unsafe {
+                anixops_rewrite_apply_body_chain(
+                    self.ptr,
+                    url.as_ptr(),
+                    phase.as_c(),
+                    body_c.as_ptr(),
+                    out.as_mut_ptr(),
+                    out.len(),
+                    &mut chain,
+                )
+            },
+        )?;
+        Ok((cstr_from_buf(&out), body_rewrite_chain_from_c(&chain)))
     }
 
     pub fn evaluate_script(&self, url: &str, phase: Phase) -> Result<ScriptResult, Error> {
@@ -485,6 +540,19 @@ fn rewrite_result_from_c(result: &AnixopsRewriteResult) -> RewriteResult {
         matched_pattern: cstr_from_buf(&result.matched_pattern),
         value: cstr_from_buf(&result.value),
         message: cstr_from_buf(&result.message),
+    }
+}
+
+fn body_rewrite_chain_from_c(chain: &AnixopsBodyRewriteChain) -> BodyRewriteChain {
+    let count = chain.rewrite_count.min(ANIXOPS_BODY_CHAIN_CAP);
+    let mut rewrites = Vec::with_capacity(count);
+    for rewrite in chain.rewrites.iter().take(count) {
+        rewrites.push(rewrite_result_from_c(rewrite));
+    }
+    BodyRewriteChain {
+        rewrites,
+        rewritten: chain.rewritten != 0,
+        truncated: chain.truncated != 0,
     }
 }
 
@@ -640,6 +708,15 @@ fn empty_rewrite_result() -> AnixopsRewriteResult {
     }
 }
 
+fn empty_body_rewrite_chain() -> AnixopsBodyRewriteChain {
+    AnixopsBodyRewriteChain {
+        rewrite_count: 0,
+        rewritten: 0,
+        truncated: 0,
+        rewrites: [empty_rewrite_result(); ANIXOPS_BODY_CHAIN_CAP],
+    }
+}
+
 fn empty_rewrite_plan() -> AnixopsRewritePlan {
     AnixopsRewritePlan {
         phase: 0,
@@ -686,7 +763,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.43.0");
+        assert_eq!(version(), "0.44.0");
         let mut engine = Engine::new().unwrap();
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);
@@ -804,5 +881,29 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
             RewriteAction::ResponseHeaderReplaceRegex
         );
         assert_eq!(plan.header_rewrites[2].action, RewriteAction::ResponseHeaderDel);
+    }
+
+    #[test]
+    fn rust_binding_applies_body_chain() {
+        let mut engine = Engine::new().unwrap();
+        engine
+            .load_config(
+                r#"
+[Rewrite]
+^https:\/\/api\.rust\.example\/chain request-body-replace-regex "from=([0-9]+)" "mid=$1"
+^https:\/\/api\.rust\.example\/chain request-body-replace-regex "mid=([0-9]+)" "to=$1"
+"#,
+            )
+            .unwrap();
+
+        let (body, chain) = engine
+            .apply_body_chain("https://api.rust.example/chain", Phase::Request, "from=42")
+            .unwrap();
+        assert_eq!(body, "to=42");
+        assert!(chain.rewritten);
+        assert!(!chain.truncated);
+        assert_eq!(chain.rewrites.len(), 2);
+        assert_eq!(chain.rewrites[0].action, RewriteAction::RequestBodyReplaceRegex);
+        assert_eq!(chain.rewrites[1].action, RewriteAction::RequestBodyReplaceRegex);
     }
 }

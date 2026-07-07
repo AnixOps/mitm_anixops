@@ -27,6 +27,7 @@ type RewriteAction int
 const (
 	RewriteNone                       RewriteAction = C.ANIXOPS_REWRITE_NONE
 	RewriteRedirect302                RewriteAction = C.ANIXOPS_REWRITE_REDIRECT_302
+	RewriteRequestBodyReplaceRegex    RewriteAction = C.ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX
 	RewriteResponseBodyReplaceRegex   RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX
 	RewriteHeaderDel                  RewriteAction = C.ANIXOPS_REWRITE_HEADER_DEL
 	RewriteHeaderAdd                  RewriteAction = C.ANIXOPS_REWRITE_HEADER_ADD
@@ -57,6 +58,12 @@ type RewriteResult struct {
 	MatchedPattern string
 	Value          string
 	Message        string
+}
+
+type BodyRewriteChain struct {
+	Rewrites  []RewriteResult
+	Rewritten bool
+	Truncated bool
 }
 
 type HeaderRewriteResult struct {
@@ -183,6 +190,32 @@ func (e *Engine) ApplyBody(url string, phase Phase, body string) (string, Rewrit
 	return C.GoString((*C.char)(unsafe.Pointer(&out[0]))), rewriteResultFromC(&result), nil
 }
 
+func (e *Engine) ApplyBodyChain(url string, phase Phase, body string) (string, BodyRewriteChain, error) {
+	var chain C.anixops_body_rewrite_chain_t
+	outCap := len(body) + C.ANIXOPS_VALUE_CAP
+	out := make([]byte, outCap)
+	if e == nil || e.ptr == nil {
+		return "", BodyRewriteChain{}, fmt.Errorf("anixops: nil engine")
+	}
+	curl := C.CString(url)
+	cbody := C.CString(body)
+	defer C.free(unsafe.Pointer(curl))
+	defer C.free(unsafe.Pointer(cbody))
+	if err := statusError(
+		"apply body chain",
+		C.anixops_rewrite_apply_body_chain(
+			e.ptr,
+			curl,
+			C.anixops_phase_t(phase),
+			cbody,
+			(*C.char)(unsafe.Pointer(&out[0])),
+			C.size_t(len(out)),
+			&chain)); err != nil {
+		return "", BodyRewriteChain{}, err
+	}
+	return C.GoString((*C.char)(unsafe.Pointer(&out[0]))), bodyRewriteChainFromC(&chain), nil
+}
+
 func (e *Engine) EvaluateNamedHeader(
 	url string,
 	phase Phase,
@@ -302,6 +335,22 @@ func rewriteResultFromC(result *C.anixops_rewrite_result_t) RewriteResult {
 		MatchedPattern: cArrayString(unsafe.Pointer(&result.matched_pattern[0])),
 		Value:          cArrayString(unsafe.Pointer(&result.value[0])),
 		Message:        cArrayString(unsafe.Pointer(&result.message[0])),
+	}
+}
+
+func bodyRewriteChainFromC(chain *C.anixops_body_rewrite_chain_t) BodyRewriteChain {
+	count := int(chain.rewrite_count)
+	if count > int(C.ANIXOPS_BODY_CHAIN_CAP) {
+		count = int(C.ANIXOPS_BODY_CHAIN_CAP)
+	}
+	rewrites := make([]RewriteResult, 0, count)
+	for i := 0; i < count; i++ {
+		rewrites = append(rewrites, rewriteResultFromC(&chain.rewrites[i]))
+	}
+	return BodyRewriteChain{
+		Rewrites:  rewrites,
+		Rewritten: chain.rewritten != 0,
+		Truncated: chain.truncated != 0,
 	}
 }
 

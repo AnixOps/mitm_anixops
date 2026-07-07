@@ -15,7 +15,7 @@ PROXY_SHIM_BIN := $(BUILD_DIR)/anixops-mitm-proxy-shim
 SCRIPT_RUNNER_JS := e2e/script_runtime/anixops_runner.js
 PKG_CONFIG_FILE := pkgconfig/mitm_anixops.pc
 CMAKE_CONFIG_FILES := cmake/mitm_anixops-config.cmake cmake/mitm_anixops-config-version.cmake
-ALPHA_NAME ?= anixops-mitm-alpha-0.43.0
+ALPHA_NAME ?= anixops-mitm-alpha-0.44.0
 
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror -fPIC
 CPPFLAGS ?= -I$(INCLUDE_DIR)
@@ -151,7 +151,7 @@ cmake-package-check: all $(CMAKE_CONFIG_FILES)
 	cp $(STATIC_LIB) $(SHARED_LIB) $(BUILD_DIR)/cmake-package-check/lib/
 	cp $(CMAKE_CONFIG_FILES) $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/
 	grep -F 'mitm_anixops::mitm_anixops' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config.cmake >/dev/null
-	grep -F 'PACKAGE_VERSION "0.43.0"' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config-version.cmake >/dev/null
+	grep -F 'PACKAGE_VERSION "0.44.0"' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config-version.cmake >/dev/null
 	if command -v cmake >/dev/null 2>&1; then \
 		cmake -S tests/cmake_smoke -B $(BUILD_DIR)/cmake-smoke -DCMAKE_PREFIX_PATH="$(abspath $(BUILD_DIR)/cmake-package-check)" >/dev/null; \
 		cmake --build $(BUILD_DIR)/cmake-smoke >/dev/null; \

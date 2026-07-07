@@ -27,6 +27,7 @@ anixops_engine_skip_server_cert_verify
 anixops_mitm_evaluate
 anixops_regex_backend_available
 anixops_rewrite_apply_body
+anixops_rewrite_apply_body_chain
 anixops_rewrite_apply_headers
 anixops_rewrite_build_plan
 anixops_rewrite_evaluate_header

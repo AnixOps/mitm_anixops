@@ -43,7 +43,7 @@ rules are ignored unless the public API returns an error such as `ANIXOPS_ERR_RE
 1. Call `anixops_mitm_evaluate` before TLS interception.
 2. Apply request URL rewrite with `anixops_rewrite_evaluate_url` before upstream routing.
 3. Enumerate request header rewrites with `anixops_rewrite_evaluate_header`.
-4. Apply request body rewrites with `anixops_rewrite_apply_body` after buffering plain text.
+4. Apply request body rewrites with `anixops_rewrite_apply_body_chain` after buffering plain text.
 5. Dispatch request scripts with `anixops_script_evaluate_url` after static request rewrites.
 6. Send the final request upstream.
 
@@ -54,7 +54,7 @@ final adapter-owned mutation before network IO.
 
 1. Dechunk and decompress the upstream response body when later stages need text.
 2. Enumerate response header rewrites with `anixops_rewrite_evaluate_header`.
-3. Apply response body rewrites with `anixops_rewrite_apply_body` after plain-text decoding.
+3. Apply response body rewrites with `anixops_rewrite_apply_body_chain` after plain-text decoding.
 4. Dispatch response scripts with `anixops_script_evaluate_url` after static response rewrites.
 5. Recompute response framing before writing to the client.
 
@@ -115,7 +115,8 @@ with an empty body. When a body is replaced, the adapter must remove stale trans
 The platform adapter, not this library, is responsible for:
 
 - buffering request/response bodies when `requires_body` is true
-- calling `anixops_rewrite_apply_body` for mock and regex body rewrite rules after a plain-text body is available
+- calling `anixops_rewrite_apply_body_chain` for mock, regex, JSON path, and optional JQ body rewrite rules after a
+  plain-text body is available; `anixops_rewrite_apply_body` remains available for legacy single-rule evaluation
 - calling `anixops_rewrite_apply_headers` for the bounded Alpha header-list helper, or calling
   `anixops_rewrite_evaluate_header` / `anixops_rewrite_evaluate_named_header` and applying returned operations to a
   platform-owned HTTP header map

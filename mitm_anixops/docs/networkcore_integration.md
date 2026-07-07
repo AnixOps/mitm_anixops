@@ -108,7 +108,7 @@ The safe Rust wrapper should own the opaque C engine handle:
 - `Engine::set_cert_state(&mut self, state: CertState)`
 - `Engine::evaluate_mitm(&self, host: &str, is_quic: bool) -> MitmDecision`
 - `Engine::evaluate_url_rewrite(&self, url: &str, phase: Phase) -> RewriteResult`
-- `Engine::apply_body(&self, url: &str, phase: Phase, body: &[u8]) -> BodyRewriteResult`
+- `Engine::apply_body_chain(&self, url: &str, phase: Phase, body: &[u8]) -> BodyRewriteChain`
 - `Engine::evaluate_header_rewrite(...) -> HeaderRewriteResult`
 - `Engine::evaluate_script(&self, url: &str, phase: Phase) -> ScriptDispatch`
 - `Engine::last_error() -> Option<LastError>`

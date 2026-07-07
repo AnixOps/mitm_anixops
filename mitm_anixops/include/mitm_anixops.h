@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 43
+#define ANIXOPS_VERSION_MINOR 44
 #define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
@@ -29,6 +29,7 @@ extern "C" {
 #define ANIXOPS_MESSAGE_CAP 256
 #define ANIXOPS_PLAN_HEADER_CAP 16
 #define ANIXOPS_HEADER_LIST_CAP 32
+#define ANIXOPS_BODY_CHAIN_CAP 16
 
 typedef struct anixops_engine anixops_engine_t;
 
@@ -143,6 +144,13 @@ typedef struct anixops_rewrite_result {
 	char message[ANIXOPS_MESSAGE_CAP];
 } anixops_rewrite_result_t;
 
+typedef struct anixops_body_rewrite_chain {
+	size_t rewrite_count;
+	int rewritten;
+	int truncated;
+	anixops_rewrite_result_t rewrites[ANIXOPS_BODY_CHAIN_CAP];
+} anixops_body_rewrite_chain_t;
+
 typedef struct anixops_header_rewrite_result {
 	anixops_rewrite_action_t action;
 	anixops_phase_t phase;
@@ -252,6 +260,14 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 	char *out_body,
 	size_t out_body_cap,
 	anixops_rewrite_result_t *out_result);
+ANIXOPS_API int anixops_rewrite_apply_body_chain(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *body,
+	char *out_body,
+	size_t out_body_cap,
+	anixops_body_rewrite_chain_t *out_chain);
 
 ANIXOPS_API int anixops_rewrite_evaluate_header(
 	const anixops_engine_t *engine,

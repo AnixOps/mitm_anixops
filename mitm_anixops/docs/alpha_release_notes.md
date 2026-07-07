@@ -30,6 +30,9 @@ Included:
 - P3 JQ foundation: `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` rules parse and
   match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with tested
   first-output, empty-output, compile-error, and invalid-JSON behavior.
+- P3 body-chain foundation: `anixops_rewrite_apply_body_chain` applies matching mock, regex, JSON path, and optional
+  JQ body rewrite rules in rule order, feeding each successful output into the next body rule while preserving the
+  legacy single-rule `anixops_rewrite_apply_body` API.
 - P4 script foundation: script dispatch metadata, the Node-based contract runner, file-backed `$persistentStore`,
   request/response script E2E, script timeout fail-open in the proxy shim, and runner `replay --script-runner`
   writeback are supported. Embedded QuickJS/JavaScriptCore is still future work.
@@ -38,12 +41,12 @@ Included:
   `anixops_rewrite_build_plan`
   provides a C ABI foundation that aggregates phase rewrite, header rewrites, script dispatch, body-rewrite output, and
   `requires_body`; the Alpha proxy shim provides HTTP/1.1 CONNECT/TLS demo coverage around the C ABI, including buffered
-  request/response header and body rewrite before script dispatch and gzip/deflate response decoding for body/script
-  mutation with identity writeback.
+  request/response header and chain body rewrite before script dispatch and gzip/deflate response decoding for
+  body/script mutation with identity writeback.
 - P6 packaging foundation: `make alpha-dist` creates a tar.gz package with libraries, pkg-config metadata, CMake package
   config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, representative fixtures, the corpus
-  manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan, named-header lookup,
-  and bounded header-list application in addition to rewrite/body/script helpers.
+  manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan, body-chain
+  application, named-header lookup, and bounded header-list application in addition to rewrite/body/script helpers.
 
 ## Known Gaps
 

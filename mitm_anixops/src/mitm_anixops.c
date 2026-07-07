@@ -351,9 +351,11 @@ static void anixops_set_mitm_result(
 	const char *pattern,
 	const char *message);
 static void anixops_set_rewrite_none(anixops_rewrite_result_t *out);
+static void anixops_set_body_rewrite_chain_none(anixops_body_rewrite_chain_t *out);
 static void anixops_set_header_rewrite_none(anixops_header_rewrite_result_t *out);
 static void anixops_set_script_none(anixops_script_result_t *out);
 static void anixops_set_rewrite_plan_none(anixops_rewrite_plan_t *out, anixops_phase_t phase);
+static void anixops_body_rewrite_chain_add(anixops_body_rewrite_chain_t *chain, const anixops_rewrite_result_t *rewrite);
 static int anixops_header_list_copy_checked(anixops_header_list_t *dst, const anixops_header_list_t *src);
 static int anixops_header_list_append(anixops_header_list_t *headers, const char *name, const char *value);
 static size_t anixops_header_list_remove_name(anixops_header_list_t *headers, const char *name);
@@ -367,7 +369,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.43.0";
+	return "0.44.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2004,6 +2006,182 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 	if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
 		anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
 	}
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_apply_body_chain(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *body,
+	char *out_body,
+	size_t out_body_cap,
+	anixops_body_rewrite_chain_t *out_chain)
+{
+	char *current_body;
+	char *next_body;
+	size_t i;
+	int copy_rc;
+
+	if (engine == NULL || url == NULL || body == NULL || out_body == NULL || out_body_cap == 0 || out_chain == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	anixops_set_body_rewrite_chain_none(out_chain);
+	current_body = (char *)malloc(out_body_cap);
+	next_body = (char *)malloc(out_body_cap);
+	if (current_body == NULL || next_body == NULL) {
+		free(current_body);
+		free(next_body);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	copy_rc = anixops_copy_text_checked(current_body, out_body_cap, body);
+	if (copy_rc != ANIXOPS_OK) {
+		out_chain->truncated = 1;
+	}
+
+	for (i = 0; i < engine->rule_len; i++) {
+		const anixops_rewrite_rule_t *rule = &engine->rules[i];
+		anixops_rewrite_result_t result;
+		regmatch_t url_matches[ANIXOPS_MATCH_CAP];
+		int url_rc;
+		int replaced = 0;
+		int apply_rc = ANIXOPS_OK;
+
+		if (rule->phase != phase || !rule->regex_ready) {
+			continue;
+		}
+		if (!(rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+				rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY ||
+				anixops_rewrite_action_replaces_body(rule->action))) {
+			continue;
+		}
+		url_rc = anixops_regex_exec(&rule->regex, url, sizeof(url_matches) / sizeof(url_matches[0]), url_matches);
+		if (url_rc != 0) {
+			continue;
+		}
+
+		anixops_set_rewrite_none(&result);
+		result.action = rule->action;
+		result.status_code = rule->status_code;
+		result.rule_index = (int)i;
+		anixops_copy_text(result.matched_pattern, sizeof(result.matched_pattern), rule->pattern);
+
+		if (rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY || rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
+			apply_rc = anixops_expand_replacement(
+				url,
+				rule->replacement,
+				url_matches,
+				sizeof(url_matches) / sizeof(url_matches[0]),
+				rule->capture_map,
+				ANIXOPS_MATCH_CAP,
+				result.value,
+				sizeof(result.value));
+			if (apply_rc != ANIXOPS_OK) {
+				anixops_copy_text(result.message, sizeof(result.message), "replacement truncated");
+				out_chain->truncated = 1;
+			}
+			else {
+				anixops_copy_text(result.message, sizeof(result.message), "body rewritten");
+			}
+			if (anixops_copy_text_checked(next_body, out_body_cap, result.value) != ANIXOPS_OK) {
+				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+				out_chain->truncated = 1;
+			}
+			replaced = 1;
+		}
+		else if (anixops_rewrite_action_replaces_body_regex(rule->action)) {
+			if (!rule->body_regex_ready ||
+				anixops_apply_body_regex_replacement(current_body, rule, next_body, out_body_cap, &replaced) != ANIXOPS_OK) {
+				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+				out_chain->truncated = 1;
+			}
+			else {
+				anixops_copy_text(result.message, sizeof(result.message), replaced ? "body rewritten" : "body regex not matched");
+			}
+		}
+		else if (anixops_rewrite_action_replaces_body_json(rule->action)) {
+			int path_supported = 1;
+			if (anixops_apply_body_json_replacement(
+					current_body,
+					rule,
+					next_body,
+					out_body_cap,
+					&replaced,
+					&path_supported) != ANIXOPS_OK) {
+				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+				out_chain->truncated = 1;
+			}
+			else if (!path_supported) {
+				anixops_copy_text(result.message, sizeof(result.message), "json path unsupported");
+			}
+			else {
+				anixops_copy_text(result.message, sizeof(result.message), replaced ? "json body rewritten" : "json path not matched");
+			}
+		}
+		else if (anixops_rewrite_action_replaces_body_jq(rule->action)) {
+			int runtime_available = 0;
+			anixops_copy_text(result.value, sizeof(result.value), rule->replacement);
+			apply_rc = anixops_apply_body_jq_replacement(
+				current_body,
+				rule->replacement,
+				next_body,
+				out_body_cap,
+				&replaced,
+				&runtime_available);
+			if (!runtime_available) {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(result.message, sizeof(result.message), "jq backend unavailable");
+				}
+			}
+			else if (apply_rc == ANIXOPS_ERR_CAPACITY) {
+				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+				out_chain->truncated = 1;
+			}
+			else if (apply_rc == ANIXOPS_ERR_PARSE) {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(result.message, sizeof(result.message), "jq execution failed");
+				}
+			}
+			else if (replaced) {
+				anixops_copy_text(result.message, sizeof(result.message), "jq body rewritten");
+			}
+			else {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(result.message, sizeof(result.message), "jq produced no output");
+				}
+			}
+		}
+		else {
+			continue;
+		}
+
+		if (replaced) {
+			char *tmp = current_body;
+			current_body = next_body;
+			next_body = tmp;
+			out_chain->rewritten = 1;
+		}
+		anixops_body_rewrite_chain_add(out_chain, &result);
+	}
+
+	if (anixops_copy_text_checked(out_body, out_body_cap, current_body) != ANIXOPS_OK) {
+		out_chain->truncated = 1;
+	}
+	free(current_body);
+	free(next_body);
 	return ANIXOPS_OK;
 }
 
@@ -5288,6 +5466,15 @@ static void anixops_set_rewrite_none(anixops_rewrite_result_t *out)
 	anixops_copy_text(out->message, sizeof(out->message), "no rewrite matched");
 }
 
+static void anixops_set_body_rewrite_chain_none(anixops_body_rewrite_chain_t *out)
+{
+	size_t i;
+	memset(out, 0, sizeof(*out));
+	for (i = 0; i < ANIXOPS_BODY_CHAIN_CAP; i++) {
+		anixops_set_rewrite_none(&out->rewrites[i]);
+	}
+}
+
 static void anixops_set_header_rewrite_none(anixops_header_rewrite_result_t *out)
 {
 	memset(out, 0, sizeof(*out));
@@ -5319,6 +5506,20 @@ static void anixops_set_rewrite_plan_none(anixops_rewrite_plan_t *out, anixops_p
 	}
 	anixops_set_script_none(&out->script);
 	out->script.phase = phase;
+}
+
+static void anixops_body_rewrite_chain_add(anixops_body_rewrite_chain_t *chain, const anixops_rewrite_result_t *rewrite)
+{
+	if (chain == NULL || rewrite == NULL) {
+		return;
+	}
+	if (chain->rewrite_count < ANIXOPS_BODY_CHAIN_CAP) {
+		chain->rewrites[chain->rewrite_count] = *rewrite;
+		chain->rewrite_count++;
+	}
+	else {
+		chain->truncated = 1;
+	}
 }
 
 static int anixops_header_list_copy_checked(anixops_header_list_t *dst, const anixops_header_list_t *src)
