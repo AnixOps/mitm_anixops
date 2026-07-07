@@ -10,11 +10,11 @@ unsupported unless a test or E2E fixture is added.
 
 | Style | Section Shape | Status | Evidence |
 | --- | --- | --- | --- |
-| AnixOps/Loon plugin | `[Argument]`, `[Script]`, `[MITM]`, `[Rewrite]` | Supported subset | `test_config.c`, `test_script.c`, BiliBili fixture |
+| AnixOps/Loon plugin | `[Argument]`, `[Script]`, `[MITM]`, `[Rewrite]` | Supported subset | `test_config.c`, `test_script.c`, BiliBili and representative Loon fixtures |
 | Loon rewrite aliases | `[URL Rewrite]`, `[Remote Rewrite]` | Supported subset | `config_accepts_section_aliases_and_crlf` |
-| Quantumult X / snippet | `#[rewrite_local]`, `#[mitm]` | Supported subset | `anixops_snippet_rewrite_script_lines_are_supported` |
+| Quantumult X / snippet | `#[rewrite_local]`, `#[mitm]` | Supported subset | `anixops_snippet_rewrite_script_lines_are_supported`, representative Quantumult X fixture |
 | Quantumult X | `[rewrite_local]`, `[mitm]` | Supported subset | `quantumultx_rewrite_local_section_is_supported` |
-| Surge module | `[Script]` plus `name = type=http-response, pattern=...` | Supported subset | `surge_style_script_rule_template_is_supported` |
+| Surge module | `[Script]` plus `name = type=http-response, pattern=...` | Supported subset | `surge_style_script_rule_template_is_supported`, representative Surge fixture |
 | Surge module arguments | `#!arguments = Name:value` | Supported subset | `sgmodule_inline_arguments_are_supported` |
 
 Unknown sections are ignored so clients can load larger platform configs and let this library consume only the policy
@@ -77,6 +77,7 @@ features it understands.
 ## Current End-To-End Evidence
 
 - `make demo-check`: pure C strategy-chain demo, no sockets/TLS/JS.
+- `make test`: public C ABI unit tests, including representative Loon, Surge, and Quantumult X fixture parsing.
 - `make e2e`: local shim plus mihomo, proving library decisions through a proxy path.
 - `make bili-e2e`: BiliUniverse Enhanced plugin/script dispatch and script execution fixture.
 - `make script-contract-e2e`: request/response script metadata and adapter writeback contract.

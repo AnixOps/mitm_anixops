@@ -88,6 +88,136 @@ static void current_bili_enhanced_plugin_fixture_is_supported(void)
 	free(fixture);
 }
 
+static void representative_loon_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Representative.Loon.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_script_result_t script;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "http://old.loon.example/path", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://api.loon.example/path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://ads.loon.example", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT_200);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.loon.example/v1", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_STREQ(script.tag, "loon.request");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=loon");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.loon.example/v1", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_STREQ(script.tag, "loon.response");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.loon.example", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void representative_surge_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Representative.Surge.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.surge.example/v1", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_STREQ(script.tag, "Surge.Request");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Feature=true&Mode=surge");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.surge.example/v1", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_STREQ(script.tag, "Surge.Response");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Feature=\"true\"&Mode=surge");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.surge.example", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void representative_quantumultx_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Representative.QuantumultX.snippet");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_script_result_t script;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 3);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.qx.example/v1", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example/qx-response.js");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://ads.qx.example", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT_DICT);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "http://old.qx.example/path", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://new.qx.example/path");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.qx.example", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void plugin_style_script_matches_response_and_resolves_arguments(void)
 {
 	const char *config =
@@ -339,6 +469,24 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"script/current_bili_enhanced_plugin_fixture_is_supported",
 		current_bili_enhanced_plugin_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/representative_loon_fixture_is_supported",
+		representative_loon_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/representative_surge_fixture_is_supported",
+		representative_surge_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/representative_quantumultx_fixture_is_supported",
+		representative_quantumultx_fixture_is_supported);
 	add_test(
 		tests,
 		count,

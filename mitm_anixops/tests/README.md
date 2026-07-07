@@ -25,7 +25,7 @@
 - `test_mitm.c`: MITM host/certificate/QUIC gate behavior.
 - `test_rewrite.c`: URL rewrite matching, action mapping, header rewrite dispatch, and mock/regex body rewrite application.
 - `test_script.c`: module argument parsing, HTTP script matching, and script dispatch metadata.
-- `fixtures/`: stable third-party module fixtures used by tests.
+- `fixtures/`: stable third-party and representative compatibility fixtures used by tests.
 - `test_main.c`: test registration and process exit status.
 - `test_harness.h`: lightweight assertion macros and shared declarations.
 - `examples/strategy_chain_demo.c`: minimal public-ABI demo checked by `make demo-check`.

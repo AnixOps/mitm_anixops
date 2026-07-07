@@ -1,0 +1,9 @@
+#!name = Representative Quantumult X Fixture
+
+#[rewrite_local]
+^https:\/\/api\.qx\.example\/v1 url script-response-body https://scripts.example/qx-response.js
+^https:\/\/ads\.qx\.example url reject-dict
+^http:\/\/old\.qx\.example\/(.*) url 302 https://new.qx.example/$1
+
+#[mitm]
+hostname = %APPEND% api.qx.example, ads.qx.example, old.qx.example

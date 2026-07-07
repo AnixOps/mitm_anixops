@@ -6,7 +6,6 @@ proxy client roadmap.
 ## Before A Stable Release
 
 - Keep `ci/abi_exports.txt` in sync with every intentional C ABI change.
-- Expand compatibility fixtures with representative Loon, Surge, and Quantumult X modules beyond BiliUniverse.
 - Decide whether unsupported-but-recognized rule actions should remain ignored or return `ANIXOPS_ERR_PARSE` in a future
   major/minor version.
 

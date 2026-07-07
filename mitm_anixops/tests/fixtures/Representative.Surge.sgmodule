@@ -1,0 +1,9 @@
+#!name = Representative Surge Fixture
+#!arguments = Feature:true,Mode:surge
+
+[Script]
+Surge.Request = type=http-request, pattern=^https:\/\/api\.surge\.example\/v1, requires-body=1, script-path=https://scripts.example/surge-request.js, argument=Feature={Feature}&Mode={Mode}
+Surge.Response = type=http-response, pattern=^https:\/\/api\.surge\.example\/v1, requires-body=1, script-path=https://scripts.example/surge-response.js, argument=Feature="{{{Feature}}}"&Mode={Mode}
+
+[MITM]
+hostname = api.surge.example

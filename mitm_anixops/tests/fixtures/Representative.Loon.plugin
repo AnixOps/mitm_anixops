@@ -1,0 +1,16 @@
+#!name = Representative Loon Fixture
+#!desc = Minimal Loon-style fixture for rewrite, script, arguments, and MITM parsing.
+
+[Argument]
+Mode = select,loon
+
+[URL Rewrite]
+^http:\/\/old\.loon\.example\/(.*) https://api.loon.example/$1 302
+^https:\/\/ads\.loon\.example reject-200
+
+[Script]
+http-request ^https:\/\/api\.loon\.example\/v1 requires-body=1, script-path=https://scripts.example/loon-request.js, tag=loon.request, argument=[{Mode}]
+http-response ^https:\/\/api\.loon\.example\/v1 requires-body=1, script-path=https://scripts.example/loon-response.js, tag=loon.response, argument=[{Mode}]
+
+[MitM]
+hostname = api.loon.example, ads.loon.example
