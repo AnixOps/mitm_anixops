@@ -6,8 +6,6 @@ proxy client roadmap.
 ## Before A Stable Release
 
 - Keep `ci/abi_exports.txt` in sync with every intentional C ABI change.
-- Decide whether unsupported-but-recognized rule actions should remain ignored or return `ANIXOPS_ERR_PARSE` in a future
-  major/minor version.
 
 ## Compatibility Gaps
 

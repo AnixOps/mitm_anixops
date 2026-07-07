@@ -196,6 +196,41 @@ static void unsupported_quantumultx_url_actions_are_ignored(void)
 	anixops_engine_free(engine);
 }
 
+static void unsupported_recognized_rewrite_actions_are_ignored(void)
+{
+	const char *config =
+		"[Rewrite]\n"
+		"^https://auth\\.test reject-401\n"
+		"^https://json\\.test request-body-json-replace $.enabled true\n"
+		"^https://echo\\.test echo-response text/plain hello\n"
+		"^https://header\\.test url header-add X-Test value\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	int status = ANIXOPS_ERR_PARSE;
+	size_t line = 123;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 0);
+	ANIXOPS_EXPECT_STREQ(message, "ok");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://auth.test", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://header.test", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+
+	anixops_engine_free(engine);
+}
+
 static void response_phase_rules_do_not_match_request_phase(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -599,6 +634,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/unsupported_quantumultx_url_actions_are_ignored",
 		unsupported_quantumultx_url_actions_are_ignored);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/unsupported_recognized_rewrite_actions_are_ignored",
+		unsupported_recognized_rewrite_actions_are_ignored);
 	add_test(tests, count, cap, "rewrite/response_phase_rules_do_not_match_request_phase", response_phase_rules_do_not_match_request_phase);
 	add_test(tests, count, cap, "rewrite/mock_request_body_rewrites_body_buffer", mock_request_body_rewrites_body_buffer);
 	add_test(tests, count, cap, "rewrite/mock_response_body_rewrites_only_response_phase", mock_response_body_rewrites_only_response_phase);
