@@ -27,6 +27,10 @@ $CandidatePrefixes = @()
 if (-not ([string]::IsNullOrWhiteSpace($MingwPrefix))) {
   $CandidatePrefixes += $MingwPrefix
 }
+if (-not ([string]::IsNullOrWhiteSpace($env:MSYS2_LOCATION))) {
+  $CandidatePrefixes += (Join-Path $env:MSYS2_LOCATION "ucrt64")
+  $CandidatePrefixes += (Join-Path $env:MSYS2_LOCATION "mingw64")
+}
 if (-not ([string]::IsNullOrWhiteSpace($env:GITHUB_WORKSPACE))) {
   $CandidatePrefixes += (Join-Path $env:GITHUB_WORKSPACE "msys64\ucrt64")
   $CandidatePrefixes += (Join-Path $env:GITHUB_WORKSPACE "msys64\mingw64")
@@ -42,11 +46,24 @@ if ($PathGcc) {
 }
 
 $MingwPrefix = $null
+$FallbackMingwPrefix = $null
 foreach ($Candidate in $CandidatePrefixes) {
-  if (-not ([string]::IsNullOrWhiteSpace($Candidate)) -and (Test-Path (Join-Path $Candidate "bin\gcc.exe"))) {
+  if ([string]::IsNullOrWhiteSpace($Candidate)) {
+    continue
+  }
+  if (-not (Test-Path (Join-Path $Candidate "bin\gcc.exe"))) {
+    continue
+  }
+  if (-not $FallbackMingwPrefix) {
+    $FallbackMingwPrefix = $Candidate
+  }
+  if (Test-Path (Join-Path $Candidate "include\regex.h")) {
     $MingwPrefix = $Candidate
     break
   }
+}
+if (-not $MingwPrefix) {
+  $MingwPrefix = $FallbackMingwPrefix
 }
 if ([string]::IsNullOrWhiteSpace($MingwPrefix) -or -not (Test-Path $MingwPrefix)) {
   throw "Unable to locate an MSYS2 MinGW prefix. Set MINGW_PREFIX or make sure setup-msys2 installed msys64 under the GitHub workspace."

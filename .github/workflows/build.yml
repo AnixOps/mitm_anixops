@@ -27,6 +27,7 @@ jobs:
         with:
           go-version: "1.22.x"
       - uses: msys2/setup-msys2@v2
+        id: msys2
         with:
           msystem: UCRT64
           update: true
@@ -36,8 +37,10 @@ jobs:
             zip
       - name: Build Windows binary
         shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
         run: |
-          $MsysRoot = Join-Path $env:GITHUB_WORKSPACE "msys64"
+          $MsysRoot = $env:MSYS2_LOCATION
           $env:PATH = "$(Join-Path $MsysRoot 'ucrt64\bin');$(Join-Path $MsysRoot 'usr\bin');$env:PATH"
           cd mitm_anixops
           .\examples\windows-bilibili\build-windows.ps1
