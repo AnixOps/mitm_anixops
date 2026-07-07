@@ -37,7 +37,8 @@ jobs:
       - name: Build Windows binary
         shell: pwsh
         run: |
-          $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
+          $MsysRoot = Join-Path $env:GITHUB_WORKSPACE "msys64"
+          $env:PATH = "$(Join-Path $MsysRoot 'ucrt64\bin');$(Join-Path $MsysRoot 'usr\bin');$env:PATH"
           cd mitm_anixops
           .\examples\windows-bilibili\build-windows.ps1
       - name: Package artifact
