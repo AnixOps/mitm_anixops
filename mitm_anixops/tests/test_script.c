@@ -388,6 +388,39 @@ static void quantumultx_rewrite_local_section_is_supported(void)
 	anixops_engine_free(engine);
 }
 
+static void quantumultx_url_prefixed_request_scripts_are_supported(void)
+{
+	const char *config =
+		"[rewrite_local]\n"
+		"^https://api\\.example\\.test/request-body url script-request-body https://scripts.example.test/qx-request-body.js\n"
+		"^https://api\\.example\\.test/request-header url script-request-header https://scripts.example.test/qx-request-header.js\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/request-body", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example.test/qx-request-body.js");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/request-header", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 0);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example.test/qx-request-header.js");
+
+	anixops_engine_free(engine);
+}
+
 static void sgmodule_inline_arguments_are_supported(void)
 {
 	const char *config =
@@ -496,6 +529,12 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 	add_test(tests, count, cap, "script/surge_style_script_rule_template_is_supported", surge_style_script_rule_template_is_supported);
 	add_test(tests, count, cap, "script/anixops_snippet_rewrite_script_lines_are_supported", anixops_snippet_rewrite_script_lines_are_supported);
 	add_test(tests, count, cap, "script/quantumultx_rewrite_local_section_is_supported", quantumultx_rewrite_local_section_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/quantumultx_url_prefixed_request_scripts_are_supported",
+		quantumultx_url_prefixed_request_scripts_are_supported);
 	add_test(tests, count, cap, "script/sgmodule_inline_arguments_are_supported", sgmodule_inline_arguments_are_supported);
 	add_test(
 		tests,
