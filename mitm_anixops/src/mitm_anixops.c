@@ -98,6 +98,8 @@ static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap
 static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags);
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
 static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern);
+static int anixops_regex_char_is_escaped(const char *pattern, size_t index);
+static int anixops_regex_closes_interval_quantifier(const char *pattern, size_t close_index);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
 static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
@@ -226,7 +228,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.21.0";
+	return "0.22.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2013,6 +2015,11 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			out[pos++] = pattern[i];
 			continue;
 		}
+		if (!in_class && ch == '?' && i > 0 && !anixops_regex_char_is_escaped(pattern, i - 1) &&
+			(pattern[i - 1] == '*' || pattern[i - 1] == '+' || pattern[i - 1] == '?' ||
+				(pattern[i - 1] == '}' && anixops_regex_closes_interval_quantifier(pattern, i - 1)))) {
+			continue;
+		}
 		if (!in_class && ch == '(' && i + 2 < len && pattern[i + 1] == '?' && pattern[i + 2] == ':') {
 			out[pos++] = '(';
 			i += 2;
@@ -2046,6 +2053,44 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 	out[pos] = '\0';
 	*out_pattern = out;
 	return ANIXOPS_OK;
+}
+
+static int anixops_regex_char_is_escaped(const char *pattern, size_t index)
+{
+	size_t slash_count = 0;
+	if (pattern == NULL || index == 0) {
+		return 0;
+	}
+	while (index > 0 && pattern[index - 1] == '\\') {
+		slash_count++;
+		index--;
+	}
+	return (slash_count % 2) != 0;
+}
+
+static int anixops_regex_closes_interval_quantifier(const char *pattern, size_t close_index)
+{
+	size_t cursor;
+	int saw_digit = 0;
+	if (pattern == NULL || pattern[close_index] != '}' || anixops_regex_char_is_escaped(pattern, close_index)) {
+		return 0;
+	}
+	cursor = close_index;
+	while (cursor > 0) {
+		unsigned char ch;
+		cursor--;
+		ch = (unsigned char)pattern[cursor];
+		if (ch == '{' && !anixops_regex_char_is_escaped(pattern, cursor)) {
+			return saw_digit;
+		}
+		if (!(isdigit(ch) || ch == ',')) {
+			return 0;
+		}
+		if (isdigit(ch)) {
+			saw_digit = 1;
+		}
+	}
+	return 0;
 }
 
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code)
