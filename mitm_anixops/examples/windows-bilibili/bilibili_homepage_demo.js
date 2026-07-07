@@ -33,57 +33,68 @@ video,
 <script id="${marker}-script">
 (() => {
   const titleSelectors = [
-    "title",
     ".bili-video-card__info--tit",
     ".video-card__info--tit",
     ".feed-card .title",
-    "a[title]",
-    "[class*='title']",
-    "[class*='Title']"
+    ".bili-rank-list-video__title",
+    ".floor-single-card .title"
   ];
-  const coverSelectors = [
-    "img",
-    "picture",
-    "video",
-    "[class*='cover']",
-    "[class*='Cover']",
-    "[class*='pic']",
-    "[class*='Pic']"
-  ];
+  let scheduled = false;
 
-  function rewrite() {
-    document.title = "test";
-    for (const selector of titleSelectors) {
-      document.querySelectorAll(selector).forEach((node) => {
-        if (node.tagName === "TITLE") {
-          node.textContent = "test";
-          return;
-        }
-        if (node.children.length > 0 && node.querySelector("svg, img, video")) {
-          return;
-        }
-        if ((node.textContent || "").trim().length > 0) {
-          node.textContent = "test";
-        }
-        if (node.hasAttribute("title")) {
-          node.setAttribute("title", "test");
-        }
-      });
+  function setTitle(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+      return;
     }
-    for (const selector of coverSelectors) {
-      document.querySelectorAll(selector).forEach((node) => {
-        node.style.setProperty("filter", "brightness(0)", "important");
-        node.style.setProperty("background", "#000", "important");
-      });
+    if (node.children.length > 0 && node.querySelector("svg, img, picture, video")) {
+      return;
+    }
+    const text = (node.textContent || "").trim();
+    if (text && node.textContent !== "test") {
+      node.textContent = "test";
+    }
+    if (node.hasAttribute("title") && node.getAttribute("title") !== "test") {
+      node.setAttribute("title", "test");
     }
   }
 
+  function rewrite() {
+    scheduled = false;
+    if (document.title !== "test") {
+      document.title = "test";
+    }
+    const title = document.querySelector("title");
+    if (title && title.textContent !== "test") {
+      title.textContent = "test";
+    }
+    const seen = new Set();
+    for (const selector of titleSelectors) {
+      for (const node of document.querySelectorAll(selector)) {
+        if (seen.has(node)) {
+          continue;
+        }
+        seen.add(node);
+        setTitle(node);
+        if (seen.size >= 200) {
+          return;
+        }
+      }
+    }
+  }
+
+  function schedule() {
+    if (scheduled) {
+      return;
+    }
+    scheduled = true;
+    requestAnimationFrame(rewrite);
+  }
+
   rewrite();
-  new MutationObserver(rewrite).observe(document.documentElement, {
+  new MutationObserver(schedule).observe(document.body || document.documentElement, {
     childList: true,
     subtree: true
   });
-  setInterval(rewrite, 1000);
+  setInterval(schedule, 3000);
 })();
 </script>`;
 
