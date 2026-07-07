@@ -1,0 +1,54 @@
+name: build
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+jobs:
+  linux-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mitm_anixops
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run unit tests
+        run: |
+          make clean
+          make test
+          make all
+
+  windows-binary:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-libsystre
+            zip
+      - name: Build Windows binary
+        shell: pwsh
+        run: |
+          $env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
+          cd mitm_anixops
+          .\examples\windows-bilibili\build-windows.ps1
+      - name: Package artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist\anixops-mitm-windows-x64\build | Out-Null
+          Copy-Item mitm_anixops\build\anixops-mitm.exe dist\anixops-mitm-windows-x64\build\
+          Copy-Item -Recurse mitm_anixops\examples dist\anixops-mitm-windows-x64\
+          Copy-Item mitm_anixops\README.md dist\anixops-mitm-windows-x64\
+          Compress-Archive -Path dist\anixops-mitm-windows-x64 -DestinationPath dist\anixops-mitm-windows-x64.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anixops-mitm-windows-x64
+          path: dist/anixops-mitm-windows-x64.zip

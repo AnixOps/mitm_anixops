@@ -1,4 +1,4 @@
-name: anixops-mitm-link
+name: anixops-mitm-link-legacy
 
 on:
   pull_request:

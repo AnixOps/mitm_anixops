@@ -6,8 +6,6 @@ WORKSPACE=$(CDPATH= cd -- "$ROOT/.." && pwd)
 MIHOMO_BIN=${MIHOMO_BIN:-"$WORKSPACE/downloads/mihomo-linux-amd64-compatible-v1.19.27"}
 DEMO_DIR="$ROOT/examples/windows-bilibili"
 DEMO_PLUGIN="$DEMO_DIR/bilibili-homepage.plugin"
-DEMO_SCRIPT="$DEMO_DIR/bilibili_homepage_demo.js"
-DEMO_SCRIPT_URL="https://local.anixops.test/bilibili_homepage_demo.js"
 
 if [ ! -x "$MIHOMO_BIN" ]; then
 	echo "missing executable mihomo binary: $MIHOMO_BIN" >&2
@@ -15,10 +13,6 @@ if [ ! -x "$MIHOMO_BIN" ]; then
 fi
 if [ ! -f "$DEMO_PLUGIN" ]; then
 	echo "missing demo plugin: $DEMO_PLUGIN" >&2
-	exit 1
-fi
-if [ ! -f "$DEMO_SCRIPT" ]; then
-	echo "missing demo script: $DEMO_SCRIPT" >&2
 	exit 1
 fi
 
@@ -123,11 +117,8 @@ wait_port 127.0.0.1 "$MIHOMO_PORT" mihomo || {
 "$ROOT/build/e2e_mitm_proxy_shim" \
 	--listen "127.0.0.1:${SHIM_PORT}" \
 	--origin-listen "127.0.0.1:${ORIGIN_PORT}" \
-	--mihomo-proxy "http://127.0.0.1:${MIHOMO_PORT}" \
+	--upstream "http://127.0.0.1:${MIHOMO_PORT}" \
 	--config "$DEMO_PLUGIN" \
-	--script-runner "$ROOT/e2e/script_runtime/anixops_runner.js" \
-	--script-path-url "$DEMO_SCRIPT_URL" \
-	--script-path-file "$DEMO_SCRIPT" \
 	--ca-cert "$TMP/ca.pem" \
 	--ca-key "$TMP/ca.key" >"$TMP/shim.log" 2>&1 &
 SHIM_PID=$!

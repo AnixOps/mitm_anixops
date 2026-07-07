@@ -46,6 +46,24 @@ build/libmitm_anixops.so
 build/libmitm_anixops.a
 ```
 
+## Windows Binary
+
+GitHub Actions builds a no-UI Windows x64 zip artifact named `anixops-mitm-windows-x64`.
+
+For the built-in Bilibili homepage MITM demo:
+
+```powershell
+.\build\anixops-mitm.exe --bilibili-demo --listen 127.0.0.1:19080 --upstream http://127.0.0.1:7890 --install-ca --debug
+```
+
+Then set the browser HTTP and HTTPS proxy to `127.0.0.1:19080` and open `https://www.bilibili.com/`.
+
+For a Shadowsocks link through mihomo:
+
+```powershell
+.\build\anixops-mitm.exe --bilibili-demo --upstream "ss://BASE64_METHOD_PASSWORD@host:port#name" --core-bin C:\path\to\mihomo.exe --install-ca --debug
+```
+
 ## Required Check
 
 Run this before every commit:

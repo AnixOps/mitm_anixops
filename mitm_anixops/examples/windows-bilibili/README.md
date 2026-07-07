@@ -6,14 +6,15 @@ This demo proves the Windows test shape:
 browser -> mitm_anixops MITM shim -> mihomo HTTP proxy -> www.bilibili.com
 ```
 
-The module matches `https://www.bilibili.com/`, runs a local response script, removes CSP for the demo response, injects
-CSS/JS, changes visible titles to `test`, and darkens cover images.
+The binary can run without a UI. With `--bilibili-demo`, it matches `https://www.bilibili.com/`, runs a built-in
+response mutator, removes CSP for the demo response, injects CSS/JS, changes visible titles to `test`, and darkens
+cover images.
 
 ## Prerequisites
 
 - Windows 10/11.
-- A running mihomo HTTP or mixed proxy, for example `http://127.0.0.1:7890`.
-- Node.js in `PATH`.
+- A running HTTP/mixed proxy, for example mihomo at `http://127.0.0.1:7890`; or a `ss://` link plus a local
+  mihomo/sing-box executable.
 - Go and a MinGW-w64/MSYS2 UCRT64 GCC toolchain in `PATH`.
 - A POSIX regex library for MinGW-w64, such as the MSYS2 UCRT64 `libsystre` package.
 
@@ -36,22 +37,21 @@ From this directory in PowerShell:
 This creates:
 
 ```text
-..\..\build\e2e_mitm_proxy_shim.exe
+..\..\build\anixops-mitm.exe
 ```
 
-## Run With An Existing Mihomo Proxy
+## Run With An Existing HTTP/Mixed Proxy
 
 If mihomo is already listening on `127.0.0.1:7890`:
 
 ```powershell
-.\start-bilibili-demo.ps1 -MihomoProxy http://127.0.0.1:7890
+.\start-bilibili-demo.ps1 -Upstream http://127.0.0.1:7890 -InstallCert -Debug
 ```
 
-The script prints the generated CA path. Import it into the current user's Trusted Root store manually, or run with
-explicit CA installation:
+Or run the binary directly:
 
 ```powershell
-.\start-bilibili-demo.ps1 -MihomoProxy http://127.0.0.1:7890 -InstallCert
+..\..\build\anixops-mitm.exe --bilibili-demo --listen 127.0.0.1:19080 --upstream http://127.0.0.1:7890 --install-ca --debug
 ```
 
 Then set the browser HTTP and HTTPS proxy to:
@@ -73,12 +73,40 @@ Expected result:
 - Cover images are rendered dark/black by injected CSS.
 - The HTML response includes `X-AnixOps-Bilibili-Demo: applied`.
 
-## Run With A Temporary Mihomo Process
+## Run With An `ss://` Link
 
-If you want the script to start a direct-mode mihomo instance:
+If you have a Shadowsocks link and a mihomo binary:
 
 ```powershell
-.\start-bilibili-demo.ps1 -MihomoBin C:\path\to\mihomo-windows-amd64.exe -MihomoPort 19091
+.\start-bilibili-demo.ps1 -Upstream "ss://BASE64_METHOD_PASSWORD@host:port#name" -CoreBin C:\path\to\mihomo.exe -InstallCert -Debug
+```
+
+The same command works with sing-box:
+
+```powershell
+.\start-bilibili-demo.ps1 -Upstream "ss://BASE64_METHOD_PASSWORD@host:port#name" -CoreBin C:\path\to\sing-box.exe -Core sing-box -InstallCert -Debug
+```
+
+Direct binary form:
+
+```powershell
+..\..\build\anixops-mitm.exe --bilibili-demo --upstream "ss://BASE64_METHOD_PASSWORD@host:port#name" --core-bin C:\path\to\mihomo.exe --install-ca --debug
+```
+
+The tool generates a temporary mihomo/sing-box config with a local mixed proxy, then uses that local proxy as the
+AnixOps upstream.
+
+## Debugging
+
+Use `--debug` to print:
+
+```text
+CONNECT host, MITM intercept/bypass decision
+TLS handshake status
+request URL and method
+upstream response status/content-type/content-encoding
+matched built-in/script rule
+response mutation result
 ```
 
 ## Cleanup
@@ -101,6 +129,8 @@ mitm_anixops e2e CA
 
 - This is a test harness, not a production Windows service.
 - The shim dynamically generates leaf certificates from the temporary CA.
+- `--install-ca` installs the generated CA into the current user's root store. You can omit it and import the printed
+  CA path manually.
 - Non-MITM `CONNECT` traffic is tunneled through mihomo so normal page assets do not fail just because they are outside
   the demo module's `hostname` list.
 - For response scripts, the shim asks upstream for `identity` encoding so the local script receives text HTML instead

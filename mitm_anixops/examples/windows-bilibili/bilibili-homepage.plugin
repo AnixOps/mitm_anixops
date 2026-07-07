@@ -1,8 +1,8 @@
-#!name = ANIXOPS Windows Bilibili Homepage Demo
+#!name = AnixOps Windows Bilibili Homepage Demo
 #!desc = Demo module for testing mitm_anixops HTML response script injection on www.bilibili.com.
 
 [Script]
-http-response ^https?:\/\/www\.bilibili\.com\/ requires-body=1, script-path=https://local.anixops.test/bilibili_homepage_demo.js, tag=ANIXOPS.Bilibili.Homepage.Demo
+http-response ^https?:\/\/www\.bilibili\.com\/ requires-body=1, script-path=builtin:anixops/bilibili-homepage-demo, tag=AnixOps.Bilibili.Homepage.Demo
 
 [MitM]
 hostname = www.bilibili.com

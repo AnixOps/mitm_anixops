@@ -3,7 +3,7 @@ package main
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../include
 #cgo LDFLAGS: ${SRCDIR}/../../build/libmitm_anixops.a
-#cgo windows LDFLAGS: -lregex
+#cgo windows LDFLAGS: -lsystre
 #include "mitm_anixops.h"
 #include <stdlib.h>
 */
@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -30,6 +31,10 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +49,12 @@ const (
 	scriptNone         = C.ANIXOPS_SCRIPT_NONE
 	phaseRequest       = C.ANIXOPS_PHASE_REQUEST
 	phaseResponse      = C.ANIXOPS_PHASE_RESPONSE
+)
+
+const (
+	builtinBilibiliScriptPath = "builtin:anixops/bilibili-homepage-demo"
+	defaultListen             = "127.0.0.1:19080"
+	defaultExternalUpstream   = "http://127.0.0.1:7890"
 )
 
 type engine struct {
@@ -66,11 +77,14 @@ type proxyServer struct {
 	engine         engine
 	certs          *certCache
 	httpClient     *http.Client
-	mihomoProxy    *url.URL
+	upstreamProxy  *url.URL
 	scriptRunner   string
 	scriptPathURL  string
 	scriptPathFile string
 	tempDir        string
+	debug          bool
+	requestSeq     uint64
+	mutex          sync.Mutex
 }
 
 type scriptMatch struct {
@@ -89,36 +103,77 @@ type scriptDone struct {
 }
 
 func main() {
-	listen := flag.String("listen", "127.0.0.1:19080", "shim proxy listen address")
+	defaultCACert, defaultCAKey := defaultCAPaths()
+	listen := flag.String("listen", defaultListen, "local HTTP/HTTPS proxy listen address")
 	originListen := flag.String("origin-listen", "", "optional local HTTPS origin listen address")
-	mihomoProxyRaw := flag.String("mihomo-proxy", "http://127.0.0.1:19091", "mihomo HTTP proxy URL")
+	upstreamRaw := flag.String("upstream", "", "upstream HTTP/mixed proxy URL, or ss:// link when --core-bin is set")
+	mihomoProxyRaw := flag.String("mihomo-proxy", "", "deprecated alias for --upstream")
+	coreKind := flag.String("core", "auto", "core to launch for ss:// upstream: auto, mihomo, or sing-box")
+	coreBin := flag.String("core-bin", "", "optional mihomo/sing-box executable used when --upstream is ss://")
+	corePort := flag.Int("core-port", 0, "local mixed proxy port for launched core; 0 picks a free port")
+	coreHome := flag.String("core-home", "", "optional working directory for generated core config/logs")
 	configPath := flag.String("config", "", "AnixOps-style config fixture")
-	caCertPath := flag.String("ca-cert", "", "path to write test CA certificate")
-	caKeyPath := flag.String("ca-key", "", "path to write test CA key")
+	bilibiliDemo := flag.Bool("bilibili-demo", false, "use the built-in www.bilibili.com HTML MITM demo config")
+	caCertPath := flag.String("ca-cert", defaultCACert, "path to write/read test CA certificate")
+	caKeyPath := flag.String("ca-key", defaultCAKey, "path to write/read test CA key")
+	installCA := flag.Bool("install-ca", false, "install the generated CA into the current user's Windows root store")
+	debug := flag.Bool("debug", false, "enable verbose request, MITM, upstream, and script logs")
 	scriptRunner := flag.String("script-runner", "", "optional Node.js AnixOps script runner path")
 	scriptPathURL := flag.String("script-path-url", "", "script URL to map to a local file")
 	scriptPathFile := flag.String("script-path-file", "", "local script file for script-path-url")
 	flag.Parse()
 
-	if *configPath == "" || *caCertPath == "" || *caKeyPath == "" {
-		log.Fatal("--config, --ca-cert, and --ca-key are required")
+	if *mihomoProxyRaw != "" && *upstreamRaw == "" {
+		*upstreamRaw = *mihomoProxyRaw
+	}
+	if *upstreamRaw == "" {
+		*upstreamRaw = defaultExternalUpstream
+	}
+	if *configPath == "" && !*bilibiliDemo {
+		log.Fatal("--config is required unless --bilibili-demo is set")
 	}
 
-	eng, err := newEngine(*configPath)
+	configForEngine := *configPath
+	if *bilibiliDemo {
+		path, err := writeTempConfig(defaultBilibiliDemoConfig())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.Remove(path)
+		configForEngine = path
+		log.Printf("demo=bilibili config=%s script=%s", path, builtinBilibiliScriptPath)
+	}
+
+	eng, err := newEngine(configForEngine)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer eng.close()
 
-	ca, err := newCA()
+	upstreamProxy, coreProcess, coreCleanup, err := resolveUpstream(*upstreamRaw, *coreKind, *coreBin, *corePort, *coreHome, *debug)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := os.WriteFile(*caCertPath, ca.certPEM, 0644); err != nil {
+	if coreCleanup != nil {
+		defer coreCleanup()
+	}
+	if coreProcess != nil {
+		installSignalCleanup(coreProcess)
+	}
+
+	ca, err := loadOrCreateCA(*caCertPath, *caKeyPath)
+	if err != nil {
 		log.Fatal(err)
 	}
-	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(ca.key)})
-	if err := os.WriteFile(*caKeyPath, keyPEM, 0600); err != nil {
+	if *installCA {
+		if err := installUserCA(*caCertPath); err != nil {
+			log.Fatal(err)
+		}
+	}
+	if err := ensureParentDir(*caCertPath); err != nil {
+		log.Fatal(err)
+	}
+	if err := os.WriteFile(*caCertPath, ca.certPEM, 0644); err != nil {
 		log.Fatal(err)
 	}
 
@@ -129,20 +184,17 @@ func main() {
 		}
 	}
 
-	mihomoProxy, err := url.Parse(*mihomoProxyRaw)
-	if err != nil {
-		log.Fatal(err)
-	}
 	ps := &proxyServer{
 		engine:         eng,
 		certs:          cache,
-		mihomoProxy:    mihomoProxy,
+		upstreamProxy:  upstreamProxy,
 		scriptRunner:   *scriptRunner,
 		scriptPathURL:  *scriptPathURL,
 		scriptPathFile: *scriptPathFile,
 		tempDir:        os.TempDir(),
+		debug:          *debug,
 		httpClient: &http.Client{Transport: &http.Transport{
-			Proxy: http.ProxyURL(mihomoProxy),
+			Proxy: http.ProxyURL(upstreamProxy),
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 				NextProtos:         []string{"http/1.1"},
@@ -158,10 +210,415 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("READY listen=%s origin=%s mihomo=%s ca=%s", *listen, originLabel(*originListen), *mihomoProxyRaw, *caCertPath)
+	log.Printf("READY listen=%s origin=%s upstream=%s ca=%s debug=%v", *listen, originLabel(*originListen), upstreamProxy.String(), *caCertPath, *debug)
+	log.Printf("BROWSER_PROXY http=%s https=%s", *listen, *listen)
+	if *bilibiliDemo {
+		log.Printf("BILIBILI_TEST open=https://www.bilibili.com/ expected_header=X-AnixOps-Bilibili-Demo: applied")
+	}
 	if err := server.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+type shadowsocksLink struct {
+	Name     string
+	Method   string
+	Password string
+	Server   string
+	Port     int
+}
+
+func defaultCAPaths() (string, string) {
+	base, err := os.UserConfigDir()
+	if err != nil || base == "" {
+		base = "."
+	}
+	dir := filepath.Join(base, "AnixOps", "mitm_anixops")
+	return filepath.Join(dir, "anixops-ca.pem"), filepath.Join(dir, "anixops-ca.key")
+}
+
+func ensureParentDir(path string) error {
+	dir := filepath.Dir(path)
+	if dir == "." || dir == "" {
+		return nil
+	}
+	return os.MkdirAll(dir, 0755)
+}
+
+func loadOrCreateCA(certPath, keyPath string) (caMaterial, error) {
+	if certPath != "" && keyPath != "" {
+		certPEM, certErr := os.ReadFile(certPath)
+		keyPEM, keyErr := os.ReadFile(keyPath)
+		if certErr == nil && keyErr == nil {
+			cert, err := tls.X509KeyPair(certPEM, keyPEM)
+			if err != nil {
+				return caMaterial{}, err
+			}
+			leaf, err := x509.ParseCertificate(cert.Certificate[0])
+			if err != nil {
+				return caMaterial{}, err
+			}
+			key, ok := cert.PrivateKey.(*rsa.PrivateKey)
+			if !ok {
+				return caMaterial{}, errors.New("stored CA key is not RSA")
+			}
+			log.Printf("CA reuse cert=%s key=%s subject=%s", certPath, keyPath, leaf.Subject.CommonName)
+			return caMaterial{cert: leaf, key: key, certPEM: certPEM}, nil
+		}
+	}
+
+	ca, err := newCA()
+	if err != nil {
+		return caMaterial{}, err
+	}
+	if certPath != "" {
+		if err := ensureParentDir(certPath); err != nil {
+			return caMaterial{}, err
+		}
+		if err := os.WriteFile(certPath, ca.certPEM, 0644); err != nil {
+			return caMaterial{}, err
+		}
+	}
+	if keyPath != "" {
+		if err := ensureParentDir(keyPath); err != nil {
+			return caMaterial{}, err
+		}
+		keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(ca.key)})
+		if err := os.WriteFile(keyPath, keyPEM, 0600); err != nil {
+			return caMaterial{}, err
+		}
+	}
+	log.Printf("CA created cert=%s key=%s subject=%s", certPath, keyPath, ca.cert.Subject.CommonName)
+	return ca, nil
+}
+
+func installUserCA(certPath string) error {
+	if runtime.GOOS != "windows" {
+		return errors.New("--install-ca is only implemented on Windows")
+	}
+	cmd := exec.Command("certutil.exe", "-user", "-addstore", "Root", certPath)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("certutil failed: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	log.Printf("CA installed into current user's Root store: %s", certPath)
+	return nil
+}
+
+func writeTempConfig(text string) (string, error) {
+	file, err := os.CreateTemp("", "anixops-config-*.conf")
+	if err != nil {
+		return "", err
+	}
+	path := file.Name()
+	if _, err := file.WriteString(text); err != nil {
+		_ = file.Close()
+		_ = os.Remove(path)
+		return "", err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(path)
+		return "", err
+	}
+	return path, nil
+}
+
+func defaultBilibiliDemoConfig() string {
+	return "[Script]\n" +
+		"http-response ^https?:\\/\\/www\\.bilibili\\.com\\/ requires-body=1, script-path=" + builtinBilibiliScriptPath + ", tag=AnixOps.Bilibili.Homepage.Demo\n\n" +
+		"[MitM]\n" +
+		"hostname = www.bilibili.com\n"
+}
+
+func resolveUpstream(raw, coreKind, coreBin string, corePort int, coreHome string, debug bool) (*url.URL, *exec.Cmd, func(), error) {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if strings.EqualFold(parsed.Scheme, "ss") {
+		if coreBin == "" {
+			return nil, nil, nil, errors.New("ss:// upstream requires --core-bin pointing to mihomo or sing-box")
+		}
+		ss, err := parseShadowsocksURL(raw)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		return startCoreForSS(ss, coreKind, coreBin, corePort, coreHome, debug)
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return nil, nil, nil, fmt.Errorf("unsupported upstream scheme %q; use http://, https://, or ss:// with --core-bin", parsed.Scheme)
+	}
+	if parsed.Host == "" {
+		return nil, nil, nil, fmt.Errorf("upstream missing host: %s", raw)
+	}
+	return parsed, nil, nil, nil
+}
+
+func parseShadowsocksURL(raw string) (shadowsocksLink, error) {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return shadowsocksLink{}, err
+	}
+	if parsed.Scheme != "ss" {
+		return shadowsocksLink{}, fmt.Errorf("not an ss URL: %s", raw)
+	}
+	name, _ := url.QueryUnescape(parsed.Fragment)
+	host := parsed.Hostname()
+	portText := parsed.Port()
+	userInfo := ""
+	if parsed.User != nil {
+		userInfo = parsed.User.String()
+	}
+
+	if host == "" || (parsed.User == nil && portText == "") {
+		encoded := strings.TrimPrefix(raw, "ss://")
+		if hash := strings.Index(encoded, "#"); hash >= 0 {
+			encoded = encoded[:hash]
+		}
+		decoded, err := decodeSSBase64(encoded)
+		if err != nil {
+			return shadowsocksLink{}, err
+		}
+		if hash := strings.Index(decoded, "#"); hash >= 0 {
+			name, _ = url.QueryUnescape(decoded[hash+1:])
+			decoded = decoded[:hash]
+		}
+		at := strings.LastIndex(decoded, "@")
+		if at < 0 {
+			return shadowsocksLink{}, errors.New("ss URL missing server")
+		}
+		userInfo = decoded[:at]
+		hostPort := decoded[at+1:]
+		host, portText, err = net.SplitHostPort(hostPort)
+		if err != nil {
+			return shadowsocksLink{}, err
+		}
+	} else {
+		decodedUser, err := decodeSSBase64(userInfo)
+		if err == nil {
+			userInfo = decodedUser
+		}
+		if value, err := url.QueryUnescape(userInfo); err == nil {
+			userInfo = value
+		}
+	}
+
+	colon := strings.Index(userInfo, ":")
+	if colon < 0 {
+		return shadowsocksLink{}, errors.New("ss URL userinfo must contain method:password")
+	}
+	port, err := strconv.Atoi(portText)
+	if err != nil || port <= 0 || port > 65535 {
+		return shadowsocksLink{}, fmt.Errorf("invalid ss port %q", portText)
+	}
+	if name == "" {
+		name = "ss-upstream"
+	}
+	return shadowsocksLink{
+		Name:     name,
+		Method:   userInfo[:colon],
+		Password: userInfo[colon+1:],
+		Server:   host,
+		Port:     port,
+	}, nil
+}
+
+func decodeSSBase64(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if slash := strings.Index(value, "/?"); slash >= 0 {
+		value = value[:slash]
+	}
+	value = strings.TrimRight(value, "=")
+	if decoded, err := base64.RawURLEncoding.DecodeString(value); err == nil {
+		return string(decoded), nil
+	}
+	if decoded, err := base64.RawStdEncoding.DecodeString(value); err == nil {
+		return string(decoded), nil
+	}
+	for len(value)%4 != 0 {
+		value += "="
+	}
+	if decoded, err := base64.URLEncoding.DecodeString(value); err == nil {
+		return string(decoded), nil
+	}
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	return string(decoded), err
+}
+
+func startCoreForSS(ss shadowsocksLink, coreKind, coreBin string, corePort int, coreHome string, debug bool) (*url.URL, *exec.Cmd, func(), error) {
+	kind := strings.ToLower(coreKind)
+	if kind == "auto" {
+		base := strings.ToLower(filepath.Base(coreBin))
+		switch {
+		case strings.Contains(base, "sing"):
+			kind = "sing-box"
+		default:
+			kind = "mihomo"
+		}
+	}
+	if corePort == 0 {
+		port, err := pickFreePort()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		corePort = port
+	}
+	if coreHome == "" {
+		dir, err := os.MkdirTemp("", "anixops-core-*")
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		coreHome = dir
+	}
+	if err := os.MkdirAll(coreHome, 0755); err != nil {
+		return nil, nil, nil, err
+	}
+
+	var configPath string
+	var args []string
+	switch kind {
+	case "mihomo":
+		configPath = filepath.Join(coreHome, "mihomo.yaml")
+		if err := os.WriteFile(configPath, []byte(renderMihomoSSConfig(ss, corePort, debug)), 0600); err != nil {
+			return nil, nil, nil, err
+		}
+		args = []string{"-d", coreHome, "-f", configPath}
+	case "sing-box", "singbox":
+		configPath = filepath.Join(coreHome, "sing-box.json")
+		if err := os.WriteFile(configPath, []byte(renderSingBoxSSConfig(ss, corePort, debug)), 0600); err != nil {
+			return nil, nil, nil, err
+		}
+		args = []string{"run", "-c", configPath}
+	default:
+		return nil, nil, nil, fmt.Errorf("unsupported core %q", coreKind)
+	}
+
+	cmd := exec.Command(coreBin, args...)
+	logPath := filepath.Join(coreHome, "core.log")
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	if err := cmd.Start(); err != nil {
+		_ = logFile.Close()
+		return nil, nil, nil, err
+	}
+	if err := waitTCP("127.0.0.1", corePort, 8*time.Second); err != nil {
+		_ = cmd.Process.Kill()
+		_ = logFile.Close()
+		return nil, nil, nil, fmt.Errorf("core did not open local mixed proxy: %w (log: %s)", err, logPath)
+	}
+	cleanup := func() {
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+			_, _ = cmd.Process.Wait()
+		}
+		_ = logFile.Close()
+	}
+	upstream, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", corePort))
+	log.Printf("core started kind=%s pid=%d proxy=%s config=%s log=%s ss=%s:%d cipher=%s", kind, cmd.Process.Pid, upstream, configPath, logPath, ss.Server, ss.Port, ss.Method)
+	return upstream, cmd, cleanup, nil
+}
+
+func renderMihomoSSConfig(ss shadowsocksLink, port int, debug bool) string {
+	logLevel := "info"
+	if debug {
+		logLevel = "debug"
+	}
+	return fmt.Sprintf(`mixed-port: %d
+bind-address: 127.0.0.1
+allow-lan: false
+mode: rule
+log-level: %s
+ipv6: false
+proxies:
+  - name: anixops-upstream
+    type: ss
+    server: %s
+    port: %d
+    cipher: %s
+    password: %q
+proxy-groups:
+  - name: ANIXOPS
+    type: select
+    proxies:
+      - anixops-upstream
+rules:
+  - MATCH,ANIXOPS
+`, port, logLevel, ss.Server, ss.Port, ss.Method, ss.Password)
+}
+
+func renderSingBoxSSConfig(ss shadowsocksLink, port int, debug bool) string {
+	level := "info"
+	if debug {
+		level = "debug"
+	}
+	config := map[string]interface{}{
+		"log": map[string]interface{}{
+			"level": level,
+		},
+		"inbounds": []map[string]interface{}{
+			{
+				"type":        "mixed",
+				"tag":         "mixed-in",
+				"listen":      "127.0.0.1",
+				"listen_port": port,
+			},
+		},
+		"outbounds": []map[string]interface{}{
+			{
+				"type":        "shadowsocks",
+				"tag":         "anixops-upstream",
+				"server":      ss.Server,
+				"server_port": ss.Port,
+				"method":      ss.Method,
+				"password":    ss.Password,
+			},
+		},
+		"route": map[string]interface{}{
+			"final": "anixops-upstream",
+		},
+	}
+	data, _ := json.MarshalIndent(config, "", "  ")
+	return string(data) + "\n"
+}
+
+func pickFreePort() (int, error) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	defer ln.Close()
+	return ln.Addr().(*net.TCPAddr).Port, nil
+}
+
+func waitTCP(host string, port int, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	addr := net.JoinHostPort(host, strconv.Itoa(port))
+	for time.Now().Before(deadline) {
+		conn, err := net.DialTimeout("tcp", addr, 250*time.Millisecond)
+		if err == nil {
+			_ = conn.Close()
+			return nil
+		}
+		time.Sleep(150 * time.Millisecond)
+	}
+	return fmt.Errorf("timeout waiting for %s", addr)
+}
+
+func installSignalCleanup(cmd *exec.Cmd) {
+	signals := make(chan os.Signal, 2)
+	signal.Notify(signals, os.Interrupt)
+	go func() {
+		sig := <-signals
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+		}
+		log.Printf("stopped by signal=%s", sig)
+		os.Exit(130)
+	}()
 }
 
 func newEngine(configPath string) (engine, error) {
@@ -187,6 +644,19 @@ func newEngine(configPath string) (engine, error) {
 func (e engine) close() {
 	if e.ptr != nil {
 		C.anixops_engine_free(e.ptr)
+	}
+}
+
+func (ps *proxyServer) nextRequestID() uint64 {
+	ps.mutex.Lock()
+	defer ps.mutex.Unlock()
+	ps.requestSeq++
+	return ps.requestSeq
+}
+
+func (ps *proxyServer) debugf(format string, args ...interface{}) {
+	if ps.debug {
+		log.Printf("DEBUG "+format, args...)
 	}
 }
 
@@ -242,44 +712,56 @@ func (ps *proxyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ps *proxyServer) handlePlainHTTP(w http.ResponseWriter, r *http.Request) {
+	id := ps.nextRequestID()
 	rawURL := r.URL.String()
 	if !r.URL.IsAbs() {
 		rawURL = "http://" + r.Host + r.URL.RequestURI()
 	}
+	ps.debugf("#%d http method=%s url=%s host=%s", id, r.Method, rawURL, r.Host)
 	action, status, value, err := ps.engine.rewrite(rawURL)
 	if err != nil {
+		ps.debugf("#%d rewrite_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 	if writeRewrite(w, action, status, value) {
+		ps.debugf("#%d rewrite action=%d status=%d value=%s", id, int(action), status, value)
 		return
 	}
 	rawURL, host, header, body, err := ps.applyRequestScript(rawURL, r.Method, r.Host, r.Header, r.Body)
 	if err != nil {
+		ps.debugf("#%d request_script_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 	header = ps.prepareUpstreamHeader(rawURL, header)
 	resp, err := ps.forward(r.Context().Done(), r.Method, rawURL, host, header, body)
 	if err != nil {
+		ps.debugf("#%d upstream_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()
+	ps.debugf("#%d upstream status=%d content_type=%s encoding=%s", id, resp.StatusCode, resp.Header.Get("Content-Type"), resp.Header.Get("Content-Encoding"))
 	if err := ps.applyResponseScript(rawURL, r.Method, header, resp); err != nil {
+		ps.debugf("#%d response_script_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
+	ps.debugf("#%d done status=%d content_length=%d", id, resp.StatusCode, resp.ContentLength)
 	copyResponse(w, resp)
 }
 
 func (ps *proxyServer) handleConnect(w http.ResponseWriter, r *http.Request) {
+	id := ps.nextRequestID()
 	hostOnly := stripPort(r.Host)
 	intercept, err := ps.engine.shouldMITM(hostOnly)
 	if err != nil {
+		ps.debugf("#%d connect host=%s mitm_error=%v", id, r.Host, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
+	ps.debugf("#%d connect host=%s intercept=%v", id, r.Host, intercept)
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
@@ -292,6 +774,7 @@ func (ps *proxyServer) handleConnect(w http.ResponseWriter, r *http.Request) {
 	}
 	defer clientConn.Close()
 	if !intercept {
+		ps.debugf("#%d tunnel target=%s", id, r.Host)
 		ps.tunnelConnect(clientConn, r.Host)
 		return
 	}
@@ -308,52 +791,63 @@ func (ps *proxyServer) handleConnect(w http.ResponseWriter, r *http.Request) {
 		NextProtos:   []string{"http/1.1"},
 	})
 	if err := tlsConn.Handshake(); err != nil {
+		ps.debugf("#%d tls_handshake_error host=%s err=%v", id, hostOnly, err)
 		return
 	}
 	defer tlsConn.Close()
+	ps.debugf("#%d mitm_tls_established host=%s", id, hostOnly)
 
 	reader := bufio.NewReader(tlsConn)
 	for {
 		req, err := http.ReadRequest(reader)
 		if err != nil {
+			ps.debugf("#%d mitm_read_done host=%s err=%v", id, hostOnly, err)
 			return
 		}
-		ps.handleMITMRequest(tlsConn, r.Host, req)
+		ps.handleMITMRequest(tlsConn, r.Host, req, id)
 	}
 }
 
-func (ps *proxyServer) handleMITMRequest(conn net.Conn, connectHost string, req *http.Request) {
+func (ps *proxyServer) handleMITMRequest(conn net.Conn, connectHost string, req *http.Request, id uint64) {
 	defer req.Body.Close()
 	host := req.Host
 	if host == "" {
 		host = connectHost
 	}
 	rawURL := "https://" + host + req.URL.RequestURI()
+	ps.debugf("#%d mitm_request method=%s url=%s", id, req.Method, rawURL)
 	action, status, value, err := ps.engine.rewrite(rawURL)
 	if err != nil {
+		ps.debugf("#%d rewrite_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
 		return
 	}
 	if writeRewriteToConn(conn, action, status, value) {
+		ps.debugf("#%d rewrite action=%d status=%d value=%s", id, int(action), status, value)
 		return
 	}
 
 	rawURL, host, header, body, err := ps.applyRequestScript(rawURL, req.Method, host, req.Header, req.Body)
 	if err != nil {
+		ps.debugf("#%d request_script_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
 		return
 	}
 	header = ps.prepareUpstreamHeader(rawURL, header)
 	resp, err := ps.forward(nil, req.Method, rawURL, host, header, body)
 	if err != nil {
+		ps.debugf("#%d upstream_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
 		return
 	}
 	defer resp.Body.Close()
+	ps.debugf("#%d upstream status=%d content_type=%s encoding=%s", id, resp.StatusCode, resp.Header.Get("Content-Type"), resp.Header.Get("Content-Encoding"))
 	if err := ps.applyResponseScript(rawURL, req.Method, header, resp); err != nil {
+		ps.debugf("#%d response_script_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
 		return
 	}
+	ps.debugf("#%d mitm_response status=%d content_length=%d", id, resp.StatusCode, resp.ContentLength)
 	if err := resp.Write(conn); err != nil {
 		return
 	}
@@ -416,6 +910,7 @@ func (ps *proxyServer) prepareUpstreamHeader(rawURL string, header http.Header) 
 		return nextHeader
 	}
 	nextHeader.Set("Accept-Encoding", "identity")
+	ps.debugf("identity_encoding url=%s tag=%s script=%s", rawURL, match.tag, match.scriptPath)
 	return nextHeader
 }
 
@@ -426,9 +921,6 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		return err
 	}
 	if match.kind == scriptNone {
-		return nil
-	}
-	if ps.scriptRunner == "" {
 		return nil
 	}
 
@@ -478,6 +970,13 @@ func (ps *proxyServer) runScript(
 	responseHeader http.Header,
 	bodyBytes []byte,
 ) (scriptDone, error) {
+	if match.scriptPath == builtinBilibiliScriptPath {
+		ps.debugf("builtin_script phase=%s tag=%s url=%s body_bytes=%d", phase, match.tag, scriptURL, len(bodyBytes))
+		return runBuiltinBilibiliScript(phase, responseStatus, responseHeader, bodyBytes), nil
+	}
+	if ps.scriptRunner == "" {
+		return scriptDone{}, fmt.Errorf("no script runner configured for %s", match.scriptPath)
+	}
 	scriptFile := ps.scriptPathFile
 	if match.scriptPath != ps.scriptPathURL {
 		return scriptDone{}, fmt.Errorf("no local script mapping for %s", match.scriptPath)
@@ -541,7 +1040,8 @@ func (ps *proxyServer) runScript(
 }
 
 func (ps *proxyServer) tunnelConnect(clientConn net.Conn, target string) {
-	upstreamAddr := proxyTCPAddress(ps.mihomoProxy)
+	upstreamAddr := proxyTCPAddress(ps.upstreamProxy)
+	ps.debugf("tunnel_connect target=%s upstream=%s", target, upstreamAddr)
 	upstreamConn, err := net.DialTimeout("tcp", upstreamAddr, 10*time.Second)
 	if err != nil {
 		writeRawError(clientConn, http.StatusBadGateway, err.Error())
@@ -583,6 +1083,112 @@ func (ps *proxyServer) tunnelConnect(clientConn net.Conn, target string) {
 		done <- struct{}{}
 	}()
 	<-done
+	ps.debugf("tunnel_closed target=%s", target)
+}
+
+func runBuiltinBilibiliScript(phase string, responseStatus int, responseHeader http.Header, bodyBytes []byte) scriptDone {
+	if phase != "response" {
+		return scriptDone{}
+	}
+	headers := flattenHeaders(responseHeader)
+	for key := range headers {
+		normalized := strings.ToLower(key)
+		if normalized == "content-security-policy" ||
+			normalized == "content-security-policy-report-only" ||
+			normalized == "content-encoding" ||
+			normalized == "content-length" {
+			delete(headers, key)
+		}
+	}
+	headers["Content-Type"] = "text/html; charset=utf-8"
+	headers["Cache-Control"] = "no-store"
+	headers["X-AnixOps-Bilibili-Demo"] = "applied"
+
+	body := string(bodyBytes)
+	marker := "anixops-bilibili-homepage-demo"
+	injection := `<style id="` + marker + `-style">
+img,
+picture,
+video,
+[class*="cover"],
+[class*="Cover"],
+[class*="pic"],
+[class*="Pic"] {
+  filter: brightness(0) !important;
+  background: #000 !important;
+}
+</style>
+<script id="` + marker + `-script">
+(() => {
+  const titleSelectors = [
+    "title",
+    ".bili-video-card__info--tit",
+    ".video-card__info--tit",
+    ".feed-card .title",
+    "a[title]",
+    "[class*='title']",
+    "[class*='Title']"
+  ];
+  const coverSelectors = [
+    "img",
+    "picture",
+    "video",
+    "[class*='cover']",
+    "[class*='Cover']",
+    "[class*='pic']",
+    "[class*='Pic']"
+  ];
+
+  function rewrite() {
+    document.title = "test";
+    for (const selector of titleSelectors) {
+      document.querySelectorAll(selector).forEach((node) => {
+        if (node.tagName === "TITLE") {
+          node.textContent = "test";
+          return;
+        }
+        if (node.children.length > 0 && node.querySelector("svg, img, video")) {
+          return;
+        }
+        if ((node.textContent || "").trim().length > 0) {
+          node.textContent = "test";
+        }
+        if (node.hasAttribute("title")) {
+          node.setAttribute("title", "test");
+        }
+      });
+    }
+    for (const selector of coverSelectors) {
+      document.querySelectorAll(selector).forEach((node) => {
+        node.style.setProperty("filter", "brightness(0)", "important");
+        node.style.setProperty("background", "#000", "important");
+      });
+    }
+  }
+
+  rewrite();
+  new MutationObserver(rewrite).observe(document.documentElement, {
+    childList: true,
+    subtree: true
+  });
+  setInterval(rewrite, 1000);
+})();
+</script>`
+	if !strings.Contains(body, marker) {
+		switch {
+		case strings.Contains(body, "</head>"):
+			body = strings.Replace(body, "</head>", injection+"</head>", 1)
+		case strings.Contains(body, "</body>"):
+			body = strings.Replace(body, "</body>", injection+"</body>", 1)
+		default:
+			body += injection
+		}
+	}
+	status := responseStatus
+	if status == 0 {
+		status = http.StatusOK
+	}
+	return scriptDone{Status: float64(status), Headers: headers, Body: &body}
 }
 
 func scriptDispatchURL(rawURL string) string {
