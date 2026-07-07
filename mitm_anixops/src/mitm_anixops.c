@@ -1,0 +1,2427 @@
+#define _POSIX_C_SOURCE 200809L
+
+#include "mitm_anixops.h"
+
+#include <ctype.h>
+#include <regex.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+
+typedef struct anixops_host_pattern {
+	char *pattern;
+	int deny;
+} anixops_host_pattern_t;
+
+typedef struct anixops_rewrite_rule {
+	char *source;
+	char *pattern;
+	char *replacement;
+	char *body_pattern;
+	char *header_name;
+	char *header_pattern;
+	regex_t regex;
+	regex_t body_regex;
+	regex_t header_regex;
+	int regex_ready;
+	int body_regex_ready;
+	int header_regex_ready;
+	anixops_rewrite_action_t action;
+	anixops_phase_t phase;
+	int status_code;
+} anixops_rewrite_rule_t;
+
+typedef struct anixops_script_rule {
+	char *source;
+	char *pattern;
+	char *script_path;
+	char *tag;
+	char *argument_template;
+	regex_t regex;
+	int regex_ready;
+	anixops_script_kind_t kind;
+	anixops_phase_t phase;
+	int requires_body;
+} anixops_script_rule_t;
+
+typedef struct anixops_argument {
+	char *name;
+	char *default_value;
+	char *value;
+} anixops_argument_t;
+
+struct anixops_engine {
+	anixops_host_pattern_t *hosts;
+	size_t host_len;
+	size_t host_cap;
+
+	anixops_rewrite_rule_t *rules;
+	size_t rule_len;
+	size_t rule_cap;
+
+	anixops_script_rule_t *scripts;
+	size_t script_len;
+	size_t script_cap;
+
+	anixops_argument_t *arguments;
+	size_t argument_len;
+	size_t argument_cap;
+
+	int mitm_enabled;
+	int h2_mitm_enabled;
+	int disable_quic_for_mitm;
+	int skip_server_cert_verify;
+	anixops_cert_state_t cert_state;
+};
+
+static char *anixops_strdup(const char *value);
+static char *anixops_strndup(const char *value, size_t len);
+static void anixops_free_rewrite_rule(anixops_rewrite_rule_t *rule);
+static void anixops_free_script_rule(anixops_script_rule_t *rule);
+static void anixops_free_argument(anixops_argument_t *argument);
+static int anixops_reserve_hosts(anixops_engine_t *engine, size_t want);
+static int anixops_reserve_rules(anixops_engine_t *engine, size_t want);
+static int anixops_reserve_scripts(anixops_engine_t *engine, size_t want);
+static int anixops_reserve_arguments(anixops_engine_t *engine, size_t want);
+static void anixops_trim_inplace(char *value);
+static void anixops_lower_inplace(char *value);
+static int anixops_parse_bool(const char *value);
+static int anixops_starts_with_ci(const char *value, const char *prefix);
+static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
+static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
+static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
+static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
+static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t action);
+static int anixops_rewrite_action_replaces_header_regex(anixops_rewrite_action_t action);
+static int anixops_parse_script_kind(const char *token, anixops_script_kind_t *kind, anixops_phase_t *phase);
+static int anixops_script_kind_requires_body_token(const char *token);
+static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t action);
+static int anixops_extract_attr(const char *attrs, const char *key, char *out, size_t out_cap);
+static int anixops_split_attr_segment(const char *segment, char *key, size_t key_cap, char *value, size_t value_cap);
+static void anixops_unquote_inplace(char *value);
+static int anixops_argument_index(const anixops_engine_t *engine, const char *name);
+static int anixops_engine_set_argument_default(anixops_engine_t *engine, const char *name, const char *value);
+static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const char *line);
+static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name);
+static int anixops_resolve_script_argument(
+	const anixops_engine_t *engine,
+	const char *argument_template,
+	char *out,
+	size_t out_cap);
+static int anixops_resolve_argument_list(
+	const anixops_engine_t *engine,
+	const char *argument_template,
+	char *out,
+	size_t out_cap);
+static int anixops_resolve_argument_template(
+	const anixops_engine_t *engine,
+	const char *argument_template,
+	char *out,
+	size_t out_cap);
+static int anixops_expand_replacement(
+	const char *input,
+	const char *replacement,
+	const regmatch_t *matches,
+	size_t match_count,
+	char *out,
+	size_t out_cap);
+static int anixops_apply_body_regex_replacement(
+	const char *body,
+	const anixops_rewrite_rule_t *rule,
+	char *out,
+	size_t out_cap,
+	int *out_replaced);
+static int anixops_apply_regex_replacement(
+	const char *input,
+	const regex_t *regex,
+	int regex_ready,
+	const char *replacement,
+	char *out,
+	size_t out_cap,
+	int *out_replaced);
+static int anixops_append_expanded_replacement(
+	const char *input,
+	const char *replacement,
+	const regmatch_t *matches,
+	size_t match_count,
+	char *out,
+	size_t out_cap,
+	size_t *pos);
+static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const char *start, size_t len);
+static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char value);
+static int anixops_wildcard_match(const char *pattern, const char *text);
+static void anixops_normalize_host(const char *input, char *out, size_t out_cap);
+static int anixops_host_pattern_matches(const char *pattern, const char *host);
+static void anixops_set_mitm_result(
+	anixops_mitm_decision_t *out,
+	anixops_mitm_decision_type_t decision,
+	anixops_mitm_reason_t reason,
+	const char *pattern,
+	const char *message);
+static void anixops_set_rewrite_none(anixops_rewrite_result_t *out);
+static void anixops_set_header_rewrite_none(anixops_header_rewrite_result_t *out);
+static void anixops_set_script_none(anixops_script_result_t *out);
+static void anixops_copy_text(char *dst, size_t cap, const char *src);
+static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
+
+ANIXOPS_API const char *anixops_version(void)
+{
+	return "0.2.0";
+}
+
+ANIXOPS_API anixops_engine_t *anixops_engine_new(void)
+{
+	anixops_engine_t *engine = (anixops_engine_t *)calloc(1, sizeof(*engine));
+	if (engine == NULL) {
+		return NULL;
+	}
+	engine->mitm_enabled = 0;
+	engine->h2_mitm_enabled = 1;
+	engine->disable_quic_for_mitm = 1;
+	engine->skip_server_cert_verify = 0;
+	engine->cert_state = ANIXOPS_CERT_UNKNOWN;
+	return engine;
+}
+
+ANIXOPS_API void anixops_engine_free(anixops_engine_t *engine)
+{
+	if (engine == NULL) {
+		return;
+	}
+	anixops_engine_clear(engine);
+	free(engine);
+}
+
+ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine)
+{
+	size_t i;
+	if (engine == NULL) {
+		return;
+	}
+	for (i = 0; i < engine->host_len; i++) {
+		free(engine->hosts[i].pattern);
+	}
+	free(engine->hosts);
+	engine->hosts = NULL;
+	engine->host_len = 0;
+	engine->host_cap = 0;
+
+	for (i = 0; i < engine->rule_len; i++) {
+		anixops_free_rewrite_rule(&engine->rules[i]);
+	}
+	free(engine->rules);
+	engine->rules = NULL;
+	engine->rule_len = 0;
+	engine->rule_cap = 0;
+
+	for (i = 0; i < engine->script_len; i++) {
+		anixops_free_script_rule(&engine->scripts[i]);
+	}
+	free(engine->scripts);
+	engine->scripts = NULL;
+	engine->script_len = 0;
+	engine->script_cap = 0;
+
+	for (i = 0; i < engine->argument_len; i++) {
+		anixops_free_argument(&engine->arguments[i]);
+	}
+	free(engine->arguments);
+	engine->arguments = NULL;
+	engine->argument_len = 0;
+	engine->argument_cap = 0;
+
+	engine->mitm_enabled = 0;
+	engine->h2_mitm_enabled = 1;
+	engine->disable_quic_for_mitm = 1;
+	engine->skip_server_cert_verify = 0;
+	engine->cert_state = ANIXOPS_CERT_UNKNOWN;
+}
+
+ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char *config_text)
+{
+	char *copy;
+	char *saveptr;
+	char *line;
+	enum {
+		SECTION_NONE,
+		SECTION_ARGUMENT,
+		SECTION_REWRITE,
+		SECTION_SCRIPT,
+		SECTION_MITM
+	} section = SECTION_NONE;
+
+	if (engine == NULL || config_text == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	copy = anixops_strdup(config_text);
+	if (copy == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+
+	for (line = strtok_r(copy, "\n", &saveptr); line != NULL; line = strtok_r(NULL, "\n", &saveptr)) {
+		char *eq;
+		char *key;
+		char *value;
+		size_t len;
+		if (line[0] != '\0' && line[strlen(line) - 1] == '\r') {
+			line[strlen(line) - 1] = '\0';
+		}
+		anixops_trim_inplace(line);
+		len = strlen(line);
+		if (len >= 3 && line[0] == '#' && line[1] == '[' && line[len - 1] == ']') {
+			line[len - 1] = '\0';
+			key = line + 2;
+			anixops_trim_inplace(key);
+			if (strcasecmp(key, "rewrite_local") == 0 ||
+				strcasecmp(key, "rewrite local") == 0 ||
+				strcasecmp(key, "rewrite") == 0 ||
+				strcasecmp(key, "url rewrite") == 0 ||
+				strcasecmp(key, "remote rewrite") == 0) {
+				section = SECTION_REWRITE;
+			}
+			else if (strcasecmp(key, "mitm") == 0) {
+				section = SECTION_MITM;
+			}
+			else if (strcasecmp(key, "script") == 0 || strcasecmp(key, "remote script") == 0) {
+				section = SECTION_SCRIPT;
+			}
+			else if (strcasecmp(key, "argument") == 0 || strcasecmp(key, "arguments") == 0) {
+				section = SECTION_ARGUMENT;
+			}
+			else {
+				section = SECTION_NONE;
+			}
+			continue;
+		}
+		if (anixops_starts_with_ci(line, "#!arguments") &&
+			(line[11] == '\0' || line[11] == '=' || isspace((unsigned char)line[11]))) {
+			eq = strchr(line, '=');
+			if (eq != NULL) {
+				int rc;
+				value = eq + 1;
+				anixops_trim_inplace(value);
+				rc = anixops_engine_add_inline_arguments(engine, value);
+				if (rc != ANIXOPS_OK) {
+					free(copy);
+					return rc;
+				}
+			}
+			continue;
+		}
+		if (line[0] == '\0' || line[0] == '#' || (line[0] == '/' && line[1] == '/')) {
+			continue;
+		}
+		if (len >= 2 && line[0] == '[' && line[len - 1] == ']') {
+			line[len - 1] = '\0';
+			key = line + 1;
+			anixops_trim_inplace(key);
+			if (strcasecmp(key, "argument") == 0 || strcasecmp(key, "arguments") == 0) {
+				section = SECTION_ARGUMENT;
+			}
+			else if (strcasecmp(key, "rewrite") == 0 ||
+				strcasecmp(key, "url rewrite") == 0 ||
+				strcasecmp(key, "remote rewrite") == 0) {
+				section = SECTION_REWRITE;
+			}
+			else if (strcasecmp(key, "mitm") == 0) {
+				section = SECTION_MITM;
+			}
+			else if (strcasecmp(key, "script") == 0 || strcasecmp(key, "remote script") == 0) {
+				section = SECTION_SCRIPT;
+			}
+			else {
+				section = SECTION_NONE;
+			}
+			continue;
+		}
+
+		if (section == SECTION_REWRITE) {
+			size_t script_count = engine->script_len;
+			int rc = anixops_engine_add_script_rule(engine, line);
+			if (rc != ANIXOPS_OK) {
+				free(copy);
+				return rc;
+			}
+			if (engine->script_len != script_count) {
+				continue;
+			}
+			rc = anixops_engine_add_rewrite_rule(engine, line);
+			if (rc != ANIXOPS_OK) {
+				free(copy);
+				return rc;
+			}
+			continue;
+		}
+		if (section == SECTION_SCRIPT) {
+			int rc = anixops_engine_add_script_rule(engine, line);
+			if (rc != ANIXOPS_OK) {
+				free(copy);
+				return rc;
+			}
+			continue;
+		}
+		if (section == SECTION_ARGUMENT) {
+			int rc = anixops_engine_add_argument(engine, line);
+			if (rc != ANIXOPS_OK) {
+				free(copy);
+				return rc;
+			}
+			continue;
+		}
+		if (section != SECTION_MITM) {
+			continue;
+		}
+
+		eq = strchr(line, '=');
+		if (eq == NULL) {
+			continue;
+		}
+		*eq = '\0';
+		key = line;
+		value = eq + 1;
+		anixops_trim_inplace(key);
+		anixops_trim_inplace(value);
+		if (strcasecmp(key, "hostname") == 0) {
+			int rc = anixops_engine_add_mitm_hostname(engine, value);
+			if (rc != ANIXOPS_OK) {
+				free(copy);
+				return rc;
+			}
+		}
+		else if (strcasecmp(key, "skip-server-cert-verify") == 0) {
+			engine->skip_server_cert_verify = anixops_parse_bool(value);
+		}
+		else if (strcasecmp(key, "enable") == 0 || strcasecmp(key, "enabled") == 0) {
+			engine->mitm_enabled = anixops_parse_bool(value);
+		}
+		else if (strcasecmp(key, "h2") == 0 || strcasecmp(key, "h2-enable") == 0) {
+			engine->h2_mitm_enabled = anixops_parse_bool(value);
+		}
+		else if (strcasecmp(key, "disable-quic") == 0 || strcasecmp(key, "disable-mitm-quic") == 0) {
+			engine->disable_quic_for_mitm = anixops_parse_bool(value);
+		}
+	}
+
+	free(copy);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const char *line)
+{
+	const char *cursor;
+	char pattern[512];
+	char second[2048];
+	char third[2048];
+	char fourth[2048];
+	char fifth[2048];
+	int have_third;
+	int have_fourth;
+	int have_fifth;
+	anixops_rewrite_action_t action = ANIXOPS_REWRITE_NONE;
+	int status_code = 0;
+	const char *body_pattern = "";
+	const char *header_name = "";
+	const char *header_pattern = "";
+	const char *replacement = "";
+	anixops_rewrite_rule_t *rule;
+
+	if (engine == NULL || line == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	cursor = line;
+	if (!anixops_next_token(&cursor, pattern, sizeof(pattern))) {
+		return ANIXOPS_OK;
+	}
+	if (pattern[0] == '#' || (pattern[0] == '/' && pattern[1] == '/')) {
+		return ANIXOPS_OK;
+	}
+	if (!anixops_next_token(&cursor, second, sizeof(second))) {
+		return ANIXOPS_OK;
+	}
+	have_third = anixops_next_token(&cursor, third, sizeof(third));
+	have_fourth = anixops_next_token(&cursor, fourth, sizeof(fourth));
+	have_fifth = anixops_next_token(&cursor, fifth, sizeof(fifth));
+
+	if (anixops_parse_rewrite_action(second, &action, &status_code)) {
+		if (anixops_rewrite_action_replaces_body(action)) {
+			if (!have_third) {
+				return ANIXOPS_OK;
+			}
+			body_pattern = third;
+			replacement = have_fourth ? fourth : "";
+		}
+		else if (anixops_rewrite_action_rewrites_header(action)) {
+			if (!have_third) {
+				return ANIXOPS_OK;
+			}
+			header_name = third;
+			if (anixops_rewrite_action_replaces_header_regex(action)) {
+				if (!have_fourth) {
+					return ANIXOPS_OK;
+				}
+				header_pattern = fourth;
+				replacement = have_fifth ? fifth : "";
+			}
+			else {
+				replacement = have_fourth ? fourth : "";
+			}
+		}
+		else {
+			replacement = have_third ? third : "";
+		}
+	}
+	else if (have_third && anixops_parse_rewrite_action(third, &action, &status_code)) {
+		if (anixops_rewrite_action_replaces_body(action)) {
+			body_pattern = second;
+			replacement = have_fourth ? fourth : "";
+		}
+		else if (anixops_rewrite_action_rewrites_header(action)) {
+			header_name = second;
+			if (anixops_rewrite_action_replaces_header_regex(action)) {
+				if (!have_fourth) {
+					return ANIXOPS_OK;
+				}
+				header_pattern = fourth;
+				replacement = have_fifth ? fifth : "";
+			}
+			else {
+				replacement = have_fourth ? fourth : "";
+			}
+		}
+		else {
+			replacement = second;
+		}
+	}
+	else {
+		return ANIXOPS_OK;
+	}
+	if (anixops_rewrite_action_replaces_body(action) && body_pattern[0] == '\0') {
+		return ANIXOPS_OK;
+	}
+	if (anixops_rewrite_action_rewrites_header(action) && header_name[0] == '\0') {
+		return ANIXOPS_OK;
+	}
+	if (anixops_rewrite_action_replaces_header_regex(action) && header_pattern[0] == '\0') {
+		return ANIXOPS_OK;
+	}
+
+	if (anixops_reserve_rules(engine, engine->rule_len + 1) != ANIXOPS_OK) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	rule = &engine->rules[engine->rule_len];
+	memset(rule, 0, sizeof(*rule));
+	rule->source = anixops_strdup(line);
+	rule->pattern = anixops_strdup(pattern);
+	rule->replacement = anixops_strdup(replacement == NULL ? "" : replacement);
+	rule->body_pattern = anixops_strdup(body_pattern == NULL ? "" : body_pattern);
+	rule->header_name = anixops_strdup(header_name == NULL ? "" : header_name);
+	rule->header_pattern = anixops_strdup(header_pattern == NULL ? "" : header_pattern);
+	if (rule->source == NULL || rule->pattern == NULL || rule->replacement == NULL || rule->body_pattern == NULL ||
+		rule->header_name == NULL || rule->header_pattern == NULL) {
+		anixops_free_rewrite_rule(rule);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	if (regcomp(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
+		anixops_free_rewrite_rule(rule);
+		return ANIXOPS_ERR_REGEX;
+	}
+	rule->regex_ready = 1;
+	if (anixops_rewrite_action_replaces_body(action)) {
+		if (regcomp(&rule->body_regex, rule->body_pattern, REG_EXTENDED) != 0) {
+			anixops_free_rewrite_rule(rule);
+			return ANIXOPS_ERR_REGEX;
+		}
+		rule->body_regex_ready = 1;
+	}
+	if (anixops_rewrite_action_replaces_header_regex(action)) {
+		if (regcomp(&rule->header_regex, rule->header_pattern, REG_EXTENDED) != 0) {
+			anixops_free_rewrite_rule(rule);
+			return ANIXOPS_ERR_REGEX;
+		}
+		rule->header_regex_ready = 1;
+	}
+	rule->action = action;
+	rule->phase = anixops_default_phase_for_action(action);
+	rule->status_code = status_code;
+	engine->rule_len++;
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_engine_add_argument(anixops_engine_t *engine, const char *line)
+{
+	char *copy;
+	char *eq;
+	char *name;
+	char *definition;
+	const char *cursor;
+	char kind[128];
+	char default_value[2048];
+	int rc;
+
+	if (engine == NULL || line == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	copy = anixops_strdup(line);
+	if (copy == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	anixops_trim_inplace(copy);
+	if (copy[0] == '\0' || copy[0] == '#' || (copy[0] == '/' && copy[1] == '/')) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+	eq = strchr(copy, '=');
+	if (eq == NULL) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+	*eq = '\0';
+	name = copy;
+	definition = eq + 1;
+	anixops_trim_inplace(name);
+	anixops_trim_inplace(definition);
+	if (name[0] == '\0') {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+
+	cursor = definition;
+	if (!anixops_next_csv_field(&cursor, kind, sizeof(kind))) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+	default_value[0] = '\0';
+	(void)anixops_next_csv_field(&cursor, default_value, sizeof(default_value));
+	anixops_unquote_inplace(default_value);
+
+	rc = anixops_engine_set_argument_default(engine, name, default_value);
+	free(copy);
+	return rc;
+}
+
+ANIXOPS_API int anixops_engine_set_argument_value(anixops_engine_t *engine, const char *name, const char *value)
+{
+	int idx;
+	anixops_argument_t *slot;
+	char *next_value;
+
+	if (engine == NULL || name == NULL || value == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	if (name[0] == '\0') {
+		return ANIXOPS_OK;
+	}
+	idx = anixops_argument_index(engine, name);
+	if (idx < 0) {
+		if (anixops_reserve_arguments(engine, engine->argument_len + 1) != ANIXOPS_OK) {
+			return ANIXOPS_ERR_OUT_OF_MEMORY;
+		}
+		slot = &engine->arguments[engine->argument_len];
+		memset(slot, 0, sizeof(*slot));
+		slot->name = anixops_strdup(name);
+		slot->default_value = anixops_strdup("");
+		if (slot->name == NULL || slot->default_value == NULL) {
+			anixops_free_argument(slot);
+			return ANIXOPS_ERR_OUT_OF_MEMORY;
+		}
+		idx = (int)engine->argument_len;
+		engine->argument_len++;
+	}
+	next_value = anixops_strdup(value);
+	if (next_value == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	free(engine->arguments[idx].value);
+	engine->arguments[idx].value = next_value;
+	return ANIXOPS_OK;
+}
+
+static int anixops_engine_set_argument_default(anixops_engine_t *engine, const char *name, const char *value)
+{
+	int idx;
+	anixops_argument_t *slot;
+
+	if (engine == NULL || name == NULL || value == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	if (name[0] == '\0') {
+		return ANIXOPS_OK;
+	}
+	idx = anixops_argument_index(engine, name);
+	if (idx >= 0) {
+		char *next_default = anixops_strdup(value);
+		if (next_default == NULL) {
+			return ANIXOPS_ERR_OUT_OF_MEMORY;
+		}
+		free(engine->arguments[idx].default_value);
+		engine->arguments[idx].default_value = next_default;
+		return ANIXOPS_OK;
+	}
+
+	if (anixops_reserve_arguments(engine, engine->argument_len + 1) != ANIXOPS_OK) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	slot = &engine->arguments[engine->argument_len];
+	memset(slot, 0, sizeof(*slot));
+	slot->name = anixops_strdup(name);
+	slot->default_value = anixops_strdup(value);
+	if (slot->name == NULL || slot->default_value == NULL) {
+		anixops_free_argument(slot);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	engine->argument_len++;
+	return ANIXOPS_OK;
+}
+
+static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const char *line)
+{
+	char *copy;
+	const char *cursor;
+	char field[4096];
+
+	if (engine == NULL || line == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	copy = anixops_strdup(line);
+	if (copy == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	cursor = copy;
+	while (anixops_next_csv_field(&cursor, field, sizeof(field))) {
+		char *colon;
+		char *name;
+		char *value;
+		int rc;
+		if (field[0] == '\0') {
+			continue;
+		}
+		colon = strchr(field, ':');
+		if (colon == NULL) {
+			continue;
+		}
+		*colon = '\0';
+		name = field;
+		value = colon + 1;
+		anixops_trim_inplace(name);
+		anixops_trim_inplace(value);
+		anixops_unquote_inplace(value);
+		rc = anixops_engine_set_argument_default(engine, name, value);
+		if (rc != ANIXOPS_OK) {
+			free(copy);
+			return rc;
+		}
+	}
+	free(copy);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const char *line)
+{
+	char *copy;
+	char *trimmed;
+	const char *cursor;
+	char first[128];
+	char pattern[512];
+	char type[128];
+	char script_path[2048];
+	char tag[2048];
+	char argument_template[4096];
+	char requires_body[128];
+	anixops_script_kind_t kind = ANIXOPS_SCRIPT_NONE;
+	anixops_phase_t phase = ANIXOPS_PHASE_REQUEST;
+	const char *attrs = NULL;
+	int direct_script_path = 0;
+	anixops_script_rule_t *rule;
+
+	if (engine == NULL || line == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	copy = anixops_strdup(line);
+	if (copy == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	trimmed = copy;
+	anixops_trim_inplace(trimmed);
+	if (trimmed[0] == '\0' || trimmed[0] == '#' || (trimmed[0] == '/' && trimmed[1] == '/')) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+
+	pattern[0] = '\0';
+	type[0] = '\0';
+	script_path[0] = '\0';
+	tag[0] = '\0';
+	argument_template[0] = '\0';
+	requires_body[0] = '\0';
+
+	cursor = trimmed;
+	if (anixops_next_token(&cursor, first, sizeof(first)) && anixops_parse_script_kind(first, &kind, &phase)) {
+		if (!anixops_next_token(&cursor, pattern, sizeof(pattern))) {
+			free(copy);
+			return ANIXOPS_OK;
+		}
+		attrs = cursor;
+	}
+	else {
+		char *eq = strchr(trimmed, '=');
+		char *left;
+		if (eq == NULL) {
+			const char *rewrite_cursor = trimmed;
+			char mode[128];
+			char rewrite_type[128];
+			if (!anixops_next_token(&rewrite_cursor, pattern, sizeof(pattern)) ||
+				!anixops_next_token(&rewrite_cursor, mode, sizeof(mode))) {
+				free(copy);
+				return ANIXOPS_OK;
+			}
+			if (anixops_parse_script_kind(mode, &kind, &phase)) {
+				anixops_copy_text(rewrite_type, sizeof(rewrite_type), mode);
+				if (!anixops_next_token(&rewrite_cursor, script_path, sizeof(script_path))) {
+					free(copy);
+					return ANIXOPS_OK;
+				}
+			}
+			else if ((strcasecmp(mode, "url") == 0 || strcasecmp(mode, "header") == 0) &&
+				anixops_next_token(&rewrite_cursor, rewrite_type, sizeof(rewrite_type)) &&
+				anixops_parse_script_kind(rewrite_type, &kind, &phase)) {
+				if (!anixops_next_token(&rewrite_cursor, script_path, sizeof(script_path))) {
+					free(copy);
+					return ANIXOPS_OK;
+				}
+			}
+			else {
+				free(copy);
+				return ANIXOPS_OK;
+			}
+			if (anixops_script_kind_requires_body_token(rewrite_type)) {
+				anixops_copy_text(requires_body, sizeof(requires_body), "1");
+			}
+			direct_script_path = 1;
+			attrs = "";
+		}
+		else {
+			*eq = '\0';
+			left = trimmed;
+			attrs = eq + 1;
+			anixops_trim_inplace(left);
+			anixops_copy_text(tag, sizeof(tag), left);
+			if (!anixops_extract_attr(attrs, "type", type, sizeof(type)) ||
+				!anixops_parse_script_kind(type, &kind, &phase)) {
+				free(copy);
+				return ANIXOPS_OK;
+			}
+			if (!anixops_extract_attr(attrs, "pattern", pattern, sizeof(pattern))) {
+				free(copy);
+				return ANIXOPS_OK;
+			}
+		}
+	}
+
+	if (!direct_script_path) {
+		(void)anixops_extract_attr(attrs, "script-path", script_path, sizeof(script_path));
+		if (script_path[0] == '\0') {
+			(void)anixops_extract_attr(attrs, "script_path", script_path, sizeof(script_path));
+		}
+	}
+	(void)anixops_extract_attr(attrs, "tag", tag, sizeof(tag));
+	(void)anixops_extract_attr(attrs, "argument", argument_template, sizeof(argument_template));
+	(void)anixops_extract_attr(attrs, "requires-body", requires_body, sizeof(requires_body));
+	if (requires_body[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "requires_body", requires_body, sizeof(requires_body));
+	}
+	anixops_unquote_inplace(pattern);
+	anixops_unquote_inplace(script_path);
+	anixops_unquote_inplace(tag);
+	anixops_unquote_inplace(argument_template);
+	anixops_unquote_inplace(requires_body);
+
+	if (kind == ANIXOPS_SCRIPT_NONE || pattern[0] == '\0' || script_path[0] == '\0') {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+	if (anixops_reserve_scripts(engine, engine->script_len + 1) != ANIXOPS_OK) {
+		free(copy);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	rule = &engine->scripts[engine->script_len];
+	memset(rule, 0, sizeof(*rule));
+	rule->source = anixops_strdup(line);
+	rule->pattern = anixops_strdup(pattern);
+	rule->script_path = anixops_strdup(script_path);
+	rule->tag = anixops_strdup(tag);
+	rule->argument_template = anixops_strdup(argument_template);
+	if (rule->source == NULL || rule->pattern == NULL || rule->script_path == NULL ||
+		rule->tag == NULL || rule->argument_template == NULL) {
+		anixops_free_script_rule(rule);
+		free(copy);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	if (regcomp(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
+		anixops_free_script_rule(rule);
+		free(copy);
+		return ANIXOPS_ERR_REGEX;
+	}
+	rule->regex_ready = 1;
+	rule->kind = kind;
+	rule->phase = phase;
+	rule->requires_body = anixops_parse_bool(requires_body);
+	engine->script_len++;
+	free(copy);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_engine_add_mitm_hostname(anixops_engine_t *engine, const char *pattern)
+{
+	char *copy;
+	char *saveptr;
+	char *item;
+
+	if (engine == NULL || pattern == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	copy = anixops_strdup(pattern);
+	if (copy == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+
+	for (item = strtok_r(copy, ",", &saveptr); item != NULL; item = strtok_r(NULL, ",", &saveptr)) {
+		anixops_host_pattern_t *slot;
+		int deny = 0;
+		anixops_trim_inplace(item);
+		if (item[0] == '\0') {
+			continue;
+		}
+		if (anixops_starts_with_ci(item, "%APPEND%")) {
+			item += strlen("%APPEND%");
+			anixops_trim_inplace(item);
+		}
+		if (item[0] == '-' || item[0] == '!') {
+			deny = 1;
+			item++;
+			anixops_trim_inplace(item);
+		}
+		else if (item[0] == '+') {
+			item++;
+			anixops_trim_inplace(item);
+		}
+		if (item[0] == '\0') {
+			continue;
+		}
+		if (anixops_reserve_hosts(engine, engine->host_len + 1) != ANIXOPS_OK) {
+			free(copy);
+			return ANIXOPS_ERR_OUT_OF_MEMORY;
+		}
+		slot = &engine->hosts[engine->host_len];
+		{
+			char normalized[512];
+			anixops_normalize_host(item, normalized, sizeof(normalized));
+			slot->pattern = anixops_strdup(normalized);
+		}
+		if (slot->pattern == NULL) {
+			free(copy);
+			return ANIXOPS_ERR_OUT_OF_MEMORY;
+		}
+		slot->deny = deny;
+		engine->host_len++;
+	}
+
+	free(copy);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API void anixops_engine_set_mitm_enabled(anixops_engine_t *engine, int enabled)
+{
+	if (engine != NULL) {
+		engine->mitm_enabled = enabled ? 1 : 0;
+	}
+}
+
+ANIXOPS_API void anixops_engine_set_h2_mitm_enabled(anixops_engine_t *engine, int enabled)
+{
+	if (engine != NULL) {
+		engine->h2_mitm_enabled = enabled ? 1 : 0;
+	}
+}
+
+ANIXOPS_API void anixops_engine_set_disable_quic_for_mitm(anixops_engine_t *engine, int enabled)
+{
+	if (engine != NULL) {
+		engine->disable_quic_for_mitm = enabled ? 1 : 0;
+	}
+}
+
+ANIXOPS_API void anixops_engine_set_cert_state(anixops_engine_t *engine, anixops_cert_state_t state)
+{
+	if (engine != NULL) {
+		engine->cert_state = state;
+	}
+}
+
+ANIXOPS_API int anixops_mitm_evaluate(
+	const anixops_engine_t *engine,
+	const char *hostname,
+	int is_quic,
+	anixops_mitm_decision_t *out_decision)
+{
+	char host[512];
+	size_t i;
+	const char *allow_pattern = NULL;
+
+	if (engine == NULL || hostname == NULL || out_decision == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	anixops_normalize_host(hostname, host, sizeof(host));
+	if (!engine->mitm_enabled) {
+		anixops_set_mitm_result(out_decision, ANIXOPS_MITM_BYPASS, ANIXOPS_MITM_REASON_DISABLED, NULL, "mitm disabled");
+		return ANIXOPS_OK;
+	}
+	if (host[0] == '\0') {
+		anixops_set_mitm_result(out_decision, ANIXOPS_MITM_BYPASS, ANIXOPS_MITM_REASON_EMPTY_HOST, NULL, "empty host");
+		return ANIXOPS_OK;
+	}
+	if (engine->cert_state != ANIXOPS_CERT_TRUSTED) {
+		anixops_set_mitm_result(
+			out_decision,
+			ANIXOPS_MITM_BYPASS,
+			ANIXOPS_MITM_REASON_CERT_NOT_TRUSTED,
+			NULL,
+			"mitm certificate not trusted");
+		return ANIXOPS_OK;
+	}
+
+	for (i = 0; i < engine->host_len; i++) {
+		if (engine->hosts[i].deny && anixops_host_pattern_matches(engine->hosts[i].pattern, host)) {
+			anixops_set_mitm_result(
+				out_decision,
+				ANIXOPS_MITM_BYPASS,
+				ANIXOPS_MITM_REASON_DENY_HOST,
+				engine->hosts[i].pattern,
+				"host matched deny pattern");
+			return ANIXOPS_OK;
+		}
+	}
+
+	for (i = 0; i < engine->host_len; i++) {
+		if (!engine->hosts[i].deny && anixops_host_pattern_matches(engine->hosts[i].pattern, host)) {
+			allow_pattern = engine->hosts[i].pattern;
+			break;
+		}
+	}
+	if (allow_pattern == NULL) {
+		anixops_set_mitm_result(out_decision, ANIXOPS_MITM_BYPASS, ANIXOPS_MITM_REASON_NO_HOST_MATCH, NULL, "no mitm host match");
+		return ANIXOPS_OK;
+	}
+	if (is_quic && engine->disable_quic_for_mitm) {
+		anixops_set_mitm_result(
+			out_decision,
+			ANIXOPS_MITM_REJECT_QUIC,
+			ANIXOPS_MITM_REASON_QUIC_DISABLED_FOR_MITM,
+			allow_pattern,
+			"quic should be rejected so tcp tls can be intercepted");
+		return ANIXOPS_OK;
+	}
+
+	anixops_set_mitm_result(out_decision, ANIXOPS_MITM_INTERCEPT, ANIXOPS_MITM_REASON_ALLOWED, allow_pattern, "mitm allowed");
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_evaluate_url(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	anixops_rewrite_result_t *out_result)
+{
+	size_t i;
+
+	if (engine == NULL || url == NULL || out_result == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	anixops_set_rewrite_none(out_result);
+
+	for (i = 0; i < engine->rule_len; i++) {
+		const anixops_rewrite_rule_t *rule = &engine->rules[i];
+		regmatch_t matches[10];
+		int rc;
+		if (rule->phase != phase || !rule->regex_ready || anixops_rewrite_action_rewrites_header(rule->action)) {
+			continue;
+		}
+		rc = regexec(&rule->regex, url, sizeof(matches) / sizeof(matches[0]), matches, 0);
+		if (rc != 0) {
+			continue;
+		}
+		out_result->action = rule->action;
+		out_result->status_code = rule->status_code;
+		out_result->rule_index = (int)i;
+		anixops_copy_text(out_result->matched_pattern, sizeof(out_result->matched_pattern), rule->pattern);
+		if (rule->action == ANIXOPS_REWRITE_REDIRECT_302 || rule->action == ANIXOPS_REWRITE_REDIRECT_307 ||
+			rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY || rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
+			int expand_rc = anixops_expand_replacement(
+				url,
+				rule->replacement,
+				matches,
+				sizeof(matches) / sizeof(matches[0]),
+				out_result->value,
+				sizeof(out_result->value));
+			if (expand_rc != ANIXOPS_OK) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "replacement truncated");
+			}
+		}
+		else {
+			out_result->value[0] = '\0';
+		}
+		if (out_result->message[0] == '\0') {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "rewrite matched");
+		}
+		return ANIXOPS_OK;
+	}
+
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_apply_body(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *body,
+	char *out_body,
+	size_t out_body_cap,
+	anixops_rewrite_result_t *out_result)
+{
+	int rc;
+
+	if (engine == NULL || url == NULL || body == NULL || out_body == NULL || out_body_cap == 0 ||
+		out_result == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+
+	rc = anixops_rewrite_evaluate_url(engine, url, phase, out_result);
+	if (rc != ANIXOPS_OK) {
+		return rc;
+	}
+	if (out_result->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+		out_result->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
+		if (anixops_copy_text_checked(out_body, out_body_cap, out_result->value) != ANIXOPS_OK) {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+		}
+		return ANIXOPS_OK;
+	}
+	if (anixops_rewrite_action_replaces_body(out_result->action)) {
+		int replaced = 0;
+		const anixops_rewrite_rule_t *rule;
+		if (out_result->rule_index < 0 || (size_t)out_result->rule_index >= engine->rule_len) {
+			if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+			}
+			return ANIXOPS_OK;
+		}
+		rule = &engine->rules[out_result->rule_index];
+		if (!rule->body_regex_ready ||
+			anixops_apply_body_regex_replacement(body, rule, out_body, out_body_cap, &replaced) != ANIXOPS_OK) {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+			return ANIXOPS_OK;
+		}
+		if (replaced) {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "body rewritten");
+		}
+		else {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "body regex not matched");
+		}
+		return ANIXOPS_OK;
+	}
+
+	if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+		anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+	}
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_evaluate_header(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	size_t start_index,
+	const char *current_header_value,
+	anixops_header_rewrite_result_t *out_result)
+{
+	size_t i;
+
+	if (engine == NULL || url == NULL || out_result == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	anixops_set_header_rewrite_none(out_result);
+
+	for (i = start_index; i < engine->rule_len; i++) {
+		const anixops_rewrite_rule_t *rule = &engine->rules[i];
+		regmatch_t url_matches[10];
+		int rc;
+		if (rule->phase != phase || !rule->regex_ready || !anixops_rewrite_action_rewrites_header(rule->action)) {
+			continue;
+		}
+		rc = regexec(&rule->regex, url, sizeof(url_matches) / sizeof(url_matches[0]), url_matches, 0);
+		if (rc != 0) {
+			continue;
+		}
+
+		out_result->action = rule->action;
+		out_result->phase = rule->phase;
+		out_result->rule_index = (int)i;
+		anixops_copy_text(out_result->matched_pattern, sizeof(out_result->matched_pattern), rule->pattern);
+		anixops_copy_text(out_result->header_name, sizeof(out_result->header_name), rule->header_name);
+
+		if (anixops_rewrite_action_replaces_header_regex(rule->action)) {
+			int replaced = 0;
+			if (current_header_value == NULL) {
+				anixops_copy_text(out_result->value, sizeof(out_result->value), rule->replacement);
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "header regex value required");
+				return ANIXOPS_OK;
+			}
+			if (!rule->header_regex_ready ||
+				anixops_apply_regex_replacement(
+					current_header_value,
+					&rule->header_regex,
+					rule->header_regex_ready,
+					rule->replacement,
+					out_result->value,
+					sizeof(out_result->value),
+					&replaced) != ANIXOPS_OK) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "header value truncated");
+				return ANIXOPS_OK;
+			}
+			anixops_copy_text(
+				out_result->message,
+				sizeof(out_result->message),
+				replaced ? "header rewritten" : "header regex not matched");
+			return ANIXOPS_OK;
+		}
+
+		if (rule->action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL) {
+			out_result->value[0] = '\0';
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "header rewrite matched");
+			return ANIXOPS_OK;
+		}
+
+		if (anixops_expand_replacement(
+				url,
+				rule->replacement,
+				url_matches,
+				sizeof(url_matches) / sizeof(url_matches[0]),
+				out_result->value,
+				sizeof(out_result->value)) != ANIXOPS_OK) {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "header value truncated");
+		}
+		else {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "header rewrite matched");
+		}
+		return ANIXOPS_OK;
+	}
+
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_script_evaluate_url(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	anixops_script_result_t *out_result)
+{
+	size_t i;
+
+	if (engine == NULL || url == NULL || out_result == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	anixops_set_script_none(out_result);
+
+	for (i = 0; i < engine->script_len; i++) {
+		const anixops_script_rule_t *rule = &engine->scripts[i];
+		int rc;
+		if (rule->phase != phase || !rule->regex_ready) {
+			continue;
+		}
+		rc = regexec(&rule->regex, url, 0, NULL, 0);
+		if (rc != 0) {
+			continue;
+		}
+		out_result->kind = rule->kind;
+		out_result->phase = rule->phase;
+		out_result->requires_body = rule->requires_body;
+		out_result->rule_index = (int)i;
+		anixops_copy_text(out_result->matched_pattern, sizeof(out_result->matched_pattern), rule->pattern);
+		anixops_copy_text(out_result->script_path, sizeof(out_result->script_path), rule->script_path);
+		anixops_copy_text(out_result->tag, sizeof(out_result->tag), rule->tag);
+		if (anixops_resolve_script_argument(
+				engine,
+				rule->argument_template,
+				out_result->argument,
+				sizeof(out_result->argument)) != ANIXOPS_OK) {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "script argument truncated");
+		}
+		else {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "script matched");
+		}
+		return ANIXOPS_OK;
+	}
+
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_mitm_pattern_count(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->host_len;
+}
+
+ANIXOPS_API size_t anixops_engine_rewrite_rule_count(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->rule_len;
+}
+
+ANIXOPS_API size_t anixops_engine_script_rule_count(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->script_len;
+}
+
+ANIXOPS_API size_t anixops_engine_argument_count(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->argument_len;
+}
+
+ANIXOPS_API int anixops_engine_h2_mitm_enabled(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->h2_mitm_enabled;
+}
+
+static char *anixops_strdup(const char *value)
+{
+	if (value == NULL) {
+		return NULL;
+	}
+	return anixops_strndup(value, strlen(value));
+}
+
+static char *anixops_strndup(const char *value, size_t len)
+{
+	char *copy = (char *)malloc(len + 1);
+	if (copy == NULL) {
+		return NULL;
+	}
+	memcpy(copy, value, len);
+	copy[len] = '\0';
+	return copy;
+}
+
+static void anixops_free_rewrite_rule(anixops_rewrite_rule_t *rule)
+{
+	if (rule == NULL) {
+		return;
+	}
+	if (rule->regex_ready) {
+		regfree(&rule->regex);
+	}
+	if (rule->body_regex_ready) {
+		regfree(&rule->body_regex);
+	}
+	if (rule->header_regex_ready) {
+		regfree(&rule->header_regex);
+	}
+	free(rule->source);
+	free(rule->pattern);
+	free(rule->replacement);
+	free(rule->body_pattern);
+	free(rule->header_name);
+	free(rule->header_pattern);
+	memset(rule, 0, sizeof(*rule));
+}
+
+static void anixops_free_script_rule(anixops_script_rule_t *rule)
+{
+	if (rule == NULL) {
+		return;
+	}
+	if (rule->regex_ready) {
+		regfree(&rule->regex);
+	}
+	free(rule->source);
+	free(rule->pattern);
+	free(rule->script_path);
+	free(rule->tag);
+	free(rule->argument_template);
+	memset(rule, 0, sizeof(*rule));
+}
+
+static void anixops_free_argument(anixops_argument_t *argument)
+{
+	if (argument == NULL) {
+		return;
+	}
+	free(argument->name);
+	free(argument->default_value);
+	free(argument->value);
+	memset(argument, 0, sizeof(*argument));
+}
+
+static int anixops_reserve_hosts(anixops_engine_t *engine, size_t want)
+{
+	anixops_host_pattern_t *next;
+	size_t next_cap;
+	if (want <= engine->host_cap) {
+		return ANIXOPS_OK;
+	}
+	next_cap = engine->host_cap == 0 ? 8 : engine->host_cap * 2;
+	while (next_cap < want) {
+		next_cap *= 2;
+	}
+	next = (anixops_host_pattern_t *)realloc(engine->hosts, next_cap * sizeof(*next));
+	if (next == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	engine->hosts = next;
+	engine->host_cap = next_cap;
+	return ANIXOPS_OK;
+}
+
+static int anixops_reserve_rules(anixops_engine_t *engine, size_t want)
+{
+	anixops_rewrite_rule_t *next;
+	size_t next_cap;
+	if (want <= engine->rule_cap) {
+		return ANIXOPS_OK;
+	}
+	next_cap = engine->rule_cap == 0 ? 8 : engine->rule_cap * 2;
+	while (next_cap < want) {
+		next_cap *= 2;
+	}
+	next = (anixops_rewrite_rule_t *)realloc(engine->rules, next_cap * sizeof(*next));
+	if (next == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	memset(next + engine->rule_cap, 0, (next_cap - engine->rule_cap) * sizeof(*next));
+	engine->rules = next;
+	engine->rule_cap = next_cap;
+	return ANIXOPS_OK;
+}
+
+static int anixops_reserve_scripts(anixops_engine_t *engine, size_t want)
+{
+	anixops_script_rule_t *next;
+	size_t next_cap;
+	if (want <= engine->script_cap) {
+		return ANIXOPS_OK;
+	}
+	next_cap = engine->script_cap == 0 ? 8 : engine->script_cap * 2;
+	while (next_cap < want) {
+		next_cap *= 2;
+	}
+	next = (anixops_script_rule_t *)realloc(engine->scripts, next_cap * sizeof(*next));
+	if (next == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	memset(next + engine->script_cap, 0, (next_cap - engine->script_cap) * sizeof(*next));
+	engine->scripts = next;
+	engine->script_cap = next_cap;
+	return ANIXOPS_OK;
+}
+
+static int anixops_reserve_arguments(anixops_engine_t *engine, size_t want)
+{
+	anixops_argument_t *next;
+	size_t next_cap;
+	if (want <= engine->argument_cap) {
+		return ANIXOPS_OK;
+	}
+	next_cap = engine->argument_cap == 0 ? 8 : engine->argument_cap * 2;
+	while (next_cap < want) {
+		next_cap *= 2;
+	}
+	next = (anixops_argument_t *)realloc(engine->arguments, next_cap * sizeof(*next));
+	if (next == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	memset(next + engine->argument_cap, 0, (next_cap - engine->argument_cap) * sizeof(*next));
+	engine->arguments = next;
+	engine->argument_cap = next_cap;
+	return ANIXOPS_OK;
+}
+
+static void anixops_trim_inplace(char *value)
+{
+	char *start;
+	char *end;
+	if (value == NULL) {
+		return;
+	}
+	start = value;
+	while (*start != '\0' && isspace((unsigned char)*start)) {
+		start++;
+	}
+	if (start != value) {
+		memmove(value, start, strlen(start) + 1);
+	}
+	end = value + strlen(value);
+	while (end > value && isspace((unsigned char)*(end - 1))) {
+		end--;
+	}
+	*end = '\0';
+}
+
+static void anixops_lower_inplace(char *value)
+{
+	if (value == NULL) {
+		return;
+	}
+	while (*value != '\0') {
+		*value = (char)tolower((unsigned char)*value);
+		value++;
+	}
+}
+
+static int anixops_parse_bool(const char *value)
+{
+	if (value == NULL) {
+		return 0;
+	}
+	return strcasecmp(value, "true") == 0 ||
+		strcasecmp(value, "yes") == 0 ||
+		strcasecmp(value, "on") == 0 ||
+		strcmp(value, "1") == 0;
+}
+
+static int anixops_starts_with_ci(const char *value, const char *prefix)
+{
+	size_t prefix_len = strlen(prefix);
+	return strncasecmp(value, prefix, prefix_len) == 0;
+}
+
+static int anixops_next_token(const char **cursor, char *out, size_t out_cap)
+{
+	const char *p;
+	size_t pos = 0;
+	char quote = '\0';
+	if (cursor == NULL || *cursor == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	p = *cursor;
+	while (*p != '\0' && isspace((unsigned char)*p)) {
+		p++;
+	}
+	if (*p == '\0') {
+		out[0] = '\0';
+		*cursor = p;
+		return 0;
+	}
+	if (*p == '"' || *p == '\'') {
+		quote = *p;
+		p++;
+	}
+	while (*p != '\0') {
+		char ch = *p;
+		if (quote != '\0') {
+			if (ch == quote) {
+				p++;
+				break;
+			}
+			if (ch == '\\' && p[1] != '\0' && (p[1] == quote || p[1] == '\\')) {
+				p++;
+				ch = *p;
+			}
+		}
+		else if (isspace((unsigned char)ch)) {
+			break;
+		}
+		if (pos + 1 < out_cap) {
+			out[pos++] = ch;
+		}
+		p++;
+	}
+	out[pos] = '\0';
+	while (*p != '\0' && isspace((unsigned char)*p)) {
+		p++;
+	}
+	*cursor = p;
+	return 1;
+}
+
+static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap)
+{
+	const char *p;
+	size_t pos = 0;
+	char quote = '\0';
+	if (cursor == NULL || *cursor == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	p = *cursor;
+	while (*p != '\0' && (isspace((unsigned char)*p) || *p == ',')) {
+		p++;
+	}
+	if (*p == '\0') {
+		out[0] = '\0';
+		*cursor = p;
+		return 0;
+	}
+	while (*p != '\0') {
+		char ch = *p;
+		if (quote != '\0') {
+			if (ch == quote) {
+				quote = '\0';
+			}
+			else if (ch == '\\' && p[1] != '\0') {
+				if (pos + 1 < out_cap) {
+					out[pos++] = ch;
+				}
+				p++;
+				ch = *p;
+			}
+		}
+		else {
+			if (ch == '"' || ch == '\'') {
+				quote = ch;
+			}
+			else if (ch == ',') {
+				break;
+			}
+		}
+		if (pos + 1 < out_cap) {
+			out[pos++] = ch;
+		}
+		p++;
+	}
+	out[pos] = '\0';
+	anixops_trim_inplace(out);
+	if (*p == ',') {
+		p++;
+	}
+	*cursor = p;
+	return 1;
+}
+
+static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code)
+{
+	if (token == NULL || action == NULL || status_code == NULL) {
+		return 0;
+	}
+	if (strcmp(token, "302") == 0) {
+		*action = ANIXOPS_REWRITE_REDIRECT_302;
+		*status_code = 302;
+		return 1;
+	}
+	if (strcmp(token, "307") == 0) {
+		*action = ANIXOPS_REWRITE_REDIRECT_307;
+		*status_code = 307;
+		return 1;
+	}
+	if (strcasecmp(token, "reject") == 0 || strcasecmp(token, "reject-current-session") == 0) {
+		*action = ANIXOPS_REWRITE_REJECT;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "reject-200") == 0) {
+		*action = ANIXOPS_REWRITE_REJECT_200;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "reject-img") == 0) {
+		*action = ANIXOPS_REWRITE_REJECT_IMG;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "reject-video") == 0) {
+		*action = ANIXOPS_REWRITE_REJECT_VIDEO;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "reject-dict") == 0) {
+		*action = ANIXOPS_REWRITE_REJECT_DICT;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "reject-array") == 0) {
+		*action = ANIXOPS_REWRITE_REJECT_ARRAY;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "mock-request-body") == 0) {
+		*action = ANIXOPS_REWRITE_MOCK_REQUEST_BODY;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "mock-response-body") == 0) {
+		*action = ANIXOPS_REWRITE_MOCK_RESPONSE_BODY;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "request-body-replace-regex") == 0) {
+		*action = ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "response-body-replace-regex") == 0) {
+		*action = ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "header-replace") == 0) {
+		*action = ANIXOPS_REWRITE_HEADER_REPLACE;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "header-add") == 0) {
+		*action = ANIXOPS_REWRITE_HEADER_ADD;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "header-replace-regex") == 0) {
+		*action = ANIXOPS_REWRITE_HEADER_REPLACE_REGEX;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "response-header-del") == 0) {
+		*action = ANIXOPS_REWRITE_RESPONSE_HEADER_DEL;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "response-header-replace") == 0) {
+		*action = ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "response-header-add") == 0) {
+		*action = ANIXOPS_REWRITE_RESPONSE_HEADER_ADD;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "response-header-replace-regex") == 0) {
+		*action = ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX;
+		*status_code = 0;
+		return 1;
+	}
+	return 0;
+}
+
+static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX;
+}
+
+static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_HEADER_REPLACE ||
+		action == ANIXOPS_REWRITE_HEADER_ADD ||
+		action == ANIXOPS_REWRITE_HEADER_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_ADD ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX;
+}
+
+static int anixops_rewrite_action_replaces_header_regex(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_HEADER_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX;
+}
+
+static int anixops_parse_script_kind(const char *token, anixops_script_kind_t *kind, anixops_phase_t *phase)
+{
+	if (token == NULL || kind == NULL || phase == NULL) {
+		return 0;
+	}
+	if (strcasecmp(token, "http-request") == 0 || strcasecmp(token, "script-request-body") == 0 ||
+		strcasecmp(token, "script-request-header") == 0) {
+		*kind = ANIXOPS_SCRIPT_HTTP_REQUEST;
+		*phase = ANIXOPS_PHASE_REQUEST;
+		return 1;
+	}
+	if (strcasecmp(token, "http-response") == 0 || strcasecmp(token, "script-response-body") == 0 ||
+		strcasecmp(token, "script-response-header") == 0) {
+		*kind = ANIXOPS_SCRIPT_HTTP_RESPONSE;
+		*phase = ANIXOPS_PHASE_RESPONSE;
+		return 1;
+	}
+	return 0;
+}
+
+static int anixops_script_kind_requires_body_token(const char *token)
+{
+	const char *needle = "body";
+	size_t needle_len = strlen(needle);
+	if (token == NULL) {
+		return 0;
+	}
+	while (*token != '\0') {
+		if (strncasecmp(token, needle, needle_len) == 0) {
+			return 1;
+		}
+		token++;
+	}
+	return 0;
+}
+
+static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t action)
+{
+	if (action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY ||
+		action == ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_ADD ||
+		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX) {
+		return ANIXOPS_PHASE_RESPONSE;
+	}
+	return ANIXOPS_PHASE_REQUEST;
+}
+
+static int anixops_extract_attr(const char *attrs, const char *key, char *out, size_t out_cap)
+{
+	const char *segment_start;
+	const char *p;
+	char quote = '\0';
+	int bracket_depth = 0;
+	if (attrs == NULL || key == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	segment_start = attrs;
+	p = attrs;
+	while (1) {
+		char ch = *p;
+		int at_end = ch == '\0';
+		if (!at_end) {
+			if (quote != '\0') {
+				if (ch == quote) {
+					quote = '\0';
+				}
+				else if (ch == '\\' && p[1] != '\0') {
+					p++;
+				}
+			}
+			else {
+				if (ch == '"' || ch == '\'') {
+					quote = ch;
+				}
+				else if (ch == '[' || ch == '(' || ch == '{') {
+					bracket_depth++;
+				}
+				else if ((ch == ']' || ch == ')' || ch == '}') && bracket_depth > 0) {
+					bracket_depth--;
+				}
+				else if (ch == ',' && bracket_depth == 0) {
+					at_end = 1;
+				}
+			}
+		}
+		if (at_end) {
+			char segment[4096];
+			char parsed_key[256];
+			char parsed_value[4096];
+			size_t len = (size_t)(p - segment_start);
+			if (len >= sizeof(segment)) {
+				len = sizeof(segment) - 1;
+			}
+			memcpy(segment, segment_start, len);
+			segment[len] = '\0';
+			if (anixops_split_attr_segment(segment, parsed_key, sizeof(parsed_key), parsed_value, sizeof(parsed_value)) &&
+				strcasecmp(parsed_key, key) == 0) {
+				anixops_copy_text(out, out_cap, parsed_value);
+				return 1;
+			}
+			if (ch == '\0') {
+				break;
+			}
+			p++;
+			segment_start = p;
+			continue;
+		}
+		p++;
+	}
+	return 0;
+}
+
+static int anixops_split_attr_segment(const char *segment, char *key, size_t key_cap, char *value, size_t value_cap)
+{
+	const char *eq;
+	size_t key_len;
+	if (segment == NULL || key == NULL || value == NULL || key_cap == 0 || value_cap == 0) {
+		return 0;
+	}
+	eq = strchr(segment, '=');
+	if (eq == NULL) {
+		return 0;
+	}
+	key_len = (size_t)(eq - segment);
+	if (key_len >= key_cap) {
+		key_len = key_cap - 1;
+	}
+	memcpy(key, segment, key_len);
+	key[key_len] = '\0';
+	anixops_trim_inplace(key);
+	anixops_copy_text(value, value_cap, eq + 1);
+	anixops_trim_inplace(value);
+	return key[0] != '\0';
+}
+
+static void anixops_unquote_inplace(char *value)
+{
+	size_t len;
+	char quote;
+	if (value == NULL) {
+		return;
+	}
+	anixops_trim_inplace(value);
+	len = strlen(value);
+	if (len < 2) {
+		return;
+	}
+	quote = value[0];
+	if ((quote == '"' || quote == '\'') && value[len - 1] == quote) {
+		size_t i;
+		size_t pos = 0;
+		for (i = 1; i + 1 < len; i++) {
+			if (value[i] == '\\' && i + 2 < len) {
+				i++;
+			}
+			value[pos++] = value[i];
+		}
+		value[pos] = '\0';
+	}
+}
+
+static int anixops_argument_index(const anixops_engine_t *engine, const char *name)
+{
+	size_t i;
+	if (engine == NULL || name == NULL) {
+		return -1;
+	}
+	for (i = 0; i < engine->argument_len; i++) {
+		if (strcmp(engine->arguments[i].name, name) == 0) {
+			return (int)i;
+		}
+	}
+	return -1;
+}
+
+static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name)
+{
+	int idx = anixops_argument_index(engine, name);
+	if (idx < 0) {
+		return "";
+	}
+	if (engine->arguments[idx].value != NULL) {
+		return engine->arguments[idx].value;
+	}
+	return engine->arguments[idx].default_value == NULL ? "" : engine->arguments[idx].default_value;
+}
+
+static int anixops_resolve_script_argument(
+	const anixops_engine_t *engine,
+	const char *argument_template,
+	char *out,
+	size_t out_cap)
+{
+	const char *p;
+	if (out == NULL || out_cap == 0) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	out[0] = '\0';
+	if (argument_template == NULL || argument_template[0] == '\0') {
+		return ANIXOPS_OK;
+	}
+	p = argument_template;
+	while (*p != '\0' && isspace((unsigned char)*p)) {
+		p++;
+	}
+	if (*p == '[') {
+		return anixops_resolve_argument_list(engine, argument_template, out, out_cap);
+	}
+	return anixops_resolve_argument_template(engine, argument_template, out, out_cap);
+}
+
+static int anixops_resolve_argument_list(
+	const anixops_engine_t *engine,
+	const char *argument_template,
+	char *out,
+	size_t out_cap)
+{
+	const char *p = argument_template;
+	size_t pos = 0;
+	int first = 1;
+	int truncated = 0;
+	while (*p != '\0') {
+		if (*p == '{') {
+			const char *end = strchr(p + 1, '}');
+			char name[256];
+			const char *value;
+			size_t len;
+			if (end == NULL) {
+				break;
+			}
+			len = (size_t)(end - (p + 1));
+			if (len >= sizeof(name)) {
+				len = sizeof(name) - 1;
+			}
+			memcpy(name, p + 1, len);
+			name[len] = '\0';
+			anixops_trim_inplace(name);
+			value = anixops_argument_value(engine, name);
+			if (!first && anixops_append_char(out, out_cap, &pos, '&') != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			first = 0;
+			if (anixops_append_range(out, out_cap, &pos, name, strlen(name)) != ANIXOPS_OK ||
+				anixops_append_char(out, out_cap, &pos, '=') != ANIXOPS_OK ||
+				anixops_append_range(out, out_cap, &pos, value, strlen(value)) != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			p = end + 1;
+			continue;
+		}
+		p++;
+	}
+	if (out_cap > 0) {
+		out[pos < out_cap ? pos : out_cap - 1] = '\0';
+	}
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
+static int anixops_resolve_argument_template(
+	const anixops_engine_t *engine,
+	const char *argument_template,
+	char *out,
+	size_t out_cap)
+{
+	const char *p = argument_template;
+	size_t pos = 0;
+	int truncated = 0;
+	while (*p != '\0') {
+		if (p[0] == '{' && p[1] == '{' && p[2] == '{') {
+			const char *end = strstr(p + 3, "}}}");
+			char name[256];
+			const char *value;
+			size_t len;
+			if (end == NULL) {
+				if (anixops_append_char(out, out_cap, &pos, *p) != ANIXOPS_OK) {
+					truncated = 1;
+				}
+				p++;
+				continue;
+			}
+			len = (size_t)(end - (p + 3));
+			if (len >= sizeof(name)) {
+				len = sizeof(name) - 1;
+			}
+			memcpy(name, p + 3, len);
+			name[len] = '\0';
+			anixops_trim_inplace(name);
+			value = anixops_argument_value(engine, name);
+			if (anixops_append_range(out, out_cap, &pos, value, strlen(value)) != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			p = end + 3;
+			continue;
+		}
+		if (*p == '{') {
+			const char *end = strchr(p + 1, '}');
+			char name[256];
+			const char *value;
+			size_t len;
+			if (end == NULL) {
+				if (anixops_append_char(out, out_cap, &pos, *p) != ANIXOPS_OK) {
+					truncated = 1;
+				}
+				p++;
+				continue;
+			}
+			len = (size_t)(end - (p + 1));
+			if (len >= sizeof(name)) {
+				len = sizeof(name) - 1;
+			}
+			memcpy(name, p + 1, len);
+			name[len] = '\0';
+			anixops_trim_inplace(name);
+			value = anixops_argument_value(engine, name);
+			if (anixops_append_range(out, out_cap, &pos, value, strlen(value)) != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			p = end + 1;
+			continue;
+		}
+		if (anixops_append_char(out, out_cap, &pos, *p) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		p++;
+	}
+	if (out_cap > 0) {
+		out[pos < out_cap ? pos : out_cap - 1] = '\0';
+	}
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
+static int anixops_expand_replacement(
+	const char *input,
+	const char *replacement,
+	const regmatch_t *matches,
+	size_t match_count,
+	char *out,
+	size_t out_cap)
+{
+	size_t pos = 0;
+	const char *p = replacement == NULL ? "" : replacement;
+	int truncated = 0;
+	if (input == NULL || out == NULL || out_cap == 0) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	while (*p != '\0') {
+		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
+			size_t idx = (size_t)(p[1] - '0');
+			if (idx < match_count && matches[idx].rm_so >= 0 && matches[idx].rm_eo >= matches[idx].rm_so) {
+				size_t start = (size_t)matches[idx].rm_so;
+				size_t len = (size_t)(matches[idx].rm_eo - matches[idx].rm_so);
+				if (anixops_append_range(out, out_cap, &pos, input + start, len) != ANIXOPS_OK) {
+					truncated = 1;
+				}
+			}
+			p += 2;
+			continue;
+		}
+		if (*p == '\\' && p[1] == '/') {
+			if (anixops_append_char(out, out_cap, &pos, '/') != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			p += 2;
+			continue;
+		}
+		if (anixops_append_char(out, out_cap, &pos, *p) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		p++;
+	}
+	if (out_cap > 0) {
+		out[pos < out_cap ? pos : out_cap - 1] = '\0';
+	}
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
+static int anixops_apply_body_regex_replacement(
+	const char *body,
+	const anixops_rewrite_rule_t *rule,
+	char *out,
+	size_t out_cap,
+	int *out_replaced)
+{
+	if (rule == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	return anixops_apply_regex_replacement(
+		body,
+		&rule->body_regex,
+		rule->body_regex_ready,
+		rule->replacement,
+		out,
+		out_cap,
+		out_replaced);
+}
+
+static int anixops_apply_regex_replacement(
+	const char *input,
+	const regex_t *regex,
+	int regex_ready,
+	const char *replacement,
+	char *out,
+	size_t out_cap,
+	int *out_replaced)
+{
+	const char *cursor = input;
+	size_t pos = 0;
+	int truncated = 0;
+	int replaced = 0;
+	regmatch_t matches[10];
+
+	if (input == NULL || regex == NULL || out == NULL || out_cap == 0 || out_replaced == NULL || !regex_ready) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	out[0] = '\0';
+
+	while (regexec(regex, cursor, sizeof(matches) / sizeof(matches[0]), matches, 0) == 0) {
+		size_t prefix_len;
+		size_t advance;
+		if (matches[0].rm_so < 0 || matches[0].rm_eo < matches[0].rm_so) {
+			break;
+		}
+		prefix_len = (size_t)matches[0].rm_so;
+		advance = (size_t)matches[0].rm_eo;
+		if (anixops_append_range(out, out_cap, &pos, cursor, prefix_len) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		if (anixops_append_expanded_replacement(
+				cursor,
+				replacement,
+				matches,
+				sizeof(matches) / sizeof(matches[0]),
+				out,
+				out_cap,
+				&pos) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		replaced = 1;
+		if (advance == 0) {
+			if (cursor[0] == '\0') {
+				break;
+			}
+			if (anixops_append_char(out, out_cap, &pos, cursor[0]) != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			cursor++;
+			continue;
+		}
+		cursor += advance;
+	}
+	if (anixops_append_range(out, out_cap, &pos, cursor, strlen(cursor)) != ANIXOPS_OK) {
+		truncated = 1;
+	}
+	if (out_cap > 0) {
+		out[pos < out_cap ? pos : out_cap - 1] = '\0';
+	}
+	*out_replaced = replaced;
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
+static int anixops_append_expanded_replacement(
+	const char *input,
+	const char *replacement,
+	const regmatch_t *matches,
+	size_t match_count,
+	char *out,
+	size_t out_cap,
+	size_t *pos)
+{
+	const char *p = replacement == NULL ? "" : replacement;
+	int truncated = 0;
+	if (input == NULL || out == NULL || out_cap == 0 || pos == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	while (*p != '\0') {
+		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
+			size_t idx = (size_t)(p[1] - '0');
+			if (idx < match_count && matches[idx].rm_so >= 0 && matches[idx].rm_eo >= matches[idx].rm_so) {
+				size_t start = (size_t)matches[idx].rm_so;
+				size_t len = (size_t)(matches[idx].rm_eo - matches[idx].rm_so);
+				if (anixops_append_range(out, out_cap, pos, input + start, len) != ANIXOPS_OK) {
+					truncated = 1;
+				}
+			}
+			p += 2;
+			continue;
+		}
+		if (*p == '\\' && p[1] == '/') {
+			if (anixops_append_char(out, out_cap, pos, '/') != ANIXOPS_OK) {
+				truncated = 1;
+			}
+			p += 2;
+			continue;
+		}
+		if (anixops_append_char(out, out_cap, pos, *p) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		p++;
+	}
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
+static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const char *start, size_t len)
+{
+	size_t i;
+	int rc = ANIXOPS_OK;
+	for (i = 0; i < len; i++) {
+		if (anixops_append_char(out, out_cap, pos, start[i]) != ANIXOPS_OK) {
+			rc = ANIXOPS_ERR_CAPACITY;
+		}
+	}
+	return rc;
+}
+
+static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char value)
+{
+	if (*pos + 1 >= out_cap) {
+		return ANIXOPS_ERR_CAPACITY;
+	}
+	out[*pos] = value;
+	(*pos)++;
+	out[*pos] = '\0';
+	return ANIXOPS_OK;
+}
+
+static int anixops_wildcard_match(const char *pattern, const char *text)
+{
+	const char *star = NULL;
+	const char *retry = NULL;
+	while (*text != '\0') {
+		if (*pattern == '*') {
+			star = pattern++;
+			retry = text;
+		}
+		else if (*pattern == *text) {
+			pattern++;
+			text++;
+		}
+		else if (star != NULL) {
+			pattern = star + 1;
+			text = ++retry;
+		}
+		else {
+			return 0;
+		}
+	}
+	while (*pattern == '*') {
+		pattern++;
+	}
+	return *pattern == '\0';
+}
+
+static void anixops_normalize_host(const char *input, char *out, size_t out_cap)
+{
+	size_t len;
+	const char *start = input;
+	const char *end;
+	size_t colon_count = 0;
+	const char *last_colon = NULL;
+	const char *p;
+
+	if (out_cap == 0) {
+		return;
+	}
+	out[0] = '\0';
+	if (input == NULL) {
+		return;
+	}
+	while (*start != '\0' && isspace((unsigned char)*start)) {
+		start++;
+	}
+	end = start + strlen(start);
+	while (end > start && isspace((unsigned char)*(end - 1))) {
+		end--;
+	}
+	if (end > start && *start == '[') {
+		const char *close = memchr(start, ']', (size_t)(end - start));
+		if (close != NULL) {
+			start++;
+			end = close;
+		}
+	}
+	for (p = start; p < end; p++) {
+		if (*p == ':') {
+			colon_count++;
+			last_colon = p;
+		}
+	}
+	if (colon_count == 1 && last_colon != NULL) {
+		const char *q = last_colon + 1;
+		int all_digits = *q != '\0';
+		while (q < end) {
+			if (!isdigit((unsigned char)*q)) {
+				all_digits = 0;
+				break;
+			}
+			q++;
+		}
+		if (all_digits) {
+			end = last_colon;
+		}
+	}
+	len = (size_t)(end - start);
+	if (len >= out_cap) {
+		len = out_cap - 1;
+	}
+	memcpy(out, start, len);
+	out[len] = '\0';
+	anixops_lower_inplace(out);
+}
+
+static int anixops_host_pattern_matches(const char *pattern, const char *host)
+{
+	if (pattern == NULL || host == NULL || pattern[0] == '\0' || host[0] == '\0') {
+		return 0;
+	}
+	if (strcmp(pattern, "*") == 0) {
+		return 1;
+	}
+	if (anixops_starts_with_ci(pattern, "*.") && strcmp(pattern + 2, host) == 0) {
+		return 1;
+	}
+	return anixops_wildcard_match(pattern, host);
+}
+
+static void anixops_set_mitm_result(
+	anixops_mitm_decision_t *out,
+	anixops_mitm_decision_type_t decision,
+	anixops_mitm_reason_t reason,
+	const char *pattern,
+	const char *message)
+{
+	memset(out, 0, sizeof(*out));
+	out->decision = decision;
+	out->reason = reason;
+	anixops_copy_text(out->matched_pattern, sizeof(out->matched_pattern), pattern == NULL ? "" : pattern);
+	anixops_copy_text(out->message, sizeof(out->message), message == NULL ? "" : message);
+}
+
+static void anixops_set_rewrite_none(anixops_rewrite_result_t *out)
+{
+	memset(out, 0, sizeof(*out));
+	out->action = ANIXOPS_REWRITE_NONE;
+	out->status_code = 0;
+	out->rule_index = -1;
+	anixops_copy_text(out->message, sizeof(out->message), "no rewrite matched");
+}
+
+static void anixops_set_header_rewrite_none(anixops_header_rewrite_result_t *out)
+{
+	memset(out, 0, sizeof(*out));
+	out->action = ANIXOPS_REWRITE_NONE;
+	out->phase = ANIXOPS_PHASE_REQUEST;
+	out->rule_index = -1;
+	anixops_copy_text(out->message, sizeof(out->message), "no header rewrite matched");
+}
+
+static void anixops_set_script_none(anixops_script_result_t *out)
+{
+	memset(out, 0, sizeof(*out));
+	out->kind = ANIXOPS_SCRIPT_NONE;
+	out->phase = ANIXOPS_PHASE_REQUEST;
+	out->requires_body = 0;
+	out->rule_index = -1;
+	anixops_copy_text(out->message, sizeof(out->message), "no script matched");
+}
+
+static void anixops_copy_text(char *dst, size_t cap, const char *src)
+{
+	if (dst == NULL || cap == 0) {
+		return;
+	}
+	if (src == NULL) {
+		dst[0] = '\0';
+		return;
+	}
+	snprintf(dst, cap, "%s", src);
+}
+
+static int anixops_copy_text_checked(char *dst, size_t cap, const char *src)
+{
+	size_t len;
+	if (dst == NULL || cap == 0) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	if (src == NULL) {
+		dst[0] = '\0';
+		return ANIXOPS_OK;
+	}
+	len = strlen(src);
+	if (len >= cap) {
+		memcpy(dst, src, cap - 1);
+		dst[cap - 1] = '\0';
+		return ANIXOPS_ERR_CAPACITY;
+	}
+	memcpy(dst, src, len + 1);
+	return ANIXOPS_OK;
+}

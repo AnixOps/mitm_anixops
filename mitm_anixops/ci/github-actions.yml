@@ -1,0 +1,16 @@
+name: anixops-mitm-link
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mitm_anixops
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: sh scripts/check.sh
