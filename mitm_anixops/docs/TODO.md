@@ -11,7 +11,8 @@ publishing.
 ## Compatibility Gaps
 
 - Full JQ-style JSON body rewrite filters beyond the tested JSON path replacement subset.
-- Full NSRegularExpression/PCRE compatibility beyond POSIX ERE and the tested leading `(?i)` prefix.
+- Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)` prefix and shorthand
+  classes.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script and common reject/rewrite
   actions.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.

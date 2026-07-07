@@ -96,6 +96,7 @@ static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
 static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags);
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
+static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action);
@@ -206,7 +207,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.6.0";
+	return "0.7.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1852,11 +1853,18 @@ static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap
 static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags)
 {
 	const char *compile_pattern;
+	char *normalized_pattern = NULL;
+	int rc;
 	if (regex == NULL || pattern == NULL) {
 		return -1;
 	}
 	compile_pattern = anixops_regex_pattern_after_inline_flags(pattern, &flags);
-	return regcomp(regex, compile_pattern, flags);
+	if (anixops_normalize_regex_pattern(compile_pattern, &normalized_pattern) != ANIXOPS_OK) {
+		return REG_ESPACE;
+	}
+	rc = regcomp(regex, normalized_pattern, flags);
+	free(normalized_pattern);
+	return rc;
 }
 
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags)
@@ -1866,6 +1874,74 @@ static const char *anixops_regex_pattern_after_inline_flags(const char *pattern,
 		return pattern + 4;
 	}
 	return pattern;
+}
+
+static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern)
+{
+	size_t len;
+	size_t cap;
+	size_t pos = 0;
+	size_t i;
+	int in_class = 0;
+	char *out;
+	if (pattern == NULL || out_pattern == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	len = strlen(pattern);
+	if (len > ((size_t)-1 - 1) / 16) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	cap = len * 16 + 1;
+	out = (char *)malloc(cap);
+	if (out == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	for (i = 0; i < len; i++) {
+		char ch = pattern[i];
+		const char *replacement = NULL;
+		if (ch == '\\' && i + 1 < len) {
+			char next = pattern[i + 1];
+			if (next == 'd') {
+				replacement = in_class ? "0-9" : "[0-9]";
+			}
+			else if (next == 'D' && !in_class) {
+				replacement = "[^0-9]";
+			}
+			else if (next == 'w') {
+				replacement = in_class ? "A-Za-z0-9_" : "[A-Za-z0-9_]";
+			}
+			else if (next == 'W' && !in_class) {
+				replacement = "[^A-Za-z0-9_]";
+			}
+			else if (next == 's') {
+				replacement = in_class ? "[:space:]" : "[[:space:]]";
+			}
+			else if (next == 'S' && !in_class) {
+				replacement = "[^[:space:]]";
+			}
+			if (replacement != NULL) {
+				size_t replacement_len = strlen(replacement);
+				memcpy(out + pos, replacement, replacement_len);
+				pos += replacement_len;
+				i++;
+				continue;
+			}
+			out[pos++] = ch;
+			i++;
+			out[pos++] = pattern[i];
+			continue;
+		}
+		if (ch == '[' && !in_class) {
+			in_class = 1;
+		}
+		else if (ch == ']' && in_class) {
+			in_class = 0;
+		}
+		out[pos++] = ch;
+	}
+	out[pos] = '\0';
+	*out_pattern = out;
+	return ANIXOPS_OK;
 }
 
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code)
