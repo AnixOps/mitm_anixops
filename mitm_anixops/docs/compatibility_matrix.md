@@ -46,6 +46,7 @@ features it understands.
 | Leading `(?i)`, `(?s)`, and `(?is)` regex prefixes | Supported subset | URL, body, header, and script regex tests |
 | PCRE shorthand classes `\d`, `\w`, `\s` | Supported subset | URL, body, header, and script regex test |
 | PCRE horizontal whitespace classes `\h`, `\H` | Supported subset | URL, body, header, and script regex test |
+| PCRE vertical whitespace classes `\v`, `\V` | Supported ASCII subset | URL, body, header, and script regex test |
 | PCRE control escapes `\t`, `\n`, `\r`, `\f`, `\a`, `\e` | Supported subset | URL, body, header, and script regex test |
 | PCRE hex byte escapes `\xHH` | Supported subset | URL, body, header, and script regex test |
 | PCRE Unicode escapes `\uHHHH` | Supported subset | URL, body, header, and script regex test |

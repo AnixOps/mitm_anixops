@@ -235,7 +235,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.26.0";
+	return "0.27.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1988,17 +1988,23 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			else if (next == 's') {
 				replacement = in_class ? "[:space:]" : "[[:space:]]";
 			}
-				else if (next == 'S' && !in_class) {
-					replacement = "[^[:space:]]";
-				}
-				else if (next == 'h') {
-					replacement = in_class ? "[:blank:]" : "[[:blank:]]";
-				}
-				else if (next == 'H' && !in_class) {
-					replacement = "[^[:blank:]]";
-				}
-				else if (next == 't' || next == 'n' || next == 'r' || next == 'f' || next == 'a' || next == 'e') {
-					char value;
+			else if (next == 'S' && !in_class) {
+				replacement = "[^[:space:]]";
+			}
+			else if (next == 'h') {
+				replacement = in_class ? "[:blank:]" : "[[:blank:]]";
+			}
+			else if (next == 'H' && !in_class) {
+				replacement = "[^[:blank:]]";
+			}
+			else if (next == 'v') {
+				replacement = in_class ? "\n\r\f\v" : "[\n\r\f\v]";
+			}
+			else if (next == 'V' && !in_class) {
+				replacement = "[^\n\r\f\v]";
+			}
+			else if (next == 't' || next == 'n' || next == 'r' || next == 'f' || next == 'a' || next == 'e') {
+				char value;
 				switch (next) {
 				case 't':
 					value = '\t';
