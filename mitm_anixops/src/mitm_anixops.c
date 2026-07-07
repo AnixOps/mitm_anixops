@@ -276,7 +276,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.36.0";
+	return "0.37.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2466,7 +2466,7 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 			return 1;
 		}
 	}
-	if (strcasecmp(token, "reject-img") == 0) {
+	if (strcasecmp(token, "reject-img") == 0 || strcasecmp(token, "reject-tinygif") == 0) {
 		*action = ANIXOPS_REWRITE_REJECT_IMG;
 		*status_code = 200;
 		return 1;

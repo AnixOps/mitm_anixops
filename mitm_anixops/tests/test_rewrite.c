@@ -158,6 +158,7 @@ static void reject_variants_map_to_expected_actions(void)
 		{"reject-200", ANIXOPS_REWRITE_REJECT_200, 200},
 		{"reject-401", ANIXOPS_REWRITE_REJECT, 401},
 		{"reject-img", ANIXOPS_REWRITE_REJECT_IMG, 200},
+		{"reject-tinygif", ANIXOPS_REWRITE_REJECT_IMG, 200},
 		{"reject-video", ANIXOPS_REWRITE_REJECT_VIDEO, 200},
 		{"reject-dict", ANIXOPS_REWRITE_REJECT_DICT, 200},
 		{"reject-array", ANIXOPS_REWRITE_REJECT_ARRAY, 200},

@@ -38,7 +38,7 @@ features it understands.
 | Feature | Status | Public API / Evidence |
 | --- | --- | --- |
 | URL redirect `301`, `302`, `303`, `307`, `308` | Supported | `anixops_rewrite_evaluate_url` |
-| Reject variants | Supported | `reject`, `reject-200`, numeric `reject-NNN`, `reject-img`, `reject-video`, `reject-dict`, `reject-array` |
+| Reject variants | Supported | `reject`, `reject-200`, numeric `reject-NNN`, `reject-img`, `reject-tinygif`, `reject-video`, `reject-dict`, `reject-array` |
 | Quantumult X `url`-prefixed redirect/reject/body/header/echo-response rewrites | Supported subset | `quantumultx_url_prefixed_rewrites_are_supported`, `quantumultx_echo_response_is_supported` |
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1`, `${1}`, and `\1` tests |
