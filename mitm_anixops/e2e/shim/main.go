@@ -324,7 +324,7 @@ func writeTempConfig(text string) (string, error) {
 
 func defaultBilibiliDemoConfig() string {
 	return "[Script]\n" +
-		"http-response ^https?:\\/\\/www\\.bilibili\\.com\\/ requires-body=1, script-path=" + builtinBilibiliScriptPath + ", tag=AnixOps.Bilibili.Homepage.Demo\n\n" +
+		"http-response ^https?:\\/\\/www\\.bilibili\\.com\\/(\\?.*)?$ requires-body=1, script-path=" + builtinBilibiliScriptPath + ", tag=AnixOps.Bilibili.Homepage.Demo\n\n" +
 		"[MitM]\n" +
 		"hostname = www.bilibili.com\n"
 }
@@ -948,6 +948,8 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		resp.ContentLength = int64(len(*done.Body))
 		resp.Header.Del("Content-Encoding")
 		resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(*done.Body)))
+	} else {
+		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
 	if status, ok := numericStatus(done.Status); ok {
 		resp.StatusCode = status
@@ -1084,6 +1086,9 @@ func (ps *proxyServer) tunnelConnect(clientConn net.Conn, target string) {
 
 func runBuiltinBilibiliScript(phase string, responseStatus int, responseHeader http.Header, bodyBytes []byte) scriptDone {
 	if phase != "response" {
+		return scriptDone{}
+	}
+	if contentType := responseHeader.Get("Content-Type"); !strings.Contains(strings.ToLower(contentType), "text/html") {
 		return scriptDone{}
 	}
 	headers := flattenHeaders(responseHeader)
@@ -1375,6 +1380,11 @@ func startOrigin(addr string, cache *certCache) error {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("X-Origin-Accept-Encoding", r.Header.Get("Accept-Encoding"))
 			io.WriteString(w, "<!doctype html><html><head><title>origin title</title></head><body><main><a class=\"bili-video-card__info--tit\" href=\"/video/BV1\">origin title</a><img class=\"bili-video-card__cover\" src=\"/cover.jpg\" alt=\"cover\"></main></body></html>")
+			return
+		}
+		if stripPort(r.Host) == "www.bilibili.com" && strings.HasPrefix(r.URL.Path, "/gentleman/polyfill.js") {
+			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+			io.WriteString(w, "console.log('polyfill');\n")
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/contract/request-response") {

@@ -74,6 +74,17 @@ assert_header_contains_ci() {
 	fi
 }
 
+assert_not_contains() {
+	file=$1
+	pattern=$2
+	if grep -F "$pattern" "$file" >/dev/null; then
+		echo "assertion failed: $file unexpectedly contains: $pattern" >&2
+		echo "--- $file ---" >&2
+		sed -n '1,180p' "$file" >&2
+		exit 1
+	fi
+}
+
 TMP=${TMPDIR:-/tmp}/anixops-bilibili-homepage-demo-$$
 mkdir -p "$TMP/mihomo-home"
 cleanup() {
@@ -153,6 +164,18 @@ assert_header_contains_ci "$TMP/headers.out" "X-Origin-Accept-Encoding: identity
 assert_contains "$TMP/body.out" "anixops-bilibili-homepage-demo"
 assert_contains "$TMP/body.out" "document.title = \"test\""
 assert_contains "$TMP/body.out" "brightness(0)"
+
+curl --silent --show-error --max-time 12 --http1.1 \
+	--proxy "http://127.0.0.1:${SHIM_PORT}" \
+	--cacert "$TMP/ca.pem" \
+	--dump-header "$TMP/asset-headers.out" \
+	--output "$TMP/asset-body.out" \
+	"https://www.bilibili.com:${ORIGIN_PORT}/gentleman/polyfill.js?features=es2015"
+
+assert_contains "$TMP/asset-headers.out" "HTTP/1.1 200 OK"
+assert_not_contains "$TMP/asset-headers.out" "X-AnixOps-Bilibili-Demo"
+assert_contains "$TMP/asset-body.out" "console.log('polyfill');"
+assert_not_contains "$TMP/asset-body.out" "anixops-bilibili-homepage-demo"
 
 echo "bilibili homepage demo: HTML response script injected through shim -> mihomo path"
 echo "mitm_anixops bilibili homepage demo e2e passed"
