@@ -123,6 +123,37 @@ static void reject_variants_map_to_expected_actions(void)
 	}
 }
 
+static void numeric_reject_status_variants_are_supported(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://gone\\.test reject-404"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://legal\\.test reject-451"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://bad\\.test reject-099"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://gone.test", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REJECT);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 404);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://legal.test", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REJECT);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 451);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://bad.test", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
+
+	anixops_engine_free(engine);
+}
+
 static void quantumultx_url_prefixed_rewrites_are_supported(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1356,6 +1387,7 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 	add_test(tests, count, cap, "rewrite/redirect_307_supports_dollar_capture", redirect_307_supports_dollar_capture);
 	add_test(tests, count, cap, "rewrite/redirect_307_supports_backslash_capture", redirect_307_supports_backslash_capture);
 	add_test(tests, count, cap, "rewrite/reject_variants_map_to_expected_actions", reject_variants_map_to_expected_actions);
+	add_test(tests, count, cap, "rewrite/numeric_reject_status_variants_are_supported", numeric_reject_status_variants_are_supported);
 	add_test(
 		tests,
 		count,

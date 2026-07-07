@@ -221,7 +221,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.16.0";
+	return "0.17.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2053,6 +2053,18 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 		*action = ANIXOPS_REWRITE_REJECT;
 		*status_code = 401;
 		return 1;
+	}
+	if (strncasecmp(token, "reject-", 7) == 0 &&
+		isdigit((unsigned char)token[7]) &&
+		isdigit((unsigned char)token[8]) &&
+		isdigit((unsigned char)token[9]) &&
+		token[10] == '\0') {
+		int code = (token[7] - '0') * 100 + (token[8] - '0') * 10 + (token[9] - '0');
+		if (code >= 100 && code <= 599) {
+			*action = ANIXOPS_REWRITE_REJECT;
+			*status_code = code;
+			return 1;
+		}
 	}
 	if (strcasecmp(token, "reject-img") == 0) {
 		*action = ANIXOPS_REWRITE_REJECT_IMG;
