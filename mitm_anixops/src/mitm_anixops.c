@@ -214,7 +214,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.9.0";
+	return "0.10.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1925,6 +1925,12 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			}
 			else if (next == 'S' && !in_class) {
 				replacement = "[^[:space:]]";
+			}
+			else if (next == 'A' && !in_class) {
+				replacement = "^";
+			}
+			else if ((next == 'z' || next == 'Z') && !in_class) {
+				replacement = "$";
 			}
 			if (replacement != NULL) {
 				size_t replacement_len = strlen(replacement);

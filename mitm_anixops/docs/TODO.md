@@ -12,7 +12,7 @@ publishing.
 
 - Full JQ-style JSON body rewrite filters beyond the tested JSON path replacement subset.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
-  and non-capturing group matching subset.
+  absolute anchors, and non-capturing group matching subset.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script and common reject/rewrite
   actions.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.

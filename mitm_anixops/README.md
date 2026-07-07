@@ -27,7 +27,7 @@ Implemented:
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
 - Regex capture replacement with `$1` and `\1`.
 - POSIX ERE regex matching with a supported leading `(?i)` case-insensitive prefix and PCRE shorthand classes
-  `\d`, `\w`, and `\s`.
+  `\d`, `\w`, and `\s`, plus PCRE absolute anchors `\A`, `\z`, and `\Z`.
 - PCRE non-capturing group syntax `(?:...)` for matching, normalized as a regular POSIX capturing group.
 - AnixOps/Surge-style module script metadata for HTTP request/response hooks.
 - AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, plus per-argument overrides for script `$argument` generation.
@@ -41,8 +41,8 @@ Not implemented yet:
 - HTTP parser, HTTP/2 frame parser, compression/chunk handling, body buffering.
 - Full JQ rewrite actions beyond the tested JSON path replacement subset.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
-- Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes, and
-  non-capturing group matching subset.
+- Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
+  absolute anchors, and non-capturing group matching subset.
 - Full AnixOps compatibility.
 
 ## Build
