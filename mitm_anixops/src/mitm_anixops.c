@@ -99,6 +99,7 @@ static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags)
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
 static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
+static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_json(anixops_rewrite_action_t action);
@@ -225,7 +226,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.18.0";
+	return "0.19.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1325,8 +1326,9 @@ ANIXOPS_API int anixops_rewrite_evaluate_url(
 		out_result->status_code = rule->status_code;
 		out_result->rule_index = (int)i;
 		anixops_copy_text(out_result->matched_pattern, sizeof(out_result->matched_pattern), rule->pattern);
-		if (rule->action == ANIXOPS_REWRITE_REDIRECT_302 || rule->action == ANIXOPS_REWRITE_REDIRECT_307 ||
-			rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY || rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
+		if (anixops_rewrite_action_redirects(rule->action) ||
+			rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+			rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
 			int expand_rc = anixops_expand_replacement(
 				url,
 				rule->replacement,
@@ -2033,14 +2035,29 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 	if (token == NULL || action == NULL || status_code == NULL) {
 		return 0;
 	}
+	if (strcmp(token, "301") == 0) {
+		*action = ANIXOPS_REWRITE_REDIRECT_301;
+		*status_code = 301;
+		return 1;
+	}
 	if (strcmp(token, "302") == 0) {
 		*action = ANIXOPS_REWRITE_REDIRECT_302;
 		*status_code = 302;
 		return 1;
 	}
+	if (strcmp(token, "303") == 0) {
+		*action = ANIXOPS_REWRITE_REDIRECT_303;
+		*status_code = 303;
+		return 1;
+	}
 	if (strcmp(token, "307") == 0) {
 		*action = ANIXOPS_REWRITE_REDIRECT_307;
 		*status_code = 307;
+		return 1;
+	}
+	if (strcmp(token, "308") == 0) {
+		*action = ANIXOPS_REWRITE_REDIRECT_308;
+		*status_code = 308;
 		return 1;
 	}
 	if (strcasecmp(token, "reject") == 0 || strcasecmp(token, "reject-current-session") == 0) {
@@ -2156,6 +2173,15 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 		return 1;
 	}
 	return 0;
+}
+
+static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_REDIRECT_301 ||
+		action == ANIXOPS_REWRITE_REDIRECT_302 ||
+		action == ANIXOPS_REWRITE_REDIRECT_303 ||
+		action == ANIXOPS_REWRITE_REDIRECT_307 ||
+		action == ANIXOPS_REWRITE_REDIRECT_308;
 }
 
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action)

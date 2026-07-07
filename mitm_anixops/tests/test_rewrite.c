@@ -90,6 +90,55 @@ static void redirect_307_supports_backslash_capture(void)
 	anixops_engine_free(engine);
 }
 
+static void standard_redirect_status_variants_are_supported(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://permanent\\.test/(.*) https://new.test/$1 301"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://see-other\\.test/(.*) url 303 https://new.test/$1"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://preserve\\.test/(.*) https://new.test/$1 308"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://invalid\\.test/(.*) https://new.test/$1 309"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 3);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://permanent.test/a", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_301);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 301);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://new.test/a");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://see-other.test/b", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_303);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 303);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://new.test/b");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://preserve.test/c", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_308);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 308);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://new.test/c");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://invalid.test/d", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
+
+	anixops_engine_free(engine);
+}
+
 static void reject_variants_map_to_expected_actions(void)
 {
 	struct reject_case {
@@ -1454,6 +1503,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 	add_test(tests, count, cap, "rewrite/redirect_302_literal_replacement", redirect_302_literal_replacement);
 	add_test(tests, count, cap, "rewrite/redirect_307_supports_dollar_capture", redirect_307_supports_dollar_capture);
 	add_test(tests, count, cap, "rewrite/redirect_307_supports_backslash_capture", redirect_307_supports_backslash_capture);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/standard_redirect_status_variants_are_supported",
+		standard_redirect_status_variants_are_supported);
 	add_test(tests, count, cap, "rewrite/reject_variants_map_to_expected_actions", reject_variants_map_to_expected_actions);
 	add_test(tests, count, cap, "rewrite/numeric_reject_status_variants_are_supported", numeric_reject_status_variants_are_supported);
 	add_test(

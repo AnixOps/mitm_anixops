@@ -18,8 +18,9 @@ Implemented:
 - AnixOps-style `[MITM] hostname = ...` parsing.
 - Explicit MITM gate: enabled flag, trusted certificate state, allow/deny host patterns.
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.
-- AnixOps-style `[Rewrite]` URL rules for `302`, `307`, `reject`, `reject-200`, `reject-401`, `reject-img`,
-  `reject-video`, `reject-dict`, `reject-array`, and numeric `reject-NNN` statuses.
+- AnixOps-style `[Rewrite]` URL rules for standard redirects `301`, `302`, `303`, `307`, `308`, plus `reject`,
+  `reject-200`, `reject-401`, `reject-img`, `reject-video`, `reject-dict`, `reject-array`, and numeric `reject-NNN`
+  statuses.
 - Rewrite section aliases including `[URL Rewrite]`, `[Remote Rewrite]`, `[Header Rewrite]`, and
   `[Remote Header Rewrite]`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.
