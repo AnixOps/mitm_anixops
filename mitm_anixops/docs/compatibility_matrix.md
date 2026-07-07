@@ -47,7 +47,7 @@ features it understands.
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, global replacement tests |
-| Request/response body JSON path replace | Supported subset for buffered JSON | `$.field` / nested object path tests |
+| Request/response body JSON path replace | Supported subset for buffered JSON | `$.field`, nested object path, and array index tests |
 | Request header add/replace/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Response header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Full JQ-style JSON rewrites | Not implemented | See `docs/TODO.md` |

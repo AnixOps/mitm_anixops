@@ -628,7 +628,7 @@ static void response_body_json_replace_supports_nested_path_and_missing_path(voi
 {
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t result;
-	char body[160];
+	char body[200];
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
 	ANIXOPS_EXPECT_EQ_INT(
@@ -638,6 +638,14 @@ static void response_body_json_replace_supports_nested_path_and_missing_path(voi
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/missing response-body-json-replace $.missing true"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/array response-body-json-replace $.items[1].title '\"test\"'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/out response-body-json-replace $.items[5].title true"),
 		ANIXOPS_OK);
 
 	ANIXOPS_EXPECT_EQ_INT(
@@ -671,6 +679,34 @@ static void response_body_json_replace_supports_nested_path_and_missing_path(voi
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_apply_body(
 			engine,
+			"https://api.test/array",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"items\":[{\"title\":\"a\"},{\"title\":\"b\"}],\"enabled\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[{\"title\":\"a\"},{\"title\":\"test\"}],\"enabled\":false}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/out",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"items\":[{\"title\":\"a\"}]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json path not matched");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[{\"title\":\"a\"}]}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
 			"https://api.test/profile",
 			ANIXOPS_PHASE_REQUEST,
 			"{\"user\":{\"name\":\"Alice\"}}",
@@ -684,7 +720,7 @@ static void response_body_json_replace_supports_nested_path_and_missing_path(voi
 	anixops_engine_free(engine);
 }
 
-static void json_body_replace_reports_unsupported_path_and_truncation(void)
+static void json_body_replace_supports_array_index_and_reports_truncation(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t result;
@@ -693,6 +729,9 @@ static void json_body_replace_reports_unsupported_path_and_truncation(void)
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/items request-body-json-replace $.items[0] true"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/bad-path request-body-json-replace $.items[] true"),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_rewrite_rule(
@@ -704,6 +743,20 @@ static void json_body_replace_reports_unsupported_path_and_truncation(void)
 		anixops_rewrite_apply_body(
 			engine,
 			"https://api.test/items",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"items\":[false]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[true]}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/bad-path",
 			ANIXOPS_PHASE_REQUEST,
 			"{\"items\":[false]}",
 			body,
@@ -967,8 +1020,8 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		tests,
 		count,
 		cap,
-		"rewrite/json_body_replace_reports_unsupported_path_and_truncation",
-		json_body_replace_reports_unsupported_path_and_truncation);
+		"rewrite/json_body_replace_supports_array_index_and_reports_truncation",
+		json_body_replace_supports_array_index_and_reports_truncation);
 	add_test(
 		tests,
 		count,

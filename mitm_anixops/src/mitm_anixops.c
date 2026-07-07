@@ -178,8 +178,15 @@ static int anixops_json_find_member_value(
 	size_t key_len,
 	const char **out_value_start,
 	const char **out_value_end);
+static int anixops_json_find_array_element_value(
+	const char *array_start,
+	const char *array_end,
+	size_t index,
+	const char **out_value_start,
+	const char **out_value_end);
 static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len);
 static int anixops_json_parse_path_segment(const char **cursor, const char **out_key, size_t *out_key_len);
+static int anixops_json_parse_array_index(const char **cursor, size_t *out_index);
 static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end);
 static const char *anixops_json_skip_ws(const char *cursor, const char *end);
 static const char *anixops_json_skip_string(const char *cursor, const char *end);
@@ -207,7 +214,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.7.0";
+	return "0.8.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2764,10 +2771,23 @@ static int anixops_json_find_path_value(
 		if (!found) {
 			return 0;
 		}
+		while (*cursor == '[') {
+			size_t index;
+			if (!anixops_json_parse_array_index(&cursor, &index)) {
+				return -1;
+			}
+			found = anixops_json_find_array_element_value(value_start, value_end, index, &value_start, &value_end);
+			if (!found) {
+				return 0;
+			}
+		}
 		if (*cursor == '\0') {
 			*out_value_start = value_start;
 			*out_value_end = value_end;
 			return 1;
+		}
+		if (*cursor != '.') {
+			return -1;
 		}
 		object_start = anixops_json_skip_ws(value_start, value_end);
 		object_end = value_end;
@@ -2844,6 +2864,52 @@ static int anixops_json_find_member_value(
 	return 0;
 }
 
+static int anixops_json_find_array_element_value(
+	const char *array_start,
+	const char *array_end,
+	size_t index,
+	const char **out_value_start,
+	const char **out_value_end)
+{
+	const char *cursor;
+	size_t current = 0;
+	if (array_start == NULL || array_end == NULL || out_value_start == NULL || out_value_end == NULL) {
+		return 0;
+	}
+	cursor = anixops_json_skip_ws(array_start, array_end);
+	if (cursor >= array_end || *cursor != '[') {
+		return 0;
+	}
+	cursor = anixops_json_skip_ws(cursor + 1, array_end);
+	if (cursor < array_end && *cursor == ']') {
+		return 0;
+	}
+	while (cursor < array_end) {
+		const char *value_start = cursor;
+		const char *value_end = anixops_json_skip_value(value_start, array_end);
+		const char *after;
+		if (value_end == NULL) {
+			return 0;
+		}
+		after = anixops_json_skip_ws(value_end, array_end);
+		if (after >= array_end || (*after != ',' && *after != ']')) {
+			return 0;
+		}
+		if (current == index) {
+			*out_value_start = value_start;
+			*out_value_end = value_end;
+			return 1;
+		}
+		if (*after == ',') {
+			current++;
+			cursor = anixops_json_skip_ws(after + 1, array_end);
+			continue;
+		}
+		return 0;
+	}
+	return 0;
+}
+
 static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len)
 {
 	const char *cursor;
@@ -2903,7 +2969,7 @@ static int anixops_json_parse_path_segment(const char **cursor, const char **out
 	}
 	start = *cursor;
 	p = start;
-	while (*p != '\0' && *p != '.') {
+	while (*p != '\0' && *p != '.' && *p != '[') {
 		unsigned char ch = (unsigned char)*p;
 		if (!(isalnum(ch) || ch == '_' || ch == '-')) {
 			return 0;
@@ -2916,6 +2982,33 @@ static int anixops_json_parse_path_segment(const char **cursor, const char **out
 	*out_key = start;
 	*out_key_len = (size_t)(p - start);
 	*cursor = p;
+	return 1;
+}
+
+static int anixops_json_parse_array_index(const char **cursor, size_t *out_index)
+{
+	const char *p;
+	size_t value = 0;
+	if (cursor == NULL || *cursor == NULL || out_index == NULL || **cursor != '[') {
+		return 0;
+	}
+	p = *cursor + 1;
+	if (!isdigit((unsigned char)*p)) {
+		return 0;
+	}
+	while (isdigit((unsigned char)*p)) {
+		size_t digit = (size_t)(*p - '0');
+		if (value > (((size_t)-1) - digit) / 10) {
+			return 0;
+		}
+		value = value * 10 + digit;
+		p++;
+	}
+	if (*p != ']') {
+		return 0;
+	}
+	*out_index = value;
+	*cursor = p + 1;
 	return 1;
 }
 
