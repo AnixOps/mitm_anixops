@@ -34,7 +34,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: anixops-mitm-alpha-linux
-          path: mitm_anixops/build/anixops-mitm-alpha-0.41.0.tar.gz
+          path: mitm_anixops/build/anixops-mitm-alpha-*.tar.gz
 
   windows-binary:
     runs-on: windows-latest
