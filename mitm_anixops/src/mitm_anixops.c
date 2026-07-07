@@ -276,7 +276,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.34.0";
+	return "0.35.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -305,6 +305,8 @@ static int anixops_is_rewrite_section(const char *key)
 		(strcasecmp(key, "rewrite") == 0 ||
 			strcasecmp(key, "rewrite_local") == 0 ||
 			strcasecmp(key, "rewrite local") == 0 ||
+			strcasecmp(key, "rewrite_remote") == 0 ||
+			strcasecmp(key, "rewrite remote") == 0 ||
 			strcasecmp(key, "url rewrite") == 0 ||
 			strcasecmp(key, "remote rewrite") == 0 ||
 			strcasecmp(key, "header rewrite") == 0 ||

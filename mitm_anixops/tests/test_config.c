@@ -83,6 +83,34 @@ static void config_accepts_header_rewrite_section_aliases(void)
 	anixops_engine_free(engine);
 }
 
+static void config_accepts_quantumultx_rewrite_remote_section_aliases(void)
+{
+	const char *config =
+		"#[rewrite_remote]\n"
+		"^https://remote\\.qx\\.test/block reject\n"
+		"[rewrite_remote]\n"
+		"^https://remote\\.qx\\.test/old https://remote.qx.test/new 302\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://remote.qx.test/block", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REJECT);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://remote.qx.test/old", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://remote.qx.test/new");
+
+	anixops_engine_free(engine);
+}
+
 static void config_parses_script_and_ignores_unknown_sections(void)
 {
 	const char *config =
@@ -188,6 +216,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_accepts_header_rewrite_section_aliases",
 		config_accepts_header_rewrite_section_aliases);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_accepts_quantumultx_rewrite_remote_section_aliases",
+		config_accepts_quantumultx_rewrite_remote_section_aliases);
 	add_test(
 		tests,
 		count,
