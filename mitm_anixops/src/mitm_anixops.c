@@ -3,6 +3,7 @@
 #include "mitm_anixops.h"
 
 #include <ctype.h>
+#include <limits.h>
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -231,7 +232,7 @@ static int anixops_json_find_member_value(
 static int anixops_json_find_array_element_value(
 	const char *array_start,
 	const char *array_end,
-	size_t index,
+	long index,
 	const char **out_value_start,
 	const char **out_value_end);
 static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len);
@@ -246,7 +247,8 @@ static int anixops_json_decode_escape(const char **cursor, const char *end, char
 static int anixops_json_read_hex4(const char **cursor, const char *end, unsigned long *out_value);
 static int anixops_json_append_utf8(char *out, size_t out_cap, size_t *pos, unsigned long codepoint);
 static int anixops_hex_digit(unsigned char ch);
-static int anixops_json_parse_array_index(const char **cursor, size_t *out_index);
+static int anixops_json_parse_array_index(const char **cursor, long *out_index);
+static int anixops_json_array_length(const char *array_start, const char *array_end, size_t *out_len);
 static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end);
 static const char *anixops_json_skip_ws(const char *cursor, const char *end);
 static const char *anixops_json_skip_string(const char *cursor, const char *end);
@@ -274,7 +276,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.33.0";
+	return "0.34.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -3354,7 +3356,7 @@ static int anixops_json_find_path_value(
 				parsed_segment = 1;
 				continue;
 			}
-			size_t index;
+			long index;
 			if (!anixops_json_parse_array_index(&cursor, &index)) {
 				return -1;
 			}
@@ -3444,14 +3446,29 @@ static int anixops_json_find_member_value(
 static int anixops_json_find_array_element_value(
 	const char *array_start,
 	const char *array_end,
-	size_t index,
+	long index,
 	const char **out_value_start,
 	const char **out_value_end)
 {
 	const char *cursor;
 	size_t current = 0;
+	size_t target_index;
 	if (array_start == NULL || array_end == NULL || out_value_start == NULL || out_value_end == NULL) {
 		return 0;
+	}
+	if (index < 0) {
+		size_t length;
+		size_t reverse_index = (size_t)(-index);
+		if (!anixops_json_array_length(array_start, array_end, &length)) {
+			return 0;
+		}
+		if (reverse_index == 0 || reverse_index > length) {
+			return 0;
+		}
+		target_index = length - reverse_index;
+	}
+	else {
+		target_index = (size_t)index;
 	}
 	cursor = anixops_json_skip_ws(array_start, array_end);
 	if (cursor >= array_end || *cursor != '[') {
@@ -3472,7 +3489,7 @@ static int anixops_json_find_array_element_value(
 		if (after >= array_end || (*after != ',' && *after != ']')) {
 			return 0;
 		}
-		if (current == index) {
+		if (current == target_index) {
 			*out_value_start = value_start;
 			*out_value_end = value_end;
 			return 1;
@@ -3760,20 +3777,25 @@ static int anixops_hex_digit(unsigned char ch)
 	return -1;
 }
 
-static int anixops_json_parse_array_index(const char **cursor, size_t *out_index)
+static int anixops_json_parse_array_index(const char **cursor, long *out_index)
 {
 	const char *p;
-	size_t value = 0;
+	unsigned long value = 0;
+	int negative = 0;
 	if (cursor == NULL || *cursor == NULL || out_index == NULL || **cursor != '[') {
 		return 0;
 	}
 	p = *cursor + 1;
+	if (*p == '-') {
+		negative = 1;
+		p++;
+	}
 	if (!isdigit((unsigned char)*p)) {
 		return 0;
 	}
 	while (isdigit((unsigned char)*p)) {
-		size_t digit = (size_t)(*p - '0');
-		if (value > (((size_t)-1) - digit) / 10) {
+		unsigned long digit = (unsigned long)(*p - '0');
+		if (value > (((unsigned long)LONG_MAX) - digit) / 10UL) {
 			return 0;
 		}
 		value = value * 10 + digit;
@@ -3782,9 +3804,46 @@ static int anixops_json_parse_array_index(const char **cursor, size_t *out_index
 	if (*p != ']') {
 		return 0;
 	}
-	*out_index = value;
+	*out_index = negative && value != 0 ? -(long)value : (long)value;
 	*cursor = p + 1;
 	return 1;
+}
+
+static int anixops_json_array_length(const char *array_start, const char *array_end, size_t *out_len)
+{
+	const char *cursor;
+	size_t count = 0;
+	if (array_start == NULL || array_end == NULL || out_len == NULL) {
+		return 0;
+	}
+	cursor = anixops_json_skip_ws(array_start, array_end);
+	if (cursor >= array_end || *cursor != '[') {
+		return 0;
+	}
+	cursor = anixops_json_skip_ws(cursor + 1, array_end);
+	if (cursor < array_end && *cursor == ']') {
+		*out_len = 0;
+		return 1;
+	}
+	while (cursor < array_end) {
+		const char *value_end = anixops_json_skip_value(cursor, array_end);
+		const char *after;
+		if (value_end == NULL) {
+			return 0;
+		}
+		after = anixops_json_skip_ws(value_end, array_end);
+		if (after >= array_end || (*after != ',' && *after != ']')) {
+			return 0;
+		}
+		count++;
+		if (*after == ',') {
+			cursor = anixops_json_skip_ws(after + 1, array_end);
+			continue;
+		}
+		*out_len = count;
+		return 1;
+	}
+	return 0;
 }
 
 static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end)
