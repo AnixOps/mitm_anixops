@@ -73,6 +73,12 @@ cat > "$TMP/module.plugin" <<EOF_CONF
 [Argument]
 Mode = input,contract
 
+[Rewrite]
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? header-add X-AnixOps-Static-Request static-request
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? request-body-json-replace $.from "static-request"
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? response-header-add X-AnixOps-Static-Response static-response
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? response-body-json-replace $.code 7
+
 [Script]
 http-request ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.request, argument=[{Mode}]
 http-response ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.response, argument=[{Mode}]
@@ -112,6 +118,8 @@ wait_port 127.0.0.1 "$MIHOMO_PORT" mihomo || {
 	--script-runner "$ROOT/e2e/script_runtime/anixops_runner.js" \
 	--script-path-url "$SCRIPT_URL" \
 	--script-path-file "$SCRIPT_FILE" \
+	--script-store "$TMP/script-store.json" \
+	--script-timeout-ms 50 \
 	--ca-cert "$TMP/ca.pem" \
 	--ca-key "$TMP/ca.key" >"$TMP/shim.log" 2>&1 &
 SHIM_PID=$!
@@ -152,14 +160,102 @@ const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 if (body.ok !== true) throw new Error("script body was not applied");
 if (body.argument !== "Mode=contract") throw new Error(`unexpected argument: ${body.argument}`);
 if (body.url !== "https://google.com/contract/request-response?contract=1") throw new Error(`unexpected URL: ${body.url}`);
+if (body.persistentArgument !== "Mode=contract") throw new Error(`response script did not read persistent store: ${body.persistentArgument}`);
 if (body.requestHeader !== "applied") throw new Error(`request header did not reach response script: ${body.requestHeader}`);
-if (!body.original || body.original.code !== 0) throw new Error("original response body missing");
+if (body.staticResponseHeader !== "static-response") throw new Error(`response header rewrite did not run before response script: ${body.staticResponseHeader}`);
+if (!body.original || body.original.code !== 7) throw new Error("response body rewrite did not run before response script");
 if (body.original.requestScript !== "applied") throw new Error("origin did not receive request script header");
 const upstream = JSON.parse(body.original.body);
-if (upstream.from !== "curl") throw new Error("origin did not receive original request body");
+if (upstream.staticRequestHeader !== "static-request") throw new Error(`request header rewrite did not run before request script: ${upstream.staticRequestHeader}`);
+if (upstream.from !== "static-request") throw new Error("request body rewrite did not run before request script");
 if (upstream.requestScript !== true) throw new Error("origin did not receive request script body mutation");
 if (upstream.argument !== "Mode=contract") throw new Error("request script did not receive resolved argument");
+if (upstream.storeAfter !== "Mode=contract") throw new Error(`request script did not write persistent store: ${upstream.storeAfter}`);
 JS
 
+curl --silent --show-error --max-time 12 --http1.1 \
+	--proxy "http://127.0.0.1:${SHIM_PORT}" \
+	--cacert "$TMP/ca.pem" \
+	--request POST \
+	--header "Content-Type: application/json" \
+	--data '{"from":"timeout"}' \
+	--dump-header "$TMP/timeout-headers.out" \
+	--output "$TMP/timeout-body.out" \
+	"https://google.com:${ORIGIN_PORT}/contract/request-response?timeout=1"
+
+grep -F "HTTP/1.1 200 OK" "$TMP/timeout-headers.out" >/dev/null
+grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/timeout-headers.out" >/dev/null
+if grep -i -F "X-AnixOps-Script:" "$TMP/timeout-headers.out" >/dev/null; then
+	echo "timed-out response script unexpectedly applied response headers" >&2
+	sed -n '1,120p' "$TMP/timeout-headers.out" >&2
+	exit 1
+fi
+
+node - "$TMP/timeout-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 7) throw new Error(`response body rewrite did not survive script timeout: ${body.code}`);
+if (body.requestScript !== "applied") throw new Error("request script header did not survive response timeout");
+const upstream = JSON.parse(body.body);
+if (upstream.from !== "static-request") throw new Error("request body rewrite did not survive response timeout");
+if (upstream.requestScript !== true) throw new Error("request script body mutation did not survive response timeout");
+JS
+
+run_compressed_response_case() {
+	encoding=$1
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/json" \
+		--data "{\"from\":\"${encoding}\"}" \
+		--dump-header "$TMP/${encoding}-headers.out" \
+		--output "$TMP/${encoding}-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/request-response?compressed=${encoding}"
+
+	grep -F "HTTP/1.1 201 Created" "$TMP/${encoding}-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Script: applied" "$TMP/${encoding}-headers.out" >/dev/null
+	if grep -i -F "Content-Encoding:" "$TMP/${encoding}-headers.out" >/dev/null; then
+		echo "scripted ${encoding} response leaked Content-Encoding" >&2
+		sed -n '1,120p' "$TMP/${encoding}-headers.out" >&2
+		exit 1
+	fi
+
+	node - "$TMP/${encoding}-body.out" "$encoding" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const encoding = process.argv[3];
+if (body.ok !== true) throw new Error(`${encoding}: script body was not applied`);
+if (body.url !== `https://google.com/contract/request-response?compressed=${encoding}`) {
+  throw new Error(`${encoding}: unexpected URL: ${body.url}`);
+}
+if (body.persistentArgument !== "Mode=contract") {
+  throw new Error(`${encoding}: response script did not read persistent store: ${body.persistentArgument}`);
+}
+if (!body.original || body.original.code !== 7) throw new Error(`${encoding}: response body rewrite did not run before response script`);
+if (body.staticResponseHeader !== "static-response") {
+  throw new Error(`${encoding}: response header rewrite did not run before response script: ${body.staticResponseHeader}`);
+}
+if (body.original.requestScript !== "applied") throw new Error(`${encoding}: request script header missing`);
+const upstream = JSON.parse(body.original.body);
+if (upstream.staticRequestHeader !== "static-request") {
+  throw new Error(`${encoding}: request header rewrite did not run before request script: ${upstream.staticRequestHeader}`);
+}
+if (upstream.from !== "static-request") throw new Error(`${encoding}: request body rewrite did not run before request script`);
+if (upstream.requestScript !== true) throw new Error(`${encoding}: request script body mutation missing`);
+if (upstream.storeAfter !== "Mode=contract") throw new Error(`${encoding}: request script did not write persistent store`);
+JS
+}
+
+run_compressed_response_case gzip
+run_compressed_response_case deflate
+
+grep -F '"contract.argument": "Mode=contract"' "$TMP/script-store.json" >/dev/null
+
 echo "script contract: request header/body and response status/header/body applied through MITM proxy path"
+echo "script contract: static request/response header rewrites run before script dispatch"
+echo "script contract: static request/response body rewrites run before script dispatch"
+echo "script contract: persistentStore read/write shared across request and response scripts"
+echo "script contract: response script timeout fails open after static rewrites"
+echo "script contract: gzip/deflate response bodies decoded and returned as identity after script mutation"
 echo "mitm_anixops script contract e2e passed"

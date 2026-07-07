@@ -17,9 +17,9 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.40.0");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.41.0");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 40);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 41);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 0);
 }
 
@@ -30,6 +30,8 @@ static void null_arguments_are_rejected(void)
 	anixops_rewrite_result_t rewrite;
 	anixops_header_rewrite_result_t header_rewrite;
 	anixops_script_result_t script;
+	anixops_rewrite_plan_t plan;
+	anixops_rule_diagnostic_t diagnostic;
 	char body[16];
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
@@ -82,6 +84,29 @@ static void null_arguments_are_rejected(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_script_evaluate_url(NULL, "https://example.com", ANIXOPS_PHASE_RESPONSE, &script), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_script_evaluate_url(engine, NULL, ANIXOPS_PHASE_RESPONSE, &script), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_script_evaluate_url(engine, "https://example.com", ANIXOPS_PHASE_RESPONSE, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(NULL, "https://example.com", ANIXOPS_PHASE_REQUEST, NULL, NULL, 0, NULL, &plan),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(engine, NULL, ANIXOPS_PHASE_REQUEST, NULL, NULL, 0, NULL, &plan),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, NULL, NULL, 0, NULL, NULL),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", NULL, sizeof(body), NULL, &plan),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, "{}", body, 0, NULL, &plan),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(NULL, ANIXOPS_COMPAT_PORTABLE), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, (anixops_compat_profile_t)99), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(NULL, ANIXOPS_REGEX_BACKEND_POSIX_LITE), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, (anixops_regex_backend_t)99), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(NULL), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(NULL, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
 
 	anixops_engine_free(engine);
 }
@@ -144,6 +169,11 @@ static void default_engine_state_is_conservative(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_PORTABLE);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
+	ANIXOPS_EXPECT_EQ_INT(anixops_regex_backend_available(ANIXOPS_REGEX_BACKEND_POSIX_LITE), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_regex_backend_available((anixops_regex_backend_t)99), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "example.com", 0, &decision), ANIXOPS_OK);
@@ -170,12 +200,22 @@ static void clear_resets_and_engine_remains_usable(void)
 	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, "[MITM]\nskip-server-cert-verify = true\n"), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, ANIXOPS_REGEX_BACKEND_POSIX_LITE), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
+	if (!anixops_regex_backend_available(ANIXOPS_REGEX_BACKEND_PCRE2)) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, ANIXOPS_REGEX_BACKEND_PCRE2), ANIXOPS_ERR_INVALID_ARGUMENT);
+	}
 
 	anixops_engine_clear(engine);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_PORTABLE);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.example.com", 0, &decision), ANIXOPS_OK);

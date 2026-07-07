@@ -57,6 +57,7 @@ static void redirect_302_literal_replacement(void)
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_302);
 	ANIXOPS_EXPECT_EQ_INT(result.status_code, 302);
 	ANIXOPS_EXPECT_STREQ(result.value, "https://www.google.com");
+	ANIXOPS_EXPECT_STREQ(result.message, "rewrite matched");
 
 	anixops_engine_free(engine);
 }
@@ -197,6 +198,7 @@ static void numeric_reject_status_variants_are_supported(void)
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REJECT);
 	ANIXOPS_EXPECT_EQ_INT(result.status_code, 404);
+	ANIXOPS_EXPECT_STREQ(result.message, "rewrite matched");
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_evaluate_url(engine, "https://legal.test", ANIXOPS_PHASE_REQUEST, &result),
@@ -1621,6 +1623,52 @@ static void pcre_quoted_literals_match_all_regex_contexts(void)
 	anixops_engine_free(engine);
 }
 
+static void pcre2_backend_matches_lookaround_when_available(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	if (!anixops_regex_backend_available(ANIXOPS_REGEX_BACKEND_PCRE2)) {
+		anixops_engine_free(engine);
+		return;
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, ANIXOPS_REGEX_BACKEND_PCRE2), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/(?=item)(item)/(\\d+)$ https://dest.test/$1/$2 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://body\\.test request-body-replace-regex \"(?<=token=)(\\d+)\" \"$1-ok\""),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://api.test/item/42", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/item/42");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test",
+			ANIXOPS_PHASE_REQUEST,
+			"token=123&ok=1",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "token=123-ok&ok=1");
+
+	anixops_engine_free(engine);
+}
+
 static void request_body_json_replace_updates_top_level_field(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1647,6 +1695,146 @@ static void request_body_json_replace_updates_top_level_field(void)
 
 	anixops_engine_free(engine);
 }
+
+static void jq_body_rewrite_rules_are_matched_with_fail_open_runtime_gap(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/request request-body-jq '.enabled = true'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/response http-response-jq '.enabled = false'"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/request",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"enabled\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JQ);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
+	ANIXOPS_EXPECT_STREQ(result.value, ".enabled = true");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true}");
+#else
+	ANIXOPS_EXPECT_STREQ(result.message, "jq backend unavailable");
+	ANIXOPS_EXPECT_STREQ(result.value, ".enabled = true");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":false}");
+#endif
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/response",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"enabled\":true}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
+	ANIXOPS_EXPECT_STREQ(result.value, ".enabled = false");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":false}");
+#else
+	ANIXOPS_EXPECT_STREQ(result.message, "jq backend unavailable");
+	ANIXOPS_EXPECT_STREQ(result.value, ".enabled = false");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true}");
+#endif
+
+	anixops_engine_free(engine);
+}
+
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+static void jq_backend_handles_output_and_error_policy(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/jq/multi response-body-jq '.items[]'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/jq/empty response-body-jq 'empty'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/jq/bad-json response-body-jq '.'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/jq/bad-filter response-body-jq '['"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/multi",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"items\":[1,2]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "1");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/empty",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"items\":[1]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq produced no output");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[1]}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/bad-json",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"items\":[",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq execution failed");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/bad-filter",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ok\":true}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq execution failed");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+
+	anixops_engine_free(engine);
+}
+#endif
 
 static void response_body_json_replace_supports_nested_path_and_missing_path(void)
 {
@@ -2130,6 +2318,113 @@ static void header_rewrite_enumerates_matching_rules_with_start_index(void)
 	anixops_engine_free(engine);
 }
 
+static void rewrite_plan_matches_individual_evaluation_order(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_plan_t plan;
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	anixops_script_result_t script;
+	char plan_body[128];
+	char individual_body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://plan\\.test/(.*) header-add X-One one-$1"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://plan\\.test/(.*) header-replace X-Two two-$1"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://plan\\.test/(.*) request-body-replace-regex token=([0-9]+) token=$1-ok"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"http-request ^https://plan\\.test/(.*) requires-body=1, script-path=https://scripts.test/plan.js, "
+			"tag=plan.request, argument=Mode=plan"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://plan.test/path",
+			ANIXOPS_PHASE_REQUEST,
+			"token=42",
+			plan_body,
+			sizeof(plan_body),
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, 2);
+	ANIXOPS_EXPECT_STREQ(plan_body, "token=42-ok");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 2);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrite_truncated, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, ANIXOPS_REWRITE_HEADER_ADD);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].header_name, "X-One");
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].value, "one-path");
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].action, ANIXOPS_REWRITE_HEADER_REPLACE);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].header_name, "X-Two");
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].value, "two-path");
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.requires_body, 1);
+	ANIXOPS_EXPECT_STREQ(plan.script.script_path, "https://scripts.test/plan.js");
+	ANIXOPS_EXPECT_STREQ(plan.script.tag, "plan.request");
+	ANIXOPS_EXPECT_STREQ(plan.script.argument, "Mode=plan");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://plan.test/path",
+			ANIXOPS_PHASE_REQUEST,
+			"token=42",
+			individual_body,
+			sizeof(individual_body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, rewrite.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, rewrite.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan_body, individual_body);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://plan.test/path", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, header.action);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].value, header.value);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://plan.test/path",
+			ANIXOPS_PHASE_REQUEST,
+			(size_t)header.rule_index + 1,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].action, header.action);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].value, header.value);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://plan.test/path", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, script.kind);
+	ANIXOPS_EXPECT_STREQ(plan.script.script_path, script.script_path);
+	ANIXOPS_EXPECT_STREQ(plan.script.argument, script.argument);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(engine, "https://plan.test/path", ANIXOPS_PHASE_REQUEST, NULL, NULL, 0, NULL, &plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 2);
+
+	anixops_engine_free(engine);
+}
+
 static void request_header_delete_is_supported(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2413,8 +2708,28 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		tests,
 		count,
 		cap,
+		"rewrite/pcre2_backend_matches_lookaround_when_available",
+		pcre2_backend_matches_lookaround_when_available);
+	add_test(
+		tests,
+		count,
+		cap,
 		"rewrite/request_body_json_replace_updates_top_level_field",
 		request_body_json_replace_updates_top_level_field);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/jq_body_rewrite_rules_are_matched_with_fail_open_runtime_gap",
+		jq_body_rewrite_rules_are_matched_with_fail_open_runtime_gap);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/jq_backend_handles_output_and_error_policy",
+		jq_backend_handles_output_and_error_policy);
+#endif
 	add_test(
 		tests,
 		count,
@@ -2469,6 +2784,7 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/header_rewrite_enumerates_matching_rules_with_start_index",
 		header_rewrite_enumerates_matching_rules_with_start_index);
+	add_test(tests, count, cap, "rewrite/rewrite_plan_matches_individual_evaluation_order", rewrite_plan_matches_individual_evaluation_order);
 	add_test(tests, count, cap, "rewrite/request_header_delete_is_supported", request_header_delete_is_supported);
 	add_test(
 		tests,

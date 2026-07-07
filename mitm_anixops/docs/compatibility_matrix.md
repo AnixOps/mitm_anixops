@@ -11,7 +11,9 @@ unsupported unless a test or E2E fixture is added.
 | Style | Section Shape | Status | Evidence |
 | --- | --- | --- | --- |
 | AnixOps/Loon plugin | `[Argument]`, `[Script]`, `[MITM]`, `[Rewrite]` | Supported subset | `test_config.c`, `test_script.c`, BiliBili and representative Loon fixtures |
+| Loon plugin metadata | `[Plugin]` | Tolerated metadata section | `plugin_metadata_section_is_tolerated_with_diagnostics` |
 | Loon rewrite aliases | `[URL Rewrite]`, `[Remote Rewrite]` | Supported subset | `config_accepts_section_aliases_and_crlf` |
+| Loon body rewrite aliases | `[Body Rewrite]`, `[Remote Body Rewrite]` | Supported subset | `config_accepts_body_rewrite_section_aliases` |
 | Loon header rewrite aliases | `[Header Rewrite]`, `[Remote Header Rewrite]` | Supported subset | `config_accepts_header_rewrite_section_aliases` |
 | Quantumult X / snippet | `#[rewrite_local]`, `#[rewrite_remote]`, `#[mitm]` | Supported subset | `anixops_snippet_rewrite_script_lines_are_supported`, representative Quantumult X fixture |
 | Quantumult X | `[rewrite_local]`, `[rewrite_remote]`, `[mitm]` | Supported subset | `quantumultx_rewrite_local_section_is_supported`, `config_accepts_quantumultx_rewrite_remote_section_aliases` |
@@ -60,9 +62,12 @@ features it understands.
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, global replacement tests |
 | Request/response body JSON path replace | Supported subset for buffered JSON | `$.field`, `$['field']`, empty, common escaped, and `\uXXXX` bracket keys, nested object path, and positive/negative array index tests |
+| Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq |
+| Alpha proxy body rewrite path | Supported subset | `make script-contract-e2e` verifies buffered request/response body rewrite before script dispatch through the HTTP/1.1 MITM shim |
 | Request header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Response header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
-| Full JQ-style JSON rewrites | Not implemented | See `docs/TODO.md` |
+| Alpha proxy header rewrite path | Supported subset | `make script-contract-e2e` verifies request/response header rewrite before script dispatch through the HTTP/1.1 MITM shim |
+| Full JQ-style JSON rewrites | Supported subset with gaps | libjq first-output-wins, empty-output, invalid JSON, and compile-error policies are tested; resource limits and broad corpus coverage remain gaps |
 | Compression/chunk handling | Out of scope | adapter responsibility |
 
 ## Script Dispatch
@@ -77,7 +82,10 @@ features it understands.
 | Surge template arguments `{Name}`, `{{{Name}}}` | Supported subset | `surge_style_script_rule_template_is_supported` |
 | Malformed Surge attr-list script rules | Ignored, except invalid regex reports an error | `malformed_and_non_http_script_rules_are_ignored_or_rejected` |
 | Quantumult X `url script-request-body` / `script-request-header` / `script-response-body` / `script-response-header` | Supported subset | snippet and `[rewrite_local]` tests |
-| JavaScript runtime | Out of scope | `docs/script_runtime_contract.md` |
+| JavaScript runtime | Adapter contract supported | C library returns dispatch metadata; Alpha runner can execute mapped scripts through the Node contract runner during `replay --script-runner`; embedded QuickJS/JSC remains future work |
+| `$persistentStore` | Alpha runner backend | Node contract runner supports `--store <file>` with read/write/remove; runner replay and proxy script-contract E2E verify state shared across invocations |
+| Script timeout/error policy | Alpha proxy shim subset | `make script-contract-e2e` verifies a timed-out response script fails open after static rewrites instead of returning 502 |
+| Response compression for scripts | Alpha proxy shim subset | gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
 
 ## Diagnostics And ABI
 
@@ -87,14 +95,37 @@ features it understands.
 | Caller-owned result structs | Supported | no public internal pointers |
 | Status text | Supported | `anixops_status_message` |
 | Last error status/line/message copy | Supported | `anixops_engine_copy_last_error` |
+| Compatibility profile selector | Supported foundation | `anixops_engine_set_compat_profile`, `anixops_engine_compat_profile`; profile-specific behavior is still incremental |
+| Per-rule parse diagnostics | Supported foundation | `anixops_engine_rule_diagnostic_count`, `anixops_engine_copy_rule_diagnostic`, accepted/ignored/rejected config tests |
+| Request/response plan builder | Supported foundation | `anixops_rewrite_build_plan` aggregates phase rewrite, matching header rewrites, script dispatch, body-rewrite output, and `requires_body`; unit test compares it against individual evaluation APIs |
+| Regex backend selector | Supported foundation | `anixops_regex_backend_available`, `anixops_engine_set_regex_backend`, POSIX Lite default |
+| Optional PCRE2 backend | Supported optional backend | `make pcre2-test`, `PCRE2=1`, lookahead/lookbehind fixture |
+| Optional libjq backend | Supported optional backend | `make jq-test`, `JQ=1`, body rewrite and fail-open policy fixtures |
 | ABI export allowlist | Supported | `ci/abi_exports.txt` checked by `scripts/check.sh` |
+| pkg-config metadata | Supported Alpha packaging | `make pkg-config-check`, relocatable `lib/pkgconfig/mitm_anixops.pc` in `alpha-dist` |
+| CMake package config | Supported Alpha packaging | `make cmake-package-check`, relocatable `lib/cmake/mitm_anixops`; configure/build smoke runs when `cmake` is installed |
+| Go cgo binding | Supported Alpha wrapper | `make go-binding-check`, package `bindings/go/anixops`, pkg-config backed cgo link, includes plan helper coverage |
+| Rust FFI binding | Supported Alpha wrapper | `make rust-binding-check`, crate `bindings/rust/mitm-anixops`, pkg-config backed build script, includes plan helper coverage |
 | Thread-safe mutation | Not provided | external synchronization required |
 
 ## Current End-To-End Evidence
 
 - `make demo-check`: pure C strategy-chain demo, no sockets/TLS/JS.
-- `make test`: public C ABI unit tests, including representative Loon, Surge, and Quantumult X fixture parsing.
+- `make runner-check`: no-UI runner scan/trace/replay smoke test over the representative Loon fixture, including optional
+  Node script-runtime replay, `$done.body` writeback, and file-backed `$persistentStore`.
+- `make proxy-shim-check`: Alpha HTTP/1.1 CONNECT/TLS proxy shim build smoke test.
+- `make script-contract-e2e`: request/response header/body rewrite and script mutation through the proxy path, including
+  shared `$persistentStore`, script timeout fail-open, gzip/deflate response decode, and identity writeback.
+- `make pkg-config-check`: staged Alpha-style install layout compiled and executed through `pkg-config`.
+- `make cmake-package-check`: staged Alpha-style install layout checked as a CMake config package, including
+  configure/build/run smoke when `cmake` is available.
+- `make go-binding-check`: Go cgo wrapper tests over config load, rewrite, body rewrite, script dispatch, and plan helper.
+- `make rust-binding-check`: Rust FFI wrapper tests over config load, rewrite, body rewrite, script dispatch, and plan
+  helper.
+- `make test`: public C ABI unit tests, including the plan builder, representative Loon, Surge, and Quantumult X fixture
+  parsing.
 - `make e2e`: local shim plus mihomo, proving library decisions through a proxy path.
 - `make bili-e2e`: BiliUniverse Enhanced plugin/script dispatch and script execution fixture.
-- `make script-contract-e2e`: request/response script metadata and adapter writeback contract.
+- `make script-contract-e2e`: request/response script metadata, persistentStore, timeout fail-open, and adapter writeback
+  contract.
 - `make bilibili-homepage-demo-e2e`: built-in Windows Bilibili homepage demo behavior through the shim path.

@@ -13,11 +13,27 @@ jobs:
         working-directory: mitm_anixops
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
       - name: Install mihomo fixture binary
         run: sh scripts/ensure-mihomo.sh
       - name: Run full project check
         run: |
           sh scripts/check.sh
+      - name: Build Alpha package
+        run: make alpha-dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anixops-mitm-alpha-linux
+          path: mitm_anixops/build/anixops-mitm-alpha-0.41.0.tar.gz
 
   windows-binary:
     runs-on: windows-latest

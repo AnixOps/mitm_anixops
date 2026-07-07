@@ -1,0 +1,10 @@
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: mitm_anixops
+Description: AnixOps-compatible MITM and rewrite policy C ABI
+Version: 0.41.0
+Libs: -L${libdir} -lmitm_anixops
+Cflags: -I${includedir}

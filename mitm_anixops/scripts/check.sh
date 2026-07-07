@@ -6,8 +6,36 @@ cd "$ROOT"
 
 make clean
 make test
+if [ -f /usr/include/pcre2.h ]; then
+	make pcre2-test
+else
+	printf '%s\n' 'skip pcre2-test: missing /usr/include/pcre2.h'
+fi
+if [ -f /usr/include/jq.h ]; then
+	make jq-test
+else
+	printf '%s\n' 'skip jq-test: missing /usr/include/jq.h'
+fi
 make all
 make demo-check
+make runner-check
+make proxy-shim-check
+if command -v pkg-config >/dev/null 2>&1; then
+	make pkg-config-check
+else
+	printf '%s\n' 'skip pkg-config-check: pkg-config not found'
+fi
+if command -v go >/dev/null 2>&1; then
+	make go-binding-check
+else
+	printf '%s\n' 'skip go-binding-check: go not found'
+fi
+if command -v cargo >/dev/null 2>&1; then
+	make rust-binding-check
+else
+	printf '%s\n' 'skip rust-binding-check: cargo not found'
+fi
+make cmake-package-check
 make ordering-contract-check
 
 DEFAULT_MIHOMO_BIN="$ROOT/../downloads/mihomo-linux-amd64-compatible-v1.19.27"

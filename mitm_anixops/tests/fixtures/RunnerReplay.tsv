@@ -1,0 +1,5 @@
+# type	name	phase	url	body
+case	redirect	request	http://old.loon.example/v1	-
+case	reject-ads	request	https://ads.loon.example/banner	-
+case	request-script	request	https://api.loon.example/v1	{"from":"request"}
+case	response-script	response	https://api.loon.example/v1	{"from":"response"}

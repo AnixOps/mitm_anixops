@@ -1,0 +1,10 @@
+[package]
+name = "mitm-anixops"
+version = "0.41.0"
+edition = "2021"
+license = "MIT"
+description = "Rust FFI wrapper for the mitm_anixops C ABI"
+
+[lib]
+name = "mitm_anixops"
+path = "src/lib.rs"

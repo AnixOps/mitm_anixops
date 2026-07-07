@@ -4,6 +4,15 @@
 returns dispatch metadata. The platform adapter owns script downloading, caching, execution, body decoding, and HTTP
 mutation.
 
+The Alpha package includes `anixops-script-runner.js`, the Node-based contract runner used by demos and E2E replay. It
+is a reference adapter for the bindings below, not the final embedded QuickJS/JavaScriptCore runtime.
+
+`anixops-mitm-runner replay` can execute the same contract without network IO when `--script-runner` and one or more
+`--script-map <script-url=local-file>` entries are provided. In that mode, the runner feeds the matched script metadata
+and replay body into the Node contract runner, captures `$done`, and applies a returned `body` field to the replay trace.
+Pass `--script-store <file>` to share a JSON-backed `$persistentStore` across replayed script invocations. The packaged
+Node contract runner exposes the same backend directly as `--store <file>`.
+
 ## Dispatch
 
 For each intercepted HTTP request or response, the adapter should:
@@ -53,6 +62,10 @@ Response scripts run last so JavaScript sees the response after static policy re
 adapter-owned status, header, or body mutation. After any body mutation, remove stale transfer/content encodings or
 recompute them consistently.
 
+The Alpha proxy shim follows this ordering for its HTTP/1.1 MITM demo path: request and response header/body rewrites
+run before the Node contract runner is invoked, and response bodies decoded from gzip/deflate are returned as identity
+after mutation.
+
 ## Globals
 
 The adapter should expose these AnixOps-compatible bindings:
@@ -61,7 +74,8 @@ The adapter should expose these AnixOps-compatible bindings:
 - `$request`: request object with `url`, `method`, `headers`, and `body` when a body is buffered.
 - `$response`: response object with `status`, `headers`, and `body`; only present during response-phase execution.
 - `$argument`: resolved argument string from `anixops_script_result_t.argument`.
-- `$persistentStore`: platform storage adapter with `read` and `write`.
+- `$persistentStore`: platform storage adapter with `read`, `write`, and optional `remove`. The Alpha Node contract
+  runner supports a JSON file backend through `--store <file>`.
 - `$done(value)`: completion callback.
 
 ## Request Result
@@ -109,9 +123,14 @@ The platform adapter, not this library, is responsible for:
 - updating `Content-Length` and transfer framing
 - HTTP/2 frame assembly and response writeback
 
+The Alpha proxy shim implements the response-script subset for gzip and deflate by decoding before the script runner and
+returning the mutated response as identity with corrected `Content-Length`. The Alpha Node contract runner also supports
+file-backed `$persistentStore` state shared across request and response script invocations.
+
 ## Error Behavior
 
-The adapter should enforce a timeout for `$done`. The E2E runner defaults to 5 seconds.
+The adapter should enforce a timeout for `$done`. The Node contract runner defaults to 5 seconds, `anixops-mitm-runner
+replay` exposes this as `--timeout-ms`, and the Alpha proxy shim exposes it as `--script-timeout-ms`.
 
 Recommended production behavior:
 
@@ -121,6 +140,9 @@ Recommended production behavior:
 - Missing script asset: log and preserve the original HTTP object.
 
 ## Current E2E Proof
+
+The Alpha proxy shim follows this policy for script runner failures. `make script-contract-e2e` includes a response
+script timeout case and asserts that the client receives the static-rewritten response instead of a proxy 502.
 
 `make script-contract-e2e` starts `mihomo`, the Go MITM shim, a local HTTPS origin, and `curl`.
 
@@ -132,3 +154,10 @@ It proves this contract through the proxy path:
 - response script dispatch through `ANIXOPS_PHASE_RESPONSE`
 - response status, header, and body mutation
 - `$request.url`, `$request.headers`, `$argument`, and original `$response.body` propagation
+
+`make runner-check` also proves the no-network replay path:
+
+- script dispatch through `ANIXOPS_PHASE_REQUEST` and `ANIXOPS_PHASE_RESPONSE`
+- local script-path mapping for remote script URLs
+- `$argument` propagation
+- `$done.body` writeback into the replay JSON body field

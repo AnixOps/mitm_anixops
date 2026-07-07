@@ -94,8 +94,11 @@ This fixture uses a tiny synthetic script to verify that the proxy adapter appli
 by `$done`:
 
 ```text
-request script dispatch -> request header/body mutation -> local origin
-response script dispatch -> status/header/body mutation -> MITM response
+request header/body rewrite -> request script dispatch -> request header/body mutation -> local origin
+response header/body rewrite -> response script dispatch -> status/header/body mutation -> MITM response
+gzip/deflate response decode -> body rewrite/script mutation -> identity writeback
+persistentStore write in request script -> persistentStore read in response script
+response script timeout -> fail open with static-rewritten response
 ```
 
 Run:
@@ -111,7 +114,10 @@ Covered:
 - response status mutation
 - response header mutation
 - response body mutation
-- `$request.url`, `$request.headers`, `$argument`, and original `$response.body` propagation
+- `$request.url`, `$request.headers`, `$argument`, `$persistentStore`, and original `$response.body` propagation
+- static request/response header and body rewrites before script dispatch
+- response script timeout fail-open after static rewrites
+- gzip/deflate response decode with identity writeback
 
 Not covered yet:
 
@@ -119,5 +125,5 @@ Not covered yet:
 - HTTP/2 frame-level rewrite
 - QUIC downgrade behavior
 - JavaScriptCore embedding on iOS
-- compressed/chunked HTTP body handling
-- header/JQ rewrite actions
+- brotli/zstd, chunked streaming, and full compressed body pipeline handling
+- JQ rewrite execution through the proxy path

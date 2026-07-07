@@ -30,12 +30,20 @@ Use this checklist before publishing a `mitm_anixops` source tag, binary artifac
    script kind=2
    ```
 
-6. Confirm `docs/compatibility_matrix.md` and `docs/TODO.md` reflect the shipped behavior and known gaps.
-7. For Windows artifacts, use the GitHub Actions artifact named:
+6. Confirm the output includes `make pkg-config-check` and that the staged smoke binary runs through the generated
+   `mitm_anixops.pc`.
+7. Confirm the output includes `make cmake-package-check` and that the staged CMake consumer configure/build/run smoke
+   passes. If `cmake` is unavailable in a constrained local environment, treat the explicit skip as a local limitation
+   and rerun on a machine with CMake before publishing Alpha artifacts.
+8. Confirm the output includes `make go-binding-check` and that the Go cgo wrapper tests pass through pkg-config.
+9. Confirm the output includes `make rust-binding-check` and that the Rust wrapper tests pass through pkg-config.
+10. Confirm `docs/compatibility_matrix.md` and `docs/TODO.md` reflect the shipped behavior and known gaps.
+11. For Windows artifacts, use the GitHub Actions artifact named:
 
    ```text
    anixops-mitm-windows-x64
    ```
 
-8. Do not add proxy forwarding, TLS socketing, certificate installation, HTTP/2 parsing, compression handling, a
-   JavaScript runtime, GUI code, or platform network extensions to the C library release.
+12. Do not add proxy forwarding, TLS socketing, certificate installation, HTTP/2 parsing, compression handling, a
+   JavaScript runtime, GUI code, or platform network extensions to the C library ABI. Keep those in explicit runner,
+   shim, or platform-adapter layers.

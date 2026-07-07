@@ -20,13 +20,14 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 40
+#define ANIXOPS_VERSION_MINOR 41
 #define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
 #define ANIXOPS_VALUE_CAP 2048
 #define ANIXOPS_ARGUMENT_CAP 4096
 #define ANIXOPS_MESSAGE_CAP 256
+#define ANIXOPS_PLAN_HEADER_CAP 16
 
 typedef struct anixops_engine anixops_engine_t;
 
@@ -69,6 +70,25 @@ typedef enum anixops_phase {
 	ANIXOPS_PHASE_RESPONSE = 1
 } anixops_phase_t;
 
+typedef enum anixops_compat_profile {
+	ANIXOPS_COMPAT_PORTABLE = 0,
+	ANIXOPS_COMPAT_LOON_STRICT = 1,
+	ANIXOPS_COMPAT_SURGE_STRICT = 2,
+	ANIXOPS_COMPAT_QUANTUMULTX_STRICT = 3
+} anixops_compat_profile_t;
+
+typedef enum anixops_regex_backend {
+	ANIXOPS_REGEX_BACKEND_POSIX_LITE = 0,
+	ANIXOPS_REGEX_BACKEND_PCRE2 = 1,
+	ANIXOPS_REGEX_BACKEND_NSREGULAR_EXPRESSION = 2
+} anixops_regex_backend_t;
+
+typedef enum anixops_rule_diagnostic_status {
+	ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED = 1,
+	ANIXOPS_RULE_DIAGNOSTIC_IGNORED = 2,
+	ANIXOPS_RULE_DIAGNOSTIC_REJECTED = 3
+} anixops_rule_diagnostic_status_t;
+
 typedef enum anixops_rewrite_action {
 	ANIXOPS_REWRITE_NONE = 0,
 	ANIXOPS_REWRITE_REDIRECT_302 = 1,
@@ -95,7 +115,9 @@ typedef enum anixops_rewrite_action {
 	ANIXOPS_REWRITE_REDIRECT_301 = 22,
 	ANIXOPS_REWRITE_REDIRECT_303 = 23,
 	ANIXOPS_REWRITE_REDIRECT_308 = 24,
-	ANIXOPS_REWRITE_HEADER_DEL = 25
+	ANIXOPS_REWRITE_HEADER_DEL = 25,
+	ANIXOPS_REWRITE_REQUEST_BODY_JQ = 26,
+	ANIXOPS_REWRITE_RESPONSE_BODY_JQ = 27
 } anixops_rewrite_action_t;
 
 typedef enum anixops_script_kind {
@@ -142,6 +164,26 @@ typedef struct anixops_script_result {
 	char message[ANIXOPS_MESSAGE_CAP];
 } anixops_script_result_t;
 
+typedef struct anixops_rewrite_plan {
+	anixops_phase_t phase;
+	int body_available;
+	int requires_body;
+	anixops_rewrite_result_t rewrite;
+	size_t header_rewrite_count;
+	int header_rewrite_truncated;
+	anixops_header_rewrite_result_t header_rewrites[ANIXOPS_PLAN_HEADER_CAP];
+	anixops_script_result_t script;
+} anixops_rewrite_plan_t;
+
+typedef struct anixops_rule_diagnostic {
+	anixops_rule_diagnostic_status_t status;
+	anixops_compat_profile_t profile;
+	size_t line;
+	char section[ANIXOPS_PATTERN_CAP];
+	char action[ANIXOPS_PATTERN_CAP];
+	char message[ANIXOPS_MESSAGE_CAP];
+} anixops_rule_diagnostic_t;
+
 ANIXOPS_API const char *anixops_version(void);
 ANIXOPS_API const char *anixops_status_message(int status);
 ANIXOPS_API anixops_engine_t *anixops_engine_new(void);
@@ -154,6 +196,17 @@ ANIXOPS_API int anixops_engine_copy_last_error(
 	size_t *out_line,
 	char *out_message,
 	size_t out_message_cap);
+
+ANIXOPS_API int anixops_engine_set_compat_profile(anixops_engine_t *engine, anixops_compat_profile_t profile);
+ANIXOPS_API anixops_compat_profile_t anixops_engine_compat_profile(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_regex_backend_available(anixops_regex_backend_t backend);
+ANIXOPS_API int anixops_engine_set_regex_backend(anixops_engine_t *engine, anixops_regex_backend_t backend);
+ANIXOPS_API anixops_regex_backend_t anixops_engine_regex_backend(const anixops_engine_t *engine);
+ANIXOPS_API size_t anixops_engine_rule_diagnostic_count(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
+	const anixops_engine_t *engine,
+	size_t index,
+	anixops_rule_diagnostic_t *out_diagnostic);
 
 ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char *config_text);
 ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const char *line);
@@ -201,6 +254,16 @@ ANIXOPS_API int anixops_script_evaluate_url(
 	const char *url,
 	anixops_phase_t phase,
 	anixops_script_result_t *out_result);
+
+ANIXOPS_API int anixops_rewrite_build_plan(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *body,
+	char *out_body,
+	size_t out_body_cap,
+	const char *current_header_value,
+	anixops_rewrite_plan_t *out_plan);
 
 ANIXOPS_API size_t anixops_engine_mitm_pattern_count(const anixops_engine_t *engine);
 ANIXOPS_API size_t anixops_engine_rewrite_rule_count(const anixops_engine_t *engine);

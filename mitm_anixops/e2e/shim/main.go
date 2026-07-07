@@ -11,6 +11,9 @@ import "C"
 import (
 	"bufio"
 	"bytes"
+	"compress/flate"
+	"compress/gzip"
+	"compress/zlib"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -41,19 +44,45 @@ import (
 )
 
 const (
-	rewriteNone        = C.ANIXOPS_REWRITE_NONE
-	rewriteRedirect302 = C.ANIXOPS_REWRITE_REDIRECT_302
-	rewriteRedirect307 = C.ANIXOPS_REWRITE_REDIRECT_307
-	mitmIntercept      = C.ANIXOPS_MITM_INTERCEPT
-	scriptNone         = C.ANIXOPS_SCRIPT_NONE
-	phaseRequest       = C.ANIXOPS_PHASE_REQUEST
-	phaseResponse      = C.ANIXOPS_PHASE_RESPONSE
+	rewriteNone                       = C.ANIXOPS_REWRITE_NONE
+	rewriteRedirect301                = C.ANIXOPS_REWRITE_REDIRECT_301
+	rewriteRedirect302                = C.ANIXOPS_REWRITE_REDIRECT_302
+	rewriteRedirect303                = C.ANIXOPS_REWRITE_REDIRECT_303
+	rewriteRedirect307                = C.ANIXOPS_REWRITE_REDIRECT_307
+	rewriteRedirect308                = C.ANIXOPS_REWRITE_REDIRECT_308
+	rewriteReject                     = C.ANIXOPS_REWRITE_REJECT
+	rewriteReject200                  = C.ANIXOPS_REWRITE_REJECT_200
+	rewriteRejectImg                  = C.ANIXOPS_REWRITE_REJECT_IMG
+	rewriteRejectVideo                = C.ANIXOPS_REWRITE_REJECT_VIDEO
+	rewriteRejectDict                 = C.ANIXOPS_REWRITE_REJECT_DICT
+	rewriteRejectArray                = C.ANIXOPS_REWRITE_REJECT_ARRAY
+	rewriteMockRequestBody            = C.ANIXOPS_REWRITE_MOCK_REQUEST_BODY
+	rewriteMockResponseBody           = C.ANIXOPS_REWRITE_MOCK_RESPONSE_BODY
+	rewriteRequestBodyReplaceRegex    = C.ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX
+	rewriteResponseBodyReplaceRegex   = C.ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX
+	rewriteRequestBodyJSONReplace     = C.ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE
+	rewriteResponseBodyJSONReplace    = C.ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE
+	rewriteRequestBodyJQ              = C.ANIXOPS_REWRITE_REQUEST_BODY_JQ
+	rewriteResponseBodyJQ             = C.ANIXOPS_REWRITE_RESPONSE_BODY_JQ
+	rewriteHeaderReplace              = C.ANIXOPS_REWRITE_HEADER_REPLACE
+	rewriteHeaderAdd                  = C.ANIXOPS_REWRITE_HEADER_ADD
+	rewriteHeaderReplaceRegex         = C.ANIXOPS_REWRITE_HEADER_REPLACE_REGEX
+	rewriteResponseHeaderDel          = C.ANIXOPS_REWRITE_RESPONSE_HEADER_DEL
+	rewriteResponseHeaderReplace      = C.ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE
+	rewriteResponseHeaderAdd          = C.ANIXOPS_REWRITE_RESPONSE_HEADER_ADD
+	rewriteResponseHeaderReplaceRegex = C.ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX
+	rewriteHeaderDel                  = C.ANIXOPS_REWRITE_HEADER_DEL
+	mitmIntercept                     = C.ANIXOPS_MITM_INTERCEPT
+	scriptNone                        = C.ANIXOPS_SCRIPT_NONE
+	phaseRequest                      = C.ANIXOPS_PHASE_REQUEST
+	phaseResponse                     = C.ANIXOPS_PHASE_RESPONSE
 )
 
 const (
 	builtinBilibiliScriptPath = "builtin:anixops/bilibili-homepage-demo"
 	defaultListen             = "127.0.0.1:19080"
 	defaultExternalUpstream   = "http://127.0.0.1:7890"
+	maxBodyRewriteBuffer      = 32 * 1024 * 1024
 )
 
 type engine struct {
@@ -73,17 +102,19 @@ type certCache struct {
 }
 
 type proxyServer struct {
-	engine         engine
-	certs          *certCache
-	httpClient     *http.Client
-	upstreamProxy  *url.URL
-	scriptRunner   string
-	scriptPathURL  string
-	scriptPathFile string
-	tempDir        string
-	debug          bool
-	requestSeq     uint64
-	mutex          sync.Mutex
+	engine          engine
+	certs           *certCache
+	httpClient      *http.Client
+	upstreamProxy   *url.URL
+	scriptRunner    string
+	scriptPathURL   string
+	scriptPathFile  string
+	scriptStore     string
+	scriptTimeoutMs string
+	tempDir         string
+	debug           bool
+	requestSeq      uint64
+	mutex           sync.Mutex
 }
 
 type scriptMatch struct {
@@ -120,6 +151,8 @@ func main() {
 	scriptRunner := flag.String("script-runner", "", "optional Node.js AnixOps script runner path")
 	scriptPathURL := flag.String("script-path-url", "", "script URL to map to a local file")
 	scriptPathFile := flag.String("script-path-file", "", "local script file for script-path-url")
+	scriptStore := flag.String("script-store", "", "optional JSON file backing $persistentStore for the script runner")
+	scriptTimeoutMs := flag.String("script-timeout-ms", "5000", "script runner $done timeout in milliseconds")
 	flag.Parse()
 
 	if *mihomoProxyRaw != "" && *upstreamRaw == "" {
@@ -184,14 +217,16 @@ func main() {
 	}
 
 	ps := &proxyServer{
-		engine:         eng,
-		certs:          cache,
-		upstreamProxy:  upstreamProxy,
-		scriptRunner:   *scriptRunner,
-		scriptPathURL:  *scriptPathURL,
-		scriptPathFile: *scriptPathFile,
-		tempDir:        os.TempDir(),
-		debug:          *debug,
+		engine:          eng,
+		certs:           cache,
+		upstreamProxy:   upstreamProxy,
+		scriptRunner:    *scriptRunner,
+		scriptPathURL:   *scriptPathURL,
+		scriptPathFile:  *scriptPathFile,
+		scriptStore:     *scriptStore,
+		scriptTimeoutMs: *scriptTimeoutMs,
+		tempDir:         os.TempDir(),
+		debug:           *debug,
 		httpClient: &http.Client{Transport: &http.Transport{
 			Proxy: http.ProxyURL(upstreamProxy),
 			TLSClientConfig: &tls.Config{
@@ -660,14 +695,65 @@ func (ps *proxyServer) debugf(format string, args ...interface{}) {
 }
 
 func (e engine) rewrite(rawURL string) (action C.anixops_rewrite_action_t, status int, value string, err error) {
+	return e.rewriteForPhase(rawURL, phaseRequest)
+}
+
+func (e engine) rewriteForPhase(rawURL string, phase C.anixops_phase_t) (action C.anixops_rewrite_action_t, status int, value string, err error) {
 	curl := C.CString(rawURL)
 	defer C.free(unsafe.Pointer(curl))
 	var result C.anixops_rewrite_result_t
-	rc := C.anixops_rewrite_evaluate_url(e.ptr, curl, C.ANIXOPS_PHASE_REQUEST, &result)
+	rc := C.anixops_rewrite_evaluate_url(e.ptr, curl, phase, &result)
 	if rc != C.ANIXOPS_OK {
 		return rewriteNone, 0, "", fmt.Errorf("anixops_rewrite_evaluate_url failed: %d", int(rc))
 	}
 	return result.action, int(result.status_code), cStringFromArray(unsafe.Pointer(&result.value[0])), nil
+}
+
+func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) ([]byte, bool, string, error) {
+	outCap, ok := bodyRewriteBufferCap(len(body))
+	if !ok {
+		return body, false, "body rewrite skipped: body too large", nil
+	}
+	curl := C.CString(rawURL)
+	defer C.free(unsafe.Pointer(curl))
+	cbody := C.CString(string(body))
+	defer C.free(unsafe.Pointer(cbody))
+	out := (*C.char)(C.malloc(C.size_t(outCap)))
+	if out == nil {
+		return nil, false, "", errors.New("body rewrite output allocation failed")
+	}
+	defer C.free(unsafe.Pointer(out))
+
+	var result C.anixops_rewrite_result_t
+	rc := C.anixops_rewrite_apply_body(e.ptr, curl, phase, cbody, out, C.size_t(outCap), &result)
+	if rc != C.ANIXOPS_OK {
+		return nil, false, "", fmt.Errorf("anixops_rewrite_apply_body failed: %d", int(rc))
+	}
+	message := cStringFromArray(unsafe.Pointer(&result.message[0]))
+	if !rewriteActionIsBody(result.action) {
+		return body, false, message, nil
+	}
+	if strings.Contains(strings.ToLower(message), "truncated") {
+		return body, false, message, nil
+	}
+	rewritten := []byte(C.GoString(out))
+	return rewritten, !bytes.Equal(rewritten, body), message, nil
+}
+
+func (e engine) evaluateHeader(rawURL string, phase C.anixops_phase_t, startIndex int, currentValue *string) (C.anixops_header_rewrite_result_t, error) {
+	curl := C.CString(rawURL)
+	defer C.free(unsafe.Pointer(curl))
+	var ccurrent *C.char
+	if currentValue != nil {
+		ccurrent = C.CString(*currentValue)
+		defer C.free(unsafe.Pointer(ccurrent))
+	}
+	var result C.anixops_header_rewrite_result_t
+	rc := C.anixops_rewrite_evaluate_header(e.ptr, curl, phase, C.size_t(startIndex), ccurrent, &result)
+	if rc != C.ANIXOPS_OK {
+		return result, fmt.Errorf("anixops_rewrite_evaluate_header failed: %d", int(rc))
+	}
+	return result, nil
 }
 
 func (e engine) script(rawURL string, phase C.anixops_phase_t) (scriptMatch, error) {
@@ -700,6 +786,104 @@ func (e engine) shouldMITM(host string) (bool, error) {
 
 func cStringFromArray(ptr unsafe.Pointer) string {
 	return C.GoString((*C.char)(ptr))
+}
+
+func rewriteActionIsBody(action C.anixops_rewrite_action_t) bool {
+	switch action {
+	case rewriteMockRequestBody,
+		rewriteMockResponseBody,
+		rewriteRequestBodyReplaceRegex,
+		rewriteResponseBodyReplaceRegex,
+		rewriteRequestBodyJSONReplace,
+		rewriteResponseBodyJSONReplace,
+		rewriteRequestBodyJQ,
+		rewriteResponseBodyJQ:
+		return true
+	default:
+		return false
+	}
+}
+
+func rewriteActionIsHeader(action C.anixops_rewrite_action_t) bool {
+	switch action {
+	case rewriteHeaderReplace,
+		rewriteHeaderAdd,
+		rewriteHeaderDel,
+		rewriteHeaderReplaceRegex,
+		rewriteResponseHeaderDel,
+		rewriteResponseHeaderReplace,
+		rewriteResponseHeaderAdd,
+		rewriteResponseHeaderReplaceRegex:
+		return true
+	default:
+		return false
+	}
+}
+
+func rewriteActionIsHeaderReplaceRegex(action C.anixops_rewrite_action_t) bool {
+	return action == rewriteHeaderReplaceRegex || action == rewriteResponseHeaderReplaceRegex
+}
+
+func bodyRewriteBufferCap(bodyLen int) (int, bool) {
+	if bodyLen+1 > maxBodyRewriteBuffer {
+		return 0, false
+	}
+	capacity := bodyLen + 4096
+	if bodyLen <= (maxBodyRewriteBuffer-4096)/4 {
+		capacity = bodyLen*4 + 4096
+	}
+	if capacity < 8192 {
+		capacity = 8192
+	}
+	if capacity > maxBodyRewriteBuffer {
+		capacity = maxBodyRewriteBuffer
+	}
+	return capacity, true
+}
+
+func (ps *proxyServer) applyHeaderRewrites(rawURL string, phase C.anixops_phase_t, header http.Header) (http.Header, error) {
+	nextHeader := cloneHeader(header)
+	startIndex := 0
+	for {
+		result, err := ps.engine.evaluateHeader(rawURL, phase, startIndex, nil)
+		if err != nil {
+			return nil, err
+		}
+		if result.action == rewriteNone {
+			return nextHeader, nil
+		}
+		if int(result.rule_index) < startIndex {
+			return nil, fmt.Errorf("header rewrite rule index moved backwards: %d", int(result.rule_index))
+		}
+		if rewriteActionIsHeaderReplaceRegex(result.action) {
+			name := cStringFromArray(unsafe.Pointer(&result.header_name[0]))
+			current := nextHeader.Get(name)
+			result, err = ps.engine.evaluateHeader(rawURL, phase, int(result.rule_index), &current)
+			if err != nil {
+				return nil, err
+			}
+		}
+		ps.applyHeaderRewriteResult(nextHeader, rawURL, &result)
+		startIndex = int(result.rule_index) + 1
+	}
+}
+
+func (ps *proxyServer) applyHeaderRewriteResult(header http.Header, rawURL string, result *C.anixops_header_rewrite_result_t) {
+	name := cStringFromArray(unsafe.Pointer(&result.header_name[0]))
+	value := cStringFromArray(unsafe.Pointer(&result.value[0]))
+	message := cStringFromArray(unsafe.Pointer(&result.message[0]))
+	if name == "" {
+		return
+	}
+	switch result.action {
+	case rewriteHeaderAdd, rewriteResponseHeaderAdd:
+		header.Add(name, value)
+	case rewriteHeaderReplace, rewriteHeaderReplaceRegex, rewriteResponseHeaderReplace, rewriteResponseHeaderReplaceRegex:
+		header.Set(name, value)
+	case rewriteHeaderDel, rewriteResponseHeaderDel:
+		header.Del(name)
+	}
+	ps.debugf("header_rewrite url=%s phase=%d action=%d name=%s message=%s", rawURL, int(result.phase), int(result.action), name, message)
 }
 
 func (ps *proxyServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -872,14 +1056,27 @@ func (ps *proxyServer) applyRequestScript(
 			return "", "", nil, nil, err
 		}
 	}
-	nextHeader := cloneHeader(header)
+	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseRequest, header)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+	rewrittenBody, bodyChanged, bodyMessage, err := ps.engine.applyBody(rawURL, phaseRequest, bodyBytes)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+	if bodyChanged {
+		bodyBytes = rewrittenBody
+		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
+		ps.debugf("request_body_rewrite url=%s message=%s bytes=%d", rawURL, bodyMessage, len(bodyBytes))
+	}
 	if match.kind == scriptNone || ps.scriptRunner == "" {
 		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
 	}
 
 	done, err := ps.runScript("request", match, scriptURL, method, nextHeader, 0, nil, bodyBytes)
 	if err != nil {
-		return "", "", nil, nil, err
+		ps.debugf("request_script_fail_open url=%s tag=%s err=%v", scriptURL, match.tag, err)
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
 	}
 	if done.URL != "" {
 		rawURL = done.URL
@@ -895,28 +1092,46 @@ func (ps *proxyServer) applyRequestScript(
 	}
 	if done.Body != nil {
 		bodyBytes = []byte(*done.Body)
+		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
 	}
 	return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
 }
 
 func (ps *proxyServer) prepareUpstreamHeader(rawURL string, header http.Header) http.Header {
 	nextHeader := cloneHeader(header)
+	needsPlainText := false
 	match, err := ps.engine.script(scriptDispatchURL(rawURL), phaseResponse)
-	if err != nil || match.kind == scriptNone || match.requiresBody == 0 {
-		return nextHeader
+	if err == nil && match.kind != scriptNone && match.requiresBody != 0 {
+		needsPlainText = true
 	}
-	nextHeader.Set("Accept-Encoding", "identity")
-	ps.debugf("identity_encoding url=%s tag=%s script=%s", rawURL, match.tag, match.scriptPath)
+	action, _, _, err := ps.engine.rewriteForPhase(rawURL, phaseResponse)
+	if err == nil && rewriteActionIsBody(action) {
+		needsPlainText = true
+	}
+	if needsPlainText {
+		nextHeader.Set("Accept-Encoding", "identity")
+		ps.debugf("identity_encoding url=%s tag=%s script=%s bodyRewrite=%v", rawURL, match.tag, match.scriptPath, rewriteActionIsBody(action))
+	}
 	return nextHeader
 }
 
 func (ps *proxyServer) applyResponseScript(rawURL string, method string, requestHeader http.Header, resp *http.Response) error {
+	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseResponse, resp.Header)
+	if err != nil {
+		return err
+	}
+	resp.Header = nextHeader
 	scriptURL := scriptDispatchURL(rawURL)
 	match, err := ps.engine.script(scriptURL, phaseResponse)
 	if err != nil {
 		return err
 	}
-	if match.kind == scriptNone {
+	action, _, _, err := ps.engine.rewriteForPhase(rawURL, phaseResponse)
+	if err != nil {
+		return err
+	}
+	hasBodyRewrite := rewriteActionIsBody(action)
+	if match.kind == scriptNone && !hasBodyRewrite {
 		return nil
 	}
 
@@ -925,6 +1140,32 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		return err
 	}
 	_ = resp.Body.Close()
+	scriptBody, decoded, err := decodeResponseBodyForScript(resp.Header.Get("Content-Encoding"), bodyBytes)
+	if err != nil {
+		return err
+	}
+	bodyChanged := false
+	bodyMessage := ""
+	if hasBodyRewrite {
+		rewritten, changed, message, err := ps.engine.applyBody(rawURL, phaseResponse, scriptBody)
+		if err != nil {
+			return err
+		}
+		bodyMessage = message
+		if changed {
+			scriptBody = rewritten
+			bodyChanged = true
+			ps.debugf("response_body_rewrite url=%s message=%s bytes=%d", rawURL, bodyMessage, len(scriptBody))
+		}
+	}
+	if match.kind == scriptNone {
+		if bodyChanged || decoded {
+			replaceResponseBody(resp, scriptBody)
+		} else {
+			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
+		return nil
+	}
 	done, err := ps.runScript(
 		"response",
 		match,
@@ -933,9 +1174,15 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		requestHeader,
 		resp.StatusCode,
 		resp.Header,
-		bodyBytes)
+		scriptBody)
 	if err != nil {
-		return err
+		ps.debugf("response_script_fail_open url=%s tag=%s err=%v", scriptURL, match.tag, err)
+		if bodyChanged {
+			replaceResponseBody(resp, scriptBody)
+		} else {
+			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		}
+		return nil
 	}
 	if done.Headers != nil {
 		resp.Header = make(http.Header)
@@ -944,7 +1191,9 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		}
 	}
 	if done.Body != nil {
-		replaceResponseBody(resp, *done.Body)
+		replaceResponseBody(resp, []byte(*done.Body))
+	} else if bodyChanged || decoded {
+		replaceResponseBody(resp, scriptBody)
 	} else {
 		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
@@ -955,8 +1204,42 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 	return nil
 }
 
-func replaceResponseBody(resp *http.Response, body string) {
-	resp.Body = io.NopCloser(strings.NewReader(body))
+func decodeResponseBodyForScript(encoding string, body []byte) ([]byte, bool, error) {
+	normalized := strings.ToLower(strings.TrimSpace(encoding))
+	if normalized == "" || normalized == "identity" {
+		return body, false, nil
+	}
+	if strings.Contains(normalized, ",") {
+		return nil, false, fmt.Errorf("stacked content-encoding is not supported for script body: %s", encoding)
+	}
+
+	var reader io.ReadCloser
+	var err error
+	switch normalized {
+	case "gzip", "x-gzip":
+		reader, err = gzip.NewReader(bytes.NewReader(body))
+	case "deflate":
+		reader, err = zlib.NewReader(bytes.NewReader(body))
+		if err != nil {
+			reader = flate.NewReader(bytes.NewReader(body))
+			err = nil
+		}
+	default:
+		return nil, false, fmt.Errorf("unsupported content-encoding for script body: %s", encoding)
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	defer reader.Close()
+	decoded, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, false, err
+	}
+	return decoded, true, nil
+}
+
+func replaceResponseBody(resp *http.Response, body []byte) {
+	resp.Body = io.NopCloser(bytes.NewReader(body))
 	resp.ContentLength = int64(len(body))
 	resp.TransferEncoding = nil
 	resp.Uncompressed = false
@@ -964,6 +1247,12 @@ func replaceResponseBody(resp *http.Response, body string) {
 	resp.Header.Del("Content-Encoding")
 	resp.Header.Del("Transfer-Encoding")
 	resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
+}
+
+func normalizeRequestBodyHeader(header http.Header, bodyLen int) {
+	header.Del("Content-Encoding")
+	header.Del("Transfer-Encoding")
+	header.Set("Content-Length", strconv.Itoa(bodyLen))
 }
 
 func (ps *proxyServer) runScript(
@@ -1019,7 +1308,11 @@ func (ps *proxyServer) runScript(
 		"--body", bodyPath,
 		"--phase", phase,
 		"--method", method,
+		"--timeoutMs", ps.scriptTimeoutMs,
 		"--requestHeaders", string(requestHeaderJSON),
+	}
+	if ps.scriptStore != "" {
+		args = append(args, "--store", ps.scriptStore)
 	}
 	if phase == "response" {
 		headerJSON, err := json.Marshal(flattenHeaders(responseHeader))
@@ -1246,27 +1539,29 @@ func (ps *proxyServer) forward(done <-chan struct{}, method, rawURL, host string
 
 func writeRewrite(w http.ResponseWriter, action C.anixops_rewrite_action_t, status int, value string) bool {
 	switch action {
-	case rewriteRedirect302, rewriteRedirect307:
+	case rewriteRedirect301, rewriteRedirect302, rewriteRedirect303, rewriteRedirect307, rewriteRedirect308:
 		if status == 0 {
 			status = http.StatusFound
 		}
 		w.Header().Set("Location", value)
 		w.WriteHeader(status)
 		return true
-	case rewriteNone:
-		return false
-	default:
+	case rewriteReject, rewriteReject200, rewriteRejectImg, rewriteRejectVideo, rewriteRejectDict, rewriteRejectArray:
 		if status == 0 {
 			status = http.StatusForbidden
 		}
 		w.WriteHeader(status)
 		return true
+	case rewriteNone:
+		return false
+	default:
+		return false
 	}
 }
 
 func writeRewriteToConn(conn net.Conn, action C.anixops_rewrite_action_t, status int, value string) bool {
 	switch action {
-	case rewriteRedirect302, rewriteRedirect307:
+	case rewriteRedirect301, rewriteRedirect302, rewriteRedirect303, rewriteRedirect307, rewriteRedirect308:
 		if status == 0 {
 			status = http.StatusFound
 		}
@@ -1283,14 +1578,16 @@ func writeRewriteToConn(conn net.Conn, action C.anixops_rewrite_action_t, status
 		resp.Header.Set("Location", value)
 		_ = resp.Write(conn)
 		return true
-	case rewriteNone:
-		return false
-	default:
+	case rewriteReject, rewriteReject200, rewriteRejectImg, rewriteRejectVideo, rewriteRejectDict, rewriteRejectArray:
 		if status == 0 {
 			status = http.StatusForbidden
 		}
 		writeRawError(conn, status, http.StatusText(status))
 		return true
+	case rewriteNone:
+		return false
+	default:
+		return false
 	}
 }
 
@@ -1410,11 +1707,34 @@ func startOrigin(addr string, cache *certCache) error {
 		if strings.HasPrefix(r.URL.Path, "/contract/request-response") {
 			body, _ := io.ReadAll(r.Body)
 			w.Header().Set("Content-Type", "application/json")
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			payload, _ := json.Marshal(map[string]interface{}{
 				"code":          0,
 				"requestScript": r.Header.Get("X-AnixOps-Request-Script"),
 				"body":          string(body),
 			})
+			payload = append(payload, '\n')
+			switch r.URL.Query().Get("compressed") {
+			case "gzip":
+				var compressed bytes.Buffer
+				gzipWriter := gzip.NewWriter(&compressed)
+				_, _ = gzipWriter.Write(payload)
+				_ = gzipWriter.Close()
+				w.Header().Set("Content-Encoding", "gzip")
+				w.Header().Set("Content-Length", strconv.Itoa(compressed.Len()))
+				w.Header().Set("X-Origin-Content-Encoding", "gzip")
+				_, _ = w.Write(compressed.Bytes())
+			case "deflate":
+				var compressed bytes.Buffer
+				deflateWriter := zlib.NewWriter(&compressed)
+				_, _ = deflateWriter.Write(payload)
+				_ = deflateWriter.Close()
+				w.Header().Set("Content-Encoding", "deflate")
+				w.Header().Set("Content-Length", strconv.Itoa(compressed.Len()))
+				w.Header().Set("X-Origin-Content-Encoding", "deflate")
+				_, _ = w.Write(compressed.Bytes())
+			default:
+				_, _ = w.Write(payload)
+			}
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/x/resource/show/tab/v2") ||

@@ -83,6 +83,49 @@ static void config_accepts_header_rewrite_section_aliases(void)
 	anixops_engine_free(engine);
 }
 
+static void config_accepts_body_rewrite_section_aliases(void)
+{
+	const char *config =
+		"[Body Rewrite]\n"
+		"^https://api\\.test/request request-body-replace-regex token=[0-9]+ token=ok\n"
+		"[Remote Body Rewrite]\n"
+		"^https://api\\.test/response response-body-replace-regex ad clean\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/request",
+			ANIXOPS_PHASE_REQUEST,
+			"token=123&ok=1",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "token=ok&ok=1");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/response",
+			ANIXOPS_PHASE_RESPONSE,
+			"ad=1&ok=1",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "clean=1&ok=1");
+
+	anixops_engine_free(engine);
+}
+
 static void config_accepts_quantumultx_rewrite_remote_section_aliases(void)
 {
 	const char *config =
@@ -241,6 +284,99 @@ static void config_failure_records_line_diagnostic(void)
 	anixops_engine_free(engine);
 }
 
+static void config_records_rule_diagnostics_for_accepted_and_ignored_lines(void)
+{
+	const char *config =
+		"[General]\n"
+		"hostname = ignored.test\n"
+		"[Rewrite]\n"
+		"^https://ok\\.test https://target.test 302\n"
+		"^https://incomplete\\.test\n"
+		"[MITM]\n"
+		"hostname = api.example.test\n"
+		"ca-p12 = ignored.p12\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 6);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 1);
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "section");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 2, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 4);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 3, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 5);
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 5, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 8);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "ca-p12");
+
+	anixops_engine_free(engine);
+}
+
+static void plugin_metadata_section_is_tolerated_with_diagnostics(void)
+{
+	const char *config =
+		"[Plugin]\n"
+		"name = Example Plugin\n"
+		"desc = Metadata only\n"
+		"[MITM]\n"
+		"hostname = api.example.test\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "plugin metadata") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 2, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+
+	anixops_engine_free(engine);
+}
+
+static void config_records_rejected_rule_diagnostic_before_returning_error(void)
+{
+	const char *config =
+		"[Rewrite]\n"
+		"[ https://target.test 302\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "rewrite URL regex") != NULL);
+
+	anixops_engine_free(engine);
+}
+
 static void quoted_replacement_is_parsed_as_one_token(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -269,6 +405,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_accepts_header_rewrite_section_aliases",
 		config_accepts_header_rewrite_section_aliases);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_accepts_body_rewrite_section_aliases",
+		config_accepts_body_rewrite_section_aliases);
 	add_test(
 		tests,
 		count,
@@ -302,5 +444,23 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 	add_test(tests, count, cap, "config/incomplete_rewrite_lines_are_ignored", incomplete_rewrite_lines_are_ignored);
 	add_test(tests, count, cap, "config/invalid_regex_is_reported_and_does_not_add_rule", invalid_regex_is_reported_and_does_not_add_rule);
 	add_test(tests, count, cap, "config/config_failure_records_line_diagnostic", config_failure_records_line_diagnostic);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_records_rule_diagnostics_for_accepted_and_ignored_lines",
+		config_records_rule_diagnostics_for_accepted_and_ignored_lines);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/plugin_metadata_section_is_tolerated_with_diagnostics",
+		plugin_metadata_section_is_tolerated_with_diagnostics);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_records_rejected_rule_diagnostic_before_returning_error",
+		config_records_rejected_rule_diagnostic_before_returning_error);
 	add_test(tests, count, cap, "config/quoted_replacement_is_parsed_as_one_token", quoted_replacement_is_parsed_as_one_token);
 }

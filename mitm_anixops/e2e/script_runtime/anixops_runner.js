@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const fs = require("node:fs");
+const path = require("node:path");
 const util = require("node:util");
 const vm = require("node:vm");
 
@@ -22,6 +23,35 @@ function readArgs(argv) {
   return args;
 }
 
+function loadStore(storePath) {
+  if (!storePath) {
+    return { data: {}, save() {} };
+  }
+  let data = {};
+  try {
+    if (fs.existsSync(storePath)) {
+      const raw = fs.readFileSync(storePath, "utf8").trim();
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          data = parsed;
+        }
+      }
+    }
+  } catch {
+    data = {};
+  }
+  return {
+    data,
+    save() {
+      fs.mkdirSync(path.dirname(storePath), { recursive: true });
+      const tmp = `${storePath}.${process.pid}.tmp`;
+      fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
+      fs.renameSync(tmp, storePath);
+    },
+  };
+}
+
 async function main() {
   const args = readArgs(process.argv);
   const phase = args.phase || "response";
@@ -33,6 +63,7 @@ async function main() {
 
   const script = fs.readFileSync(args.script, "utf8");
   const body = fs.readFileSync(args.body, "utf8");
+  const store = loadStore(args.store);
   const logToStderr = (...items) => {
     process.stderr.write(`${items.map((item) => (typeof item === "string" ? item : util.inspect(item))).join(" ")}\n`);
   };
@@ -71,10 +102,26 @@ async function main() {
   }
   globalThis.$argument = args.argument;
   globalThis.$persistentStore = {
-    read() {
-      return null;
+    read(key) {
+      if (typeof key !== "string" || !(key in store.data)) {
+        return null;
+      }
+      return store.data[key];
     },
-    write() {
+    write(value, key) {
+      if (typeof key !== "string" || key.length === 0) {
+        return false;
+      }
+      store.data[key] = value == null ? "" : String(value);
+      store.save();
+      return true;
+    },
+    remove(key) {
+      if (typeof key !== "string") {
+        return false;
+      }
+      delete store.data[key];
+      store.save();
       return true;
     },
   };
