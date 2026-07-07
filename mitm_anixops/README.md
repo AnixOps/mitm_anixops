@@ -33,8 +33,8 @@ Implemented:
   actions.
 - Regex capture replacement with `$1` and `\1`.
 - POSIX ERE regex matching with supported leading `(?i)`, `(?s)`, and `(?is)` prefixes, PCRE shorthand classes
-  `\d`, `\w`, and `\s`, PCRE control escapes such as `\t`, PCRE hex byte escapes such as `\x2e`, PCRE Unicode
-  escapes such as `\u00e9`, lazy quantifier suffixes normalized to greedy equivalents, plus PCRE absolute anchors
+  `\d`, `\w`, `\s`, `\h`, and `\H`, PCRE control escapes such as `\t`, PCRE hex byte escapes such as `\x2e`,
+  PCRE Unicode escapes such as `\u00e9`, lazy quantifier suffixes normalized to greedy equivalents, plus PCRE absolute anchors
   `\A`, `\z`, and `\Z`.
 - PCRE non-capturing group syntax `(?:...)` for matching, normalized as a regular POSIX capturing group.
 - PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching, normalized as regular POSIX capturing
