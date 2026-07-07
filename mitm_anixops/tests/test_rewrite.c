@@ -15,6 +15,13 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 	(*count)++;
 }
 
+static void set_header_field(anixops_header_field_t *field, const char *name, const char *value)
+{
+	memset(field, 0, sizeof(*field));
+	snprintf(field->name, sizeof(field->name), "%s", name);
+	snprintf(field->value, sizeof(field->value), "%s", value);
+}
+
 static void no_match_returns_none_and_rule_index_minus_one(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2490,6 +2497,106 @@ static void named_header_rewrite_matches_header_case_insensitively(void)
 	anixops_engine_free(engine);
 }
 
+static void header_list_rewrite_applies_multi_value_request_semantics(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_list_t input;
+	anixops_header_list_t output;
+	anixops_rewrite_plan_t plan;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	memset(&input, 0, sizeof(input));
+	set_header_field(&input.fields[0], "X-Mode", "old-one");
+	set_header_field(&input.fields[1], "x-mode", "old-two");
+	set_header_field(&input.fields[2], "X-Drop", "remove-me");
+	set_header_field(&input.fields[3], "X-Token", "old=Fast");
+	set_header_field(&input.fields[4], "x-token", "skip");
+	input.count = 5;
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/(.*) header-add X-Trace trace-$1"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/(.*) header-replace X-Mode mode-$1"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/(.*) header-del X-Drop"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/(.*) header-replace-regex X-Token \"old=([A-Za-z]+)\" \"new=$1\""),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_headers(engine, "https://api.test/path", ANIXOPS_PHASE_REQUEST, &input, &output, &plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(output.count, 4);
+	ANIXOPS_EXPECT_EQ_INT(output.truncated, 0);
+	ANIXOPS_EXPECT_STREQ(output.fields[0].name, "X-Token");
+	ANIXOPS_EXPECT_STREQ(output.fields[0].value, "new=Fast");
+	ANIXOPS_EXPECT_STREQ(output.fields[1].name, "x-token");
+	ANIXOPS_EXPECT_STREQ(output.fields[1].value, "skip");
+	ANIXOPS_EXPECT_STREQ(output.fields[2].name, "X-Trace");
+	ANIXOPS_EXPECT_STREQ(output.fields[2].value, "trace-path");
+	ANIXOPS_EXPECT_STREQ(output.fields[3].name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(output.fields[3].value, "mode-path");
+
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 4);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrite_truncated, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, ANIXOPS_REWRITE_HEADER_ADD);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].header_name, "X-Trace");
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].action, ANIXOPS_REWRITE_HEADER_REPLACE);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].header_name, "X-Mode");
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[2].action, ANIXOPS_REWRITE_HEADER_DEL);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[2].message, "header list deleted");
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[3].action, ANIXOPS_REWRITE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[3].value, "new=Fast");
+
+	anixops_engine_free(engine);
+}
+
+static void header_list_rewrite_keeps_set_cookie_values_separate(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_list_t input;
+	anixops_header_list_t output;
+	anixops_rewrite_plan_t plan;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	memset(&input, 0, sizeof(input));
+	set_header_field(&input.fields[0], "Set-Cookie", "a=1; Path=/");
+	set_header_field(&input.fields[1], "set-cookie", "b=1; Path=/");
+	set_header_field(&input.fields[2], "X-Remove", "yes");
+	input.count = 3;
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/cookies response-header-add Set-Cookie \"c=1; Path=/\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/cookies response-header-replace-regex Set-Cookie \"a=1\" \"a=2\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/cookies response-header-del X-Remove"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_headers(engine, "https://api.test/cookies", ANIXOPS_PHASE_RESPONSE, &input, &output, &plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(output.count, 3);
+	ANIXOPS_EXPECT_EQ_INT(output.truncated, 0);
+	ANIXOPS_EXPECT_STREQ(output.fields[0].name, "Set-Cookie");
+	ANIXOPS_EXPECT_STREQ(output.fields[0].value, "a=2; Path=/");
+	ANIXOPS_EXPECT_STREQ(output.fields[1].name, "set-cookie");
+	ANIXOPS_EXPECT_STREQ(output.fields[1].value, "b=1; Path=/");
+	ANIXOPS_EXPECT_STREQ(output.fields[2].name, "Set-Cookie");
+	ANIXOPS_EXPECT_STREQ(output.fields[2].value, "c=1; Path=/");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 3);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, ANIXOPS_REWRITE_RESPONSE_HEADER_ADD);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[2].action, ANIXOPS_REWRITE_RESPONSE_HEADER_DEL);
+
+	anixops_engine_free(engine);
+}
+
 static void rewrite_plan_matches_individual_evaluation_order(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2968,6 +3075,18 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/named_header_rewrite_matches_header_case_insensitively",
 		named_header_rewrite_matches_header_case_insensitively);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/header_list_rewrite_applies_multi_value_request_semantics",
+		header_list_rewrite_applies_multi_value_request_semantics);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/header_list_rewrite_keeps_set_cookie_values_separate",
+		header_list_rewrite_keeps_set_cookie_values_separate);
 	add_test(tests, count, cap, "rewrite/rewrite_plan_matches_individual_evaluation_order", rewrite_plan_matches_individual_evaluation_order);
 	add_test(tests, count, cap, "rewrite/request_header_delete_is_supported", request_header_delete_is_supported);
 	add_test(

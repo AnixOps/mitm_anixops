@@ -17,9 +17,9 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.42.0");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.43.0");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 42);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 43);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 0);
 }
 
@@ -29,6 +29,8 @@ static void null_arguments_are_rejected(void)
 	anixops_mitm_decision_t mitm;
 	anixops_rewrite_result_t rewrite;
 	anixops_header_rewrite_result_t header_rewrite;
+	anixops_header_list_t headers;
+	anixops_header_list_t rewritten_headers;
 	anixops_script_result_t script;
 	anixops_rewrite_plan_t plan;
 	anixops_rule_diagnostic_t diagnostic;
@@ -120,6 +122,19 @@ static void null_arguments_are_rejected(void)
 			"X-Test",
 			"",
 			NULL),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	memset(&headers, 0, sizeof(headers));
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_headers(NULL, "https://example.com", ANIXOPS_PHASE_REQUEST, &headers, &rewritten_headers, NULL),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_headers(engine, NULL, ANIXOPS_PHASE_REQUEST, &headers, &rewritten_headers, NULL),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_headers(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, NULL, &rewritten_headers, NULL),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_headers(engine, "https://example.com", ANIXOPS_PHASE_REQUEST, &headers, NULL, NULL),
 		ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_script_evaluate_url(NULL, "https://example.com", ANIXOPS_PHASE_RESPONSE, &script), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_script_evaluate_url(engine, NULL, ANIXOPS_PHASE_RESPONSE, &script), ANIXOPS_ERR_INVALID_ARGUMENT);

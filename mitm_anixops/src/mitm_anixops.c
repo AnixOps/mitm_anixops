@@ -354,6 +354,11 @@ static void anixops_set_rewrite_none(anixops_rewrite_result_t *out);
 static void anixops_set_header_rewrite_none(anixops_header_rewrite_result_t *out);
 static void anixops_set_script_none(anixops_script_result_t *out);
 static void anixops_set_rewrite_plan_none(anixops_rewrite_plan_t *out, anixops_phase_t phase);
+static int anixops_header_list_copy_checked(anixops_header_list_t *dst, const anixops_header_list_t *src);
+static int anixops_header_list_append(anixops_header_list_t *headers, const char *name, const char *value);
+static size_t anixops_header_list_remove_name(anixops_header_list_t *headers, const char *name);
+static int anixops_header_list_name_matches(const char *left, const char *right);
+static void anixops_rewrite_plan_add_header(anixops_rewrite_plan_t *plan, const anixops_header_rewrite_result_t *header);
 static void anixops_set_diagnostic(anixops_engine_t *engine, int status, size_t line, const char *message);
 static void anixops_clear_diagnostic(anixops_engine_t *engine);
 static int anixops_config_line_error(anixops_engine_t *engine, int status, size_t line_no, char *line);
@@ -362,7 +367,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.42.0";
+	return "0.43.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2130,6 +2135,141 @@ static int anixops_rewrite_evaluate_header_internal(
 		return ANIXOPS_OK;
 	}
 
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_apply_headers(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const anixops_header_list_t *headers,
+	anixops_header_list_t *out_headers,
+	anixops_rewrite_plan_t *out_plan)
+{
+	anixops_header_list_t working;
+	size_t i;
+
+	if (engine == NULL || url == NULL || headers == NULL || out_headers == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	if (anixops_header_list_copy_checked(&working, headers) != ANIXOPS_OK) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	if (out_plan != NULL) {
+		anixops_set_rewrite_plan_none(out_plan, phase);
+	}
+
+	for (i = 0; i < engine->rule_len; i++) {
+		const anixops_rewrite_rule_t *rule = &engine->rules[i];
+		anixops_header_rewrite_result_t result;
+		regmatch_t url_matches[ANIXOPS_MATCH_CAP];
+		int url_rc;
+
+		if (rule->phase != phase || !rule->regex_ready || !anixops_rewrite_action_rewrites_header(rule->action)) {
+			continue;
+		}
+		url_rc = anixops_regex_exec(&rule->regex, url, sizeof(url_matches) / sizeof(url_matches[0]), url_matches);
+		if (url_rc != 0) {
+			continue;
+		}
+
+		anixops_set_header_rewrite_none(&result);
+		result.action = rule->action;
+		result.phase = rule->phase;
+		result.rule_index = (int)i;
+		anixops_copy_text(result.matched_pattern, sizeof(result.matched_pattern), rule->pattern);
+		anixops_copy_text(result.header_name, sizeof(result.header_name), rule->header_name);
+
+		if (anixops_rewrite_action_replaces_header_regex(rule->action)) {
+			size_t h;
+			int saw_header = 0;
+			int saw_replacement = 0;
+			int saw_truncation = 0;
+			for (h = 0; h < working.count; h++) {
+				char replaced_value[ANIXOPS_VALUE_CAP];
+				int replaced = 0;
+				if (!anixops_header_list_name_matches(working.fields[h].name, rule->header_name)) {
+					continue;
+				}
+				saw_header = 1;
+				if (!rule->header_regex_ready ||
+					anixops_apply_regex_replacement(
+						working.fields[h].value,
+						&rule->header_regex,
+						rule->header_regex_ready,
+						rule->replacement,
+						rule->header_capture_map,
+						ANIXOPS_MATCH_CAP,
+						replaced_value,
+						sizeof(replaced_value),
+						&replaced) != ANIXOPS_OK) {
+					saw_truncation = 1;
+					continue;
+				}
+				if (!replaced) {
+					continue;
+				}
+				anixops_copy_text(working.fields[h].value, sizeof(working.fields[h].value), replaced_value);
+				if (!saw_replacement) {
+					anixops_copy_text(result.value, sizeof(result.value), replaced_value);
+				}
+				saw_replacement = 1;
+			}
+			if (saw_truncation) {
+				anixops_copy_text(result.message, sizeof(result.message), "header value truncated");
+			}
+			else if (saw_replacement) {
+				anixops_copy_text(result.message, sizeof(result.message), "header list rewritten");
+			}
+			else if (saw_header) {
+				anixops_copy_text(result.message, sizeof(result.message), "header regex not matched");
+			}
+			else {
+				anixops_copy_text(result.message, sizeof(result.message), "header not found");
+			}
+			anixops_rewrite_plan_add_header(out_plan, &result);
+			continue;
+		}
+
+		if (rule->action == ANIXOPS_REWRITE_HEADER_DEL || rule->action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL) {
+			size_t removed = anixops_header_list_remove_name(&working, rule->header_name);
+			result.value[0] = '\0';
+			anixops_copy_text(
+				result.message,
+				sizeof(result.message),
+				removed > 0 ? "header list deleted" : "header not found");
+			anixops_rewrite_plan_add_header(out_plan, &result);
+			continue;
+		}
+
+		if (anixops_expand_replacement(
+				url,
+				rule->replacement,
+				url_matches,
+				sizeof(url_matches) / sizeof(url_matches[0]),
+				rule->capture_map,
+				ANIXOPS_MATCH_CAP,
+				result.value,
+				sizeof(result.value)) != ANIXOPS_OK) {
+			anixops_copy_text(result.message, sizeof(result.message), "header value truncated");
+			anixops_rewrite_plan_add_header(out_plan, &result);
+			continue;
+		}
+
+		if (rule->action == ANIXOPS_REWRITE_HEADER_REPLACE || rule->action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE) {
+			(void)anixops_header_list_remove_name(&working, rule->header_name);
+		}
+		if (anixops_header_list_append(&working, rule->header_name, result.value) != ANIXOPS_OK) {
+			working.truncated = 1;
+			anixops_copy_text(result.message, sizeof(result.message), "header list truncated");
+		}
+		else {
+			anixops_copy_text(result.message, sizeof(result.message), "header list rewritten");
+		}
+		anixops_rewrite_plan_add_header(out_plan, &result);
+	}
+
+	*out_headers = working;
 	return ANIXOPS_OK;
 }
 
@@ -5179,6 +5319,80 @@ static void anixops_set_rewrite_plan_none(anixops_rewrite_plan_t *out, anixops_p
 	}
 	anixops_set_script_none(&out->script);
 	out->script.phase = phase;
+}
+
+static int anixops_header_list_copy_checked(anixops_header_list_t *dst, const anixops_header_list_t *src)
+{
+	if (dst == NULL || src == NULL || src->count > ANIXOPS_HEADER_LIST_CAP) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	*dst = *src;
+	return ANIXOPS_OK;
+}
+
+static int anixops_header_list_append(anixops_header_list_t *headers, const char *name, const char *value)
+{
+	anixops_header_field_t *field;
+	if (headers == NULL || name == NULL || value == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	if (headers->count >= ANIXOPS_HEADER_LIST_CAP) {
+		return ANIXOPS_ERR_CAPACITY;
+	}
+	field = &headers->fields[headers->count];
+	memset(field, 0, sizeof(*field));
+	anixops_copy_text(field->name, sizeof(field->name), name);
+	anixops_copy_text(field->value, sizeof(field->value), value);
+	headers->count++;
+	return ANIXOPS_OK;
+}
+
+static size_t anixops_header_list_remove_name(anixops_header_list_t *headers, const char *name)
+{
+	size_t read_index;
+	size_t write_index = 0;
+	size_t removed = 0;
+
+	if (headers == NULL || name == NULL) {
+		return 0;
+	}
+	for (read_index = 0; read_index < headers->count; read_index++) {
+		if (anixops_header_list_name_matches(headers->fields[read_index].name, name)) {
+			removed++;
+			continue;
+		}
+		if (write_index != read_index) {
+			headers->fields[write_index] = headers->fields[read_index];
+		}
+		write_index++;
+	}
+	for (; write_index < headers->count; write_index++) {
+		memset(&headers->fields[write_index], 0, sizeof(headers->fields[write_index]));
+	}
+	headers->count -= removed;
+	return removed;
+}
+
+static int anixops_header_list_name_matches(const char *left, const char *right)
+{
+	if (left == NULL || right == NULL) {
+		return 0;
+	}
+	return strcasecmp(left, right) == 0;
+}
+
+static void anixops_rewrite_plan_add_header(anixops_rewrite_plan_t *plan, const anixops_header_rewrite_result_t *header)
+{
+	if (plan == NULL || header == NULL) {
+		return;
+	}
+	if (plan->header_rewrite_count < ANIXOPS_PLAN_HEADER_CAP) {
+		plan->header_rewrites[plan->header_rewrite_count] = *header;
+		plan->header_rewrite_count++;
+	}
+	else {
+		plan->header_rewrite_truncated = 1;
+	}
 }
 
 static void anixops_set_diagnostic(anixops_engine_t *engine, int status, size_t line, const char *message)

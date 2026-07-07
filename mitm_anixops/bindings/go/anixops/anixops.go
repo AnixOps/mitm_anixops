@@ -4,6 +4,7 @@ package anixops
 #cgo pkg-config: mitm_anixops
 #include "mitm_anixops.h"
 #include <stdlib.h>
+#include <string.h>
 */
 import "C"
 
@@ -24,12 +25,17 @@ const (
 type RewriteAction int
 
 const (
-	RewriteNone                     RewriteAction = C.ANIXOPS_REWRITE_NONE
-	RewriteRedirect302              RewriteAction = C.ANIXOPS_REWRITE_REDIRECT_302
-	RewriteResponseBodyReplaceRegex RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX
-	RewriteHeaderAdd                RewriteAction = C.ANIXOPS_REWRITE_HEADER_ADD
-	RewriteHeaderReplace            RewriteAction = C.ANIXOPS_REWRITE_HEADER_REPLACE
-	RewriteResponseHeaderAdd        RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_HEADER_ADD
+	RewriteNone                       RewriteAction = C.ANIXOPS_REWRITE_NONE
+	RewriteRedirect302                RewriteAction = C.ANIXOPS_REWRITE_REDIRECT_302
+	RewriteResponseBodyReplaceRegex   RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX
+	RewriteHeaderDel                  RewriteAction = C.ANIXOPS_REWRITE_HEADER_DEL
+	RewriteHeaderAdd                  RewriteAction = C.ANIXOPS_REWRITE_HEADER_ADD
+	RewriteHeaderReplace              RewriteAction = C.ANIXOPS_REWRITE_HEADER_REPLACE
+	RewriteHeaderReplaceRegex         RewriteAction = C.ANIXOPS_REWRITE_HEADER_REPLACE_REGEX
+	RewriteResponseHeaderDel          RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_HEADER_DEL
+	RewriteResponseHeaderAdd          RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_HEADER_ADD
+	RewriteResponseHeaderReplace      RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE
+	RewriteResponseHeaderReplaceRegex RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX
 )
 
 type ScriptKind int
@@ -61,6 +67,16 @@ type HeaderRewriteResult struct {
 	HeaderName     string
 	Value          string
 	Message        string
+}
+
+type HeaderField struct {
+	Name  string
+	Value string
+}
+
+type HeaderList struct {
+	Fields    []HeaderField
+	Truncated bool
 }
 
 type ScriptResult struct {
@@ -199,6 +215,38 @@ func (e *Engine) EvaluateNamedHeader(
 	return headerRewriteResultFromC(&result), nil
 }
 
+func (e *Engine) ApplyHeaders(url string, phase Phase, headers HeaderList) (HeaderList, RewritePlan, error) {
+	var in C.anixops_header_list_t
+	var out C.anixops_header_list_t
+	var plan C.anixops_rewrite_plan_t
+	if e == nil || e.ptr == nil {
+		return HeaderList{}, RewritePlan{}, fmt.Errorf("anixops: nil engine")
+	}
+	if len(headers.Fields) > int(C.ANIXOPS_HEADER_LIST_CAP) {
+		return HeaderList{}, RewritePlan{}, fmt.Errorf("anixops: header list exceeds capacity")
+	}
+	curl := C.CString(url)
+	defer C.free(unsafe.Pointer(curl))
+	in.count = C.size_t(len(headers.Fields))
+	if headers.Truncated {
+		in.truncated = 1
+	}
+	for i, field := range headers.Fields {
+		if writeCArrayString(unsafe.Pointer(&in.fields[i].name[0]), int(C.ANIXOPS_PATTERN_CAP), field.Name) {
+			in.truncated = 1
+		}
+		if writeCArrayString(unsafe.Pointer(&in.fields[i].value[0]), int(C.ANIXOPS_VALUE_CAP), field.Value) {
+			in.truncated = 1
+		}
+	}
+	if err := statusError(
+		"apply headers",
+		C.anixops_rewrite_apply_headers(e.ptr, curl, C.anixops_phase_t(phase), &in, &out, &plan)); err != nil {
+		return HeaderList{}, RewritePlan{}, err
+	}
+	return headerListFromC(&out), rewritePlanFromC(&plan), nil
+}
+
 func (e *Engine) BuildPlan(url string, phase Phase, body string) (RewritePlan, string, error) {
 	var plan C.anixops_rewrite_plan_t
 	outCap := len(body) + C.ANIXOPS_VALUE_CAP
@@ -269,6 +317,24 @@ func headerRewriteResultFromC(result *C.anixops_header_rewrite_result_t) HeaderR
 	}
 }
 
+func headerListFromC(list *C.anixops_header_list_t) HeaderList {
+	count := int(list.count)
+	if count > int(C.ANIXOPS_HEADER_LIST_CAP) {
+		count = int(C.ANIXOPS_HEADER_LIST_CAP)
+	}
+	fields := make([]HeaderField, 0, count)
+	for i := 0; i < count; i++ {
+		fields = append(fields, HeaderField{
+			Name:  cArrayString(unsafe.Pointer(&list.fields[i].name[0])),
+			Value: cArrayString(unsafe.Pointer(&list.fields[i].value[0])),
+		})
+	}
+	return HeaderList{
+		Fields:    fields,
+		Truncated: list.truncated != 0,
+	}
+}
+
 func scriptResultFromC(result *C.anixops_script_result_t) ScriptResult {
 	return ScriptResult{
 		Kind:           ScriptKind(result.kind),
@@ -305,4 +371,16 @@ func rewritePlanFromC(plan *C.anixops_rewrite_plan_t) RewritePlan {
 
 func cArrayString(ptr unsafe.Pointer) string {
 	return C.GoString((*C.char)(ptr))
+}
+
+func writeCArrayString(ptr unsafe.Pointer, cap int, value string) bool {
+	bytes := []byte(value)
+	truncated := false
+	if len(bytes) >= cap {
+		bytes = bytes[:cap-1]
+		truncated = true
+	}
+	C.memset(ptr, 0, C.size_t(cap))
+	copy(unsafe.Slice((*byte)(ptr), cap), bytes)
+	return truncated
 }

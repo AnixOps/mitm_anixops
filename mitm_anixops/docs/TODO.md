@@ -32,8 +32,9 @@ publishing.
 - Exact AnixOps/Loon behavior for every malformed line. Portable mode still ignores incomplete non-action lines; strict
   profiles reject ignored rule-shaped lines in supported sections and report regex compilation failures.
 - Exact rewrite/script ordering for all edge cases in larger platform clients. The Alpha C ABI now has
-  `anixops_rewrite_build_plan` for URL/body/header/script aggregation and `anixops_rewrite_evaluate_named_header` for
-  case-insensitive single-header lookup, but larger client corpus ordering still needs broader fixtures.
+  `anixops_rewrite_build_plan` for URL/body/header/script aggregation, `anixops_rewrite_evaluate_named_header` for
+  case-insensitive single-header lookup, and `anixops_rewrite_apply_headers` for bounded multi-value header-list
+  application, but larger client corpus ordering still needs broader fixtures.
 - Production `$persistentStore` beyond the Alpha Node runner's JSON file backend: platform namespace policy, locking,
   transaction semantics, quotas, and migration behavior.
 - Production script runtime scheduling beyond the Alpha proxy shim's timeout fail-open path: cancellation, memory limits,
@@ -64,7 +65,8 @@ Adapters such as NetworkCore or another proxy client must own:
 - TLS session handling and certificate generation/trust decisions.
 - HTTP/1.1 and HTTP/2 message parsing and serialization.
 - Body buffering, decoding, recompression, transfer framing, and size limits.
-- Header map storage and multi-value semantics; the C ABI can evaluate a single named header case-insensitively, but
-  adapters still own complete header collection storage and Set-Cookie policy.
+- Header parser/storage and unbounded platform header map ownership. The C ABI can evaluate a named header and apply
+  supported rewrite operations to a bounded header list, including independent `Set-Cookie` fields, but adapters still
+  own HTTP parsing, original casing policy, and transport writeback.
 - Script asset download/cache policy and JavaScript execution.
 - Concurrency control around each `anixops_engine_t`, or an engine snapshot strategy.

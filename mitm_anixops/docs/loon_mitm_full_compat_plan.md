@@ -382,7 +382,7 @@ int anixops_runtime_apply_plan(
 | P1 | Surge parser | `.sgmodule` metadata、`#!arguments`、`%APPEND%`、`%INSERT%`、attr-list template | Surge corpus parse 报告无未知 P1 规则 |
 | P1 | Surge body | `[Body Rewrite]` regex chain、`http-request-jq`、`http-response-jq` | jq fixture 输出和 trace 匹配预期 |
 | P1 | Quantumult X parser | `#[rewrite_local]`、`#[rewrite_remote]`、`#[mitm]`、INI section、`url` prefixed actions | QX corpus parse 报告无未知 P1 规则 |
-| P1 | Header semantics | Alpha 已提供单 header name 的 case-insensitive lookup API；后续补 multi-value append/replace/delete 和 Set-Cookie 特例策略 | header matrix fixture 覆盖 request 和 response |
+| P1 | Header semantics | Alpha 已提供单 header name 的 case-insensitive lookup API，并提供 bounded header list 的 multi-value append/replace/delete、regex replace 和 Set-Cookie 独立字段策略 | header matrix fixture 覆盖 request 和 response |
 | P2 | Malformed behavior | Alpha 已覆盖 supported section 中 ignored rule 在 strict profile 下 rejected、portable 下 ignored；后续补 LOON/SURGE/QX 逐规则 malformed 差异 | 同一 malformed corpus 在不同 profile 下输出不同但稳定诊断 |
 
 ### Runtime Backlog

@@ -16,7 +16,7 @@ http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, script-path=https
 `
 
 func TestGoBindingEvaluatesPolicy(t *testing.T) {
-	if Version() != "0.42.0" {
+	if Version() != "0.43.0" {
 		t.Fatalf("Version() = %q", Version())
 	}
 	engine, err := NewEngine()
@@ -114,5 +114,57 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	}
 	if script.Argument != "Mode=go" {
 		t.Fatalf("script.Argument = %q", script.Argument)
+	}
+}
+
+func TestGoBindingAppliesHeaderList(t *testing.T) {
+	engine, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	const config = `
+[Rewrite]
+^https:\/\/api\.go\.example\/cookies response-header-add Set-Cookie "c=1; Path=/"
+^https:\/\/api\.go\.example\/cookies response-header-replace-regex Set-Cookie "a=1" "a=2"
+^https:\/\/api\.go\.example\/cookies response-header-del X-Remove
+`
+	if err := engine.LoadConfig(config); err != nil {
+		t.Fatal(err)
+	}
+	headers, plan, err := engine.ApplyHeaders("https://api.go.example/cookies", PhaseResponse, HeaderList{
+		Fields: []HeaderField{
+			{Name: "Set-Cookie", Value: "a=1; Path=/"},
+			{Name: "set-cookie", Value: "b=1; Path=/"},
+			{Name: "X-Remove", Value: "yes"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if headers.Truncated {
+		t.Fatalf("headers truncated")
+	}
+	if len(headers.Fields) != 3 {
+		t.Fatalf("len(headers.Fields) = %d: %+v", len(headers.Fields), headers.Fields)
+	}
+	want := []HeaderField{
+		{Name: "Set-Cookie", Value: "a=2; Path=/"},
+		{Name: "set-cookie", Value: "b=1; Path=/"},
+		{Name: "Set-Cookie", Value: "c=1; Path=/"},
+	}
+	for i := range want {
+		if headers.Fields[i] != want[i] {
+			t.Fatalf("headers.Fields[%d] = %+v, want %+v", i, headers.Fields[i], want[i])
+		}
+	}
+	if len(plan.HeaderRewrites) != 3 {
+		t.Fatalf("len(plan.HeaderRewrites) = %d", len(plan.HeaderRewrites))
+	}
+	if plan.HeaderRewrites[0].Action != RewriteResponseHeaderAdd ||
+		plan.HeaderRewrites[1].Action != RewriteResponseHeaderReplaceRegex ||
+		plan.HeaderRewrites[2].Action != RewriteResponseHeaderDel {
+		t.Fatalf("unexpected plan headers: %+v", plan.HeaderRewrites)
 	}
 }

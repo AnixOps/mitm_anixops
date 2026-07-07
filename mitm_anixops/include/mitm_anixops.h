@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 42
+#define ANIXOPS_VERSION_MINOR 43
 #define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
@@ -28,6 +28,7 @@ extern "C" {
 #define ANIXOPS_ARGUMENT_CAP 4096
 #define ANIXOPS_MESSAGE_CAP 256
 #define ANIXOPS_PLAN_HEADER_CAP 16
+#define ANIXOPS_HEADER_LIST_CAP 32
 
 typedef struct anixops_engine anixops_engine_t;
 
@@ -152,6 +153,17 @@ typedef struct anixops_header_rewrite_result {
 	char message[ANIXOPS_MESSAGE_CAP];
 } anixops_header_rewrite_result_t;
 
+typedef struct anixops_header_field {
+	char name[ANIXOPS_PATTERN_CAP];
+	char value[ANIXOPS_VALUE_CAP];
+} anixops_header_field_t;
+
+typedef struct anixops_header_list {
+	size_t count;
+	int truncated;
+	anixops_header_field_t fields[ANIXOPS_HEADER_LIST_CAP];
+} anixops_header_list_t;
+
 typedef struct anixops_script_result {
 	anixops_script_kind_t kind;
 	anixops_phase_t phase;
@@ -256,6 +268,13 @@ ANIXOPS_API int anixops_rewrite_evaluate_named_header(
 	const char *header_name,
 	const char *current_header_value,
 	anixops_header_rewrite_result_t *out_result);
+ANIXOPS_API int anixops_rewrite_apply_headers(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const anixops_header_list_t *headers,
+	anixops_header_list_t *out_headers,
+	anixops_rewrite_plan_t *out_plan);
 
 ANIXOPS_API int anixops_script_evaluate_url(
 	const anixops_engine_t *engine,

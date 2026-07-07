@@ -116,7 +116,9 @@ The platform adapter, not this library, is responsible for:
 
 - buffering request/response bodies when `requires_body` is true
 - calling `anixops_rewrite_apply_body` for mock and regex body rewrite rules after a plain-text body is available
-- calling `anixops_rewrite_evaluate_header` and applying returned operations to the platform HTTP header map
+- calling `anixops_rewrite_apply_headers` for the bounded Alpha header-list helper, or calling
+  `anixops_rewrite_evaluate_header` / `anixops_rewrite_evaluate_named_header` and applying returned operations to a
+  platform-owned HTTP header map
 - dechunking HTTP/1.1 bodies before script execution
 - decompressing gzip, brotli, deflate, or zstd payloads before scripts inspect text bodies
 - recompressing or removing `Content-Encoding` after mutation

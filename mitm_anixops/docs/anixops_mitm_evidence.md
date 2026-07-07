@@ -94,8 +94,9 @@ The library implements the decision/model layer, not AnixOps's socket runtime:
   portable C, but not full NSRegularExpression/PCRE compatibility.
 - Mock and regex body rewrite operate on already-buffered plain text. The platform adapter still owns body buffering,
   decompression, transfer framing, and HTTP writeback.
-- Header rewrite returns structured operations; the platform adapter still owns the concrete case-insensitive header map
-  and multi-value header behavior.
+- Header rewrite returns structured operations, and `anixops_rewrite_apply_headers` can apply supported operations to a
+  bounded case-insensitive header list with independent `Set-Cookie` entries. The platform adapter still owns HTTP
+  parsing, unbounded storage, original casing policy, and writeback.
 - `*.example.com` matches both `example.com` and subdomains in this library. Treat this as a documented
   compatibility choice until dynamic AnixOps behavior is tested.
 

@@ -8,6 +8,7 @@ const ANIXOPS_ARGUMENT_CAP: usize = 4096;
 const ANIXOPS_MESSAGE_CAP: usize = 256;
 const ANIXOPS_PATTERN_CAP: usize = 256;
 const ANIXOPS_PLAN_HEADER_CAP: usize = 16;
+const ANIXOPS_HEADER_LIST_CAP: usize = 32;
 
 #[repr(C)]
 struct AnixopsEngine {
@@ -35,6 +36,21 @@ struct AnixopsHeaderRewriteResult {
     header_name: [c_char; ANIXOPS_PATTERN_CAP],
     value: [c_char; ANIXOPS_VALUE_CAP],
     message: [c_char; ANIXOPS_MESSAGE_CAP],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct AnixopsHeaderField {
+    name: [c_char; ANIXOPS_PATTERN_CAP],
+    value: [c_char; ANIXOPS_VALUE_CAP],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct AnixopsHeaderList {
+    count: usize,
+    truncated: c_int,
+    fields: [AnixopsHeaderField; ANIXOPS_HEADER_LIST_CAP],
 }
 
 #[repr(C)]
@@ -96,6 +112,14 @@ extern "C" {
         current_header_value: *const c_char,
         out_result: *mut AnixopsHeaderRewriteResult,
     ) -> c_int;
+    fn anixops_rewrite_apply_headers(
+        engine: *const AnixopsEngine,
+        url: *const c_char,
+        phase: c_int,
+        headers: *const AnixopsHeaderList,
+        out_headers: *mut AnixopsHeaderList,
+        out_plan: *mut AnixopsRewritePlan,
+    ) -> c_int;
     fn anixops_script_evaluate_url(
         engine: *const AnixopsEngine,
         url: *const c_char,
@@ -134,9 +158,14 @@ pub enum RewriteAction {
     None,
     Redirect302,
     ResponseBodyReplaceRegex,
+    HeaderDel,
     HeaderAdd,
     HeaderReplace,
+    HeaderReplaceRegex,
+    ResponseHeaderDel,
     ResponseHeaderAdd,
+    ResponseHeaderReplace,
+    ResponseHeaderReplaceRegex,
     Other(i32),
 }
 
@@ -146,9 +175,14 @@ impl From<c_int> for RewriteAction {
             0 => RewriteAction::None,
             1 => RewriteAction::Redirect302,
             12 => RewriteAction::ResponseBodyReplaceRegex,
+            25 => RewriteAction::HeaderDel,
             14 => RewriteAction::HeaderAdd,
             13 => RewriteAction::HeaderReplace,
+            15 => RewriteAction::HeaderReplaceRegex,
+            16 => RewriteAction::ResponseHeaderDel,
             18 => RewriteAction::ResponseHeaderAdd,
+            17 => RewriteAction::ResponseHeaderReplace,
+            19 => RewriteAction::ResponseHeaderReplaceRegex,
             other => RewriteAction::Other(other),
         }
     }
@@ -211,6 +245,18 @@ pub struct HeaderRewriteResult {
     pub header_name: String,
     pub value: String,
     pub message: String,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct HeaderField {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct HeaderList {
+    pub fields: Vec<HeaderField>,
+    pub truncated: bool,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -347,6 +393,32 @@ impl Engine {
         Ok(header_rewrite_result_from_c(&result))
     }
 
+    pub fn apply_headers(
+        &self,
+        url: &str,
+        phase: Phase,
+        headers: &HeaderList,
+    ) -> Result<(HeaderList, RewritePlan), Error> {
+        let url = CString::new(url).expect("url must not contain nul bytes");
+        let input = header_list_to_c(headers)?;
+        let mut output = empty_header_list();
+        let mut plan = empty_rewrite_plan();
+        check_status(
+            "apply_headers",
+            unsafe {
+                anixops_rewrite_apply_headers(
+                    self.ptr,
+                    url.as_ptr(),
+                    phase.as_c(),
+                    &input,
+                    &mut output,
+                    &mut plan,
+                )
+            },
+        )?;
+        Ok((header_list_from_c(&output), rewrite_plan_from_c(&plan)))
+    }
+
     pub fn build_plan(
         &self,
         url: &str,
@@ -474,6 +546,58 @@ fn rewrite_plan_from_c(plan: &AnixopsRewritePlan) -> RewritePlan {
     }
 }
 
+fn header_list_to_c(headers: &HeaderList) -> Result<AnixopsHeaderList, Error> {
+    if headers.fields.len() > ANIXOPS_HEADER_LIST_CAP {
+        return Err(Error {
+            operation: "header_list_to_c",
+            status: -4,
+            message: "header list exceeds capacity".to_string(),
+        });
+    }
+    let mut out = empty_header_list();
+    out.count = headers.fields.len();
+    out.truncated = if headers.truncated { 1 } else { 0 };
+    for (index, field) in headers.fields.iter().enumerate() {
+        if write_str_to_buf(&mut out.fields[index].name, &field.name) {
+            out.truncated = 1;
+        }
+        if write_str_to_buf(&mut out.fields[index].value, &field.value) {
+            out.truncated = 1;
+        }
+    }
+    Ok(out)
+}
+
+fn header_list_from_c(headers: &AnixopsHeaderList) -> HeaderList {
+    let count = headers.count.min(ANIXOPS_HEADER_LIST_CAP);
+    let mut fields = Vec::with_capacity(count);
+    for field in headers.fields.iter().take(count) {
+        fields.push(HeaderField {
+            name: cstr_from_buf(&field.name),
+            value: cstr_from_buf(&field.value),
+        });
+    }
+    HeaderList {
+        fields,
+        truncated: headers.truncated != 0,
+    }
+}
+
+fn write_str_to_buf(buf: &mut [c_char], value: &str) -> bool {
+    for slot in buf.iter_mut() {
+        *slot = 0;
+    }
+    if buf.is_empty() {
+        return !value.is_empty();
+    }
+    let bytes = value.as_bytes();
+    let copy_len = bytes.len().min(buf.len() - 1);
+    for (index, byte) in bytes.iter().take(copy_len).enumerate() {
+        buf[index] = *byte as c_char;
+    }
+    bytes.len() >= buf.len()
+}
+
 fn cstr_from_buf(buf: &[c_char]) -> String {
     unsafe { CStr::from_ptr(buf.as_ptr()).to_string_lossy().into_owned() }
 }
@@ -487,6 +611,21 @@ fn empty_header_rewrite_result() -> AnixopsHeaderRewriteResult {
         header_name: [0; ANIXOPS_PATTERN_CAP],
         value: [0; ANIXOPS_VALUE_CAP],
         message: [0; ANIXOPS_MESSAGE_CAP],
+    }
+}
+
+fn empty_header_field() -> AnixopsHeaderField {
+    AnixopsHeaderField {
+        name: [0; ANIXOPS_PATTERN_CAP],
+        value: [0; ANIXOPS_VALUE_CAP],
+    }
+}
+
+fn empty_header_list() -> AnixopsHeaderList {
+    AnixopsHeaderList {
+        count: 0,
+        truncated: 0,
+        fields: [empty_header_field(); ANIXOPS_HEADER_LIST_CAP],
     }
 }
 
@@ -547,7 +686,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.42.0");
+        assert_eq!(version(), "0.43.0");
         let mut engine = Engine::new().unwrap();
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);
@@ -603,5 +742,67 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
         assert_eq!(script.script_path, "https://scripts.example/rust-response.js");
         assert_eq!(script.tag, "rust.response");
         assert_eq!(script.argument, "Mode=rust");
+    }
+
+    #[test]
+    fn rust_binding_applies_header_list() {
+        let mut engine = Engine::new().unwrap();
+        engine
+            .load_config(
+                r#"
+[Rewrite]
+^https:\/\/api\.rust\.example\/cookies response-header-add Set-Cookie "c=1; Path=/"
+^https:\/\/api\.rust\.example\/cookies response-header-replace-regex Set-Cookie "a=1" "a=2"
+^https:\/\/api\.rust\.example\/cookies response-header-del X-Remove
+"#,
+            )
+            .unwrap();
+
+        let input = HeaderList {
+            fields: vec![
+                HeaderField {
+                    name: "Set-Cookie".to_string(),
+                    value: "a=1; Path=/".to_string(),
+                },
+                HeaderField {
+                    name: "set-cookie".to_string(),
+                    value: "b=1; Path=/".to_string(),
+                },
+                HeaderField {
+                    name: "X-Remove".to_string(),
+                    value: "yes".to_string(),
+                },
+            ],
+            truncated: false,
+        };
+        let (headers, plan) = engine
+            .apply_headers("https://api.rust.example/cookies", Phase::Response, &input)
+            .unwrap();
+
+        assert!(!headers.truncated);
+        assert_eq!(
+            headers.fields,
+            vec![
+                HeaderField {
+                    name: "Set-Cookie".to_string(),
+                    value: "a=2; Path=/".to_string(),
+                },
+                HeaderField {
+                    name: "set-cookie".to_string(),
+                    value: "b=1; Path=/".to_string(),
+                },
+                HeaderField {
+                    name: "Set-Cookie".to_string(),
+                    value: "c=1; Path=/".to_string(),
+                },
+            ]
+        );
+        assert_eq!(plan.header_rewrites.len(), 3);
+        assert_eq!(plan.header_rewrites[0].action, RewriteAction::ResponseHeaderAdd);
+        assert_eq!(
+            plan.header_rewrites[1].action,
+            RewriteAction::ResponseHeaderReplaceRegex
+        );
+        assert_eq!(plan.header_rewrites[2].action, RewriteAction::ResponseHeaderDel);
     }
 }

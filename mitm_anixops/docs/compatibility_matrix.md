@@ -68,6 +68,7 @@ features it understands.
 | Request header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Response header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Case-insensitive named header lookup | Supported foundation | `anixops_rewrite_evaluate_named_header` filters rewrite rules by header name using case-insensitive matching; Go/Rust wrappers expose the same helper |
+| Multi-value header-list application | Supported Alpha bounded list | `anixops_rewrite_apply_headers` applies add/replace/delete and regex replace across a bounded header list with case-insensitive names; tests cover request multi-value semantics and response `Set-Cookie` fields kept as independent header entries |
 | Alpha proxy header rewrite path | Supported subset | `make script-contract-e2e` verifies request/response header rewrite before script dispatch through the HTTP/1.1 MITM shim |
 | Full JQ-style JSON rewrites | Supported subset with gaps | libjq first-output-wins, empty-output, invalid JSON, and compile-error policies are tested; resource limits and broad corpus coverage remain gaps |
 | Compression/chunk handling | Out of scope | adapter responsibility |
@@ -107,8 +108,8 @@ features it understands.
 | ABI export allowlist | Supported | `ci/abi_exports.txt` checked by `scripts/check.sh` |
 | pkg-config metadata | Supported Alpha packaging | `make pkg-config-check`, relocatable `lib/pkgconfig/mitm_anixops.pc` in `alpha-dist` |
 | CMake package config | Supported Alpha packaging | `make cmake-package-check`, relocatable `lib/cmake/mitm_anixops`; configure/build smoke runs when `cmake` is installed |
-| Go cgo binding | Supported Alpha wrapper | `make go-binding-check`, package `bindings/go/anixops`, pkg-config backed cgo link, includes plan and named-header helper coverage |
-| Rust FFI binding | Supported Alpha wrapper | `make rust-binding-check`, crate `bindings/rust/mitm-anixops`, pkg-config backed build script, includes plan and named-header helper coverage |
+| Go cgo binding | Supported Alpha wrapper | `make go-binding-check`, package `bindings/go/anixops`, pkg-config backed cgo link, includes plan, named-header, and header-list helper coverage |
+| Rust FFI binding | Supported Alpha wrapper | `make rust-binding-check`, crate `bindings/rust/mitm-anixops`, pkg-config backed build script, includes plan, named-header, and header-list helper coverage |
 | Thread-safe mutation | Not provided | external synchronization required |
 
 ## Current End-To-End Evidence

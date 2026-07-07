@@ -7,7 +7,7 @@ int main(void)
 {
 	const char *version = anixops_version();
 	anixops_engine_t *engine;
-	if (version == NULL || strcmp(version, "0.42.0") != 0) {
+	if (version == NULL || strcmp(version, "0.43.0") != 0) {
 		fprintf(stderr, "unexpected version: %s\n", version == NULL ? "(null)" : version);
 		return 1;
 	}
