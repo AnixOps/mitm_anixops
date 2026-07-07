@@ -3,7 +3,6 @@ package main
 /*
 #cgo CFLAGS: -I${SRCDIR}/../../include
 #cgo LDFLAGS: ${SRCDIR}/../../build/libmitm_anixops.a
-#cgo windows LDFLAGS: -lsystre
 #include "mitm_anixops.h"
 #include <stdlib.h>
 */
