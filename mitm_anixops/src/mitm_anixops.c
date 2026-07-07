@@ -193,6 +193,10 @@ static int anixops_json_parse_bracket_key(
 	size_t out_cap,
 	const char **out_key,
 	size_t *out_key_len);
+static int anixops_json_decode_escape(const char **cursor, const char *end, char *out, size_t out_cap, size_t *out_len);
+static int anixops_json_read_hex4(const char **cursor, const char *end, unsigned long *out_value);
+static int anixops_json_append_utf8(char *out, size_t out_cap, size_t *pos, unsigned long codepoint);
+static int anixops_hex_digit(unsigned char ch);
 static int anixops_json_parse_array_index(const char **cursor, size_t *out_index);
 static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end);
 static const char *anixops_json_skip_ws(const char *cursor, const char *end);
@@ -221,7 +225,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.17.0";
+	return "0.18.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -3013,33 +3017,25 @@ static int anixops_json_key_matches(const char *string_start, const char *string
 	while (cursor < content_end) {
 		unsigned char ch = (unsigned char)*cursor++;
 		if (ch == '\\') {
+			char decoded[4];
+			size_t decoded_len = 0;
+			size_t i;
 			if (cursor >= content_end) {
 				return 0;
 			}
-			ch = (unsigned char)*cursor++;
-			switch (ch) {
-			case '"':
-			case '\\':
-			case '/':
-				break;
-			case 'b':
-				ch = '\b';
-				break;
-			case 'f':
-				ch = '\f';
-				break;
-			case 'n':
-				ch = '\n';
-				break;
-			case 'r':
-				ch = '\r';
-				break;
-			case 't':
-				ch = '\t';
-				break;
-			default:
+			if (!anixops_json_decode_escape(&cursor, content_end, decoded, sizeof(decoded), &decoded_len)) {
 				return 0;
 			}
+			if (pos + decoded_len > key_len) {
+				return 0;
+			}
+			for (i = 0; i < decoded_len; i++) {
+				if (key[pos + i] != decoded[i]) {
+					return 0;
+				}
+			}
+			pos += decoded_len;
+			continue;
 		}
 		if (pos >= key_len || key[pos] != (char)ch) {
 			return 0;
@@ -3082,12 +3078,14 @@ static int anixops_json_parse_bracket_key(
 	size_t *out_key_len)
 {
 	const char *p;
+	const char *end;
 	size_t pos = 0;
 	char quote;
 	if (cursor == NULL || *cursor == NULL || out == NULL || out_cap == 0 || out_key == NULL || out_key_len == NULL ||
 		**cursor != '[') {
 		return 0;
 	}
+	end = *cursor + strlen(*cursor);
 	p = *cursor + 1;
 	if (*p != '\'' && *p != '"') {
 		return 0;
@@ -3097,37 +3095,19 @@ static int anixops_json_parse_bracket_key(
 	while (*p != '\0' && *p != quote) {
 		char ch = *p++;
 		if (ch == '\\') {
-			char escaped;
-			ch = *p++;
-			if (ch == '\0') {
+			char decoded[4];
+			size_t decoded_len = 0;
+			size_t i;
+			if (!anixops_json_decode_escape(&p, end, decoded, sizeof(decoded), &decoded_len)) {
 				return 0;
 			}
-			switch (ch) {
-			case '\'':
-			case '"':
-			case '\\':
-			case '/':
-				escaped = ch;
-				break;
-			case 'b':
-				escaped = '\b';
-				break;
-			case 'f':
-				escaped = '\f';
-				break;
-			case 'n':
-				escaped = '\n';
-				break;
-			case 'r':
-				escaped = '\r';
-				break;
-			case 't':
-				escaped = '\t';
-				break;
-			default:
+			if (pos + decoded_len >= out_cap) {
 				return 0;
 			}
-			ch = escaped;
+			for (i = 0; i < decoded_len; i++) {
+				out[pos++] = decoded[i];
+			}
+			continue;
 		}
 		if (pos + 1 >= out_cap) {
 			return 0;
@@ -3142,6 +3122,158 @@ static int anixops_json_parse_bracket_key(
 	*out_key_len = pos;
 	*cursor = p + 2;
 	return 1;
+}
+
+static int anixops_json_decode_escape(const char **cursor, const char *end, char *out, size_t out_cap, size_t *out_len)
+{
+	const char *p;
+	unsigned char ch;
+	unsigned long codepoint;
+	size_t pos = 0;
+
+	if (cursor == NULL || *cursor == NULL || end == NULL || out == NULL || out_cap == 0 || out_len == NULL) {
+		return 0;
+	}
+	p = *cursor;
+	if (p >= end) {
+		return 0;
+	}
+	ch = (unsigned char)*p++;
+	switch (ch) {
+	case '\'':
+	case '"':
+	case '\\':
+	case '/':
+		out[pos++] = (char)ch;
+		break;
+	case 'b':
+		out[pos++] = '\b';
+		break;
+	case 'f':
+		out[pos++] = '\f';
+		break;
+	case 'n':
+		out[pos++] = '\n';
+		break;
+	case 'r':
+		out[pos++] = '\r';
+		break;
+	case 't':
+		out[pos++] = '\t';
+		break;
+	case 'u':
+		if (!anixops_json_read_hex4(&p, end, &codepoint)) {
+			return 0;
+		}
+		if (codepoint >= 0xD800UL && codepoint <= 0xDBFFUL) {
+			unsigned long low;
+			if ((size_t)(end - p) < 2 || p[0] != '\\' || p[1] != 'u') {
+				return 0;
+			}
+			p += 2;
+			if (!anixops_json_read_hex4(&p, end, &low) || low < 0xDC00UL || low > 0xDFFFUL) {
+				return 0;
+			}
+			codepoint = 0x10000UL + ((codepoint - 0xD800UL) << 10) + (low - 0xDC00UL);
+		}
+		else if (codepoint >= 0xDC00UL && codepoint <= 0xDFFFUL) {
+			return 0;
+		}
+		if (!anixops_json_append_utf8(out, out_cap, &pos, codepoint)) {
+			return 0;
+		}
+		break;
+	default:
+		return 0;
+	}
+	*cursor = p;
+	*out_len = pos;
+	return 1;
+}
+
+static int anixops_json_read_hex4(const char **cursor, const char *end, unsigned long *out_value)
+{
+	const char *p;
+	unsigned long value = 0;
+	size_t i;
+
+	if (cursor == NULL || *cursor == NULL || end == NULL || out_value == NULL) {
+		return 0;
+	}
+	p = *cursor;
+	for (i = 0; i < 4; i++) {
+		int digit;
+		if (p >= end) {
+			return 0;
+		}
+		digit = anixops_hex_digit((unsigned char)*p);
+		if (digit < 0) {
+			return 0;
+		}
+		value = (value << 4) | (unsigned long)digit;
+		p++;
+	}
+	*cursor = p;
+	*out_value = value;
+	return 1;
+}
+
+static int anixops_json_append_utf8(char *out, size_t out_cap, size_t *pos, unsigned long codepoint)
+{
+	size_t p;
+	if (out == NULL || pos == NULL || codepoint > 0x10FFFFUL) {
+		return 0;
+	}
+	p = *pos;
+	if (codepoint <= 0x7FUL) {
+		if (p + 1 > out_cap) {
+			return 0;
+		}
+		out[p++] = (char)codepoint;
+	}
+	else if (codepoint <= 0x7FFUL) {
+		if (p + 2 > out_cap) {
+			return 0;
+		}
+		out[p++] = (char)(0xC0U | (codepoint >> 6));
+		out[p++] = (char)(0x80U | (codepoint & 0x3FUL));
+	}
+	else if (codepoint <= 0xFFFFUL) {
+		if (codepoint >= 0xD800UL && codepoint <= 0xDFFFUL) {
+			return 0;
+		}
+		if (p + 3 > out_cap) {
+			return 0;
+		}
+		out[p++] = (char)(0xE0U | (codepoint >> 12));
+		out[p++] = (char)(0x80U | ((codepoint >> 6) & 0x3FUL));
+		out[p++] = (char)(0x80U | (codepoint & 0x3FUL));
+	}
+	else {
+		if (p + 4 > out_cap) {
+			return 0;
+		}
+		out[p++] = (char)(0xF0U | (codepoint >> 18));
+		out[p++] = (char)(0x80U | ((codepoint >> 12) & 0x3FUL));
+		out[p++] = (char)(0x80U | ((codepoint >> 6) & 0x3FUL));
+		out[p++] = (char)(0x80U | (codepoint & 0x3FUL));
+	}
+	*pos = p;
+	return 1;
+}
+
+static int anixops_hex_digit(unsigned char ch)
+{
+	if (ch >= '0' && ch <= '9') {
+		return (int)(ch - '0');
+	}
+	if (ch >= 'a' && ch <= 'f') {
+		return (int)(ch - 'a' + 10);
+	}
+	if (ch >= 'A' && ch <= 'F') {
+		return (int)(ch - 'A' + 10);
+	}
+	return -1;
 }
 
 static int anixops_json_parse_array_index(const char **cursor, size_t *out_index)

@@ -1219,6 +1219,74 @@ static void json_body_replace_supports_escaped_bracket_string_keys(void)
 	anixops_engine_free(engine);
 }
 
+static void json_body_replace_supports_unicode_escaped_bracket_string_keys(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[200];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/dot request-body-json-replace $['profile\\u002emeta']['na\\u006de'] '\"test\"'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/body request-body-json-replace $['caf\\u00e9'] true"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/bad request-body-json-replace $['bad\\u00zz'] true"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/dot",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"profile.meta\":{\"na\\u006de\":\"Alice\"}}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"profile.meta\":{\"na\\u006de\":\"test\"}}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/body",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"caf\\u00e9\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"caf\\u00e9\":true}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/bad",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"bad\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json path unsupported");
+	ANIXOPS_EXPECT_STREQ(body, "{\"bad\":false}");
+
+	anixops_engine_free(engine);
+}
+
 static void header_rewrite_rules_are_separate_from_url_rewrite(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1501,6 +1569,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/json_body_replace_supports_escaped_bracket_string_keys",
 		json_body_replace_supports_escaped_bracket_string_keys);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/json_body_replace_supports_unicode_escaped_bracket_string_keys",
+		json_body_replace_supports_unicode_escaped_bracket_string_keys);
 	add_test(
 		tests,
 		count,
