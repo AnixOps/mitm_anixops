@@ -31,8 +31,8 @@ Implemented:
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, and header rewrite
   actions.
 - Regex capture replacement with `$1` and `\1`.
-- POSIX ERE regex matching with a supported leading `(?i)` case-insensitive prefix and PCRE shorthand classes
-  `\d`, `\w`, and `\s`, plus PCRE absolute anchors `\A`, `\z`, and `\Z`.
+- POSIX ERE regex matching with a supported leading `(?i)` case-insensitive prefix, PCRE shorthand classes
+  `\d`, `\w`, and `\s`, PCRE hex byte escapes such as `\x2e`, plus PCRE absolute anchors `\A`, `\z`, and `\Z`.
 - PCRE non-capturing group syntax `(?:...)` for matching, normalized as a regular POSIX capturing group.
 - PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching, normalized as regular POSIX capturing
   groups.

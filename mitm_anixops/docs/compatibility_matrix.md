@@ -45,6 +45,7 @@ features it understands.
 | Capture expansion | Supported subset | `$1` and `\1` tests |
 | Leading `(?i)` regex prefix | Supported subset | URL, body, header, and script regex test |
 | PCRE shorthand classes `\d`, `\w`, `\s` | Supported subset | URL, body, header, and script regex test |
+| PCRE hex byte escapes `\xHH` | Supported subset | URL, body, header, and script regex test |
 | PCRE absolute anchors `\A`, `\z`, `\Z` | Supported subset | URL, body, header, and script regex test |
 | PCRE non-capturing groups `(?:...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
 | PCRE named capture groups `(?<name>...)`, `(?'name'...)` | Supported as regular capturing groups | URL, body, header, and script regex test |

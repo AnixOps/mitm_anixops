@@ -226,7 +226,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.19.0";
+	return "0.20.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1960,6 +1960,24 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			}
 			else if (next == 'S' && !in_class) {
 				replacement = "[^[:space:]]";
+			}
+			else if (next == 'x' && i + 3 < len) {
+				int hi = anixops_hex_digit((unsigned char)pattern[i + 2]);
+				int lo = anixops_hex_digit((unsigned char)pattern[i + 3]);
+				if (hi >= 0 && lo >= 0) {
+					unsigned char value = (unsigned char)((hi << 4) | lo);
+					const char *meta = in_class ? "\\]-^" : ".^$*+?()[]{}|\\";
+					if (value == '\0') {
+						free(out);
+						return ANIXOPS_ERR_PARSE;
+					}
+					if (strchr(meta, value) != NULL) {
+						out[pos++] = '\\';
+					}
+					out[pos++] = (char)value;
+					i += 3;
+					continue;
+				}
 			}
 			else if (next == 'A' && !in_class) {
 				replacement = "^";
