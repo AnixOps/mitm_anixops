@@ -174,6 +174,21 @@ assert_not_contains "$TMP/body.out" "setInterval"
 curl --silent --show-error --max-time 12 --http1.1 \
 	--proxy "http://127.0.0.1:${SHIM_PORT}" \
 	--cacert "$TMP/ca.pem" \
+	--dump-header "$TMP/chunked-headers.out" \
+	--output "$TMP/chunked-body.out" \
+	"https://www.bilibili.com:${ORIGIN_PORT}/?chunked=1"
+
+assert_contains "$TMP/chunked-headers.out" "HTTP/1.1 200 OK"
+assert_header_contains_ci "$TMP/chunked-headers.out" "X-AnixOps-Bilibili-Demo: applied"
+assert_header_contains_ci "$TMP/chunked-headers.out" "X-Origin-Transfer-Mode: chunked"
+assert_header_contains_ci "$TMP/chunked-headers.out" "Content-Length:"
+assert_not_contains "$TMP/chunked-headers.out" "Transfer-Encoding: chunked"
+assert_contains "$TMP/chunked-body.out" "anixops-bilibili-homepage-demo"
+assert_contains "$TMP/chunked-body.out" "document.title = \"test\""
+
+curl --silent --show-error --max-time 12 --http1.1 \
+	--proxy "http://127.0.0.1:${SHIM_PORT}" \
+	--cacert "$TMP/ca.pem" \
 	--dump-header "$TMP/asset-headers.out" \
 	--output "$TMP/asset-body.out" \
 	"https://www.bilibili.com:${ORIGIN_PORT}/gentleman/polyfill.js?features=es2015"

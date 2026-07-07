@@ -944,10 +944,7 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		}
 	}
 	if done.Body != nil {
-		resp.Body = io.NopCloser(strings.NewReader(*done.Body))
-		resp.ContentLength = int64(len(*done.Body))
-		resp.Header.Del("Content-Encoding")
-		resp.Header.Set("Content-Length", fmt.Sprintf("%d", len(*done.Body)))
+		replaceResponseBody(resp, *done.Body)
 	} else {
 		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 	}
@@ -956,6 +953,17 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		resp.Status = fmt.Sprintf("%d %s", status, http.StatusText(status))
 	}
 	return nil
+}
+
+func replaceResponseBody(resp *http.Response, body string) {
+	resp.Body = io.NopCloser(strings.NewReader(body))
+	resp.ContentLength = int64(len(body))
+	resp.TransferEncoding = nil
+	resp.Uncompressed = false
+	resp.Trailer = nil
+	resp.Header.Del("Content-Encoding")
+	resp.Header.Del("Transfer-Encoding")
+	resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
 }
 
 func (ps *proxyServer) runScript(
@@ -1381,9 +1389,17 @@ func startOrigin(addr string, cache *certCache) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if stripPort(r.Host) == "www.bilibili.com" && r.URL.Path == "/" {
+			body := "<!doctype html><html><head><title>origin title</title></head><body><main><a class=\"bili-video-card__info--tit\" href=\"/video/BV1\">origin title</a><img class=\"bili-video-card__cover\" src=\"/cover.jpg\" alt=\"cover\"></main></body></html>"
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("X-Origin-Accept-Encoding", r.Header.Get("Accept-Encoding"))
-			io.WriteString(w, "<!doctype html><html><head><title>origin title</title></head><body><main><a class=\"bili-video-card__info--tit\" href=\"/video/BV1\">origin title</a><img class=\"bili-video-card__cover\" src=\"/cover.jpg\" alt=\"cover\"></main></body></html>")
+			if r.URL.Query().Get("chunked") == "1" {
+				w.Header().Set("X-Origin-Transfer-Mode", "chunked")
+				w.WriteHeader(http.StatusOK)
+				if flusher, ok := w.(http.Flusher); ok {
+					flusher.Flush()
+				}
+			}
+			io.WriteString(w, body)
 			return
 		}
 		if stripPort(r.Host) == "www.bilibili.com" && strings.HasPrefix(r.URL.Path, "/gentleman/polyfill.js") {
