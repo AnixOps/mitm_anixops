@@ -215,7 +215,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.12.0";
+	return "0.13.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1932,6 +1932,22 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			}
 			else if ((next == 'z' || next == 'Z') && !in_class) {
 				replacement = "$";
+			}
+			else if (next == 'Q' && !in_class) {
+				size_t q = i + 2;
+				while (q < len) {
+					char literal = pattern[q];
+					if (literal == '\\' && q + 1 < len && pattern[q + 1] == 'E') {
+						break;
+					}
+					if (strchr(".^$*+?()[]{}|\\", literal) != NULL) {
+						out[pos++] = '\\';
+					}
+					out[pos++] = literal;
+					q++;
+				}
+				i = (q + 1 < len && pattern[q] == '\\' && pattern[q + 1] == 'E') ? q + 1 : len - 1;
+				continue;
 			}
 			if (replacement != NULL) {
 				size_t replacement_len = strlen(replacement);

@@ -47,6 +47,7 @@ features it understands.
 | PCRE absolute anchors `\A`, `\z`, `\Z` | Supported subset | URL, body, header, and script regex test |
 | PCRE non-capturing groups `(?:...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
 | PCRE named capture groups `(?<name>...)`, `(?'name'...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
+| PCRE quoted literals `\Q...\E` | Supported subset | URL, body, header, and script regex test |
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, global replacement tests |
