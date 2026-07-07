@@ -12,12 +12,12 @@ jobs:
       run:
         working-directory: mitm_anixops
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.22.x"
           cache: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "22.x"
       - name: Install Linux dependencies
@@ -31,7 +31,7 @@ jobs:
           sh scripts/check.sh
       - name: Build Alpha package
         run: make alpha-dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: anixops-mitm-alpha-linux
           path: mitm_anixops/build/anixops-mitm-alpha-0.41.0.tar.gz
@@ -39,8 +39,8 @@ jobs:
   windows-binary:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.22.x"
           cache: false
@@ -70,7 +70,7 @@ jobs:
           Copy-Item -Recurse mitm_anixops\examples dist\anixops-mitm-windows-x64\
           Copy-Item mitm_anixops\README.md dist\anixops-mitm-windows-x64\
           Compress-Archive -Path dist\anixops-mitm-windows-x64 -DestinationPath dist\anixops-mitm-windows-x64.zip -Force
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: anixops-mitm-windows-x64
           path: dist/anixops-mitm-windows-x64.zip
