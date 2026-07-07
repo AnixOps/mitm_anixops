@@ -421,6 +421,35 @@ static void quantumultx_url_prefixed_request_scripts_are_supported(void)
 	anixops_engine_free(engine);
 }
 
+static void quantumultx_url_prefixed_response_header_scripts_are_supported(void)
+{
+	const char *config =
+		"[rewrite_local]\n"
+		"^https://api\\.example\\.test/response-header url script-response-header https://scripts.example.test/qx-response-header.js\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/response-header", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/response-header", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 0);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example.test/qx-response-header.js");
+
+	anixops_engine_free(engine);
+}
+
 static void sgmodule_inline_arguments_are_supported(void)
 {
 	const char *config =
@@ -535,6 +564,12 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"script/quantumultx_url_prefixed_request_scripts_are_supported",
 		quantumultx_url_prefixed_request_scripts_are_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/quantumultx_url_prefixed_response_header_scripts_are_supported",
+		quantumultx_url_prefixed_response_header_scripts_are_supported);
 	add_test(tests, count, cap, "script/sgmodule_inline_arguments_are_supported", sgmodule_inline_arguments_are_supported);
 	add_test(
 		tests,

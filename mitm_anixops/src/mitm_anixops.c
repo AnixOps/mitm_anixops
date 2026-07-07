@@ -235,7 +235,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.28.0";
+	return "0.29.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)

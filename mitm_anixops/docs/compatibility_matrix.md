@@ -75,7 +75,7 @@ features it understands.
 | `argument=[{Name},...]` | Supported | BiliBili fixture tests |
 | Surge template arguments `{Name}`, `{{{Name}}}` | Supported subset | `surge_style_script_rule_template_is_supported` |
 | Malformed Surge attr-list script rules | Ignored, except invalid regex reports an error | `malformed_and_non_http_script_rules_are_ignored_or_rejected` |
-| Quantumult X `url script-request-body` / `script-request-header` / `script-response-body` | Supported subset | snippet and `[rewrite_local]` tests |
+| Quantumult X `url script-request-body` / `script-request-header` / `script-response-body` / `script-response-header` | Supported subset | snippet and `[rewrite_local]` tests |
 | JavaScript runtime | Out of scope | `docs/script_runtime_contract.md` |
 
 ## Diagnostics And ABI
