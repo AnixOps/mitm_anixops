@@ -186,15 +186,52 @@ static void quantumultx_url_prefixed_rewrites_are_supported(void)
 	anixops_engine_free(engine);
 }
 
+static void quantumultx_url_prefixed_header_rewrites_are_supported(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_rewrite_result_t header;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://header\\.test url header-add X-Test value"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://header\\.test url response-header-replace-regex X-Mode \"mode=([A-Za-z]+)\" \"mode=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://header.test", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_HEADER_ADD);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Test");
+	ANIXOPS_EXPECT_STREQ(header.value, "value");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.test",
+			ANIXOPS_PHASE_RESPONSE,
+			1,
+			"mode=Fast",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(header.value, "mode=Fast");
+
+	anixops_engine_free(engine);
+}
+
 static void unsupported_quantumultx_url_actions_are_ignored(void)
 {
 	const char *config =
 		"[rewrite_local]\n"
-		"^https://header\\.test url header-add X-Test value\n"
 		"^https://echo\\.test url echo-response text/plain hello\n";
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t result;
-	anixops_header_rewrite_result_t header;
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
@@ -205,10 +242,6 @@ static void unsupported_quantumultx_url_actions_are_ignored(void)
 		anixops_rewrite_evaluate_url(engine, "https://echo.test", ANIXOPS_PHASE_REQUEST, &result),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
-	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_header(engine, "https://header.test", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
-		ANIXOPS_OK);
-	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
 
 	anixops_engine_free(engine);
 }
@@ -217,11 +250,9 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 {
 	const char *config =
 		"[Rewrite]\n"
-		"^https://echo\\.test echo-response text/plain hello\n"
-		"^https://header\\.test url header-add X-Test value\n";
+		"^https://echo\\.test echo-response text/plain hello\n";
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t rewrite;
-	anixops_header_rewrite_result_t header;
 	int status = ANIXOPS_ERR_PARSE;
 	size_t line = 123;
 	char message[ANIXOPS_MESSAGE_CAP];
@@ -238,10 +269,6 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 		anixops_rewrite_evaluate_url(engine, "https://echo.test", ANIXOPS_PHASE_REQUEST, &rewrite),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
-	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_header(engine, "https://header.test", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
-		ANIXOPS_OK);
-	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
 
 	anixops_engine_free(engine);
 }
@@ -1286,6 +1313,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/quantumultx_url_prefixed_rewrites_are_supported",
 		quantumultx_url_prefixed_rewrites_are_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/quantumultx_url_prefixed_header_rewrites_are_supported",
+		quantumultx_url_prefixed_header_rewrites_are_supported);
 	add_test(
 		tests,
 		count,

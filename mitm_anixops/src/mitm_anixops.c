@@ -215,7 +215,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.13.0";
+	return "0.14.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -581,9 +581,11 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 	char third[2048];
 	char fourth[2048];
 	char fifth[2048];
+	char sixth[2048];
 	int have_third;
 	int have_fourth;
 	int have_fifth;
+	int have_sixth;
 	anixops_rewrite_action_t action = ANIXOPS_REWRITE_NONE;
 	int status_code = 0;
 	const char *body_pattern = "";
@@ -613,6 +615,7 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 	have_third = anixops_next_token(&cursor, third, sizeof(third));
 	have_fourth = anixops_next_token(&cursor, fourth, sizeof(fourth));
 	have_fifth = anixops_next_token(&cursor, fifth, sizeof(fifth));
+	have_sixth = anixops_next_token(&cursor, sixth, sizeof(sixth));
 
 	if (strcasecmp(second, "url") == 0 && have_third && anixops_parse_rewrite_action(third, &action, &status_code)) {
 		if (anixops_rewrite_action_replaces_body(action)) {
@@ -623,7 +626,20 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 			replacement = have_fifth ? fifth : "";
 		}
 		else if (anixops_rewrite_action_rewrites_header(action)) {
-			return ANIXOPS_OK;
+			if (!have_fourth) {
+				return ANIXOPS_OK;
+			}
+			header_name = fourth;
+			if (anixops_rewrite_action_replaces_header_regex(action)) {
+				if (!have_fifth) {
+					return ANIXOPS_OK;
+				}
+				header_pattern = fifth;
+				replacement = have_sixth ? sixth : "";
+			}
+			else {
+				replacement = have_fifth ? fifth : "";
+			}
 		}
 		else {
 			replacement = have_fourth ? fourth : "";

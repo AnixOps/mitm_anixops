@@ -14,8 +14,8 @@ publishing.
   bracket string keys, and array indexes.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
   absolute anchors, non-capturing groups, named capture groups, and quoted literal matching subset.
-- Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script and common reject/rewrite
-  actions.
+- Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, common reject/body/header
+  rewrite actions, and redirect actions.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.
 - Exact AnixOps/Loon behavior for every malformed line. Current behavior ignores incomplete non-action lines and reports
   regex compilation failures.

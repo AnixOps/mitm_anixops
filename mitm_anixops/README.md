@@ -25,6 +25,8 @@ Implemented:
   and array indexes such as `$.enabled`, `$['profile.meta'].name`, and `$.items[0].title`, with raw JSON literals such
   as `true`, `null`, objects, arrays, or quoted strings.
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
+- Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, and header rewrite
+  actions.
 - Regex capture replacement with `$1` and `\1`.
 - POSIX ERE regex matching with a supported leading `(?i)` case-insensitive prefix and PCRE shorthand classes
   `\d`, `\w`, and `\s`, plus PCRE absolute anchors `\A`, `\z`, and `\Z`.
