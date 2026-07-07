@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "name": "BiliBili Enhanced Plugin",
+      "platform": "loon",
+      "path": "../BiliBili.Enhanced.plugin",
+      "source": "bundled fixture",
+      "sha256": "e0eca33cd58a765283e863924030187448665e39397b1231e0dcc3db60429f52",
+      "expectedStatus": 0,
+      "expectedMitm": 2,
+      "expectedRewrite": 0,
+      "expectedScript": 4,
+      "expectedArgument": 11
+    },
+    {
+      "name": "Representative Loon",
+      "platform": "loon",
+      "path": "../Representative.Loon.plugin",
+      "source": "bundled fixture",
+      "sha256": "75048ccaa290fd1be7a0beb6eba8bb0a7b17e6b3b7db054d213710e98ae2ad36",
+      "expectedStatus": 0,
+      "expectedMitm": 2,
+      "expectedRewrite": 2,
+      "expectedScript": 2,
+      "expectedArgument": 1
+    },
+    {
+      "name": "Representative Surge",
+      "platform": "surge",
+      "path": "../Representative.Surge.sgmodule",
+      "source": "bundled fixture",
+      "sha256": "7b0dfbaea6a3d8f618d84894644c45b5e8627fa0f1d85852ff03f0b8e34b212c",
+      "expectedStatus": 0,
+      "expectedMitm": 1,
+      "expectedRewrite": 0,
+      "expectedScript": 2,
+      "expectedArgument": 2
+    },
+    {
+      "name": "Representative Quantumult X",
+      "platform": "quantumultx",
+      "path": "../Representative.QuantumultX.snippet",
+      "source": "bundled fixture",
+      "sha256": "397a201010724f485e36dee682dd7222e5fe9316d2dd58c7089ab9d6b6d9bc7d",
+      "expectedStatus": 0,
+      "expectedMitm": 3,
+      "expectedRewrite": 2,
+      "expectedScript": 1,
+      "expectedArgument": 0
+    }
+  ]
+}

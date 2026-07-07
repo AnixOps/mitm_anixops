@@ -86,6 +86,7 @@ For the no-UI Alpha runner:
 ```sh
 make runner
 build/anixops-mitm-runner scan tests/fixtures/Representative.Loon.plugin
+build/anixops-mitm-runner scan --corpus tests/fixtures/corpus/manifest.json
 build/anixops-mitm-runner trace --plugin tests/fixtures/Representative.Loon.plugin --url https://api.loon.example/v1 --phase response
 build/anixops-mitm-runner replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv
 build/anixops-mitm-runner replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv \
@@ -95,7 +96,9 @@ build/anixops-mitm-runner replay --plugin tests/fixtures/Representative.Loon.plu
   --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_replay_script.js
 ```
 
-`replay` uses a stable TSV fixture format for no-network trace checks:
+`scan --corpus` reads `tests/fixtures/corpus/manifest.json`, resolves fixture paths relative to that manifest, and emits
+a stable JSON report with source metadata, sha256, expected parser status, expected rule counts, observed counts,
+diagnostic count, and an overall `passed` flag. `replay` uses a stable TSV fixture format for no-network trace checks:
 
 ```text
 case<TAB>name<TAB>request|response<TAB>url<TAB>body-or-
@@ -122,10 +125,10 @@ make alpha-dist
 ```
 
 That writes `build/anixops-mitm-alpha-0.41.0.tar.gz`. Alpha scope and known gaps are documented in
-`docs/alpha_release_notes.md`. The package includes `fixtures/Representative.Loon.plugin` and
-`fixtures/RunnerReplay.tsv` so the runner can be exercised without the source tree; it also includes
-`fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc` for C consumers, and
-`lib/cmake/mitm_anixops/mitm_anixops-config.cmake` for CMake consumers.
+`docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
+`fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
+tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
+for C consumers, and `lib/cmake/mitm_anixops/mitm_anixops-config.cmake` for CMake consumers.
 
 For pkg-config integration:
 
@@ -204,12 +207,12 @@ sh scripts/check.sh
 
 The check script cleans the build, compiles the static and shared libraries, runs the separated test fixture, runs
 optional PCRE2/libjq test builds when headers are present, verifies the complete exported C ABI symbol allowlist in
-`ci/abi_exports.txt` when `nm` is available, runs the minimal strategy-chain demo, runs the no-UI runner replay with and
-without script execution, runs the proxy-shim smoke check, runs the mihomo proxy-chain E2E when `MIHOMO_BIN` points to
-an executable binary, runs the BiliUniverse script-runtime E2E fixture, and checks the generic request/response script
-contract including `$persistentStore`, script timeout fail-open, static header/body rewrite ordering, and gzip/deflate
-response decode coverage. GitHub Actions runs the same entrypoint after installing the pinned mihomo fixture with
-`scripts/ensure-mihomo.sh`.
+`ci/abi_exports.txt` when `nm` is available, runs the minimal strategy-chain demo, runs the no-UI runner corpus scan and
+replay with and without script execution, runs the proxy-shim smoke check, runs the mihomo proxy-chain E2E when
+`MIHOMO_BIN` points to an executable binary, runs the BiliUniverse script-runtime E2E fixture, and checks the generic
+request/response script contract including `$persistentStore`, script timeout fail-open, static header/body rewrite
+ordering, and gzip/deflate response decode coverage. GitHub Actions runs the same entrypoint after installing the
+pinned mihomo fixture with `scripts/ensure-mihomo.sh`.
 
 Test policy and layout are documented in `tests/README.md`.
 

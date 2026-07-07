@@ -372,7 +372,7 @@ int anixops_runtime_apply_plan(
 
 | 优先级 | 模块 | 交付物 | 验收证据 |
 | --- | --- | --- | --- |
-| P0 | Corpus | `tests/fixtures/corpus/manifest.json`，记录插件来源、sha256、平台、规则数量、预期 unsupported allowlist | `anixops-mitm-runner scan --corpus` 生成稳定 JSON 报告 |
+| P0 | Corpus | Alpha 已提供 `tests/fixtures/corpus/manifest.json`，记录插件来源、sha256、平台和期望规则计数；后续扩展 unsupported allowlist 和更大真实插件集 | `anixops-mitm-runner scan --corpus` 生成稳定 JSON 报告，`make runner-check` 覆盖当前 manifest |
 | P0 | Diagnostics | 每条规则有 parse 状态、line、section、action、backend requirement | malformed fixture 不再只能靠 last-error 判断 |
 | P0 | LOON parser | `[Plugin]`、`[Argument]`、`[MITM]`、`[Script]`、`[Rewrite]`、`[URL Rewrite]`、`[Header Rewrite]`、`[Body Rewrite]` section 归一化 | Representative LOON fixture 扩展后通过 unit test |
 | P0 | MITM | `hostname`、deny host、wildcard、`%APPEND%`、`skip-server-cert-verify`、`h2`、`disable-quic` 一致决策 | host matrix fixture 覆盖 exact、suffix、wildcard、deny、empty host |

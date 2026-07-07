@@ -31,14 +31,16 @@ Included:
 - P4 script foundation: script dispatch metadata, the Node-based contract runner, file-backed `$persistentStore`,
   request/response script E2E, script timeout fail-open in the proxy shim, and runner `replay --script-runner`
   writeback are supported. Embedded QuickJS/JavaScriptCore is still future work.
-- P5 runner foundation: `scan`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics and comparable URL,
-  rewrite, header, body, and script traces; `anixops_rewrite_build_plan` provides a C ABI foundation that aggregates
-  phase rewrite, header rewrites, script dispatch, body-rewrite output, and `requires_body`; the Alpha proxy shim
-  provides HTTP/1.1 CONNECT/TLS demo coverage around the C ABI, including buffered request/response header and body
-  rewrite before script dispatch and gzip/deflate response decoding for body/script mutation with identity writeback.
+- P5 runner foundation: `scan`, `scan --corpus`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics,
+  corpus count checks, and comparable URL, rewrite, header, body, and script traces; `anixops_rewrite_build_plan`
+  provides a C ABI foundation that aggregates phase rewrite, header rewrites, script dispatch, body-rewrite output, and
+  `requires_body`; the Alpha proxy shim provides HTTP/1.1 CONNECT/TLS demo coverage around the C ABI, including buffered
+  request/response header and body rewrite before script dispatch and gzip/deflate response decoding for body/script
+  mutation with identity writeback.
 - P6 packaging foundation: `make alpha-dist` creates a tar.gz package with libraries, pkg-config metadata, CMake package
-  config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, representative fixtures, header, and docs.
-  The Go and Rust Alpha wrappers expose the aggregated rewrite plan in addition to rewrite/body/script helpers.
+  config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, representative fixtures, the corpus
+  manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan in addition to
+  rewrite/body/script helpers.
 
 ## Known Gaps
 
@@ -67,7 +69,7 @@ make alpha-dist
 
 The check gate covers unit tests, the C ABI plan builder, optional PCRE2/libjq builds when headers are present,
 pkg-config compile/run smoke, CMake package configure/build/run smoke, Go cgo binding tests, Rust wrapper tests, ABI
-exports, strategy demo, runner replay with and without script execution, proxy-shim smoke tests, mihomo proxy E2E,
-BiliUniverse fixture, generic script contract E2E with persistentStore, header/body rewrite ordering, gzip/deflate
-response decode coverage, and script timeout fail-open, plus the Bilibili homepage demo E2E. Go and Rust wrapper tests
-also cover the aggregated plan helper.
+exports, strategy demo, runner corpus scan, runner replay with and without script execution, proxy-shim smoke tests,
+mihomo proxy E2E, BiliUniverse fixture, generic script contract E2E with persistentStore, header/body rewrite ordering,
+gzip/deflate response decode coverage, and script timeout fail-open, plus the Bilibili homepage demo E2E. Go and Rust
+wrapper tests also cover the aggregated plan helper.

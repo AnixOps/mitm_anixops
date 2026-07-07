@@ -8,6 +8,20 @@
 #include <unistd.h>
 
 #define SCRIPT_MAP_CAP 8
+#define CORPUS_FIXTURE_CAP 32
+
+typedef struct corpus_fixture {
+	char name[256];
+	char platform[64];
+	char path[1024];
+	char source[256];
+	char sha256[65];
+	int expected_status;
+	size_t expected_mitm;
+	size_t expected_rewrite;
+	size_t expected_script;
+	size_t expected_argument;
+} corpus_fixture_t;
 
 static char *read_file(const char *path)
 {
@@ -46,6 +60,294 @@ static char *read_file(const char *path)
 	}
 	data[read_len] = '\0';
 	return data;
+}
+
+static int copy_text(char *out, size_t out_cap, const char *value)
+{
+	size_t len;
+	if (out == NULL || out_cap == 0 || value == NULL) {
+		return 0;
+	}
+	len = strlen(value);
+	if (len >= out_cap) {
+		return 0;
+	}
+	memcpy(out, value, len + 1);
+	return 1;
+}
+
+static int json_skip_ws(const char **cursor, const char *end)
+{
+	while (*cursor < end && (**cursor == ' ' || **cursor == '\t' || **cursor == '\n' || **cursor == '\r')) {
+		(*cursor)++;
+	}
+	return *cursor < end;
+}
+
+static const char *json_object_end(const char *object_start)
+{
+	const char *p = object_start;
+	int depth = 0;
+	int in_string = 0;
+	int escaped = 0;
+	while (*p != '\0') {
+		if (in_string) {
+			if (escaped) {
+				escaped = 0;
+			}
+			else if (*p == '\\') {
+				escaped = 1;
+			}
+			else if (*p == '"') {
+				in_string = 0;
+			}
+		}
+		else if (*p == '"') {
+			in_string = 1;
+		}
+		else if (*p == '{') {
+			depth++;
+		}
+		else if (*p == '}') {
+			depth--;
+			if (depth == 0) {
+				return p;
+			}
+		}
+		p++;
+	}
+	return NULL;
+}
+
+static int json_parse_string_value(const char **cursor, const char *end, char *out, size_t out_cap)
+{
+	size_t pos = 0;
+	const char *p = *cursor;
+	if (p >= end || *p != '"') {
+		return 0;
+	}
+	p++;
+	while (p < end && *p != '"') {
+		char ch = *p++;
+		if (ch == '\\') {
+			if (p >= end) {
+				return 0;
+			}
+			ch = *p++;
+			switch (ch) {
+			case '"':
+			case '\\':
+			case '/':
+				break;
+			case 'b':
+				ch = '\b';
+				break;
+			case 'f':
+				ch = '\f';
+				break;
+			case 'n':
+				ch = '\n';
+				break;
+			case 'r':
+				ch = '\r';
+				break;
+			case 't':
+				ch = '\t';
+				break;
+			default:
+				return 0;
+			}
+		}
+		if (pos + 1 >= out_cap) {
+			return 0;
+		}
+		out[pos++] = ch;
+	}
+	if (p >= end || *p != '"') {
+		return 0;
+	}
+	out[pos] = '\0';
+	*cursor = p + 1;
+	return 1;
+}
+
+static const char *json_find_field(const char *object_start, const char *object_end, const char *field)
+{
+	char needle[128];
+	const char *p;
+	if (snprintf(needle, sizeof(needle), "\"%s\"", field) >= (int)sizeof(needle)) {
+		return NULL;
+	}
+	p = object_start;
+	while (p < object_end) {
+		const char *found = strstr(p, needle);
+		if (found == NULL || found >= object_end) {
+			return NULL;
+		}
+		p = found + strlen(needle);
+		while (p < object_end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
+			p++;
+		}
+		if (p < object_end && *p == ':') {
+			p++;
+			while (p < object_end && (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r')) {
+				p++;
+			}
+			return p;
+		}
+	}
+	return NULL;
+}
+
+static int json_object_string_field(
+	const char *object_start,
+	const char *object_end,
+	const char *field,
+	char *out,
+	size_t out_cap)
+{
+	const char *value = json_find_field(object_start, object_end, field);
+	if (value == NULL) {
+		return 0;
+	}
+	return json_parse_string_value(&value, object_end, out, out_cap);
+}
+
+static int json_object_size_field(const char *object_start, const char *object_end, const char *field, size_t *out)
+{
+	const char *value = json_find_field(object_start, object_end, field);
+	char *number_end;
+	unsigned long parsed;
+	if (value == NULL || value >= object_end || out == NULL) {
+		return 0;
+	}
+	parsed = strtoul(value, &number_end, 10);
+	if (number_end == value || number_end > object_end) {
+		return 0;
+	}
+	*out = (size_t)parsed;
+	return 1;
+}
+
+static int json_object_int_field(const char *object_start, const char *object_end, const char *field, int *out)
+{
+	size_t parsed;
+	if (!json_object_size_field(object_start, object_end, field, &parsed) || out == NULL) {
+		return 0;
+	}
+	*out = (int)parsed;
+	return 1;
+}
+
+static int parse_corpus_manifest(const char *text, corpus_fixture_t *fixtures, size_t *out_count)
+{
+	const char *fixtures_key;
+	const char *cursor;
+	size_t count = 0;
+	if (text == NULL || fixtures == NULL || out_count == NULL) {
+		return 0;
+	}
+	fixtures_key = strstr(text, "\"fixtures\"");
+	if (fixtures_key == NULL) {
+		return 0;
+	}
+	cursor = strchr(fixtures_key, '[');
+	if (cursor == NULL) {
+		return 0;
+	}
+	cursor++;
+	for (;;) {
+		const char *object_start;
+		const char *object_end;
+		corpus_fixture_t fixture;
+		if (!json_skip_ws(&cursor, text + strlen(text))) {
+			return 0;
+		}
+		if (*cursor == ']') {
+			break;
+		}
+		if (*cursor != '{') {
+			return 0;
+		}
+		if (count >= CORPUS_FIXTURE_CAP) {
+			return 0;
+		}
+		object_start = cursor;
+		object_end = json_object_end(object_start);
+		if (object_end == NULL) {
+			return 0;
+		}
+		memset(&fixture, 0, sizeof(fixture));
+		if (!json_object_string_field(object_start, object_end, "name", fixture.name, sizeof(fixture.name)) ||
+			!json_object_string_field(object_start, object_end, "platform", fixture.platform, sizeof(fixture.platform)) ||
+			!json_object_string_field(object_start, object_end, "path", fixture.path, sizeof(fixture.path)) ||
+			!json_object_string_field(object_start, object_end, "source", fixture.source, sizeof(fixture.source)) ||
+			!json_object_string_field(object_start, object_end, "sha256", fixture.sha256, sizeof(fixture.sha256)) ||
+			!json_object_int_field(object_start, object_end, "expectedStatus", &fixture.expected_status) ||
+			!json_object_size_field(object_start, object_end, "expectedMitm", &fixture.expected_mitm) ||
+			!json_object_size_field(object_start, object_end, "expectedRewrite", &fixture.expected_rewrite) ||
+			!json_object_size_field(object_start, object_end, "expectedScript", &fixture.expected_script) ||
+			!json_object_size_field(object_start, object_end, "expectedArgument", &fixture.expected_argument)) {
+			return 0;
+		}
+		fixtures[count++] = fixture;
+		cursor = object_end + 1;
+		if (!json_skip_ws(&cursor, text + strlen(text))) {
+			return 0;
+		}
+		if (*cursor == ',') {
+			cursor++;
+		}
+		else if (*cursor == ']') {
+			break;
+		}
+		else {
+			return 0;
+		}
+	}
+	*out_count = count;
+	return 1;
+}
+
+static int dirname_for_path(const char *path, char *out, size_t out_cap)
+{
+	const char *slash;
+	size_t len;
+	if (path == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	slash = strrchr(path, '/');
+	if (slash == NULL) {
+		return copy_text(out, out_cap, ".");
+	}
+	len = (size_t)(slash - path);
+	if (len == 0) {
+		len = 1;
+	}
+	if (len >= out_cap) {
+		return 0;
+	}
+	memcpy(out, path, len);
+	out[len] = '\0';
+	return 1;
+}
+
+static int resolve_manifest_path(const char *manifest_path, const char *fixture_path, char *out, size_t out_cap)
+{
+	char dir[1024];
+	if (manifest_path == NULL || fixture_path == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	if (fixture_path[0] == '/') {
+		return copy_text(out, out_cap, fixture_path);
+	}
+	if (!dirname_for_path(manifest_path, dir, sizeof(dir))) {
+		return 0;
+	}
+	if (snprintf(out, out_cap, "%s/%s", dir, fixture_path) >= (int)out_cap) {
+		return 0;
+	}
+	return 1;
 }
 
 static void json_string(const char *value)
@@ -154,6 +456,107 @@ static int cmd_scan(const char *path)
 	printf("}\n");
 	anixops_engine_free(engine);
 	return status == ANIXOPS_OK ? 0 : 2;
+}
+
+static int cmd_scan_corpus(const char *manifest_path)
+{
+	char *manifest = read_file(manifest_path);
+	corpus_fixture_t fixtures[CORPUS_FIXTURE_CAP];
+	size_t fixture_count = 0;
+	size_t i;
+	int passed = 1;
+
+	if (manifest == NULL) {
+		fprintf(stderr, "failed to load corpus manifest: %s\n", manifest_path);
+		return 1;
+	}
+	if (!parse_corpus_manifest(manifest, fixtures, &fixture_count)) {
+		fprintf(stderr, "failed to parse corpus manifest: %s\n", manifest_path);
+		free(manifest);
+		return 1;
+	}
+	free(manifest);
+
+	printf("{\"version\":");
+	json_string(anixops_version());
+	printf(",\"manifest\":");
+	json_string(manifest_path);
+	printf(",\"fixtureCount\":%zu,\"fixtures\":[", fixture_count);
+	for (i = 0; i < fixture_count; i++) {
+		char resolved_path[2048];
+		anixops_engine_t *engine = NULL;
+		int status = ANIXOPS_ERR_INVALID_ARGUMENT;
+		size_t mitm_count = 0;
+		size_t rewrite_count = 0;
+		size_t script_count = 0;
+		size_t argument_count = 0;
+		size_t diagnostic_count = 0;
+		int matched = 0;
+		if (i != 0) {
+			putchar(',');
+		}
+		if (!resolve_manifest_path(manifest_path, fixtures[i].path, resolved_path, sizeof(resolved_path)) ||
+			!load_engine(resolved_path, &engine, &status)) {
+			passed = 0;
+			printf("{\"name\":");
+			json_string(fixtures[i].name);
+			printf(",\"platform\":");
+			json_string(fixtures[i].platform);
+			printf(",\"source\":");
+			json_string(fixtures[i].source);
+			printf(",\"sha256\":");
+			json_string(fixtures[i].sha256);
+			printf(",\"path\":");
+			json_string(fixtures[i].path);
+			printf(",\"status\":%d,\"expectedStatus\":%d,\"matched\":false,\"message\":",
+				status,
+				fixtures[i].expected_status);
+			json_string("fixture load failed");
+			putchar('}');
+			continue;
+		}
+		mitm_count = anixops_engine_mitm_pattern_count(engine);
+		rewrite_count = anixops_engine_rewrite_rule_count(engine);
+		script_count = anixops_engine_script_rule_count(engine);
+		argument_count = anixops_engine_argument_count(engine);
+		diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+		matched =
+			status == fixtures[i].expected_status &&
+			mitm_count == fixtures[i].expected_mitm &&
+			rewrite_count == fixtures[i].expected_rewrite &&
+			script_count == fixtures[i].expected_script &&
+			argument_count == fixtures[i].expected_argument;
+		if (!matched) {
+			passed = 0;
+		}
+		printf("{\"name\":");
+		json_string(fixtures[i].name);
+		printf(",\"platform\":");
+		json_string(fixtures[i].platform);
+		printf(",\"source\":");
+		json_string(fixtures[i].source);
+		printf(",\"sha256\":");
+		json_string(fixtures[i].sha256);
+		printf(",\"path\":");
+		json_string(fixtures[i].path);
+		printf(",\"status\":%d,\"expectedStatus\":%d,\"counts\":{\"mitm\":%zu,\"rewrite\":%zu,\"script\":%zu,\"argument\":%zu},",
+			status,
+			fixtures[i].expected_status,
+			mitm_count,
+			rewrite_count,
+			script_count,
+			argument_count);
+		printf("\"expectedCounts\":{\"mitm\":%zu,\"rewrite\":%zu,\"script\":%zu,\"argument\":%zu},\"diagnosticCount\":%zu,\"matched\":%s}",
+			fixtures[i].expected_mitm,
+			fixtures[i].expected_rewrite,
+			fixtures[i].expected_script,
+			fixtures[i].expected_argument,
+			diagnostic_count,
+			matched ? "true" : "false");
+		anixops_engine_free(engine);
+	}
+	printf("],\"passed\":%s}\n", passed ? "true" : "false");
+	return passed ? 0 : 2;
 }
 
 static anixops_phase_t parse_phase(const char *phase)
@@ -722,6 +1125,7 @@ static void usage(void)
 	fputs(
 		"usage:\n"
 		"  anixops-mitm-runner scan <plugin-file>\n"
+		"  anixops-mitm-runner scan --corpus <manifest.json>\n"
 		"  anixops-mitm-runner trace --plugin <file> --url <url> [--phase request|response]\n"
 		"  anixops-mitm-runner replay --plugin <file> --fixture <cases.tsv> "
 		"[--script-runner <node-runner.js> --script-map <url=file> --script-store <file>]\n",
@@ -735,11 +1139,14 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	if (strcmp(argv[1], "scan") == 0) {
-		if (argc != 3) {
-			usage();
-			return 1;
+		if (argc == 3) {
+			return cmd_scan(argv[2]);
 		}
-		return cmd_scan(argv[2]);
+		if (argc == 4 && strcmp(argv[2], "--corpus") == 0) {
+			return cmd_scan_corpus(argv[3]);
+		}
+		usage();
+		return 1;
 	}
 	if (strcmp(argv[1], "trace") == 0) {
 		return cmd_trace(argc, argv);

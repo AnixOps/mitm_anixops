@@ -83,6 +83,12 @@ runner-check: $(RUNNER_BIN)
 	$(RUNNER_BIN) scan tests/fixtures/Representative.Loon.plugin > $(BUILD_DIR)/runner-scan.out
 	grep -F '"status":0' $(BUILD_DIR)/runner-scan.out >/dev/null
 	grep -F '"counts":{"mitm":2,"rewrite":2,"script":2,"argument":1}' $(BUILD_DIR)/runner-scan.out >/dev/null
+	$(RUNNER_BIN) scan --corpus tests/fixtures/corpus/manifest.json > $(BUILD_DIR)/runner-corpus.out
+	grep -F '"fixtureCount":4' $(BUILD_DIR)/runner-corpus.out >/dev/null
+	grep -F '"platform":"loon"' $(BUILD_DIR)/runner-corpus.out >/dev/null
+	grep -F '"platform":"surge"' $(BUILD_DIR)/runner-corpus.out >/dev/null
+	grep -F '"platform":"quantumultx"' $(BUILD_DIR)/runner-corpus.out >/dev/null
+	grep -F '"passed":true' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	$(RUNNER_BIN) trace --plugin tests/fixtures/Representative.Loon.plugin --url https://api.loon.example/v1 --phase response > $(BUILD_DIR)/runner-trace.out
 	grep -F '"kind":2' $(BUILD_DIR)/runner-trace.out >/dev/null
 	grep -F '"tag":"loon.response"' $(BUILD_DIR)/runner-trace.out >/dev/null
@@ -153,7 +159,7 @@ cmake-package-check: all $(CMAKE_CONFIG_FILES)
 
 alpha-dist: all runner proxy-shim
 	rm -rf $(BUILD_DIR)/$(ALPHA_NAME)
-	mkdir -p $(BUILD_DIR)/$(ALPHA_NAME)/include $(BUILD_DIR)/$(ALPHA_NAME)/lib/pkgconfig $(BUILD_DIR)/$(ALPHA_NAME)/lib/cmake/mitm_anixops $(BUILD_DIR)/$(ALPHA_NAME)/bin $(BUILD_DIR)/$(ALPHA_NAME)/docs $(BUILD_DIR)/$(ALPHA_NAME)/fixtures $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src
+	mkdir -p $(BUILD_DIR)/$(ALPHA_NAME)/include $(BUILD_DIR)/$(ALPHA_NAME)/lib/pkgconfig $(BUILD_DIR)/$(ALPHA_NAME)/lib/cmake/mitm_anixops $(BUILD_DIR)/$(ALPHA_NAME)/bin $(BUILD_DIR)/$(ALPHA_NAME)/docs $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src
 	cp include/mitm_anixops.h $(BUILD_DIR)/$(ALPHA_NAME)/include/
 	cp $(STATIC_LIB) $(SHARED_LIB) $(BUILD_DIR)/$(ALPHA_NAME)/lib/
 	cp $(PKG_CONFIG_FILE) $(BUILD_DIR)/$(ALPHA_NAME)/lib/pkgconfig/
@@ -164,7 +170,8 @@ alpha-dist: all runner proxy-shim
 	cp bindings/go/anixops/*.go $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops/
 	cp bindings/rust/mitm-anixops/Cargo.toml bindings/rust/mitm-anixops/Cargo.lock bindings/rust/mitm-anixops/build.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/
 	cp bindings/rust/mitm-anixops/src/*.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src/
-	cp tests/fixtures/Representative.Loon.plugin tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
+	cp tests/fixtures/BiliBili.Enhanced.plugin tests/fixtures/Representative.Loon.plugin tests/fixtures/Representative.Surge.sgmodule tests/fixtures/Representative.QuantumultX.snippet tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
+	cp tests/fixtures/corpus/manifest.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus/
 	cp README.md docs/TODO.md docs/compatibility_matrix.md docs/alpha_release_notes.md docs/loon_mitm_full_compat_plan.md docs/loon_mitm_full_compat_brief_zh.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
 	tar -C $(BUILD_DIR) -czf $(BUILD_DIR)/$(ALPHA_NAME).tar.gz $(ALPHA_NAME)
 	@printf '%s\n' "$(BUILD_DIR)/$(ALPHA_NAME).tar.gz"
