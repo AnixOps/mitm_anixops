@@ -1923,6 +1923,32 @@ static void header_rewrite_enumerates_matching_rules_with_start_index(void)
 	anixops_engine_free(engine);
 }
 
+static void request_header_delete_is_supported(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_rewrite_result_t header;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/delete header-del X-Trace"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://api.test/delete", ANIXOPS_PHASE_RESPONSE, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://api.test/delete", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_HEADER_DEL);
+	ANIXOPS_EXPECT_EQ_INT(header.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Trace");
+	ANIXOPS_EXPECT_STREQ(header.value, "");
+	ANIXOPS_EXPECT_STREQ(header.message, "header rewrite matched");
+
+	anixops_engine_free(engine);
+}
+
 static void response_header_rules_respect_phase_and_delete(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2218,6 +2244,7 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/header_rewrite_enumerates_matching_rules_with_start_index",
 		header_rewrite_enumerates_matching_rules_with_start_index);
+	add_test(tests, count, cap, "rewrite/request_header_delete_is_supported", request_header_delete_is_supported);
 	add_test(
 		tests,
 		count,

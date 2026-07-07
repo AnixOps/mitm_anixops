@@ -235,7 +235,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.27.0";
+	return "0.28.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1503,7 +1503,7 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 			return ANIXOPS_OK;
 		}
 
-		if (rule->action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL) {
+		if (rule->action == ANIXOPS_REWRITE_HEADER_DEL || rule->action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL) {
 			out_result->value[0] = '\0';
 			anixops_copy_text(out_result->message, sizeof(out_result->message), "header rewrite matched");
 			return ANIXOPS_OK;
@@ -2348,6 +2348,11 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 		*status_code = 0;
 		return 1;
 	}
+	if (strcasecmp(token, "header-del") == 0) {
+		*action = ANIXOPS_REWRITE_HEADER_DEL;
+		*status_code = 0;
+		return 1;
+	}
 	if (strcasecmp(token, "header-replace-regex") == 0) {
 		*action = ANIXOPS_REWRITE_HEADER_REPLACE_REGEX;
 		*status_code = 0;
@@ -2409,6 +2414,7 @@ static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t actio
 {
 	return action == ANIXOPS_REWRITE_HEADER_REPLACE ||
 		action == ANIXOPS_REWRITE_HEADER_ADD ||
+		action == ANIXOPS_REWRITE_HEADER_DEL ||
 		action == ANIXOPS_REWRITE_HEADER_REPLACE_REGEX ||
 		action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL ||
 		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE ||

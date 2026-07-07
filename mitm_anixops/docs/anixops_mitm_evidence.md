@@ -48,7 +48,7 @@ Confirmed runtime shape:
 - Response-side H2 rewrite can modify response body through `URLRewrite` and then records statistics/session state.
 - Rewrite action strings include `request-body-replace-regex`, `response-body-replace-regex`, `mock-request-body`, and
   `mock-response-body` in both the app and tunnel-provider indexed strings.
-- Header rewrite action strings include `header-replace`, `header-add`, `header-replace-regex`,
+- Header rewrite action strings include `header-replace`, `header-add`, `header-del`, `header-replace-regex`,
   `response-header-del`, `response-header-replace`, `response-header-add`, and `response-header-replace-regex`.
 - `Decare::setUpHTTPSProxy:` allocates `LNGCDHTTPSProxyServer` with port `0x27f7`.
 - `Decare::setUpH2Proxy:` allocates `LNGCDH2ProxyServer` with port `0xa584`.
