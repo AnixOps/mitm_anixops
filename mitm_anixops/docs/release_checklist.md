@@ -32,8 +32,9 @@ Use this checklist before publishing a `mitm_anixops` source tag, binary artifac
 
 6. Confirm the output includes `make pkg-config-check` and that the staged smoke binary runs through the generated
    `mitm_anixops.pc`.
-7. Confirm `make runner-check` includes `anixops-mitm-runner scan --corpus tests/fixtures/corpus/manifest.json` and
-   reports `"passed":true`.
+7. Confirm `make runner-check` includes `anixops-mitm-runner scan --corpus tests/fixtures/corpus/manifest.json`,
+   validates the JSON report, and reports `"sha256Matched":true`, expected diagnostic status counts, and
+   `"passed":true`.
 8. Confirm the output includes `make cmake-package-check` and that the staged CMake consumer configure/build/run smoke
    passes. If `cmake` is unavailable in a constrained local environment, treat the explicit skip as a local limitation
    and rerun on a machine with CMake before publishing Alpha artifacts.

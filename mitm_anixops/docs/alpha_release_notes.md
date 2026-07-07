@@ -32,7 +32,8 @@ Included:
   request/response script E2E, script timeout fail-open in the proxy shim, and runner `replay --script-runner`
   writeback are supported. Embedded QuickJS/JavaScriptCore is still future work.
 - P5 runner foundation: `scan`, `scan --corpus`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics,
-  corpus count checks, and comparable URL, rewrite, header, body, and script traces; `anixops_rewrite_build_plan`
+  corpus count, sha256, and diagnostic-status checks, and comparable URL, rewrite, header, body, and script traces;
+  `anixops_rewrite_build_plan`
   provides a C ABI foundation that aggregates phase rewrite, header rewrites, script dispatch, body-rewrite output, and
   `requires_body`; the Alpha proxy shim provides HTTP/1.1 CONNECT/TLS demo coverage around the C ABI, including buffered
   request/response header and body rewrite before script dispatch and gzip/deflate response decoding for body/script
@@ -69,7 +70,7 @@ make alpha-dist
 
 The check gate covers unit tests, the C ABI plan builder, optional PCRE2/libjq builds when headers are present,
 pkg-config compile/run smoke, CMake package configure/build/run smoke, Go cgo binding tests, Rust wrapper tests, ABI
-exports, strategy demo, runner corpus scan, runner replay with and without script execution, proxy-shim smoke tests,
-mihomo proxy E2E, BiliUniverse fixture, generic script contract E2E with persistentStore, header/body rewrite ordering,
-gzip/deflate response decode coverage, and script timeout fail-open, plus the Bilibili homepage demo E2E. Go and Rust
-wrapper tests also cover the aggregated plan helper.
+exports, strategy demo, runner corpus scan with sha256 and diagnostic-status checks, runner replay with and without
+script execution, proxy-shim smoke tests, mihomo proxy E2E, BiliUniverse fixture, generic script contract E2E with
+persistentStore, header/body rewrite ordering, gzip/deflate response decode coverage, and script timeout fail-open,
+plus the Bilibili homepage demo E2E. Go and Rust wrapper tests also cover the aggregated plan helper.

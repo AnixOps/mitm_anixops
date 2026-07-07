@@ -96,9 +96,10 @@ build/anixops-mitm-runner replay --plugin tests/fixtures/Representative.Loon.plu
   --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_replay_script.js
 ```
 
-`scan --corpus` reads `tests/fixtures/corpus/manifest.json`, resolves fixture paths relative to that manifest, and emits
-a stable JSON report with source metadata, sha256, expected parser status, expected rule counts, observed counts,
-diagnostic count, and an overall `passed` flag. `replay` uses a stable TSV fixture format for no-network trace checks:
+`scan --corpus` reads `tests/fixtures/corpus/manifest.json`, resolves fixture paths relative to that manifest, verifies
+fixture sha256 digests, and emits a stable JSON report with source metadata, expected parser status, expected rule
+counts, observed counts, accepted/ignored/rejected diagnostic counts, and an overall `passed` flag. `replay` uses a
+stable TSV fixture format for no-network trace checks:
 
 ```text
 case<TAB>name<TAB>request|response<TAB>url<TAB>body-or-

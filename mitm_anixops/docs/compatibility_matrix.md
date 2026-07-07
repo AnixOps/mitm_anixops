@@ -97,7 +97,7 @@ features it understands.
 | Last error status/line/message copy | Supported | `anixops_engine_copy_last_error` |
 | Compatibility profile selector | Supported foundation | `anixops_engine_set_compat_profile`, `anixops_engine_compat_profile`; profile-specific behavior is still incremental |
 | Per-rule parse diagnostics | Supported foundation | `anixops_engine_rule_diagnostic_count`, `anixops_engine_copy_rule_diagnostic`, accepted/ignored/rejected config tests |
-| Corpus manifest scan | Supported foundation | `tests/fixtures/corpus/manifest.json`, `anixops-mitm-runner scan --corpus`, runner-check verifies representative Loon/Surge/Quantumult X and BiliBili fixture counts |
+| Corpus manifest scan | Supported foundation | `tests/fixtures/corpus/manifest.json`, `anixops-mitm-runner scan --corpus`, runner-check verifies representative Loon/Surge/Quantumult X and BiliBili fixture counts, sha256 digests, and accepted/ignored/rejected diagnostic counts |
 | Request/response plan builder | Supported foundation | `anixops_rewrite_build_plan` aggregates phase rewrite, matching header rewrites, script dispatch, body-rewrite output, and `requires_body`; unit test compares it against individual evaluation APIs |
 | Regex backend selector | Supported foundation | `anixops_regex_backend_available`, `anixops_engine_set_regex_backend`, POSIX Lite default |
 | Optional PCRE2 backend | Supported optional backend | `make pcre2-test`, `PCRE2=1`, lookahead/lookbehind fixture |
@@ -113,8 +113,8 @@ features it understands.
 
 - `make demo-check`: pure C strategy-chain demo, no sockets/TLS/JS.
 - `make runner-check`: no-UI runner scan/trace/replay smoke test over the representative Loon fixture, corpus manifest
-  scan over Loon/Surge/Quantumult X/BiliBili fixtures, optional Node script-runtime replay, `$done.body` writeback, and
-  file-backed `$persistentStore`.
+  scan over Loon/Surge/Quantumult X/BiliBili fixtures with sha256 and diagnostic-status checks, optional Node
+  script-runtime replay, `$done.body` writeback, and file-backed `$persistentStore`.
 - `make proxy-shim-check`: Alpha HTTP/1.1 CONNECT/TLS proxy shim build smoke test.
 - `make script-contract-e2e`: request/response header/body rewrite and script mutation through the proxy path, including
   shared `$persistentStore`, script timeout fail-open, gzip/deflate response decode, and identity writeback.

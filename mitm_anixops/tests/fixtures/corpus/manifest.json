@@ -11,7 +11,10 @@
       "expectedMitm": 2,
       "expectedRewrite": 0,
       "expectedScript": 4,
-      "expectedArgument": 11
+      "expectedArgument": 11,
+      "expectedDiagnosticAccepted": 16,
+      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticRejected": 0
     },
     {
       "name": "Representative Loon",
@@ -23,7 +26,10 @@
       "expectedMitm": 2,
       "expectedRewrite": 2,
       "expectedScript": 2,
-      "expectedArgument": 1
+      "expectedArgument": 1,
+      "expectedDiagnosticAccepted": 6,
+      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticRejected": 0
     },
     {
       "name": "Representative Surge",
@@ -35,7 +41,10 @@
       "expectedMitm": 1,
       "expectedRewrite": 0,
       "expectedScript": 2,
-      "expectedArgument": 2
+      "expectedArgument": 2,
+      "expectedDiagnosticAccepted": 4,
+      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticRejected": 0
     },
     {
       "name": "Representative Quantumult X",
@@ -47,7 +56,10 @@
       "expectedMitm": 3,
       "expectedRewrite": 2,
       "expectedScript": 1,
-      "expectedArgument": 0
+      "expectedArgument": 0,
+      "expectedDiagnosticAccepted": 4,
+      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticRejected": 0
     }
   ]
 }
