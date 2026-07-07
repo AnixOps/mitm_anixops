@@ -11,7 +11,7 @@ publishing.
 ## Compatibility Gaps
 
 - Full JQ-style JSON body rewrite filters beyond the tested JSON path replacement subset, including object paths,
-  bracket string keys, and array indexes.
+  bracket string keys with common escapes, and array indexes.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
   absolute anchors, non-capturing groups, named capture groups, and quoted literal matching subset.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, common reject/body/header
