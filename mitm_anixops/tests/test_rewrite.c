@@ -1288,6 +1288,55 @@ static void json_body_replace_supports_bracket_string_keys(void)
 	anixops_engine_free(engine);
 }
 
+static void json_body_replace_supports_empty_bracket_string_keys(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[200];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/empty request-body-json-replace $['']['name'] '\"test\"'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/missing request-body-json-replace $['']['missing'] true"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/empty",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"\":{\"name\":\"Alice\",\"id\":7},\"enabled\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"\":{\"name\":\"test\",\"id\":7},\"enabled\":false}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/missing",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"\":{\"name\":\"Alice\"}}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json path not matched");
+	ANIXOPS_EXPECT_STREQ(body, "{\"\":{\"name\":\"Alice\"}}");
+
+	anixops_engine_free(engine);
+}
+
 static void json_body_replace_supports_escaped_bracket_string_keys(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1693,6 +1742,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/json_body_replace_supports_bracket_string_keys",
 		json_body_replace_supports_bracket_string_keys);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/json_body_replace_supports_empty_bracket_string_keys",
+		json_body_replace_supports_empty_bracket_string_keys);
 	add_test(
 		tests,
 		count,

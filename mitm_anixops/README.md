@@ -25,8 +25,9 @@ Implemented:
   `[Remote Header Rewrite]`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.
 - JSON path request/response body replacement for already-buffered JSON bodies, using object paths, bracket string keys,
-  common escaped and `\uXXXX` bracket string keys, and array indexes such as `$.enabled`, `$['profile.meta'].name`, and
-  `$.items[0].title`, with raw JSON literals such as `true`, `null`, objects, arrays, or quoted strings.
+  empty, common escaped, and `\uXXXX` bracket string keys, and array indexes such as `$.enabled`,
+  `$['profile.meta'].name`, and `$.items[0].title`, with raw JSON literals such as `true`, `null`, objects, arrays, or
+  quoted strings.
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, and header rewrite
   actions.

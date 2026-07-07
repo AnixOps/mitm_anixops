@@ -226,7 +226,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.20.0";
+	return "0.21.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -3158,7 +3158,7 @@ static int anixops_json_parse_bracket_key(
 		}
 		out[pos++] = ch;
 	}
-	if (pos == 0 || *p != quote || p[1] != ']') {
+	if (*p != quote || p[1] != ']') {
 		return 0;
 	}
 	out[pos] = '\0';
