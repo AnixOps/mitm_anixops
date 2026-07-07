@@ -31,6 +31,7 @@ features it understands.
 | Deny host patterns | Supported | `-host` and `!host` tests |
 | Certificate trust gate | Supported as adapter input | `anixops_engine_set_cert_state` |
 | QUIC rejection decision | Supported as adapter signal | `ANIXOPS_MITM_REJECT_QUIC` |
+| HTTP/2 MITM config flag | Supported | `h2`, `h2-enable`, and `h2_enable` tests |
 | Dynamic certificates / trust store install | Out of scope | adapter responsibility |
 
 ## Rewrite

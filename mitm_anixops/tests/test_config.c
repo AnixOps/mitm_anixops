@@ -111,6 +111,23 @@ static void config_accepts_quantumultx_rewrite_remote_section_aliases(void)
 	anixops_engine_free(engine);
 }
 
+static void config_accepts_h2_enable_mitm_key_alias(void)
+{
+	const char *config =
+		"[MITM]\n"
+		"hostname = api.example.test\n"
+		"h2_enable = false\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 0);
+
+	anixops_engine_free(engine);
+}
+
 static void config_parses_script_and_ignores_unknown_sections(void)
 {
 	const char *config =
@@ -222,6 +239,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_accepts_quantumultx_rewrite_remote_section_aliases",
 		config_accepts_quantumultx_rewrite_remote_section_aliases);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_accepts_h2_enable_mitm_key_alias",
+		config_accepts_h2_enable_mitm_key_alias);
 	add_test(
 		tests,
 		count,
