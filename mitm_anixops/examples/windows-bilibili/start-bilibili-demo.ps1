@@ -6,8 +6,7 @@ param(
   [string]$Core = "auto",
   [string]$CaCert = (Join-Path $env:TEMP "anixops-bilibili-demo-ca.pem"),
   [string]$CaKey = (Join-Path $env:TEMP "anixops-bilibili-demo-ca.key"),
-  [switch]$InstallCert,
-  [switch]$Debug
+  [switch]$InstallCert
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,7 +38,8 @@ try {
   if ($InstallCert) {
     $shimArgs += "--install-ca"
   }
-  if ($Debug) {
+  $enableShimDebug = $PSBoundParameters.ContainsKey("Debug") -and [bool]$PSBoundParameters["Debug"]
+  if ($enableShimDebug) {
     $shimArgs += "--debug"
   }
   if ($CoreBin -ne "") {

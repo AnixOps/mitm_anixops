@@ -901,9 +901,6 @@ func (ps *proxyServer) applyRequestScript(
 
 func (ps *proxyServer) prepareUpstreamHeader(rawURL string, header http.Header) http.Header {
 	nextHeader := cloneHeader(header)
-	if ps.scriptRunner == "" {
-		return nextHeader
-	}
 	match, err := ps.engine.script(scriptDispatchURL(rawURL), phaseResponse)
 	if err != nil || match.kind == scriptNone || match.requiresBody == 0 {
 		return nextHeader
@@ -1376,6 +1373,7 @@ func startOrigin(addr string, cache *certCache) error {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if stripPort(r.Host) == "www.bilibili.com" && r.URL.Path == "/" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("X-Origin-Accept-Encoding", r.Header.Get("Accept-Encoding"))
 			io.WriteString(w, "<!doctype html><html><head><title>origin title</title></head><body><main><a class=\"bili-video-card__info--tit\" href=\"/video/BV1\">origin title</a><img class=\"bili-video-card__cover\" src=\"/cover.jpg\" alt=\"cover\"></main></body></html>")
 			return
 		}

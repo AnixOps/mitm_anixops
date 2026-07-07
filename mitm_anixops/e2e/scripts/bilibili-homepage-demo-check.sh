@@ -149,6 +149,7 @@ curl --silent --show-error --max-time 12 --http1.1 \
 
 assert_contains "$TMP/headers.out" "HTTP/1.1 200 OK"
 assert_header_contains_ci "$TMP/headers.out" "X-AnixOps-Bilibili-Demo: applied"
+assert_header_contains_ci "$TMP/headers.out" "X-Origin-Accept-Encoding: identity"
 assert_contains "$TMP/body.out" "anixops-bilibili-homepage-demo"
 assert_contains "$TMP/body.out" "document.title = \"test\""
 assert_contains "$TMP/body.out" "brightness(0)"
