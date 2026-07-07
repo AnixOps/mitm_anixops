@@ -121,6 +121,16 @@ static void anixops_record_capture(
 	size_t capture_map_cap,
 	int is_logical_capture);
 static size_t anixops_capture_match_index(size_t idx, const size_t *capture_map, size_t capture_map_cap);
+static int anixops_append_capture_replacement(
+	const char *input,
+	const regmatch_t *matches,
+	size_t match_count,
+	const size_t *capture_map,
+	size_t capture_map_cap,
+	size_t idx,
+	char *out,
+	size_t out_cap,
+	size_t *pos);
 static int anixops_regex_append_literal_bytes(
 	char *out,
 	size_t out_cap,
@@ -264,7 +274,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.31.0";
+	return "0.32.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2295,6 +2305,32 @@ static size_t anixops_capture_match_index(size_t idx, const size_t *capture_map,
 	return capture_map[idx];
 }
 
+static int anixops_append_capture_replacement(
+	const char *input,
+	const regmatch_t *matches,
+	size_t match_count,
+	const size_t *capture_map,
+	size_t capture_map_cap,
+	size_t idx,
+	char *out,
+	size_t out_cap,
+	size_t *pos)
+{
+	size_t match_idx;
+	if (input == NULL || matches == NULL || out == NULL || out_cap == 0 || pos == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	match_idx = anixops_capture_match_index(idx, capture_map, capture_map_cap);
+	if (match_idx < match_count &&
+		matches[match_idx].rm_so >= 0 &&
+		matches[match_idx].rm_eo >= matches[match_idx].rm_so) {
+		size_t start = (size_t)matches[match_idx].rm_so;
+		size_t len = (size_t)(matches[match_idx].rm_eo - matches[match_idx].rm_so);
+		return anixops_append_range(out, out_cap, pos, input + start, len);
+	}
+	return ANIXOPS_OK;
+}
+
 static int anixops_regex_append_literal_bytes(
 	char *out,
 	size_t out_cap,
@@ -2918,17 +2954,45 @@ static int anixops_expand_replacement(
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
 	while (*p != '\0') {
-		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
-			size_t idx = (size_t)(p[1] - '0');
-			size_t match_idx = anixops_capture_match_index(idx, capture_map, capture_map_cap);
-			if (match_idx < match_count &&
-				matches[match_idx].rm_so >= 0 &&
-				matches[match_idx].rm_eo >= matches[match_idx].rm_so) {
-				size_t start = (size_t)matches[match_idx].rm_so;
-				size_t len = (size_t)(matches[match_idx].rm_eo - matches[match_idx].rm_so);
-				if (anixops_append_range(out, out_cap, &pos, input + start, len) != ANIXOPS_OK) {
+		if (*p == '$' && p[1] == '{' && isdigit((unsigned char)p[2])) {
+			const char *end = p + 2;
+			size_t idx = 0;
+			while (isdigit((unsigned char)*end)) {
+				if (idx < ANIXOPS_MATCH_CAP) {
+					idx = idx * 10 + (size_t)(*end - '0');
+				}
+				end++;
+			}
+			if (*end == '}') {
+				if (anixops_append_capture_replacement(
+						input,
+						matches,
+						match_count,
+						capture_map,
+						capture_map_cap,
+						idx,
+						out,
+						out_cap,
+						&pos) != ANIXOPS_OK) {
 					truncated = 1;
 				}
+				p = end + 1;
+				continue;
+			}
+		}
+		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
+			size_t idx = (size_t)(p[1] - '0');
+			if (anixops_append_capture_replacement(
+					input,
+					matches,
+					match_count,
+					capture_map,
+					capture_map_cap,
+					idx,
+					out,
+					out_cap,
+					&pos) != ANIXOPS_OK) {
+				truncated = 1;
 			}
 			p += 2;
 			continue;
@@ -3105,17 +3169,45 @@ static int anixops_append_expanded_replacement(
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
 	while (*p != '\0') {
-		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
-			size_t idx = (size_t)(p[1] - '0');
-			size_t match_idx = anixops_capture_match_index(idx, capture_map, capture_map_cap);
-			if (match_idx < match_count &&
-				matches[match_idx].rm_so >= 0 &&
-				matches[match_idx].rm_eo >= matches[match_idx].rm_so) {
-				size_t start = (size_t)matches[match_idx].rm_so;
-				size_t len = (size_t)(matches[match_idx].rm_eo - matches[match_idx].rm_so);
-				if (anixops_append_range(out, out_cap, pos, input + start, len) != ANIXOPS_OK) {
+		if (*p == '$' && p[1] == '{' && isdigit((unsigned char)p[2])) {
+			const char *end = p + 2;
+			size_t idx = 0;
+			while (isdigit((unsigned char)*end)) {
+				if (idx < ANIXOPS_MATCH_CAP) {
+					idx = idx * 10 + (size_t)(*end - '0');
+				}
+				end++;
+			}
+			if (*end == '}') {
+				if (anixops_append_capture_replacement(
+						input,
+						matches,
+						match_count,
+						capture_map,
+						capture_map_cap,
+						idx,
+						out,
+						out_cap,
+						pos) != ANIXOPS_OK) {
 					truncated = 1;
 				}
+				p = end + 1;
+				continue;
+			}
+		}
+		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
+			size_t idx = (size_t)(p[1] - '0');
+			if (anixops_append_capture_replacement(
+					input,
+					matches,
+					match_count,
+					capture_map,
+					capture_map_cap,
+					idx,
+					out,
+					out_cap,
+					pos) != ANIXOPS_OK) {
+				truncated = 1;
 			}
 			p += 2;
 			continue;

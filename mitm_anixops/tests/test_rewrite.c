@@ -68,10 +68,18 @@ static void redirect_307_supports_dollar_capture(void)
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, "^https://old\\.test/(.*) https://new.test/$1 307"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://brace\\.test/(.*) https://new.test/${1}/done 302"),
+		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(anixops_rewrite_evaluate_url(engine, "https://old.test/a/b", ANIXOPS_PHASE_REQUEST, &result), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_307);
 	ANIXOPS_EXPECT_EQ_INT(result.status_code, 307);
 	ANIXOPS_EXPECT_STREQ(result.value, "https://new.test/a/b");
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://brace.test/a/b", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://new.test/a/b/done");
 
 	anixops_engine_free(engine);
 }
