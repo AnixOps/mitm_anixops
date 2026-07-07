@@ -43,7 +43,7 @@ features it understands.
 | Unsupported Quantumult X `url` actions | Ignored | `unsupported_quantumultx_url_actions_are_ignored` |
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1` and `\1` tests |
-| Leading `(?i)` regex prefix | Supported subset | URL, body, header, and script regex test |
+| Leading `(?i)`, `(?s)`, and `(?is)` regex prefixes | Supported subset | URL, body, header, and script regex tests |
 | PCRE shorthand classes `\d`, `\w`, `\s` | Supported subset | URL, body, header, and script regex test |
 | PCRE control escapes `\t`, `\n`, `\r`, `\f`, `\a`, `\e` | Supported subset | URL, body, header, and script regex test |
 | PCRE hex byte escapes `\xHH` | Supported subset | URL, body, header, and script regex test |

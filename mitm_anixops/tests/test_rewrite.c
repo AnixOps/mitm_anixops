@@ -640,6 +640,72 @@ static void inline_case_insensitive_regex_prefix_matches_all_regex_contexts(void
 	anixops_engine_free(engine);
 }
 
+static void inline_dotall_regex_prefix_matches_all_regex_contexts(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	anixops_script_result_t script;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "(?s)^https://dotall\\.test/a.*b$ https://dest.test/dotall 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test request-body-replace-regex \"(?s)line.*next\" ok"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://header\\.test response-header-replace-regex X-Test \"(?is)mode.*=([a-z]+)$\" \"mode=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"http-response (?s)^https://script\\.test/a.*b$ script-path=https://x.test/a.js"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://dotall.test/a\nb", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/dotall");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test",
+			ANIXOPS_PHASE_REQUEST,
+			"line\nmiddle\nnext!",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "ok!");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.test",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"MODE\n=FAST",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.value, "mode=FAST");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://script.test/a\nb", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://x.test/a.js");
+
+	anixops_engine_free(engine);
+}
+
 static void pcre_shorthand_regex_classes_match_all_regex_contexts(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1894,6 +1960,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/inline_case_insensitive_regex_prefix_matches_all_regex_contexts",
 		inline_case_insensitive_regex_prefix_matches_all_regex_contexts);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/inline_dotall_regex_prefix_matches_all_regex_contexts",
+		inline_dotall_regex_prefix_matches_all_regex_contexts);
 	add_test(
 		tests,
 		count,
