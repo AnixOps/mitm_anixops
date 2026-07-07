@@ -20,6 +20,8 @@ Implemented:
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.
 - AnixOps-style `[Rewrite]` URL rules for `302`, `307`, `reject`, `reject-200`, `reject-img`, `reject-video`, `reject-dict`, `reject-array`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.
+- JSON path request/response body replacement for already-buffered JSON bodies, using object paths such as `$.enabled`
+  and raw JSON literals such as `true`, `null`, objects, arrays, or quoted strings.
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
 - Regex capture replacement with `$1` and `\1`.
 - AnixOps/Surge-style module script metadata for HTTP request/response hooks.
@@ -32,7 +34,7 @@ Not implemented yet:
 
 - TLS socketing, dynamic leaf certificate generation, CA storage, or iOS trust detection.
 - HTTP parser, HTTP/2 frame parser, compression/chunk handling, body buffering.
-- JQ rewrite actions.
+- Full JQ rewrite actions beyond the tested JSON path replacement subset.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full AnixOps compatibility.
 

@@ -138,7 +138,10 @@ static void quantumultx_url_prefixed_rewrites_are_supported(void)
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test url response-body-replace-regex old new"),
 		ANIXOPS_OK);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://json\\.test url response-body-json-replace $.enabled true"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 4);
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_evaluate_url(engine, "https://old.test/path", ANIXOPS_PHASE_REQUEST, &result),
@@ -165,6 +168,20 @@ static void quantumultx_url_prefixed_rewrites_are_supported(void)
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX);
 	ANIXOPS_EXPECT_STREQ(body, "new value");
 
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://json.test",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"enabled\":false,\"name\":\"old\"}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true,\"name\":\"old\"}");
+
 	anixops_engine_free(engine);
 }
 
@@ -172,7 +189,6 @@ static void unsupported_quantumultx_url_actions_are_ignored(void)
 {
 	const char *config =
 		"[rewrite_local]\n"
-		"^https://json\\.test url request-body-json-replace $.enabled true\n"
 		"^https://header\\.test url header-add X-Test value\n"
 		"^https://echo\\.test url echo-response text/plain hello\n";
 	anixops_engine_t *engine = anixops_engine_new();
@@ -185,7 +201,7 @@ static void unsupported_quantumultx_url_actions_are_ignored(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 
 	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_url(engine, "https://json.test", ANIXOPS_PHASE_REQUEST, &result),
+		anixops_rewrite_evaluate_url(engine, "https://echo.test", ANIXOPS_PHASE_REQUEST, &result),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
 	ANIXOPS_EXPECT_EQ_INT(
@@ -201,7 +217,6 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 	const char *config =
 		"[Rewrite]\n"
 		"^https://auth\\.test reject-401\n"
-		"^https://json\\.test request-body-json-replace $.enabled true\n"
 		"^https://echo\\.test echo-response text/plain hello\n"
 		"^https://header\\.test url header-add X-Test value\n";
 	anixops_engine_t *engine = anixops_engine_new();
@@ -454,6 +469,139 @@ static void body_replace_regex_respects_phase_and_rejects_invalid_body_regex(voi
 	anixops_engine_free(engine);
 }
 
+static void request_body_json_replace_updates_top_level_field(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/profile request-body-json-replace $.enabled true"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/profile",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"enabled\":false,\"name\":\"old\"}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true,\"name\":\"old\"}");
+
+	anixops_engine_free(engine);
+}
+
+static void response_body_json_replace_supports_nested_path_and_missing_path(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[160];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/profile response-body-json-replace $.user.name '\"test\"'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/missing response-body-json-replace $.missing true"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/profile",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"user\":{\"name\":\"Alice\",\"id\":7},\"enabled\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"user\":{\"name\":\"test\",\"id\":7},\"enabled\":false}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/missing",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"enabled\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json path not matched");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":false}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/profile",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"user\":{\"name\":\"Alice\"}}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_STREQ(body, "{\"user\":{\"name\":\"Alice\"}}");
+
+	anixops_engine_free(engine);
+}
+
+static void json_body_replace_reports_unsupported_path_and_truncation(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[20];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/items request-body-json-replace $.items[0] true"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/small request-body-json-replace $.name '\"long-value\"'"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/items",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"items\":[false]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "json path unsupported");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[false]}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/small",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"name\":\"old\",\"x\":1}",
+			body,
+			10,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(result.message, "body truncated");
+
+	anixops_engine_free(engine);
+}
+
 static void header_rewrite_rules_are_separate_from_url_rewrite(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -663,6 +811,24 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/body_replace_regex_respects_phase_and_rejects_invalid_body_regex",
 		body_replace_regex_respects_phase_and_rejects_invalid_body_regex);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/request_body_json_replace_updates_top_level_field",
+		request_body_json_replace_updates_top_level_field);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/response_body_json_replace_supports_nested_path_and_missing_path",
+		response_body_json_replace_supports_nested_path_and_missing_path);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/json_body_replace_reports_unsupported_path_and_truncation",
+		json_body_replace_reports_unsupported_path_and_truncation);
 	add_test(
 		tests,
 		count,

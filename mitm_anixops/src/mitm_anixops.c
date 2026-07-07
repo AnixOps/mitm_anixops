@@ -96,6 +96,8 @@ static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
+static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action);
+static int anixops_rewrite_action_replaces_body_json(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_header_regex(anixops_rewrite_action_t action);
 static int anixops_parse_script_kind(const char *token, anixops_script_kind_t *kind, anixops_phase_t *phase);
@@ -136,6 +138,13 @@ static int anixops_apply_body_regex_replacement(
 	char *out,
 	size_t out_cap,
 	int *out_replaced);
+static int anixops_apply_body_json_replacement(
+	const char *body,
+	const anixops_rewrite_rule_t *rule,
+	char *out,
+	size_t out_cap,
+	int *out_replaced,
+	int *out_path_supported);
 static int anixops_apply_regex_replacement(
 	const char *input,
 	const regex_t *regex,
@@ -152,6 +161,27 @@ static int anixops_append_expanded_replacement(
 	char *out,
 	size_t out_cap,
 	size_t *pos);
+static int anixops_append_json_replacement(char *out, size_t out_cap, size_t *pos, const char *replacement);
+static int anixops_append_json_string(char *out, size_t out_cap, size_t *pos, const char *value);
+static int anixops_json_find_path_value(
+	const char *body,
+	const char *path,
+	const char **out_value_start,
+	const char **out_value_end);
+static int anixops_json_find_member_value(
+	const char *object_start,
+	const char *object_end,
+	const char *key,
+	size_t key_len,
+	const char **out_value_start,
+	const char **out_value_end);
+static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len);
+static int anixops_json_parse_path_segment(const char **cursor, const char **out_key, size_t *out_key_len);
+static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end);
+static const char *anixops_json_skip_ws(const char *cursor, const char *end);
+static const char *anixops_json_skip_string(const char *cursor, const char *end);
+static const char *anixops_json_skip_number(const char *cursor, const char *end);
+static const char *anixops_json_skip_value(const char *cursor, const char *end);
 static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const char *start, size_t len);
 static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char value);
 static int anixops_wildcard_match(const char *pattern, const char *text);
@@ -174,7 +204,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.3.0";
+	return "0.4.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -675,7 +705,7 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		return ANIXOPS_ERR_REGEX;
 	}
 	rule->regex_ready = 1;
-	if (anixops_rewrite_action_replaces_body(action)) {
+	if (anixops_rewrite_action_replaces_body_regex(action)) {
 		if (regcomp(&rule->body_regex, rule->body_pattern, REG_EXTENDED) != 0) {
 			anixops_free_rewrite_rule(rule);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite body regex failed to compile");
@@ -1314,16 +1344,42 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 			return ANIXOPS_OK;
 		}
 		rule = &engine->rules[out_result->rule_index];
-		if (!rule->body_regex_ready ||
-			anixops_apply_body_regex_replacement(body, rule, out_body, out_body_cap, &replaced) != ANIXOPS_OK) {
-			anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+		if (anixops_rewrite_action_replaces_body_regex(out_result->action)) {
+			if (!rule->body_regex_ready ||
+				anixops_apply_body_regex_replacement(body, rule, out_body, out_body_cap, &replaced) != ANIXOPS_OK) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				return ANIXOPS_OK;
+			}
+			if (replaced) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "body rewritten");
+			}
+			else {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "body regex not matched");
+			}
 			return ANIXOPS_OK;
 		}
-		if (replaced) {
-			anixops_copy_text(out_result->message, sizeof(out_result->message), "body rewritten");
-		}
-		else {
-			anixops_copy_text(out_result->message, sizeof(out_result->message), "body regex not matched");
+		if (anixops_rewrite_action_replaces_body_json(out_result->action)) {
+			int path_supported = 1;
+			if (anixops_apply_body_json_replacement(
+					body,
+					rule,
+					out_body,
+					out_body_cap,
+					&replaced,
+					&path_supported) != ANIXOPS_OK) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				return ANIXOPS_OK;
+			}
+			if (!path_supported) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "json path unsupported");
+			}
+			else if (replaced) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "json body rewritten");
+			}
+			else {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "json path not matched");
+			}
+			return ANIXOPS_OK;
 		}
 		return ANIXOPS_OK;
 	}
@@ -1856,6 +1912,16 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 		*status_code = 200;
 		return 1;
 	}
+	if (strcasecmp(token, "request-body-json-replace") == 0) {
+		*action = ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE;
+		*status_code = 0;
+		return 1;
+	}
+	if (strcasecmp(token, "response-body-json-replace") == 0) {
+		*action = ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE;
+		*status_code = 200;
+		return 1;
+	}
 	if (strcasecmp(token, "header-replace") == 0) {
 		*action = ANIXOPS_REWRITE_HEADER_REPLACE;
 		*status_code = 0;
@@ -1897,7 +1963,21 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action)
 {
 	return action == ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE ||
+		action == ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE;
+}
+
+static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX ||
 		action == ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX;
+}
+
+static int anixops_rewrite_action_replaces_body_json(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE ||
+		action == ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE;
 }
 
 static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t action)
@@ -1957,6 +2037,7 @@ static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t
 {
 	if (action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY ||
 		action == ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX ||
+		action == ANIXOPS_REWRITE_RESPONSE_BODY_JSON_REPLACE ||
 		action == ANIXOPS_REWRITE_RESPONSE_HEADER_DEL ||
 		action == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE ||
 		action == ANIXOPS_REWRITE_RESPONSE_HEADER_ADD ||
@@ -2315,6 +2396,53 @@ static int anixops_apply_body_regex_replacement(
 		out_replaced);
 }
 
+static int anixops_apply_body_json_replacement(
+	const char *body,
+	const anixops_rewrite_rule_t *rule,
+	char *out,
+	size_t out_cap,
+	int *out_replaced,
+	int *out_path_supported)
+{
+	const char *value_start;
+	const char *value_end;
+	size_t pos = 0;
+	int found;
+	int truncated = 0;
+
+	if (body == NULL || rule == NULL || out == NULL || out_cap == 0 || out_replaced == NULL ||
+		out_path_supported == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	*out_replaced = 0;
+	*out_path_supported = 1;
+
+	found = anixops_json_find_path_value(body, rule->body_pattern, &value_start, &value_end);
+	if (found < 0) {
+		*out_path_supported = 0;
+		return anixops_copy_text_checked(out, out_cap, body);
+	}
+	if (!found) {
+		return anixops_copy_text_checked(out, out_cap, body);
+	}
+
+	out[0] = '\0';
+	if (anixops_append_range(out, out_cap, &pos, body, (size_t)(value_start - body)) != ANIXOPS_OK) {
+		truncated = 1;
+	}
+	if (anixops_append_json_replacement(out, out_cap, &pos, rule->replacement) != ANIXOPS_OK) {
+		truncated = 1;
+	}
+	if (anixops_append_range(out, out_cap, &pos, value_end, strlen(value_end)) != ANIXOPS_OK) {
+		truncated = 1;
+	}
+	if (out_cap > 0) {
+		out[pos < out_cap ? pos : out_cap - 1] = '\0';
+	}
+	*out_replaced = 1;
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
 static int anixops_apply_regex_replacement(
 	const char *input,
 	const regex_t *regex,
@@ -2419,6 +2547,469 @@ static int anixops_append_expanded_replacement(
 		p++;
 	}
 	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+
+static int anixops_append_json_replacement(char *out, size_t out_cap, size_t *pos, const char *replacement)
+{
+	const char *raw_start;
+	const char *raw_end;
+	if (anixops_json_replacement_is_raw_value(replacement, &raw_start, &raw_end)) {
+		return anixops_append_range(out, out_cap, pos, raw_start, (size_t)(raw_end - raw_start));
+	}
+	return anixops_append_json_string(out, out_cap, pos, replacement == NULL ? "" : replacement);
+}
+
+static int anixops_append_json_string(char *out, size_t out_cap, size_t *pos, const char *value)
+{
+	const unsigned char *p = (const unsigned char *)(value == NULL ? "" : value);
+	int rc = ANIXOPS_OK;
+	if (anixops_append_char(out, out_cap, pos, '"') != ANIXOPS_OK) {
+		rc = ANIXOPS_ERR_CAPACITY;
+	}
+	while (*p != '\0') {
+		char escaped[7];
+		const char *replacement = NULL;
+		size_t replacement_len = 0;
+		switch (*p) {
+		case '"':
+			replacement = "\\\"";
+			replacement_len = 2;
+			break;
+		case '\\':
+			replacement = "\\\\";
+			replacement_len = 2;
+			break;
+		case '\b':
+			replacement = "\\b";
+			replacement_len = 2;
+			break;
+		case '\f':
+			replacement = "\\f";
+			replacement_len = 2;
+			break;
+		case '\n':
+			replacement = "\\n";
+			replacement_len = 2;
+			break;
+		case '\r':
+			replacement = "\\r";
+			replacement_len = 2;
+			break;
+		case '\t':
+			replacement = "\\t";
+			replacement_len = 2;
+			break;
+		default:
+			if (*p < 0x20) {
+				snprintf(escaped, sizeof(escaped), "\\u%04x", (unsigned int)*p);
+				replacement = escaped;
+				replacement_len = strlen(escaped);
+			}
+			break;
+		}
+		if (replacement != NULL) {
+			if (anixops_append_range(out, out_cap, pos, replacement, replacement_len) != ANIXOPS_OK) {
+				rc = ANIXOPS_ERR_CAPACITY;
+			}
+		}
+		else if (anixops_append_char(out, out_cap, pos, (char)*p) != ANIXOPS_OK) {
+			rc = ANIXOPS_ERR_CAPACITY;
+		}
+		p++;
+	}
+	if (anixops_append_char(out, out_cap, pos, '"') != ANIXOPS_OK) {
+		rc = ANIXOPS_ERR_CAPACITY;
+	}
+	return rc;
+}
+
+static int anixops_json_find_path_value(
+	const char *body,
+	const char *path,
+	const char **out_value_start,
+	const char **out_value_end)
+{
+	const char *cursor;
+	const char *object_start;
+	const char *object_end;
+	if (body == NULL || path == NULL || out_value_start == NULL || out_value_end == NULL) {
+		return 0;
+	}
+	cursor = path;
+	if (*cursor == '$') {
+		cursor++;
+	}
+	if (*cursor != '.') {
+		return -1;
+	}
+	object_start = body;
+	object_end = body + strlen(body);
+	while (*cursor != '\0') {
+		const char *key;
+		const char *value_start;
+		const char *value_end;
+		size_t key_len;
+		int found;
+
+		if (*cursor != '.') {
+			return -1;
+		}
+		cursor++;
+		if (!anixops_json_parse_path_segment(&cursor, &key, &key_len)) {
+			return -1;
+		}
+		found = anixops_json_find_member_value(object_start, object_end, key, key_len, &value_start, &value_end);
+		if (!found) {
+			return 0;
+		}
+		if (*cursor == '\0') {
+			*out_value_start = value_start;
+			*out_value_end = value_end;
+			return 1;
+		}
+		object_start = anixops_json_skip_ws(value_start, value_end);
+		object_end = value_end;
+		if (object_start >= object_end || *object_start != '{') {
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static int anixops_json_find_member_value(
+	const char *object_start,
+	const char *object_end,
+	const char *key,
+	size_t key_len,
+	const char **out_value_start,
+	const char **out_value_end)
+{
+	const char *cursor;
+	if (object_start == NULL || object_end == NULL || key == NULL || out_value_start == NULL || out_value_end == NULL) {
+		return 0;
+	}
+	cursor = anixops_json_skip_ws(object_start, object_end);
+	if (cursor >= object_end || *cursor != '{') {
+		return 0;
+	}
+	cursor++;
+	cursor = anixops_json_skip_ws(cursor, object_end);
+	if (cursor < object_end && *cursor == '}') {
+		return 0;
+	}
+	while (cursor < object_end) {
+		const char *key_end;
+		const char *value_start;
+		const char *value_end;
+		int key_matches;
+
+		if (*cursor != '"') {
+			return 0;
+		}
+		key_end = anixops_json_skip_string(cursor, object_end);
+		if (key_end == NULL) {
+			return 0;
+		}
+		key_matches = anixops_json_key_matches(cursor, key_end, key, key_len);
+		cursor = anixops_json_skip_ws(key_end, object_end);
+		if (cursor >= object_end || *cursor != ':') {
+			return 0;
+		}
+		cursor = anixops_json_skip_ws(cursor + 1, object_end);
+		value_start = cursor;
+		value_end = anixops_json_skip_value(value_start, object_end);
+		if (value_end == NULL) {
+			return 0;
+		}
+		cursor = anixops_json_skip_ws(value_end, object_end);
+		if (cursor >= object_end || (*cursor != ',' && *cursor != '}')) {
+			return 0;
+		}
+		if (key_matches) {
+			*out_value_start = value_start;
+			*out_value_end = value_end;
+			return 1;
+		}
+		if (*cursor == ',') {
+			cursor = anixops_json_skip_ws(cursor + 1, object_end);
+			continue;
+		}
+		if (*cursor == '}') {
+			return 0;
+		}
+		return 0;
+	}
+	return 0;
+}
+
+static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len)
+{
+	const char *cursor;
+	const char *content_end;
+	size_t pos = 0;
+	if (string_start == NULL || string_end == NULL || key == NULL || string_end <= string_start + 1 ||
+		*string_start != '"') {
+		return 0;
+	}
+	cursor = string_start + 1;
+	content_end = string_end - 1;
+	while (cursor < content_end) {
+		unsigned char ch = (unsigned char)*cursor++;
+		if (ch == '\\') {
+			if (cursor >= content_end) {
+				return 0;
+			}
+			ch = (unsigned char)*cursor++;
+			switch (ch) {
+			case '"':
+			case '\\':
+			case '/':
+				break;
+			case 'b':
+				ch = '\b';
+				break;
+			case 'f':
+				ch = '\f';
+				break;
+			case 'n':
+				ch = '\n';
+				break;
+			case 'r':
+				ch = '\r';
+				break;
+			case 't':
+				ch = '\t';
+				break;
+			default:
+				return 0;
+			}
+		}
+		if (pos >= key_len || key[pos] != (char)ch) {
+			return 0;
+		}
+		pos++;
+	}
+	return pos == key_len;
+}
+
+static int anixops_json_parse_path_segment(const char **cursor, const char **out_key, size_t *out_key_len)
+{
+	const char *start;
+	const char *p;
+	if (cursor == NULL || *cursor == NULL || out_key == NULL || out_key_len == NULL) {
+		return 0;
+	}
+	start = *cursor;
+	p = start;
+	while (*p != '\0' && *p != '.') {
+		unsigned char ch = (unsigned char)*p;
+		if (!(isalnum(ch) || ch == '_' || ch == '-')) {
+			return 0;
+		}
+		p++;
+	}
+	if (p == start) {
+		return 0;
+	}
+	*out_key = start;
+	*out_key_len = (size_t)(p - start);
+	*cursor = p;
+	return 1;
+}
+
+static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end)
+{
+	const char *start;
+	const char *end;
+	const char *value_end;
+	if (value == NULL) {
+		return 0;
+	}
+	end = value + strlen(value);
+	start = anixops_json_skip_ws(value, end);
+	if (start == end) {
+		return 0;
+	}
+	value_end = anixops_json_skip_value(start, end);
+	if (value_end == NULL) {
+		return 0;
+	}
+	if (anixops_json_skip_ws(value_end, end) != end) {
+		return 0;
+	}
+	*out_start = start;
+	*out_end = value_end;
+	return 1;
+}
+
+static const char *anixops_json_skip_ws(const char *cursor, const char *end)
+{
+	while (cursor < end && isspace((unsigned char)*cursor)) {
+		cursor++;
+	}
+	return cursor;
+}
+
+static const char *anixops_json_skip_string(const char *cursor, const char *end)
+{
+	if (cursor >= end || *cursor != '"') {
+		return NULL;
+	}
+	cursor++;
+	while (cursor < end) {
+		unsigned char ch = (unsigned char)*cursor++;
+		if (ch == '"') {
+			return cursor;
+		}
+		if (ch == '\\') {
+			unsigned char escaped;
+			if (cursor >= end) {
+				return NULL;
+			}
+			escaped = (unsigned char)*cursor++;
+			if (escaped == 'u') {
+				size_t i;
+				for (i = 0; i < 4; i++) {
+					if (cursor >= end || !isxdigit((unsigned char)*cursor)) {
+						return NULL;
+					}
+					cursor++;
+				}
+			}
+			else if (!(escaped == '"' || escaped == '\\' || escaped == '/' || escaped == 'b' || escaped == 'f' ||
+					   escaped == 'n' || escaped == 'r' || escaped == 't')) {
+				return NULL;
+			}
+		}
+		else if (ch < 0x20) {
+			return NULL;
+		}
+	}
+	return NULL;
+}
+
+static const char *anixops_json_skip_number(const char *cursor, const char *end)
+{
+	if (cursor < end && *cursor == '-') {
+		cursor++;
+	}
+	if (cursor >= end) {
+		return NULL;
+	}
+	if (*cursor == '0') {
+		cursor++;
+	}
+	else if (*cursor >= '1' && *cursor <= '9') {
+		while (cursor < end && isdigit((unsigned char)*cursor)) {
+			cursor++;
+		}
+	}
+	else {
+		return NULL;
+	}
+	if (cursor < end && *cursor == '.') {
+		cursor++;
+		if (cursor >= end || !isdigit((unsigned char)*cursor)) {
+			return NULL;
+		}
+		while (cursor < end && isdigit((unsigned char)*cursor)) {
+			cursor++;
+		}
+	}
+	if (cursor < end && (*cursor == 'e' || *cursor == 'E')) {
+		cursor++;
+		if (cursor < end && (*cursor == '+' || *cursor == '-')) {
+			cursor++;
+		}
+		if (cursor >= end || !isdigit((unsigned char)*cursor)) {
+			return NULL;
+		}
+		while (cursor < end && isdigit((unsigned char)*cursor)) {
+			cursor++;
+		}
+	}
+	return cursor;
+}
+
+static const char *anixops_json_skip_value(const char *cursor, const char *end)
+{
+	cursor = anixops_json_skip_ws(cursor, end);
+	if (cursor >= end) {
+		return NULL;
+	}
+	if (*cursor == '"') {
+		return anixops_json_skip_string(cursor, end);
+	}
+	if (*cursor == '{') {
+		cursor++;
+		cursor = anixops_json_skip_ws(cursor, end);
+		if (cursor < end && *cursor == '}') {
+			return cursor + 1;
+		}
+		while (cursor < end) {
+			if (*cursor != '"') {
+				return NULL;
+			}
+			cursor = anixops_json_skip_string(cursor, end);
+			if (cursor == NULL) {
+				return NULL;
+			}
+			cursor = anixops_json_skip_ws(cursor, end);
+			if (cursor >= end || *cursor != ':') {
+				return NULL;
+			}
+			cursor = anixops_json_skip_value(cursor + 1, end);
+			if (cursor == NULL) {
+				return NULL;
+			}
+			cursor = anixops_json_skip_ws(cursor, end);
+			if (cursor < end && *cursor == ',') {
+				cursor = anixops_json_skip_ws(cursor + 1, end);
+				continue;
+			}
+			if (cursor < end && *cursor == '}') {
+				return cursor + 1;
+			}
+			return NULL;
+		}
+		return NULL;
+	}
+	if (*cursor == '[') {
+		cursor++;
+		cursor = anixops_json_skip_ws(cursor, end);
+		if (cursor < end && *cursor == ']') {
+			return cursor + 1;
+		}
+		while (cursor < end) {
+			cursor = anixops_json_skip_value(cursor, end);
+			if (cursor == NULL) {
+				return NULL;
+			}
+			cursor = anixops_json_skip_ws(cursor, end);
+			if (cursor < end && *cursor == ',') {
+				cursor = anixops_json_skip_ws(cursor + 1, end);
+				continue;
+			}
+			if (cursor < end && *cursor == ']') {
+				return cursor + 1;
+			}
+			return NULL;
+		}
+		return NULL;
+	}
+	if (*cursor == '-' || isdigit((unsigned char)*cursor)) {
+		return anixops_json_skip_number(cursor, end);
+	}
+	if ((size_t)(end - cursor) >= 4 && strncmp(cursor, "true", 4) == 0) {
+		return cursor + 4;
+	}
+	if ((size_t)(end - cursor) >= 5 && strncmp(cursor, "false", 5) == 0) {
+		return cursor + 5;
+	}
+	if ((size_t)(end - cursor) >= 4 && strncmp(cursor, "null", 4) == 0) {
+		return cursor + 4;
+	}
+	return NULL;
 }
 
 static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const char *start, size_t len)
