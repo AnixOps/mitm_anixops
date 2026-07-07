@@ -10,6 +10,9 @@ trust checks should be provided by a platform adapter or a later optional crypto
 
 ## Scope
 
+The tested compatibility surface is tracked in `docs/compatibility_matrix.md`. Remaining gaps and explicit non-goals
+are tracked in `docs/TODO.md`.
+
 Implemented:
 
 - AnixOps-style `[MITM] hostname = ...` parsing.
@@ -22,6 +25,7 @@ Implemented:
 - AnixOps/Surge-style module script metadata for HTTP request/response hooks.
 - AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, plus per-argument overrides for script `$argument` generation.
 - BiliUniverse Enhanced-style `.plugin`, `.snippet`, and `.sgmodule` fixtures.
+- Status text and last-error diagnostics for config/add-rule failures, including config line numbers.
 - C ABI result structs with no exposed internal pointers.
 
 Not implemented yet:
@@ -73,9 +77,9 @@ sh scripts/check.sh
 ```
 
 The check script cleans the build, compiles the static and shared libraries, runs the separated test fixture, verifies
-that key C ABI symbols are exported when `nm` is available, runs the mihomo proxy-chain E2E when `MIHOMO_BIN` points to
-an executable binary, runs the BiliUniverse script-runtime E2E fixture, and checks the generic request/response script
-contract.
+the complete exported C ABI symbol allowlist in `ci/abi_exports.txt` when `nm` is available, runs the minimal
+strategy-chain demo, runs the mihomo proxy-chain E2E when `MIHOMO_BIN` points to an executable binary, runs the
+BiliUniverse script-runtime E2E fixture, and checks the generic request/response script contract.
 
 Test policy and layout are documented in `tests/README.md`.
 
@@ -88,6 +92,17 @@ MIHOMO_BIN=/path/to/mihomo make e2e
 The E2E fixture starts a local MITM/rewrite shim that calls this C ABI, runs mihomo as the outbound proxy core, and
 uses `https://google.com:<local-port>` against a local HTTPS origin. `scripts/check.sh` runs this automatically when
 the mihomo binary is present. See `e2e/README.md`.
+
+For the minimal pure-C strategy-chain demo:
+
+```sh
+make demo-check
+```
+
+That fixture builds `examples/strategy_chain_demo.c`, loads an embedded config, then prints and asserts the complete
+library-only flow: config load, MITM allow/deny/QUIC decisions, URL rewrite, request/response header rewrite,
+response body rewrite, and response script dispatch metadata. It intentionally does not open sockets, parse HTTP, run
+TLS, or execute JavaScript.
 
 For BiliUniverse Enhanced-style plugin script dispatch and execution:
 
@@ -109,7 +124,14 @@ make script-contract-e2e
 
 ```c
 anixops_engine_t *engine = anixops_engine_new();
-anixops_engine_load_config(engine, config_text);
+int rc = anixops_engine_load_config(engine, config_text);
+if (rc != ANIXOPS_OK) {
+    int status;
+    size_t line;
+    char message[ANIXOPS_MESSAGE_CAP];
+    anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message));
+    /* log status, line, message */
+}
 anixops_engine_set_mitm_enabled(engine, 1);
 anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
 
@@ -131,6 +153,20 @@ anixops_script_evaluate_url(engine, "https://app.bilibili.com/x/resource/show/ta
 anixops_engine_free(engine);
 ```
 
+`anixops_status_message(status)` returns stable static text for status codes. `anixops_engine_copy_last_error` copies
+the most recent mutating API diagnostic into caller-owned storage; it never returns pointers into the engine. For
+`anixops_engine_load_config`, `out_line` is the 1-based source line that failed, or `0` when the failure is not tied to
+a config line.
+
+## Threading
+
+An engine is not internally locked. Treat each `anixops_engine_t` as single-writer and externally synchronized:
+
+- Build or mutate an engine on one thread at a time.
+- Concurrent read-only evaluation is allowed only when no thread is mutating or clearing the same engine.
+- Use separate engine instances, or an adapter-owned lock/snapshot scheme, when integrating with multi-threaded network
+  stacks.
+
 ## Integration Shape
 
 For iOS:
@@ -150,11 +186,21 @@ For Rust:
 
 - Generate bindings from `include/mitm_anixops.h`, or write a thin `extern "C"` wrapper.
 - Keep this directory as a submodule, vendored dependency, or prebuilt artifact.
+- For the inspected `networkcore_anixops` Rust workspace integration path, see
+  `docs/networkcore_integration.md`.
 
 ## Evidence
 
 See `docs/anixops_mitm_evidence.md`.
 
+For the supported configuration grammar and public-API evidence, see `docs/compatibility_matrix.md`.
+
 For the BiliUniverse Enhanced fixture, see `docs/bili_enhanced_plugin_support.md`.
 
 For the script runtime adapter boundary, see `docs/script_runtime_contract.md`.
+
+For `networkcore_anixops` compatibility and integration staging, see `docs/networkcore_integration.md`.
+
+For release blockers, compatibility gaps, and stage non-goals, see `docs/TODO.md`.
+
+For publishing source or binary artifacts, see `docs/release_checklist.md`.

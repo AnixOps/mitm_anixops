@@ -7,17 +7,18 @@ cd "$ROOT"
 make clean
 make test
 make all
+make demo-check
 
 DEFAULT_MIHOMO_BIN="$ROOT/../downloads/mihomo-linux-amd64-compatible-v1.19.27"
 MIHOMO_BIN=${MIHOMO_BIN:-"$DEFAULT_MIHOMO_BIN"}
 
 if command -v nm >/dev/null 2>&1; then
-	nm -D build/libmitm_anixops.so | grep ' anixops_mitm_evaluate$' >/dev/null
-	nm -D build/libmitm_anixops.so | grep ' anixops_rewrite_evaluate_url$' >/dev/null
-	nm -D build/libmitm_anixops.so | grep ' anixops_rewrite_apply_body$' >/dev/null
-	nm -D build/libmitm_anixops.so | grep ' anixops_rewrite_evaluate_header$' >/dev/null
-	nm -D build/libmitm_anixops.so | grep ' anixops_script_evaluate_url$' >/dev/null
-	nm -D build/libmitm_anixops.so | grep ' anixops_engine_add_script_rule$' >/dev/null
+	nm -D --defined-only build/libmitm_anixops.so |
+		awk '$3 ~ /^anixops_/ { print $3 }' |
+		sort > build/abi_exports.actual
+	diff -u ci/abi_exports.txt build/abi_exports.actual
+else
+	printf '%s\n' "skip ABI export allowlist: nm not found"
 fi
 
 if command -v readelf >/dev/null 2>&1; then

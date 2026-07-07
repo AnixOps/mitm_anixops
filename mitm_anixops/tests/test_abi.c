@@ -17,9 +17,9 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.2.0");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.3.0");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 2);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 3);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 0);
 }
 
@@ -86,6 +86,54 @@ static void null_arguments_are_rejected(void)
 	anixops_engine_free(engine);
 }
 
+static void status_messages_are_stable(void)
+{
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(ANIXOPS_OK), "ok");
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(ANIXOPS_ERR_INVALID_ARGUMENT), "invalid argument");
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(ANIXOPS_ERR_OUT_OF_MEMORY), "out of memory");
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(ANIXOPS_ERR_REGEX), "regex compile failed");
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(ANIXOPS_ERR_CAPACITY), "output capacity exceeded");
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(ANIXOPS_ERR_PARSE), "parse failed");
+	ANIXOPS_EXPECT_STREQ(anixops_status_message(12345), "unknown status");
+}
+
+static void last_error_api_copies_status_line_and_message(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	int status = 123;
+	size_t line = 123;
+	char message[64];
+	char tiny[4];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(NULL, &status, &line, message, sizeof(message)), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, NULL, sizeof(message)), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, 0), ANIXOPS_ERR_INVALID_ARGUMENT);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 0);
+	ANIXOPS_EXPECT_STREQ(message, "ok");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 0);
+	ANIXOPS_EXPECT_STREQ(message, "rewrite rule line is null");
+
+	tiny[0] = '\0';
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, NULL, NULL, tiny, sizeof(tiny)), ANIXOPS_ERR_CAPACITY);
+	ANIXOPS_EXPECT_STREQ(tiny, "rew");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_mitm_hostname(engine, "example.com"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 0);
+	ANIXOPS_EXPECT_STREQ(message, "ok");
+
+	anixops_engine_free(engine);
+}
+
 static void default_engine_state_is_conservative(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -142,6 +190,8 @@ void anixops_register_abi_tests(anixops_test_case_t *tests, size_t *count, size_
 {
 	add_test(tests, count, cap, "abi/version_is_stable", version_is_stable);
 	add_test(tests, count, cap, "abi/null_arguments_are_rejected", null_arguments_are_rejected);
+	add_test(tests, count, cap, "abi/status_messages_are_stable", status_messages_are_stable);
+	add_test(tests, count, cap, "abi/last_error_api_copies_status_line_and_message", last_error_api_copies_status_line_and_message);
 	add_test(tests, count, cap, "abi/default_engine_state_is_conservative", default_engine_state_is_conservative);
 	add_test(tests, count, cap, "abi/clear_resets_and_engine_remains_usable", clear_resets_and_engine_remains_usable);
 }

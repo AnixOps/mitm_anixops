@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 2
+#define ANIXOPS_VERSION_MINOR 3
 #define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
@@ -137,9 +137,17 @@ typedef struct anixops_script_result {
 } anixops_script_result_t;
 
 ANIXOPS_API const char *anixops_version(void);
+ANIXOPS_API const char *anixops_status_message(int status);
 ANIXOPS_API anixops_engine_t *anixops_engine_new(void);
 ANIXOPS_API void anixops_engine_free(anixops_engine_t *engine);
 ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine);
+
+ANIXOPS_API int anixops_engine_copy_last_error(
+	const anixops_engine_t *engine,
+	int *out_status,
+	size_t *out_line,
+	char *out_message,
+	size_t out_message_cap);
 
 ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char *config_text);
 ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const char *line);

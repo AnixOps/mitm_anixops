@@ -1,6 +1,8 @@
 #include "test_harness.h"
 #include "mitm_anixops.h"
 
+#include <string.h>
+
 static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, const char *name, anixops_test_fn fn)
 {
 	if (*count >= cap) {
@@ -99,6 +101,35 @@ static void invalid_regex_is_reported_and_does_not_add_rule(void)
 	anixops_engine_free(engine);
 }
 
+static void config_failure_records_line_diagnostic(void)
+{
+	const char *config =
+		"[Rewrite]\n"
+		"\n"
+		"# blank line above must still count\n"
+		"[ https://target.test 302\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	int status = 0;
+	size_t line = 0;
+	char message[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 4);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "rewrite URL regex") != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, "[MITM]\nhostname = example.com\n"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 0);
+	ANIXOPS_EXPECT_STREQ(message, "ok");
+
+	anixops_engine_free(engine);
+}
+
 static void quoted_replacement_is_parsed_as_one_token(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -129,5 +160,6 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		config_parses_script_and_ignores_unknown_sections);
 	add_test(tests, count, cap, "config/incomplete_rewrite_lines_are_ignored", incomplete_rewrite_lines_are_ignored);
 	add_test(tests, count, cap, "config/invalid_regex_is_reported_and_does_not_add_rule", invalid_regex_is_reported_and_does_not_add_rule);
+	add_test(tests, count, cap, "config/config_failure_records_line_diagnostic", config_failure_records_line_diagnostic);
 	add_test(tests, count, cap, "config/quoted_replacement_is_parsed_as_one_token", quoted_replacement_is_parsed_as_one_token);
 }
