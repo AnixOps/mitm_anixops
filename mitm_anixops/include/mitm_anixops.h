@@ -8,7 +8,9 @@ extern "C" {
 #endif
 
 #if defined(_WIN32)
-#  if defined(ANIXOPS_BUILDING_DLL)
+#  if defined(ANIXOPS_STATIC)
+#    define ANIXOPS_API
+#  elif defined(ANIXOPS_BUILDING_DLL)
 #    define ANIXOPS_API __declspec(dllexport)
 #  else
 #    define ANIXOPS_API __declspec(dllimport)
