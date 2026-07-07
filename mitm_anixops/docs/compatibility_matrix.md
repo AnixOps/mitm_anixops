@@ -43,7 +43,7 @@ features it understands.
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1`, `${1}`, and `\1` tests |
 | Leading `(?i)`, `(?m)`, `(?s)`, and combined regex prefixes | Supported subset | URL, body, header, and script regex tests |
-| PCRE shorthand classes `\d`, `\w`, `\s` | Supported subset | URL, body, header, and script regex test |
+| PCRE shorthand classes `\d`, `\D`, `\w`, `\W`, `\s`, `\S` | Supported subset | URL, body, header, and script regex tests |
 | PCRE horizontal whitespace classes `\h`, `\H` | Supported subset | URL, body, header, and script regex test |
 | PCRE vertical whitespace classes `\v`, `\V` | Supported ASCII subset | URL, body, header, and script regex test |
 | PCRE control escapes `\t`, `\n`, `\r`, `\f`, `\a`, `\e` | Supported subset | URL, body, header, and script regex test |
