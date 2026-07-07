@@ -21,6 +21,38 @@ For each intercepted HTTP request or response, the adapter should:
 Home.Switch=true&Storage=Argument&LogLevel=WARN
 ```
 
+## Adapter Ordering
+
+This is the recommended order when an adapter combines MITM decisions, URL rewrite, header rewrite, body rewrite, and
+script dispatch in one request/response pass. The library exposes independent decisions; the adapter owns this ordering.
+
+Terminal URL rewrite actions such as redirect or reject stop the pipeline for that HTTP object. Invalid or unsupported
+rules are ignored unless the public API returns an error such as `ANIXOPS_ERR_REGEX`.
+
+### Request Pipeline
+
+1. Call `anixops_mitm_evaluate` before TLS interception.
+2. Apply request URL rewrite with `anixops_rewrite_evaluate_url` before upstream routing.
+3. Enumerate request header rewrites with `anixops_rewrite_evaluate_header`.
+4. Apply request body rewrites with `anixops_rewrite_apply_body` after buffering plain text.
+5. Dispatch request scripts with `anixops_script_evaluate_url` after static request rewrites.
+6. Send the final request upstream.
+
+Request scripts run last so JavaScript sees the URL, headers, and body after static policy rewrites and can make the
+final adapter-owned mutation before network IO.
+
+### Response Pipeline
+
+1. Dechunk and decompress the upstream response body when later stages need text.
+2. Enumerate response header rewrites with `anixops_rewrite_evaluate_header`.
+3. Apply response body rewrites with `anixops_rewrite_apply_body` after plain-text decoding.
+4. Dispatch response scripts with `anixops_script_evaluate_url` after static response rewrites.
+5. Recompute response framing before writing to the client.
+
+Response scripts run last so JavaScript sees the response after static policy rewrites and can make the final
+adapter-owned status, header, or body mutation. After any body mutation, remove stale transfer/content encodings or
+recompute them consistently.
+
 ## Globals
 
 The adapter should expose these AnixOps-compatible bindings:

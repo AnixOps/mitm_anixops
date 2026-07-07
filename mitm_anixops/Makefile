@@ -15,7 +15,7 @@ CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror -fPIC
 CPPFLAGS ?= -I$(INCLUDE_DIR)
 LDFLAGS_SHARED ?= -shared
 
-.PHONY: all clean test demo demo-check e2e bili-e2e script-contract-e2e bilibili-homepage-demo-e2e e2e-all
+.PHONY: all clean test demo demo-check ordering-contract-check e2e bili-e2e script-contract-e2e bilibili-homepage-demo-e2e e2e-all
 
 all: $(STATIC_LIB) $(SHARED_LIB)
 
@@ -50,6 +50,9 @@ demo-check: $(DEMO_BIN)
 	grep -F 'rewrite url action=1 status=302 value=https://new.example/path' $(BUILD_DIR)/strategy_chain_demo.out >/dev/null
 	grep -F 'rewrite response-body action=12 body=clean=1&ok=1' $(BUILD_DIR)/strategy_chain_demo.out >/dev/null
 	grep -F 'script kind=2 requires_body=1 path=https://scripts.example/demo.js tag=demo.response argument=Mode=demo' $(BUILD_DIR)/strategy_chain_demo.out >/dev/null
+
+ordering-contract-check:
+	sh scripts/adapter-ordering-contract-check.sh
 
 e2e: all
 	sh e2e/scripts/e2e-check.sh

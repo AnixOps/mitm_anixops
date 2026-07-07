@@ -8,6 +8,7 @@ make clean
 make test
 make all
 make demo-check
+make ordering-contract-check
 
 DEFAULT_MIHOMO_BIN="$ROOT/../downloads/mihomo-linux-amd64-compatible-v1.19.27"
 MIHOMO_BIN=${MIHOMO_BIN:-"$DEFAULT_MIHOMO_BIN"}

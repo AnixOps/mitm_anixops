@@ -7,8 +7,6 @@ proxy client roadmap.
 
 - Keep `ci/abi_exports.txt` in sync with every intentional C ABI change.
 - Expand compatibility fixtures with representative Loon, Surge, and Quantumult X modules beyond BiliUniverse.
-- Document exact ordering guidance for adapters that combine URL rewrite, header rewrite, body rewrite, and script
-  dispatch in one request/response pass.
 - Decide whether unsupported-but-recognized rule actions should remain ignored or return `ANIXOPS_ERR_PARSE` in a future
   major/minor version.
 
