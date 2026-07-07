@@ -90,8 +90,8 @@ The library implements the decision/model layer, not AnixOps's socket runtime:
 - Certificate trust is an input supplied by the platform adapter.
 - QUIC-for-MITM returns a decision (`ANIXOPS_MITM_REJECT_QUIC`) rather than dropping packets itself.
 - URL rewrite uses POSIX ERE with a tested leading `(?i)` case-insensitive prefix, PCRE shorthand classes, absolute
-  anchors, and non-capturing group matching subset. This is portable C, but not full NSRegularExpression/PCRE
-  compatibility.
+  anchors, non-capturing groups, and named capture group matching subset. This is portable C, but not full
+  NSRegularExpression/PCRE compatibility.
 - Mock and regex body rewrite operate on already-buffered plain text. The platform adapter still owns body buffering,
   decompression, transfer framing, and HTTP writeback.
 - Header rewrite returns structured operations; the platform adapter still owns the concrete case-insensitive header map

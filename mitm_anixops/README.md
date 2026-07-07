@@ -29,6 +29,8 @@ Implemented:
 - POSIX ERE regex matching with a supported leading `(?i)` case-insensitive prefix and PCRE shorthand classes
   `\d`, `\w`, and `\s`, plus PCRE absolute anchors `\A`, `\z`, and `\Z`.
 - PCRE non-capturing group syntax `(?:...)` for matching, normalized as a regular POSIX capturing group.
+- PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching, normalized as regular POSIX capturing
+  groups.
 - AnixOps/Surge-style module script metadata for HTTP request/response hooks.
 - AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, plus per-argument overrides for script `$argument` generation.
 - BiliUniverse Enhanced-style `.plugin`, `.snippet`, and `.sgmodule` fixtures.
@@ -42,7 +44,7 @@ Not implemented yet:
 - Full JQ rewrite actions beyond the tested JSON path replacement subset.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
-  absolute anchors, and non-capturing group matching subset.
+  absolute anchors, non-capturing groups, and named capture group matching subset.
 - Full AnixOps compatibility.
 
 ## Build
