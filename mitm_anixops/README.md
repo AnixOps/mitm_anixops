@@ -36,7 +36,7 @@ Implemented:
   `\d`, `\w`, `\s`, `\h`, `\H`, `\v`, and `\V`, PCRE control escapes such as `\t`, PCRE hex byte escapes such
   as `\x2e`, PCRE Unicode escapes such as `\u00e9`, lazy quantifier suffixes normalized to greedy equivalents, plus
   PCRE absolute anchors `\A`, `\z`, and `\Z`.
-- PCRE non-capturing group syntax `(?:...)` for matching, normalized as a regular POSIX capturing group.
+- PCRE non-capturing group syntax `(?:...)` for matching without consuming replacement capture indexes.
 - PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching, normalized as regular POSIX capturing
   groups.
 - PCRE quoted literal syntax `\Q...\E`, normalized as escaped POSIX ERE literal text.
@@ -53,7 +53,7 @@ Not implemented yet:
 - Full JQ rewrite actions beyond the tested JSON path replacement subset.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
-  absolute anchors, non-capturing groups, named capture groups, and quoted literal matching subset.
+  absolute anchors, named capture groups, and quoted literal matching subset.
 - Full AnixOps compatibility.
 
 ## Build

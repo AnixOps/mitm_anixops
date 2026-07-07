@@ -14,7 +14,7 @@ publishing.
   recursive selectors, and computed filters.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)`/`(?s)` prefixes,
   shorthand classes including horizontal and vertical whitespace, control, hex, and Unicode escapes, lazy quantifier
-  normalization, absolute anchors, non-capturing groups, named capture groups, and quoted literal matching subset.
+  normalization, absolute anchors, named capture groups, and quoted literal matching subset.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, `echo-response`, common
   reject/body/header rewrite actions, and redirect actions.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.

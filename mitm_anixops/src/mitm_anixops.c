@@ -9,6 +9,9 @@
 #include <string.h>
 #include <strings.h>
 
+#define ANIXOPS_MATCH_CAP 10
+#define ANIXOPS_CAPTURE_UNMAPPED ((size_t)-1)
+
 typedef struct anixops_host_pattern {
 	char *pattern;
 	int deny;
@@ -24,6 +27,9 @@ typedef struct anixops_rewrite_rule {
 	regex_t regex;
 	regex_t body_regex;
 	regex_t header_regex;
+	size_t capture_map[ANIXOPS_MATCH_CAP];
+	size_t body_capture_map[ANIXOPS_MATCH_CAP];
+	size_t header_capture_map[ANIXOPS_MATCH_CAP];
 	int regex_ready;
 	int body_regex_ready;
 	int header_regex_ready;
@@ -95,9 +101,26 @@ static int anixops_starts_with_ci(const char *value, const char *prefix);
 static int anixops_is_rewrite_section(const char *key);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
-static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags);
+static int anixops_compile_regex(
+	regex_t *regex,
+	const char *pattern,
+	int flags,
+	size_t *capture_map,
+	size_t capture_map_cap);
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
-static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern);
+static int anixops_normalize_regex_pattern(
+	const char *pattern,
+	char **out_pattern,
+	size_t *capture_map,
+	size_t capture_map_cap);
+static void anixops_init_capture_map(size_t *capture_map, size_t capture_map_cap);
+static void anixops_record_capture(
+	size_t *posix_capture_index,
+	size_t *logical_capture_index,
+	size_t *capture_map,
+	size_t capture_map_cap,
+	int is_logical_capture);
+static size_t anixops_capture_match_index(size_t idx, const size_t *capture_map, size_t capture_map_cap);
 static int anixops_regex_append_literal_bytes(
 	char *out,
 	size_t out_cap,
@@ -144,6 +167,8 @@ static int anixops_expand_replacement(
 	const char *replacement,
 	const regmatch_t *matches,
 	size_t match_count,
+	const size_t *capture_map,
+	size_t capture_map_cap,
 	char *out,
 	size_t out_cap);
 static int anixops_apply_body_regex_replacement(
@@ -164,6 +189,8 @@ static int anixops_apply_regex_replacement(
 	const regex_t *regex,
 	int regex_ready,
 	const char *replacement,
+	const size_t *capture_map,
+	size_t capture_map_cap,
 	char *out,
 	size_t out_cap,
 	int *out_replaced);
@@ -172,6 +199,8 @@ static int anixops_append_expanded_replacement(
 	const char *replacement,
 	const regmatch_t *matches,
 	size_t match_count,
+	const size_t *capture_map,
+	size_t capture_map_cap,
 	char *out,
 	size_t out_cap,
 	size_t *pos);
@@ -235,7 +264,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.30.0";
+	return "0.31.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -766,14 +795,19 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying rewrite rule");
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
 	}
-	if (anixops_compile_regex(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
+	if (anixops_compile_regex(&rule->regex, rule->pattern, REG_EXTENDED, rule->capture_map, ANIXOPS_MATCH_CAP) != 0) {
 		anixops_free_rewrite_rule(rule);
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite URL regex failed to compile");
 		return ANIXOPS_ERR_REGEX;
 	}
 	rule->regex_ready = 1;
 	if (anixops_rewrite_action_replaces_body_regex(action)) {
-		if (anixops_compile_regex(&rule->body_regex, rule->body_pattern, REG_EXTENDED) != 0) {
+		if (anixops_compile_regex(
+				&rule->body_regex,
+				rule->body_pattern,
+				REG_EXTENDED,
+				rule->body_capture_map,
+				ANIXOPS_MATCH_CAP) != 0) {
 			anixops_free_rewrite_rule(rule);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite body regex failed to compile");
 			return ANIXOPS_ERR_REGEX;
@@ -781,7 +815,12 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		rule->body_regex_ready = 1;
 	}
 	if (anixops_rewrite_action_replaces_header_regex(action)) {
-		if (anixops_compile_regex(&rule->header_regex, rule->header_pattern, REG_EXTENDED) != 0) {
+		if (anixops_compile_regex(
+				&rule->header_regex,
+				rule->header_pattern,
+				REG_EXTENDED,
+				rule->header_capture_map,
+				ANIXOPS_MATCH_CAP) != 0) {
 			anixops_free_rewrite_rule(rule);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite header regex failed to compile");
 			return ANIXOPS_ERR_REGEX;
@@ -1142,7 +1181,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying script rule");
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
 	}
-	if (anixops_compile_regex(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
+	if (anixops_compile_regex(&rule->regex, rule->pattern, REG_EXTENDED, NULL, 0) != 0) {
 		anixops_free_script_rule(rule);
 		free(copy);
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "script URL regex failed to compile");
@@ -1336,7 +1375,7 @@ ANIXOPS_API int anixops_rewrite_evaluate_url(
 
 	for (i = 0; i < engine->rule_len; i++) {
 		const anixops_rewrite_rule_t *rule = &engine->rules[i];
-		regmatch_t matches[10];
+		regmatch_t matches[ANIXOPS_MATCH_CAP];
 		int rc;
 		if (rule->phase != phase || !rule->regex_ready || anixops_rewrite_action_rewrites_header(rule->action)) {
 			continue;
@@ -1357,6 +1396,8 @@ ANIXOPS_API int anixops_rewrite_evaluate_url(
 				rule->replacement,
 				matches,
 				sizeof(matches) / sizeof(matches[0]),
+				rule->capture_map,
+				ANIXOPS_MATCH_CAP,
 				out_result->value,
 				sizeof(out_result->value));
 			if (expand_rc != ANIXOPS_OK) {
@@ -1475,7 +1516,7 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 
 	for (i = start_index; i < engine->rule_len; i++) {
 		const anixops_rewrite_rule_t *rule = &engine->rules[i];
-		regmatch_t url_matches[10];
+		regmatch_t url_matches[ANIXOPS_MATCH_CAP];
 		int rc;
 		if (rule->phase != phase || !rule->regex_ready || !anixops_rewrite_action_rewrites_header(rule->action)) {
 			continue;
@@ -1504,6 +1545,8 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 					&rule->header_regex,
 					rule->header_regex_ready,
 					rule->replacement,
+					rule->header_capture_map,
+					ANIXOPS_MATCH_CAP,
 					out_result->value,
 					sizeof(out_result->value),
 					&replaced) != ANIXOPS_OK) {
@@ -1528,6 +1571,8 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 				rule->replacement,
 				url_matches,
 				sizeof(url_matches) / sizeof(url_matches[0]),
+				rule->capture_map,
+				ANIXOPS_MATCH_CAP,
 				out_result->value,
 				sizeof(out_result->value)) != ANIXOPS_OK) {
 			anixops_copy_text(out_result->message, sizeof(out_result->message), "header value truncated");
@@ -1915,7 +1960,12 @@ static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap
 	return 1;
 }
 
-static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags)
+static int anixops_compile_regex(
+	regex_t *regex,
+	const char *pattern,
+	int flags,
+	size_t *capture_map,
+	size_t capture_map_cap)
 {
 	const char *compile_pattern;
 	char *normalized_pattern = NULL;
@@ -1924,7 +1974,7 @@ static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags)
 		return -1;
 	}
 	compile_pattern = anixops_regex_pattern_after_inline_flags(pattern, &flags);
-	if (anixops_normalize_regex_pattern(compile_pattern, &normalized_pattern) != ANIXOPS_OK) {
+	if (anixops_normalize_regex_pattern(compile_pattern, &normalized_pattern, capture_map, capture_map_cap) != ANIXOPS_OK) {
 		return REG_ESPACE;
 	}
 	rc = regcomp(regex, normalized_pattern, flags);
@@ -1962,17 +2012,24 @@ static const char *anixops_regex_pattern_after_inline_flags(const char *pattern,
 	return pattern;
 }
 
-static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern)
+static int anixops_normalize_regex_pattern(
+	const char *pattern,
+	char **out_pattern,
+	size_t *capture_map,
+	size_t capture_map_cap)
 {
 	size_t len;
 	size_t cap;
 	size_t pos = 0;
 	size_t i;
+	size_t posix_capture_index = 0;
+	size_t logical_capture_index = 0;
 	int in_class = 0;
 	char *out;
 	if (pattern == NULL || out_pattern == NULL) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
+	anixops_init_capture_map(capture_map, capture_map_cap);
 	len = strlen(pattern);
 	if (len > ((size_t)-1 - 1) / 16) {
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
@@ -2141,6 +2198,12 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			continue;
 		}
 		if (!in_class && ch == '(' && i + 2 < len && pattern[i + 1] == '?' && pattern[i + 2] == ':') {
+			anixops_record_capture(
+				&posix_capture_index,
+				&logical_capture_index,
+				capture_map,
+				capture_map_cap,
+				0);
 			out[pos++] = '(';
 			i += 2;
 			continue;
@@ -2156,6 +2219,12 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 					name_end++;
 				}
 				if (name_end > name_start && name_end < len && pattern[name_end] == terminator) {
+					anixops_record_capture(
+						&posix_capture_index,
+						&logical_capture_index,
+						capture_map,
+						capture_map_cap,
+						1);
 					out[pos++] = '(';
 					i = name_end;
 					continue;
@@ -2168,11 +2237,62 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 		else if (ch == ']' && in_class) {
 			in_class = 0;
 		}
+		if (!in_class && ch == '(') {
+			anixops_record_capture(
+				&posix_capture_index,
+				&logical_capture_index,
+				capture_map,
+				capture_map_cap,
+				1);
+		}
 		out[pos++] = ch;
 	}
 	out[pos] = '\0';
 	*out_pattern = out;
 	return ANIXOPS_OK;
+}
+
+static void anixops_init_capture_map(size_t *capture_map, size_t capture_map_cap)
+{
+	size_t i;
+	if (capture_map == NULL || capture_map_cap == 0) {
+		return;
+	}
+	for (i = 0; i < capture_map_cap; i++) {
+		capture_map[i] = ANIXOPS_CAPTURE_UNMAPPED;
+	}
+	capture_map[0] = 0;
+}
+
+static void anixops_record_capture(
+	size_t *posix_capture_index,
+	size_t *logical_capture_index,
+	size_t *capture_map,
+	size_t capture_map_cap,
+	int is_logical_capture)
+{
+	if (posix_capture_index == NULL || logical_capture_index == NULL) {
+		return;
+	}
+	(*posix_capture_index)++;
+	if (!is_logical_capture) {
+		return;
+	}
+	(*logical_capture_index)++;
+	if (capture_map != NULL && *logical_capture_index < capture_map_cap) {
+		capture_map[*logical_capture_index] = *posix_capture_index;
+	}
+}
+
+static size_t anixops_capture_match_index(size_t idx, const size_t *capture_map, size_t capture_map_cap)
+{
+	if (capture_map == NULL) {
+		return idx;
+	}
+	if (idx >= capture_map_cap) {
+		return ANIXOPS_CAPTURE_UNMAPPED;
+	}
+	return capture_map[idx];
 }
 
 static int anixops_regex_append_literal_bytes(
@@ -2786,6 +2906,8 @@ static int anixops_expand_replacement(
 	const char *replacement,
 	const regmatch_t *matches,
 	size_t match_count,
+	const size_t *capture_map,
+	size_t capture_map_cap,
 	char *out,
 	size_t out_cap)
 {
@@ -2798,9 +2920,12 @@ static int anixops_expand_replacement(
 	while (*p != '\0') {
 		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
 			size_t idx = (size_t)(p[1] - '0');
-			if (idx < match_count && matches[idx].rm_so >= 0 && matches[idx].rm_eo >= matches[idx].rm_so) {
-				size_t start = (size_t)matches[idx].rm_so;
-				size_t len = (size_t)(matches[idx].rm_eo - matches[idx].rm_so);
+			size_t match_idx = anixops_capture_match_index(idx, capture_map, capture_map_cap);
+			if (match_idx < match_count &&
+				matches[match_idx].rm_so >= 0 &&
+				matches[match_idx].rm_eo >= matches[match_idx].rm_so) {
+				size_t start = (size_t)matches[match_idx].rm_so;
+				size_t len = (size_t)(matches[match_idx].rm_eo - matches[match_idx].rm_so);
 				if (anixops_append_range(out, out_cap, &pos, input + start, len) != ANIXOPS_OK) {
 					truncated = 1;
 				}
@@ -2841,6 +2966,8 @@ static int anixops_apply_body_regex_replacement(
 		&rule->body_regex,
 		rule->body_regex_ready,
 		rule->replacement,
+		rule->body_capture_map,
+		ANIXOPS_MATCH_CAP,
 		out,
 		out_cap,
 		out_replaced);
@@ -2898,6 +3025,8 @@ static int anixops_apply_regex_replacement(
 	const regex_t *regex,
 	int regex_ready,
 	const char *replacement,
+	const size_t *capture_map,
+	size_t capture_map_cap,
 	char *out,
 	size_t out_cap,
 	int *out_replaced)
@@ -2906,7 +3035,7 @@ static int anixops_apply_regex_replacement(
 	size_t pos = 0;
 	int truncated = 0;
 	int replaced = 0;
-	regmatch_t matches[10];
+	regmatch_t matches[ANIXOPS_MATCH_CAP];
 
 	if (input == NULL || regex == NULL || out == NULL || out_cap == 0 || out_replaced == NULL || !regex_ready) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
@@ -2929,6 +3058,8 @@ static int anixops_apply_regex_replacement(
 				replacement,
 				matches,
 				sizeof(matches) / sizeof(matches[0]),
+				capture_map,
+				capture_map_cap,
 				out,
 				out_cap,
 				&pos) != ANIXOPS_OK) {
@@ -2962,6 +3093,8 @@ static int anixops_append_expanded_replacement(
 	const char *replacement,
 	const regmatch_t *matches,
 	size_t match_count,
+	const size_t *capture_map,
+	size_t capture_map_cap,
 	char *out,
 	size_t out_cap,
 	size_t *pos)
@@ -2974,9 +3107,12 @@ static int anixops_append_expanded_replacement(
 	while (*p != '\0') {
 		if ((*p == '$' || *p == '\\') && isdigit((unsigned char)p[1])) {
 			size_t idx = (size_t)(p[1] - '0');
-			if (idx < match_count && matches[idx].rm_so >= 0 && matches[idx].rm_eo >= matches[idx].rm_so) {
-				size_t start = (size_t)matches[idx].rm_so;
-				size_t len = (size_t)(matches[idx].rm_eo - matches[idx].rm_so);
+			size_t match_idx = anixops_capture_match_index(idx, capture_map, capture_map_cap);
+			if (match_idx < match_count &&
+				matches[match_idx].rm_so >= 0 &&
+				matches[match_idx].rm_eo >= matches[match_idx].rm_so) {
+				size_t start = (size_t)matches[match_idx].rm_so;
+				size_t len = (size_t)(matches[match_idx].rm_eo - matches[match_idx].rm_so);
 				if (anixops_append_range(out, out_cap, pos, input + start, len) != ANIXOPS_OK) {
 					truncated = 1;
 				}

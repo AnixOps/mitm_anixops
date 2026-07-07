@@ -1231,7 +1231,7 @@ static void pcre_non_capturing_groups_match_all_regex_contexts(void)
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
 	ANIXOPS_EXPECT_EQ_INT(
-		anixops_engine_add_rewrite_rule(engine, "^https://(?:api|m)\\.test/(item)$ https://dest.test/$1 302"),
+		anixops_engine_add_rewrite_rule(engine, "^https://(?:api|m)\\.test/(item)/(v[0-9]+)$ https://dest.test/$1/$2 302"),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test request-body-replace-regex \"(?:token|id)=([0-9]+)\" value=$1"),
@@ -1246,10 +1246,10 @@ static void pcre_non_capturing_groups_match_all_regex_contexts(void)
 		ANIXOPS_OK);
 
 	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_url(engine, "https://api.test/item", ANIXOPS_PHASE_REQUEST, &rewrite),
+		anixops_rewrite_evaluate_url(engine, "https://api.test/item/v1", ANIXOPS_PHASE_REQUEST, &rewrite),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
-	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/api");
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/item/v1");
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_apply_body(
@@ -1262,7 +1262,7 @@ static void pcre_non_capturing_groups_match_all_regex_contexts(void)
 			&rewrite),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
-	ANIXOPS_EXPECT_STREQ(body, "value=id");
+	ANIXOPS_EXPECT_STREQ(body, "value=42");
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_evaluate_header(
@@ -1274,7 +1274,7 @@ static void pcre_non_capturing_groups_match_all_regex_contexts(void)
 			&header),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
-	ANIXOPS_EXPECT_STREQ(header.value, "name=token");
+	ANIXOPS_EXPECT_STREQ(header.value, "name=Alice");
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_script_evaluate_url(engine, "https://cdn.test/path", ANIXOPS_PHASE_RESPONSE, &script),

@@ -51,7 +51,7 @@ features it understands.
 | PCRE Unicode escapes `\uHHHH` | Supported subset | URL, body, header, and script regex test |
 | PCRE lazy quantifier suffixes `*?`, `+?`, `??`, `{m,n}?` | Supported as greedy equivalents | URL, body, header, and script regex test |
 | PCRE absolute anchors `\A`, `\z`, `\Z` | Supported subset | URL, body, header, and script regex test |
-| PCRE non-capturing groups `(?:...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
+| PCRE non-capturing groups `(?:...)` | Supported without replacement capture numbering side effects | URL, body, header, and script regex test |
 | PCRE named capture groups `(?<name>...)`, `(?'name'...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
 | PCRE quoted literals `\Q...\E` | Supported subset | URL, body, header, and script regex test |
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
