@@ -112,6 +112,7 @@ try {
   }
 
   $env:CGO_ENABLED = "1"
+  $env:GO111MODULE = "off"
   $env:CC = (Convert-ToGccPath $Gcc)
   $env:CGO_CFLAGS = "-I$(Convert-ToGccPath $MingwInclude)"
   $env:CGO_LDFLAGS = "-L$(Convert-ToGccPath $MingwLib) -Wl,-Bstatic -lsystre -ltre -Wl,-Bdynamic"
