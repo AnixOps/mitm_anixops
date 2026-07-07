@@ -235,7 +235,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.23.0";
+	return "0.24.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1969,6 +1969,35 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 			}
 			else if (next == 'S' && !in_class) {
 				replacement = "[^[:space:]]";
+			}
+			else if (next == 't' || next == 'n' || next == 'r' || next == 'f' || next == 'a' || next == 'e') {
+				char value;
+				switch (next) {
+				case 't':
+					value = '\t';
+					break;
+				case 'n':
+					value = '\n';
+					break;
+				case 'r':
+					value = '\r';
+					break;
+				case 'f':
+					value = '\f';
+					break;
+				case 'a':
+					value = '\a';
+					break;
+				default:
+					value = 0x1b;
+					break;
+				}
+				if (anixops_regex_append_literal_bytes(out, cap, &pos, &value, 1, in_class) != ANIXOPS_OK) {
+					free(out);
+					return ANIXOPS_ERR_PARSE;
+				}
+				i++;
+				continue;
 			}
 			else if (next == 'x' && i + 3 < len) {
 				int hi = anixops_hex_digit((unsigned char)pattern[i + 2]);

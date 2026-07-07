@@ -844,6 +844,72 @@ static void pcre_unicode_escapes_match_all_regex_contexts(void)
 	anixops_engine_free(engine);
 }
 
+static void pcre_control_escapes_match_all_regex_contexts(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	anixops_script_result_t script;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://tab\\.test/a\\tb$ https://dest.test/tab 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://body\\.test request-body-replace-regex \"line\\nnext\" ok"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://header\\.test response-header-replace-regex X-Test \"mode\\r\\n(.+)$\" \"mode=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(engine, "http-response ^https://script\\.test/a\\tb$ script-path=https://x.test/a.js"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://tab.test/a\tb", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/tab");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test",
+			ANIXOPS_PHASE_REQUEST,
+			"line\nnext!",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "ok!");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.test",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"mode\r\nFast",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.value, "mode=Fast");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://script.test/a\tb", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://x.test/a.js");
+
+	anixops_engine_free(engine);
+}
+
 static void pcre_lazy_quantifiers_match_all_regex_contexts(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1846,6 +1912,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/pcre_unicode_escapes_match_all_regex_contexts",
 		pcre_unicode_escapes_match_all_regex_contexts);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/pcre_control_escapes_match_all_regex_contexts",
+		pcre_control_escapes_match_all_regex_contexts);
 	add_test(
 		tests,
 		count,
