@@ -235,7 +235,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.29.0";
+	return "0.30.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -644,7 +644,13 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 	have_sixth = anixops_next_token(&cursor, sixth, sizeof(sixth));
 
 	if (strcasecmp(second, "url") == 0 && have_third && anixops_parse_rewrite_action(third, &action, &status_code)) {
-		if (anixops_rewrite_action_replaces_body(action)) {
+		if (strcasecmp(third, "echo-response") == 0) {
+			if (!have_fifth) {
+				return ANIXOPS_OK;
+			}
+			replacement = fifth;
+		}
+		else if (anixops_rewrite_action_replaces_body(action)) {
 			if (!have_fourth) {
 				return ANIXOPS_OK;
 			}
@@ -672,7 +678,13 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		}
 	}
 	else if (anixops_parse_rewrite_action(second, &action, &status_code)) {
-		if (anixops_rewrite_action_replaces_body(action)) {
+		if (strcasecmp(second, "echo-response") == 0) {
+			if (!have_fourth) {
+				return ANIXOPS_OK;
+			}
+			replacement = fourth;
+		}
+		else if (anixops_rewrite_action_replaces_body(action)) {
 			if (!have_third) {
 				return ANIXOPS_OK;
 			}
@@ -699,7 +711,9 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 			replacement = have_third ? third : "";
 		}
 	}
-	else if (have_third && anixops_parse_rewrite_action(third, &action, &status_code)) {
+	else if (
+		have_third && strcasecmp(third, "echo-response") != 0 &&
+		anixops_parse_rewrite_action(third, &action, &status_code)) {
 		if (anixops_rewrite_action_replaces_body(action)) {
 			body_pattern = second;
 			replacement = have_fourth ? fourth : "";
@@ -2314,6 +2328,11 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 		return 1;
 	}
 	if (strcasecmp(token, "mock-response-body") == 0) {
+		*action = ANIXOPS_REWRITE_MOCK_RESPONSE_BODY;
+		*status_code = 200;
+		return 1;
+	}
+	if (strcasecmp(token, "echo-response") == 0) {
 		*action = ANIXOPS_REWRITE_MOCK_RESPONSE_BODY;
 		*status_code = 200;
 		return 1;

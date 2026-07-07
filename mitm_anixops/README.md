@@ -30,7 +30,7 @@ Implemented:
   quoted strings.
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, header rewrite,
-  and request/response script actions.
+  `echo-response`, and request/response script actions.
 - Regex capture replacement with `$1` and `\1`.
 - POSIX ERE regex matching with supported leading `(?i)`, `(?s)`, and `(?is)` prefixes, PCRE shorthand classes
   `\d`, `\w`, `\s`, `\h`, `\H`, `\v`, and `\V`, PCRE control escapes such as `\t`, PCRE hex byte escapes such

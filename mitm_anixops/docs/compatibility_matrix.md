@@ -39,8 +39,7 @@ features it understands.
 | --- | --- | --- |
 | URL redirect `301`, `302`, `303`, `307`, `308` | Supported | `anixops_rewrite_evaluate_url` |
 | Reject variants | Supported | `reject`, `reject-200`, numeric `reject-NNN`, `reject-img`, `reject-video`, `reject-dict`, `reject-array` |
-| Quantumult X `url`-prefixed redirect/reject/body/header rewrites | Supported subset | `quantumultx_url_prefixed_rewrites_are_supported` |
-| Unsupported Quantumult X `url` actions | Ignored | `unsupported_quantumultx_url_actions_are_ignored` |
+| Quantumult X `url`-prefixed redirect/reject/body/header/echo-response rewrites | Supported subset | `quantumultx_url_prefixed_rewrites_are_supported`, `quantumultx_echo_response_is_supported` |
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1` and `\1` tests |
 | Leading `(?i)`, `(?s)`, and `(?is)` regex prefixes | Supported subset | URL, body, header, and script regex tests |

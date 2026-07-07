@@ -305,23 +305,61 @@ static void quantumultx_url_prefixed_header_rewrites_are_supported(void)
 	anixops_engine_free(engine);
 }
 
-static void unsupported_quantumultx_url_actions_are_ignored(void)
+static void quantumultx_echo_response_is_supported(void)
 {
 	const char *config =
 		"[rewrite_local]\n"
-		"^https://echo\\.test url echo-response text/plain hello\n";
+		"^https://echo\\.test/(.*) url echo-response text/plain hello-$1\n"
+		"^https://direct\\.test/(.*) echo-response application/json direct-$1\n";
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t result;
+	char body[128];
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 
 	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_url(engine, "https://echo.test", ANIXOPS_PHASE_REQUEST, &result),
+		anixops_rewrite_apply_body(
+			engine,
+			"https://echo.test/path",
+			ANIXOPS_PHASE_REQUEST,
+			"original",
+			body,
+			sizeof(body),
+			&result),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_STREQ(body, "original");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://echo.test/path",
+			ANIXOPS_PHASE_RESPONSE,
+			"original",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_MOCK_RESPONSE_BODY);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 200);
+	ANIXOPS_EXPECT_STREQ(body, "hello-path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://direct.test/item",
+			ANIXOPS_PHASE_RESPONSE,
+			"original",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_MOCK_RESPONSE_BODY);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 200);
+	ANIXOPS_EXPECT_STREQ(body, "direct-item");
 
 	anixops_engine_free(engine);
 }
@@ -330,7 +368,7 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 {
 	const char *config =
 		"[Rewrite]\n"
-		"^https://echo\\.test echo-response text/plain hello\n";
+		"^https://map\\.test map-local /tmp/body.json\n";
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t rewrite;
 	int status = ANIXOPS_ERR_PARSE;
@@ -346,7 +384,7 @@ static void unsupported_recognized_rewrite_actions_are_ignored(void)
 	ANIXOPS_EXPECT_STREQ(message, "ok");
 
 	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_evaluate_url(engine, "https://echo.test", ANIXOPS_PHASE_REQUEST, &rewrite),
+		anixops_rewrite_evaluate_url(engine, "https://map.test", ANIXOPS_PHASE_REQUEST, &rewrite),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
 
@@ -2081,8 +2119,8 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		tests,
 		count,
 		cap,
-		"rewrite/unsupported_quantumultx_url_actions_are_ignored",
-		unsupported_quantumultx_url_actions_are_ignored);
+		"rewrite/quantumultx_echo_response_is_supported",
+		quantumultx_echo_response_is_supported);
 	add_test(
 		tests,
 		count,
