@@ -115,7 +115,7 @@ try {
   $env:GO111MODULE = "off"
   $env:CC = (Convert-ToGccPath $Gcc)
   $env:CGO_CFLAGS = "-DANIXOPS_STATIC -I$(Convert-ToGccPath $MingwInclude)"
-  $env:CGO_LDFLAGS = "-L$(Convert-ToGccPath $MingwLib) -Wl,-Bstatic -lsystre -ltre -Wl,-Bdynamic"
+  $env:CGO_LDFLAGS = "-L$(Convert-ToGccPath $MingwLib) -Wl,-Bstatic -lsystre -ltre -lintl -liconv -Wl,-Bdynamic"
   $env:CGO_LDFLAGS_ALLOW = ".*"
   Push-Location (Join-Path $Root "e2e\shim")
   try {
