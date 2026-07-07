@@ -752,6 +752,53 @@ static void inline_dotall_regex_prefix_matches_all_regex_contexts(void)
 	anixops_engine_free(engine);
 }
 
+static void inline_multiline_regex_prefix_matches_line_anchors(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://body\\.test request-body-replace-regex \"(?m)^token=([0-9]+)$\" \"id=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://header\\.test response-header-replace-regex X-Test \"(?im)^mode=([a-z]+)$\" \"mode=$1\""),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test",
+			ANIXOPS_PHASE_REQUEST,
+			"start\ntoken=42\nend",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "start\nid=42\nend");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.test",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"start\nMODE=Fast\nend",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.value, "start\nmode=Fast\nend");
+
+	anixops_engine_free(engine);
+}
+
 static void pcre_shorthand_regex_classes_match_all_regex_contexts(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2170,6 +2217,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/inline_dotall_regex_prefix_matches_all_regex_contexts",
 		inline_dotall_regex_prefix_matches_all_regex_contexts);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/inline_multiline_regex_prefix_matches_line_anchors",
+		inline_multiline_regex_prefix_matches_line_anchors);
 	add_test(
 		tests,
 		count,

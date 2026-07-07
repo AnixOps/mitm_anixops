@@ -42,7 +42,7 @@ features it understands.
 | Quantumult X `url`-prefixed redirect/reject/body/header/echo-response rewrites | Supported subset | `quantumultx_url_prefixed_rewrites_are_supported`, `quantumultx_echo_response_is_supported` |
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1`, `${1}`, and `\1` tests |
-| Leading `(?i)`, `(?s)`, and `(?is)` regex prefixes | Supported subset | URL, body, header, and script regex tests |
+| Leading `(?i)`, `(?m)`, `(?s)`, and combined regex prefixes | Supported subset | URL, body, header, and script regex tests |
 | PCRE shorthand classes `\d`, `\w`, `\s` | Supported subset | URL, body, header, and script regex test |
 | PCRE horizontal whitespace classes `\h`, `\H` | Supported subset | URL, body, header, and script regex test |
 | PCRE vertical whitespace classes `\v`, `\V` | Supported ASCII subset | URL, body, header, and script regex test |

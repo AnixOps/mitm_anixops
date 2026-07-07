@@ -274,7 +274,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.32.0";
+	return "0.33.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2006,6 +2006,10 @@ static const char *anixops_regex_pattern_after_inline_flags(const char *pattern,
 	for (i = 2; pattern[i] != '\0' && pattern[i] != ')'; i++) {
 		if (pattern[i] == 'i') {
 			local_flags |= REG_ICASE;
+			saw_flag = 1;
+		}
+		else if (pattern[i] == 'm') {
+			local_flags |= REG_NEWLINE;
 			saw_flag = 1;
 		}
 		else if (pattern[i] == 's') {

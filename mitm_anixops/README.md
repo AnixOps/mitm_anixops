@@ -32,7 +32,7 @@ Implemented:
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, header rewrite,
   `echo-response`, and request/response script actions.
 - Regex capture replacement with `$1`, `${1}`, and `\1`.
-- POSIX ERE regex matching with supported leading `(?i)`, `(?s)`, and `(?is)` prefixes, PCRE shorthand classes
+- POSIX ERE regex matching with supported leading `(?i)`, `(?m)`, `(?s)`, and combined flag prefixes, PCRE shorthand classes
   `\d`, `\w`, `\s`, `\h`, `\H`, `\v`, and `\V`, PCRE control escapes such as `\t`, PCRE hex byte escapes such
   as `\x2e`, PCRE Unicode escapes such as `\u00e9`, lazy quantifier suffixes normalized to greedy equivalents, plus
   PCRE absolute anchors `\A`, `\z`, and `\Z`.
@@ -52,7 +52,7 @@ Not implemented yet:
 - HTTP parser, HTTP/2 frame parser, compression/chunk handling, body buffering.
 - Full JQ rewrite actions beyond the tested JSON path replacement subset.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
-- Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)` prefix, shorthand classes,
+- Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes, shorthand classes,
   absolute anchors, named capture groups, and quoted literal matching subset.
 - Full AnixOps compatibility.
 

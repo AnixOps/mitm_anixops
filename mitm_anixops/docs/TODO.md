@@ -12,7 +12,7 @@ publishing.
 
 - Full JQ-style JSON body rewrite filters beyond the tested JSON path replacement subset, including predicates, slices,
   recursive selectors, and computed filters.
-- Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)`/`(?s)` prefixes,
+- Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand classes including horizontal and vertical whitespace, control, hex, and Unicode escapes, lazy quantifier
   normalization, absolute anchors, named capture groups, and quoted literal matching subset.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, `echo-response`, common
