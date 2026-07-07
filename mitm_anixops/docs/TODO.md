@@ -14,8 +14,9 @@ publishing.
 
 ## Compatibility Gaps
 
-- Compatibility profiles and per-rule diagnostics now have an initial C ABI foundation, but LOON/SURGE/QX strict-mode
-  behavioral differences still need to be implemented rule-by-rule.
+- Compatibility profiles and per-rule diagnostics now have an initial C ABI foundation. Strict profiles reject ignored
+  rule-shaped lines inside supported `[Rewrite]`, `[Script]`, `[Argument]`, and `[MITM]` sections; more exact
+  LOON/SURGE/QX behavioral differences still need to be implemented rule-by-rule.
 - Regex backend selection now has an initial C ABI foundation with a POSIX Lite default and optional PCRE2
   compile/match/replace support behind `PCRE2=1`; NSRegularExpression still needs a real Darwin backend.
 - Full JQ-style JSON body rewrite hardening beyond the optional libjq backend behind `JQ=1`. Default builds still
@@ -27,8 +28,8 @@ publishing.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, `echo-response`, common
   reject/body/header rewrite actions, and redirect actions.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.
-- Exact AnixOps/Loon behavior for every malformed line. Current behavior ignores incomplete non-action lines and reports
-  regex compilation failures.
+- Exact AnixOps/Loon behavior for every malformed line. Portable mode still ignores incomplete non-action lines; strict
+  profiles reject ignored rule-shaped lines in supported sections and report regex compilation failures.
 - Exact rewrite/script ordering for all edge cases in larger platform clients. The Alpha C ABI now has
   `anixops_rewrite_build_plan` for URL/body/header/script aggregation, but larger client corpus ordering still needs
   broader fixtures.

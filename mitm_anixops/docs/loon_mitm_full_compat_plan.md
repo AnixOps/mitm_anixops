@@ -311,7 +311,8 @@ int anixops_runtime_apply_plan(
 
 - 增强 LOON/Surge/QX parser。
 - 所有 ignored/rejected/partial rule 都返回结构化 diagnostics。
-- 加 `LOON_STRICT`、`SURGE_STRICT`、`QX_STRICT`、`PORTABLE` mode。
+- 已加 `LOON_STRICT`、`SURGE_STRICT`、`QX_STRICT`、`PORTABLE` mode；当前 strict profile 会把 supported section 中
+  未被解析的规则行升为 rejected，后续继续补逐平台细节。
 - 覆盖 malformed line、section alias、metadata、argument、module patch 行为。
 
 ### Phase 2: Regex backend 抽象
@@ -382,7 +383,7 @@ int anixops_runtime_apply_plan(
 | P1 | Surge body | `[Body Rewrite]` regex chain、`http-request-jq`、`http-response-jq` | jq fixture 输出和 trace 匹配预期 |
 | P1 | Quantumult X parser | `#[rewrite_local]`、`#[rewrite_remote]`、`#[mitm]`、INI section、`url` prefixed actions | QX corpus parse 报告无未知 P1 规则 |
 | P1 | Header semantics | case-insensitive lookup、multi-value append/replace/delete、Set-Cookie 特例策略 | header matrix fixture 覆盖 request 和 response |
-| P2 | Malformed behavior | LOON/SURGE/QX strict mode 与 portable mode 的 ignored/rejected 差异 | 同一 malformed corpus 在不同 profile 下输出不同但稳定诊断 |
+| P2 | Malformed behavior | Alpha 已覆盖 supported section 中 ignored rule 在 strict profile 下 rejected、portable 下 ignored；后续补 LOON/SURGE/QX 逐规则 malformed 差异 | 同一 malformed corpus 在不同 profile 下输出不同但稳定诊断 |
 
 ### Runtime Backlog
 

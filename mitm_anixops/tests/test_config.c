@@ -299,13 +299,12 @@ static void config_records_rule_diagnostics_for_accepted_and_ignored_lines(void)
 	anixops_rule_diagnostic_t diagnostic;
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
-	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 6);
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
-	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_PORTABLE);
 	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 1);
 	ANIXOPS_EXPECT_STREQ(diagnostic.action, "section");
 
@@ -327,6 +326,74 @@ static void config_records_rule_diagnostics_for_accepted_and_ignored_lines(void)
 	ANIXOPS_EXPECT_STREQ(diagnostic.action, "ca-p12");
 
 	anixops_engine_free(engine);
+}
+
+static void strict_profiles_reject_ignored_rules_in_supported_sections(void)
+{
+	struct strict_case {
+		anixops_compat_profile_t profile;
+		const char *config;
+		const char *section;
+		const char *action;
+	} cases[] = {
+		{
+			ANIXOPS_COMPAT_LOON_STRICT,
+			"[Rewrite]\n"
+			"^https://incomplete\\.test\n",
+			"Rewrite",
+			"rewrite",
+		},
+		{
+			ANIXOPS_COMPAT_SURGE_STRICT,
+			"[Script]\n"
+			"MissingPattern = type=http-response, script-path=https://x.test/a.js\n",
+			"Script",
+			"script",
+		},
+		{
+			ANIXOPS_COMPAT_QUANTUMULTX_STRICT,
+			"[Argument]\n"
+			"MissingEquals\n",
+			"Argument",
+			"argument",
+		},
+		{
+			ANIXOPS_COMPAT_LOON_STRICT,
+			"[MITM]\n"
+			"ca-p12 = ignored.p12\n",
+			"MITM",
+			"ca-p12",
+		},
+	};
+	size_t i;
+
+	for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		anixops_engine_t *engine = anixops_engine_new();
+		anixops_rule_diagnostic_t diagnostic;
+		int status = 0;
+		size_t line = 0;
+		char message[ANIXOPS_MESSAGE_CAP];
+		ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, cases[i].profile), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, cases[i].config), ANIXOPS_ERR_PARSE);
+		ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, cases[i].profile);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, cases[i].section);
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, cases[i].action);
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+		ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+		ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+		anixops_engine_free(engine);
+	}
 }
 
 static void plugin_metadata_section_is_tolerated_with_diagnostics(void)
@@ -450,6 +517,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_records_rule_diagnostics_for_accepted_and_ignored_lines",
 		config_records_rule_diagnostics_for_accepted_and_ignored_lines);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/strict_profiles_reject_ignored_rules_in_supported_sections",
+		strict_profiles_reject_ignored_rules_in_supported_sections);
 	add_test(
 		tests,
 		count,

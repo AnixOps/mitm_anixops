@@ -95,8 +95,8 @@ features it understands.
 | Caller-owned result structs | Supported | no public internal pointers |
 | Status text | Supported | `anixops_status_message` |
 | Last error status/line/message copy | Supported | `anixops_engine_copy_last_error` |
-| Compatibility profile selector | Supported foundation | `anixops_engine_set_compat_profile`, `anixops_engine_compat_profile`; profile-specific behavior is still incremental |
-| Per-rule parse diagnostics | Supported foundation | `anixops_engine_rule_diagnostic_count`, `anixops_engine_copy_rule_diagnostic`, accepted/ignored/rejected config tests |
+| Compatibility profile selector | Supported foundation | `anixops_engine_set_compat_profile`, `anixops_engine_compat_profile`; portable mode ignores unsupported rule-shaped lines in supported sections, while strict profiles reject them with parse diagnostics. Rule-by-rule platform parity remains incremental |
+| Per-rule parse diagnostics | Supported foundation | `anixops_engine_rule_diagnostic_count`, `anixops_engine_copy_rule_diagnostic`, accepted/ignored/rejected config tests, strict-profile rejected-rule tests |
 | Corpus manifest scan | Supported foundation | `tests/fixtures/corpus/manifest.json`, `anixops-mitm-runner scan --corpus`, runner-check verifies representative Loon/Surge/Quantumult X and BiliBili fixture counts, sha256 digests, and accepted/ignored/rejected diagnostic counts |
 | Request/response plan builder | Supported foundation | `anixops_rewrite_build_plan` aggregates phase rewrite, matching header rewrites, script dispatch, body-rewrite output, and `requires_body`; unit test compares it against individual evaluation APIs |
 | Regex backend selector | Supported foundation | `anixops_regex_backend_available`, `anixops_engine_set_regex_backend`, POSIX Lite default |

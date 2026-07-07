@@ -139,8 +139,17 @@ static int anixops_add_rule_diagnostic(
 	anixops_config_section_t section,
 	const char *action,
 	const char *message);
+static int anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+	anixops_engine_t *engine,
+	size_t line,
+	anixops_config_section_t section,
+	const char *action,
+	const char *ignored_message);
 static const char *anixops_section_name(anixops_config_section_t section);
 static int anixops_compat_profile_is_valid(anixops_compat_profile_t profile);
+static int anixops_compat_profile_rejects_ignored_rule(
+	const anixops_engine_t *engine,
+	anixops_config_section_t section);
 static int anixops_regex_backend_is_valid(anixops_regex_backend_t backend);
 static void anixops_trim_inplace(char *value);
 static void anixops_lower_inplace(char *value);
@@ -782,15 +791,16 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					return ANIXOPS_ERR_OUT_OF_MEMORY;
 				}
 			}
-			else if (anixops_add_rule_diagnostic(
-					 engine,
-					 ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
-					 line_no,
-					 section,
-					 "rewrite",
-					 "rewrite rule ignored") != ANIXOPS_OK) {
-				free(line);
-				return ANIXOPS_ERR_OUT_OF_MEMORY;
+			else {
+				int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+					engine,
+					line_no,
+					section,
+					"rewrite",
+					"rewrite rule ignored");
+				if (diag_rc != ANIXOPS_OK) {
+					return anixops_config_line_error(engine, diag_rc, line_no, line);
+				}
 			}
 			free(line);
 			if (line_end == NULL) {
@@ -825,15 +835,16 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					return ANIXOPS_ERR_OUT_OF_MEMORY;
 				}
 			}
-			else if (anixops_add_rule_diagnostic(
-					 engine,
-					 ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
-					 line_no,
-					 section,
-					 "script",
-					 "script rule ignored") != ANIXOPS_OK) {
-				free(line);
-				return ANIXOPS_ERR_OUT_OF_MEMORY;
+			else {
+				int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+					engine,
+					line_no,
+					section,
+					"script",
+					"script rule ignored");
+				if (diag_rc != ANIXOPS_OK) {
+					return anixops_config_line_error(engine, diag_rc, line_no, line);
+				}
 			}
 			free(line);
 			if (line_end == NULL) {
@@ -868,15 +879,16 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					return ANIXOPS_ERR_OUT_OF_MEMORY;
 				}
 			}
-			else if (anixops_add_rule_diagnostic(
-					 engine,
-					 ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
-					 line_no,
-					 section,
-					 "argument",
-					 "argument rule ignored") != ANIXOPS_OK) {
-				free(line);
-				return ANIXOPS_ERR_OUT_OF_MEMORY;
+			else {
+				int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+					engine,
+					line_no,
+					section,
+					"argument",
+					"argument rule ignored");
+				if (diag_rc != ANIXOPS_OK) {
+					return anixops_config_line_error(engine, diag_rc, line_no, line);
+				}
 			}
 			free(line);
 			if (line_end == NULL) {
@@ -910,15 +922,14 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 
 		eq = strchr(line, '=');
 		if (eq == NULL) {
-			if (anixops_add_rule_diagnostic(
+			int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
 					engine,
-					ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
 					line_no,
 					section,
 					"mitm",
-					"mitm line ignored") != ANIXOPS_OK) {
-				free(line);
-				return ANIXOPS_ERR_OUT_OF_MEMORY;
+					"mitm line ignored");
+			if (diag_rc != ANIXOPS_OK) {
+				return anixops_config_line_error(engine, diag_rc, line_no, line);
 			}
 			free(line);
 			if (line_end == NULL) {
@@ -1010,15 +1021,16 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 				return ANIXOPS_ERR_OUT_OF_MEMORY;
 			}
 		}
-		else if (anixops_add_rule_diagnostic(
-				 engine,
-				 ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
-				 line_no,
-				 section,
-				 key,
-				 "unsupported mitm option ignored") != ANIXOPS_OK) {
-			free(line);
-			return ANIXOPS_ERR_OUT_OF_MEMORY;
+		else {
+			int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+				engine,
+				line_no,
+				section,
+				key,
+				"unsupported mitm option ignored");
+			if (diag_rc != ANIXOPS_OK) {
+				return anixops_config_line_error(engine, diag_rc, line_no, line);
+			}
 		}
 		free(line);
 		if (line_end == NULL) {
@@ -2410,6 +2422,36 @@ static int anixops_add_rule_diagnostic(
 	return ANIXOPS_OK;
 }
 
+static int anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+	anixops_engine_t *engine,
+	size_t line,
+	anixops_config_section_t section,
+	const char *action,
+	const char *ignored_message)
+{
+	if (anixops_compat_profile_rejects_ignored_rule(engine, section)) {
+		int rc = anixops_add_rule_diagnostic(
+			engine,
+			ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
+			line,
+			section,
+			action,
+			"rule rejected by strict compatibility profile");
+		if (rc != ANIXOPS_OK) {
+			return rc;
+		}
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, line, "rule rejected by strict compatibility profile");
+		return ANIXOPS_ERR_PARSE;
+	}
+	return anixops_add_rule_diagnostic(
+		engine,
+		ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
+		line,
+		section,
+		action,
+		ignored_message);
+}
+
 static const char *anixops_section_name(anixops_config_section_t section)
 {
 	switch (section) {
@@ -2433,6 +2475,17 @@ static int anixops_compat_profile_is_valid(anixops_compat_profile_t profile)
 {
 	return profile == ANIXOPS_COMPAT_PORTABLE || profile == ANIXOPS_COMPAT_LOON_STRICT ||
 		profile == ANIXOPS_COMPAT_SURGE_STRICT || profile == ANIXOPS_COMPAT_QUANTUMULTX_STRICT;
+}
+
+static int anixops_compat_profile_rejects_ignored_rule(
+	const anixops_engine_t *engine,
+	anixops_config_section_t section)
+{
+	if (engine == NULL || engine->compat_profile == ANIXOPS_COMPAT_PORTABLE) {
+		return 0;
+	}
+	return section == ANIXOPS_SECTION_REWRITE || section == ANIXOPS_SECTION_SCRIPT ||
+		section == ANIXOPS_SECTION_ARGUMENT || section == ANIXOPS_SECTION_MITM;
 }
 
 static int anixops_regex_backend_is_valid(anixops_regex_backend_t backend)
