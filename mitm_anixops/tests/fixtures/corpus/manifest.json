@@ -13,7 +13,7 @@
       "expectedScript": 4,
       "expectedArgument": 11,
       "expectedDiagnosticAccepted": 16,
-      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticIgnored": 7,
       "expectedDiagnosticRejected": 0
     },
     {
@@ -28,7 +28,7 @@
       "expectedScript": 2,
       "expectedArgument": 1,
       "expectedDiagnosticAccepted": 6,
-      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticIgnored": 2,
       "expectedDiagnosticRejected": 0
     },
     {
@@ -36,14 +36,14 @@
       "platform": "surge",
       "path": "../Representative.Surge.sgmodule",
       "source": "bundled fixture",
-      "sha256": "7b0dfbaea6a3d8f618d84894644c45b5e8627fa0f1d85852ff03f0b8e34b212c",
+      "sha256": "6ce92b321d4b83f41252bdd447040e595fa8974b41a5864937f7ab6a2eea517c",
       "expectedStatus": 0,
       "expectedMitm": 1,
       "expectedRewrite": 0,
       "expectedScript": 2,
       "expectedArgument": 2,
       "expectedDiagnosticAccepted": 4,
-      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticIgnored": 4,
       "expectedDiagnosticRejected": 0
     },
     {
@@ -58,7 +58,7 @@
       "expectedScript": 1,
       "expectedArgument": 0,
       "expectedDiagnosticAccepted": 4,
-      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticIgnored": 1,
       "expectedDiagnosticRejected": 0
     }
   ]

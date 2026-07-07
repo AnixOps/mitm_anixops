@@ -22,8 +22,9 @@ Included:
 ## Implemented Toward P1-P6
 
 - P1 parser foundation: compatibility profile selector, strict-profile rejection for ignored rule-shaped lines inside
-  supported sections, per-rule accepted/ignored/rejected diagnostics, `[Plugin]` metadata tolerance, `[Body Rewrite]`
-  and `[Remote Body Rewrite]` aliases.
+  supported sections, per-rule accepted/ignored/rejected diagnostics, `[Plugin]` and `#!` metadata tolerance,
+  Surge `#!arguments`, `%APPEND%`/`%INSERT%` module patch markers, `[Body Rewrite]` and `[Remote Body Rewrite]`
+  aliases.
 - P2 regex foundation: regex backend selector with POSIX Lite default, stable empty-match replacement behavior for `^`,
   `$`, and lazy `.*?`, and optional PCRE2 compile/match/replace support when built with `PCRE2=1`;
   NSRegularExpression is still a future Darwin backend.

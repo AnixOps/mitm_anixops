@@ -763,7 +763,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.44.0");
+        assert_eq!(version(), "0.44.1");
         let mut engine = Engine::new().unwrap();
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);

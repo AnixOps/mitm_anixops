@@ -142,17 +142,22 @@ static void no_host_match_bypasses(void)
 	anixops_engine_free(engine);
 }
 
-static void append_marker_is_ignored_in_mitm_hostname(void)
+static void module_patch_markers_are_ignored_in_mitm_hostname(void)
 {
 	anixops_engine_t *engine = trusted_mitm_engine();
 	anixops_mitm_decision_t decision;
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
-	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_mitm_hostname(engine, "%APPEND% app.bilibili.com, app.biliapi.net"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_mitm_hostname(engine, "%APPEND% app.bilibili.com, %INSERT% app.biliapi.net"),
+		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 2);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "app.bilibili.com", 0, &decision), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
 	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "app.bilibili.com");
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "app.biliapi.net", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "app.biliapi.net");
 
 	anixops_engine_free(engine);
 }
@@ -184,6 +189,11 @@ void anixops_register_mitm_tests(anixops_test_case_t *tests, size_t *count, size
 	add_test(tests, count, cap, "mitm/wildcard_matches_subdomain_and_base_domain", wildcard_matches_subdomain_and_base_domain);
 	add_test(tests, count, cap, "mitm/host_normalization_handles_case_port_and_ipv6_literal", host_normalization_handles_case_port_and_ipv6_literal);
 	add_test(tests, count, cap, "mitm/no_host_match_bypasses", no_host_match_bypasses);
-	add_test(tests, count, cap, "mitm/append_marker_is_ignored_in_mitm_hostname", append_marker_is_ignored_in_mitm_hostname);
+	add_test(
+		tests,
+		count,
+		cap,
+		"mitm/module_patch_markers_are_ignored_in_mitm_hostname",
+		module_patch_markers_are_ignored_in_mitm_hostname);
 	add_test(tests, count, cap, "mitm/quic_match_returns_reject_decision_by_default", quic_match_returns_reject_decision_by_default);
 }

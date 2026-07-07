@@ -12,6 +12,7 @@ unsupported unless a test or E2E fixture is added.
 | --- | --- | --- | --- |
 | AnixOps/Loon plugin | `[Argument]`, `[Script]`, `[MITM]`, `[Rewrite]` | Supported subset | `test_config.c`, `test_script.c`, BiliBili and representative Loon fixtures |
 | Loon plugin metadata | `[Plugin]` | Tolerated metadata section | `plugin_metadata_section_is_tolerated_with_diagnostics` |
+| Hashbang metadata | `#!name`, `#!desc`, `#!arguments-desc`, `#!requirement` | Tolerated with ignored diagnostics | representative corpus fixtures |
 | Loon rewrite aliases | `[URL Rewrite]`, `[Remote Rewrite]` | Supported subset | `config_accepts_section_aliases_and_crlf` |
 | Loon body rewrite aliases | `[Body Rewrite]`, `[Remote Body Rewrite]` | Supported subset | `config_accepts_body_rewrite_section_aliases` |
 | Loon header rewrite aliases | `[Header Rewrite]`, `[Remote Header Rewrite]` | Supported subset | `config_accepts_header_rewrite_section_aliases` |
@@ -28,7 +29,7 @@ features it understands.
 | Feature | Status | Public API / Evidence |
 | --- | --- | --- |
 | `hostname = host1, host2` | Supported | `anixops_engine_add_mitm_hostname`, `anixops_mitm_evaluate` |
-| `%APPEND%` prefix | Supported | `append_marker_is_ignored_in_mitm_hostname` |
+| `%APPEND%` / `%INSERT%` prefixes | Supported | `module_patch_markers_are_ignored_in_mitm_hostname` |
 | Allow host patterns | Supported | exact, wildcard, `*.` suffix tests |
 | Deny host patterns | Supported | `-host` and `!host` tests |
 | Certificate trust gate | Supported as adapter input | `anixops_engine_set_cert_state` |

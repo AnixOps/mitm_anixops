@@ -144,6 +144,7 @@ static void representative_surge_fixture_is_supported(void)
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_script_result_t script;
 	anixops_mitm_decision_t mitm;
+	anixops_rule_diagnostic_t diagnostic;
 	ANIXOPS_EXPECT_TRUE(fixture != NULL);
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
@@ -152,6 +153,17 @@ static void representative_surge_fixture_is_supported(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 8);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 1);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "name");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "#! metadata ignored");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 4, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 5);
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "requirement");
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_script_evaluate_url(engine, "https://api.surge.example/v1", ANIXOPS_PHASE_REQUEST, &script),

@@ -155,6 +155,7 @@ static void anixops_trim_inplace(char *value);
 static void anixops_lower_inplace(char *value);
 static int anixops_parse_bool(const char *value);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
+static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap);
 static int anixops_is_rewrite_section(const char *key);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
@@ -369,7 +370,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.44.0";
+	return "0.44.1";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -705,6 +706,28 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			cursor = line_end + 1;
 			line_no++;
 			continue;
+		}
+		{
+			char metadata_key[ANIXOPS_PATTERN_CAP];
+			if (anixops_parse_hashbang_metadata_key(line, metadata_key, sizeof(metadata_key))) {
+				if (anixops_add_rule_diagnostic(
+						engine,
+						ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
+						line_no,
+						ANIXOPS_SECTION_PLUGIN,
+						metadata_key,
+						"#! metadata ignored") != ANIXOPS_OK) {
+					free(line);
+					return ANIXOPS_ERR_OUT_OF_MEMORY;
+				}
+				free(line);
+				if (line_end == NULL) {
+					break;
+				}
+				cursor = line_end + 1;
+				line_no++;
+				continue;
+			}
 		}
 		if (line[0] == '\0' || line[0] == '#' || (line[0] == '/' && line[1] == '/')) {
 			free(line);
@@ -1692,6 +1715,10 @@ ANIXOPS_API int anixops_engine_add_mitm_hostname(anixops_engine_t *engine, const
 		}
 		if (anixops_starts_with_ci(item, "%APPEND%")) {
 			item += strlen("%APPEND%");
+			anixops_trim_inplace(item);
+		}
+		else if (anixops_starts_with_ci(item, "%INSERT%")) {
+			item += strlen("%INSERT%");
 			anixops_trim_inplace(item);
 		}
 		if (item[0] == '-' || item[0] == '!') {
@@ -2917,6 +2944,40 @@ static int anixops_starts_with_ci(const char *value, const char *prefix)
 {
 	size_t prefix_len = strlen(prefix);
 	return strncasecmp(value, prefix, prefix_len) == 0;
+}
+
+static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap)
+{
+	const char *p;
+	size_t len = 0;
+	char key[ANIXOPS_PATTERN_CAP];
+
+	if (line == NULL || out_key == NULL || out_key_cap == 0 || !anixops_starts_with_ci(line, "#!")) {
+		return 0;
+	}
+	p = line + 2;
+	while (*p != '\0' && *p != '=' && !isspace((unsigned char)*p) && len + 1 < sizeof(key)) {
+		key[len++] = *p++;
+	}
+	key[len] = '\0';
+	if (key[0] == '\0' || strcasecmp(key, "arguments") == 0) {
+		return 0;
+	}
+	if (!(strcasecmp(key, "name") == 0 ||
+			strcasecmp(key, "desc") == 0 ||
+			strcasecmp(key, "description") == 0 ||
+			strcasecmp(key, "author") == 0 ||
+			strcasecmp(key, "category") == 0 ||
+			strcasecmp(key, "icon") == 0 ||
+			strcasecmp(key, "homepage") == 0 ||
+			strcasecmp(key, "date") == 0 ||
+			strcasecmp(key, "system") == 0 ||
+			strcasecmp(key, "requirement") == 0 ||
+			strcasecmp(key, "arguments-desc") == 0)) {
+		return 0;
+	}
+	anixops_copy_text(out_key, out_key_cap, key);
+	return 1;
 }
 
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap)

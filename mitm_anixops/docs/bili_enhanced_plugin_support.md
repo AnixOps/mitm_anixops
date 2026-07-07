@@ -46,10 +46,10 @@ Implemented in this library:
 - parse `.snippet` `#[rewrite_local]` script rewrite lines such as `url script-response-body`
 - parse Surge-style `name = type=http-response, pattern=...` script lines
 - parse `.sgmodule` `#!arguments` defaults
-- ignore `.sgmodule` metadata such as `#!arguments-desc` when building defaults
+- ignore `#!` metadata such as `#!arguments-desc` when building defaults
 - evaluate scripts by URL and phase through `anixops_script_evaluate_url`
 - return `script-path`, `tag`, `requires-body`, and resolved `$argument`
-- parse `[MitM] hostname`, including `%APPEND%` prefixes used by `.sgmodule`
+- parse `[MitM] hostname`, including `%APPEND%` and `%INSERT%` prefixes used by `.sgmodule`
 
 Implemented in the E2E adapter:
 
