@@ -16,7 +16,7 @@ http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, script-path=https
 `
 
 func TestGoBindingEvaluatesPolicy(t *testing.T) {
-	if Version() != "0.41.0" {
+	if Version() != "0.42.0" {
 		t.Fatalf("Version() = %q", Version())
 	}
 	engine, err := NewEngine()
@@ -55,6 +55,22 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	}
 	if bodyRewrite.Message != "body rewritten" {
 		t.Fatalf("body rewrite message = %q", bodyRewrite.Message)
+	}
+
+	namedHeader, err := engine.EvaluateNamedHeader("https://api.go.example/v1", PhaseResponse, 0, "x-go", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if namedHeader.Action != RewriteResponseHeaderAdd || namedHeader.HeaderName != "X-Go" || namedHeader.Value != "go-plan" {
+		t.Fatalf("unexpected named header: %+v", namedHeader)
+	}
+
+	missingHeader, err := engine.EvaluateNamedHeader("https://api.go.example/v1", PhaseResponse, 0, "x-missing", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if missingHeader.Action != RewriteNone {
+		t.Fatalf("unexpected missing named header: %+v", missingHeader)
 	}
 
 	plan, planBody, err := engine.BuildPlan("https://api.go.example/v1", PhaseResponse, "from=1")

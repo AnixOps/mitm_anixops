@@ -42,8 +42,8 @@ Included:
   mutation with identity writeback.
 - P6 packaging foundation: `make alpha-dist` creates a tar.gz package with libraries, pkg-config metadata, CMake package
   config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, representative fixtures, the corpus
-  manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan in addition to
-  rewrite/body/script helpers.
+  manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan and named-header lookup
+  in addition to rewrite/body/script helpers.
 
 ## Known Gaps
 

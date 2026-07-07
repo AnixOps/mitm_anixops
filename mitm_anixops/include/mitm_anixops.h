@@ -20,7 +20,7 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 41
+#define ANIXOPS_VERSION_MINOR 42
 #define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
@@ -246,6 +246,14 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 	const char *url,
 	anixops_phase_t phase,
 	size_t start_index,
+	const char *current_header_value,
+	anixops_header_rewrite_result_t *out_result);
+ANIXOPS_API int anixops_rewrite_evaluate_named_header(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	size_t start_index,
+	const char *header_name,
 	const char *current_header_value,
 	anixops_header_rewrite_result_t *out_result);
 

@@ -167,6 +167,38 @@ func (e *Engine) ApplyBody(url string, phase Phase, body string) (string, Rewrit
 	return C.GoString((*C.char)(unsafe.Pointer(&out[0]))), rewriteResultFromC(&result), nil
 }
 
+func (e *Engine) EvaluateNamedHeader(
+	url string,
+	phase Phase,
+	startIndex int,
+	headerName string,
+	currentHeaderValue string,
+) (HeaderRewriteResult, error) {
+	var result C.anixops_header_rewrite_result_t
+	if e == nil || e.ptr == nil {
+		return HeaderRewriteResult{}, fmt.Errorf("anixops: nil engine")
+	}
+	curl := C.CString(url)
+	cheaderName := C.CString(headerName)
+	ccurrentHeaderValue := C.CString(currentHeaderValue)
+	defer C.free(unsafe.Pointer(curl))
+	defer C.free(unsafe.Pointer(cheaderName))
+	defer C.free(unsafe.Pointer(ccurrentHeaderValue))
+	if err := statusError(
+		"evaluate named header",
+		C.anixops_rewrite_evaluate_named_header(
+			e.ptr,
+			curl,
+			C.anixops_phase_t(phase),
+			C.size_t(startIndex),
+			cheaderName,
+			ccurrentHeaderValue,
+			&result)); err != nil {
+		return HeaderRewriteResult{}, err
+	}
+	return headerRewriteResultFromC(&result), nil
+}
+
 func (e *Engine) BuildPlan(url string, phase Phase, body string) (RewritePlan, string, error) {
 	var plan C.anixops_rewrite_plan_t
 	outCap := len(body) + C.ANIXOPS_VALUE_CAP

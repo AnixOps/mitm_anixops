@@ -272,6 +272,14 @@ static int anixops_apply_body_jq_replacement(
 	size_t out_cap,
 	int *out_replaced,
 	int *out_runtime_available);
+static int anixops_rewrite_evaluate_header_internal(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	size_t start_index,
+	const char *header_name,
+	const char *current_header_value,
+	anixops_header_rewrite_result_t *out_result);
 static int anixops_apply_regex_replacement(
 	const char *input,
 	const anixops_compiled_regex_t *regex,
@@ -354,7 +362,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.41.0";
+	return "0.42.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2002,6 +2010,47 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 	const char *current_header_value,
 	anixops_header_rewrite_result_t *out_result)
 {
+	return anixops_rewrite_evaluate_header_internal(
+		engine,
+		url,
+		phase,
+		start_index,
+		NULL,
+		current_header_value,
+		out_result);
+}
+
+ANIXOPS_API int anixops_rewrite_evaluate_named_header(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	size_t start_index,
+	const char *header_name,
+	const char *current_header_value,
+	anixops_header_rewrite_result_t *out_result)
+{
+	if (header_name == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	return anixops_rewrite_evaluate_header_internal(
+		engine,
+		url,
+		phase,
+		start_index,
+		header_name,
+		current_header_value,
+		out_result);
+}
+
+static int anixops_rewrite_evaluate_header_internal(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	size_t start_index,
+	const char *header_name,
+	const char *current_header_value,
+	anixops_header_rewrite_result_t *out_result)
+{
 	size_t i;
 
 	if (engine == NULL || url == NULL || out_result == NULL) {
@@ -2014,6 +2063,9 @@ ANIXOPS_API int anixops_rewrite_evaluate_header(
 		regmatch_t url_matches[ANIXOPS_MATCH_CAP];
 		int rc;
 		if (rule->phase != phase || !rule->regex_ready || !anixops_rewrite_action_rewrites_header(rule->action)) {
+			continue;
+		}
+		if (header_name != NULL && strcasecmp(rule->header_name, header_name) != 0) {
 			continue;
 		}
 		rc = anixops_regex_exec(&rule->regex, url, sizeof(url_matches) / sizeof(url_matches[0]), url_matches);

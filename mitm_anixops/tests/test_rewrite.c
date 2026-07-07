@@ -2426,6 +2426,70 @@ static void header_rewrite_enumerates_matching_rules_with_start_index(void)
 	anixops_engine_free(engine);
 }
 
+static void named_header_rewrite_matches_header_case_insensitively(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_rewrite_result_t header;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/(.*) response-header-replace X-Mode mode-$1"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/(.*) response-header-replace-regex X-Mode \"old=([A-Za-z]+)\" \"new=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/(.*) response-header-replace X-Other other-$1"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_named_header(
+			engine,
+			"https://api.test/path",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"x-mode",
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE);
+	ANIXOPS_EXPECT_EQ_INT(header.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(header.value, "mode-path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_named_header(
+			engine,
+			"https://api.test/path",
+			ANIXOPS_PHASE_RESPONSE,
+			(size_t)header.rule_index + 1,
+			"X-MODE",
+			"old=Fast",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(header.rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(header.value, "new=Fast");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_named_header(
+			engine,
+			"https://api.test/path",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"x-missing",
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(header.rule_index, -1);
+
+	anixops_engine_free(engine);
+}
+
 static void rewrite_plan_matches_individual_evaluation_order(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2898,6 +2962,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/header_rewrite_enumerates_matching_rules_with_start_index",
 		header_rewrite_enumerates_matching_rules_with_start_index);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/named_header_rewrite_matches_header_case_insensitively",
+		named_header_rewrite_matches_header_case_insensitively);
 	add_test(tests, count, cap, "rewrite/rewrite_plan_matches_individual_evaluation_order", rewrite_plan_matches_individual_evaluation_order);
 	add_test(tests, count, cap, "rewrite/request_header_delete_is_supported", request_header_delete_is_supported);
 	add_test(

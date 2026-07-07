@@ -87,6 +87,15 @@ extern "C" {
         out_body_cap: usize,
         out_result: *mut AnixopsRewriteResult,
     ) -> c_int;
+    fn anixops_rewrite_evaluate_named_header(
+        engine: *const AnixopsEngine,
+        url: *const c_char,
+        phase: c_int,
+        start_index: usize,
+        header_name: *const c_char,
+        current_header_value: *const c_char,
+        out_result: *mut AnixopsHeaderRewriteResult,
+    ) -> c_int;
     fn anixops_script_evaluate_url(
         engine: *const AnixopsEngine,
         url: *const c_char,
@@ -308,6 +317,36 @@ impl Engine {
         Ok(script_result_from_c(&result))
     }
 
+    pub fn evaluate_named_header(
+        &self,
+        url: &str,
+        phase: Phase,
+        start_index: usize,
+        header_name: &str,
+        current_header_value: &str,
+    ) -> Result<HeaderRewriteResult, Error> {
+        let url = CString::new(url).expect("url must not contain nul bytes");
+        let header_name = CString::new(header_name).expect("header_name must not contain nul bytes");
+        let current_header_value =
+            CString::new(current_header_value).expect("current_header_value must not contain nul bytes");
+        let mut result = empty_header_rewrite_result();
+        check_status(
+            "evaluate_named_header",
+            unsafe {
+                anixops_rewrite_evaluate_named_header(
+                    self.ptr,
+                    url.as_ptr(),
+                    phase.as_c(),
+                    start_index,
+                    header_name.as_ptr(),
+                    current_header_value.as_ptr(),
+                    &mut result,
+                )
+            },
+        )?;
+        Ok(header_rewrite_result_from_c(&result))
+    }
+
     pub fn build_plan(
         &self,
         url: &str,
@@ -508,7 +547,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.41.0");
+        assert_eq!(version(), "0.42.0");
         let mut engine = Engine::new().unwrap();
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);
@@ -526,6 +565,18 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
             .unwrap();
         assert_eq!(body, "to=1");
         assert_eq!(body_rewrite.message, "body rewritten");
+
+        let named_header = engine
+            .evaluate_named_header("https://api.rust.example/v1", Phase::Response, 0, "x-rust", "")
+            .unwrap();
+        assert_eq!(named_header.action, RewriteAction::ResponseHeaderAdd);
+        assert_eq!(named_header.header_name, "X-Rust");
+        assert_eq!(named_header.value, "rust-plan");
+
+        let missing_header = engine
+            .evaluate_named_header("https://api.rust.example/v1", Phase::Response, 0, "x-missing", "")
+            .unwrap();
+        assert_eq!(missing_header.action, RewriteAction::None);
 
         let (plan, plan_body) = engine
             .build_plan("https://api.rust.example/v1", Phase::Response, "from=1")

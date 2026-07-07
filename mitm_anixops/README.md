@@ -34,7 +34,8 @@ Implemented:
   empty, common escaped, and `\uXXXX` bracket string keys, and array indexes such as `$.enabled`,
   `$['profile.meta'].name`, `$.items[0].title`, and `$.items[-1].title`, with raw JSON literals such as `true`, `null`,
   objects, arrays, or quoted strings.
-- Request/response header rewrite dispatch for add, replace, delete, and regex replace actions.
+- Request/response header rewrite dispatch for add, replace, delete, and regex replace actions, including a
+  case-insensitive named-header lookup API for adapters that evaluate a specific header field.
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, header rewrite,
   `echo-response`, and request/response script actions.
 - Regex capture replacement with `$1`, `${1}`, and `\1`.
@@ -128,7 +129,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.41.0.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.42.0.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
@@ -138,7 +139,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.41.0/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.42.0/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:

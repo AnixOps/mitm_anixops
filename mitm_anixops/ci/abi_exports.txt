@@ -29,6 +29,7 @@ anixops_regex_backend_available
 anixops_rewrite_apply_body
 anixops_rewrite_build_plan
 anixops_rewrite_evaluate_header
+anixops_rewrite_evaluate_named_header
 anixops_rewrite_evaluate_url
 anixops_script_evaluate_url
 anixops_status_message
