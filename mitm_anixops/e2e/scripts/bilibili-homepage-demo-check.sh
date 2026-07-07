@@ -164,6 +164,9 @@ assert_header_contains_ci "$TMP/headers.out" "X-Origin-Accept-Encoding: identity
 assert_contains "$TMP/body.out" "anixops-bilibili-homepage-demo"
 assert_contains "$TMP/body.out" "document.title = \"test\""
 assert_contains "$TMP/body.out" "brightness(0)"
+assert_contains "$TMP/body.out" "retryDelays"
+assert_not_contains "$TMP/body.out" "MutationObserver"
+assert_not_contains "$TMP/body.out" "setInterval"
 
 curl --silent --show-error --max-time 12 --http1.1 \
 	--proxy "http://127.0.0.1:${SHIM_PORT}" \

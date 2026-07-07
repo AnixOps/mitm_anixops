@@ -19,19 +19,22 @@ let body = $response.body || "";
 const marker = "anixops-bilibili-homepage-demo";
 const injection = `
 <style id="${marker}-style">
-img,
-picture,
-video,
-[class*="cover"],
-[class*="Cover"],
-[class*="pic"],
-[class*="Pic"] {
+.bili-video-card__cover img,
+.video-card__cover img,
+.feed-card img,
+.bili-rank-list-video__cover img,
+.floor-single-card img,
+img[class*="cover"],
+img[class*="Cover"],
+img[class*="pic"],
+img[class*="Pic"] {
   filter: brightness(0) !important;
   background: #000 !important;
 }
 </style>
 <script id="${marker}-script">
 (() => {
+  const retryDelays = [0, 250, 750, 1500, 3000, 5000, 8000, 12000];
   const titleSelectors = [
     ".bili-video-card__info--tit",
     ".video-card__info--tit",
@@ -39,8 +42,6 @@ video,
     ".bili-rank-list-video__title",
     ".floor-single-card .title"
   ];
-  let scheduled = false;
-
   function setTitle(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) {
       return;
@@ -58,7 +59,6 @@ video,
   }
 
   function rewrite() {
-    scheduled = false;
     if (document.title !== "test") {
       document.title = "test";
     }
@@ -74,27 +74,28 @@ video,
         }
         seen.add(node);
         setTitle(node);
-        if (seen.size >= 200) {
+        if (seen.size >= 120) {
           return;
         }
       }
     }
   }
 
-  function schedule() {
-    if (scheduled) {
-      return;
-    }
-    scheduled = true;
-    requestAnimationFrame(rewrite);
+  function scheduleRewrite(delay) {
+    setTimeout(() => requestAnimationFrame(rewrite), delay);
   }
 
-  rewrite();
-  new MutationObserver(schedule).observe(document.body || document.documentElement, {
-    childList: true,
-    subtree: true
-  });
-  setInterval(schedule, 3000);
+  function start() {
+    for (const delay of retryDelays) {
+      scheduleRewrite(delay);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start, { once: true });
+  } else {
+    start();
+  }
 })();
 </script>`;
 
