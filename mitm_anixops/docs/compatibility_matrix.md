@@ -30,7 +30,7 @@ features it understands.
 | Allow host patterns | Supported | exact, wildcard, `*.` suffix tests |
 | Deny host patterns | Supported | `-host` and `!host` tests |
 | Certificate trust gate | Supported as adapter input | `anixops_engine_set_cert_state` |
-| QUIC rejection decision | Supported as adapter signal | `ANIXOPS_MITM_REJECT_QUIC` |
+| QUIC rejection decision and config flag | Supported as adapter signal | `ANIXOPS_MITM_REJECT_QUIC`, `disable-quic`, `disable_quic`, `disable-mitm-quic`, and `disable_mitm_quic` tests |
 | HTTP/2 MITM config flag | Supported | `h2`, `h2-enable`, and `h2_enable` tests |
 | Dynamic certificates / trust store install | Out of scope | adapter responsibility |
 

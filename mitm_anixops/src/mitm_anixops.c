@@ -276,7 +276,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.38.0";
+	return "0.39.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -628,7 +628,8 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			strcasecmp(key, "h2_enable") == 0) {
 			engine->h2_mitm_enabled = anixops_parse_bool(value);
 		}
-		else if (strcasecmp(key, "disable-quic") == 0 || strcasecmp(key, "disable-mitm-quic") == 0) {
+		else if (strcasecmp(key, "disable-quic") == 0 || strcasecmp(key, "disable_quic") == 0 ||
+			strcasecmp(key, "disable-mitm-quic") == 0 || strcasecmp(key, "disable_mitm_quic") == 0) {
 			engine->disable_quic_for_mitm = anixops_parse_bool(value);
 		}
 		free(line);

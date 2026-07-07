@@ -128,6 +128,26 @@ static void config_accepts_h2_enable_mitm_key_alias(void)
 	anixops_engine_free(engine);
 }
 
+static void config_accepts_disable_quic_mitm_key_aliases(void)
+{
+	const char *config =
+		"[MITM]\n"
+		"enable = true\n"
+		"hostname = api.example.test\n"
+		"disable_quic = false\n"
+		"disable_mitm_quic = false\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_mitm_decision_t decision;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.example.test", 1, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+}
+
 static void config_parses_script_and_ignores_unknown_sections(void)
 {
 	const char *config =
@@ -245,6 +265,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_accepts_h2_enable_mitm_key_alias",
 		config_accepts_h2_enable_mitm_key_alias);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_accepts_disable_quic_mitm_key_aliases",
+		config_accepts_disable_quic_mitm_key_aliases);
 	add_test(
 		tests,
 		count,
