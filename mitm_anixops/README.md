@@ -46,6 +46,8 @@ Implemented:
 - PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching, normalized as regular POSIX capturing
   groups.
 - PCRE quoted literal syntax `\Q...\E`, normalized as escaped POSIX ERE literal text.
+- Stable global regex replacement behavior for empty matches such as `^`, `$`, and lazy `.*?` normalization in body and
+  header rewrite paths.
 - AnixOps/Surge-style module script metadata for HTTP request/response hooks.
 - AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, plus per-argument overrides for script `$argument` generation.
 - Optional libjq execution for `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` when built
@@ -64,7 +66,8 @@ Not implemented yet:
   corpus coverage.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
-  shorthand classes, absolute anchors, named capture groups, and quoted literal matching subset.
+  shorthand classes, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement
+  subset.
 - Full AnixOps compatibility.
 
 ## Build

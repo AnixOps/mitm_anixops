@@ -24,8 +24,9 @@ Included:
 - P1 parser foundation: compatibility profile selector, strict-profile rejection for ignored rule-shaped lines inside
   supported sections, per-rule accepted/ignored/rejected diagnostics, `[Plugin]` metadata tolerance, `[Body Rewrite]`
   and `[Remote Body Rewrite]` aliases.
-- P2 regex foundation: regex backend selector with POSIX Lite default and optional PCRE2 compile/match/replace support
-  when built with `PCRE2=1`; NSRegularExpression is still a future Darwin backend.
+- P2 regex foundation: regex backend selector with POSIX Lite default, stable empty-match replacement behavior for `^`,
+  `$`, and lazy `.*?`, and optional PCRE2 compile/match/replace support when built with `PCRE2=1`;
+  NSRegularExpression is still a future Darwin backend.
 - P3 JQ foundation: `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` rules parse and
   match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with tested
   first-output, empty-output, compile-error, and invalid-JSON behavior.

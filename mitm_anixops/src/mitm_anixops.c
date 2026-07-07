@@ -171,6 +171,12 @@ static int anixops_regex_exec(
 	const char *text,
 	size_t match_count,
 	regmatch_t *matches);
+static int anixops_regex_exec_with_flags(
+	const anixops_compiled_regex_t *regex,
+	const char *text,
+	size_t match_count,
+	regmatch_t *matches,
+	int not_bol);
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
 static int anixops_normalize_regex_pattern(
 	const char *pattern,
@@ -2725,6 +2731,16 @@ static int anixops_regex_exec(
 	size_t match_count,
 	regmatch_t *matches)
 {
+	return anixops_regex_exec_with_flags(regex, text, match_count, matches, 0);
+}
+
+static int anixops_regex_exec_with_flags(
+	const anixops_compiled_regex_t *regex,
+	const char *text,
+	size_t match_count,
+	regmatch_t *matches,
+	int not_bol)
+{
 	if (regex == NULL || text == NULL) {
 		return REG_NOMATCH;
 	}
@@ -2742,7 +2758,7 @@ static int anixops_regex_exec(
 			(PCRE2_SPTR)text,
 			strlen(text),
 			0,
-			0,
+			not_bol ? PCRE2_NOTBOL : 0,
 			match_data,
 			NULL);
 		if (rc < 0) {
@@ -2769,7 +2785,7 @@ static int anixops_regex_exec(
 	if (!regex->posix_ready) {
 		return REG_NOMATCH;
 	}
-	return regexec(&regex->posix, text, match_count, matches, 0);
+	return regexec(&regex->posix, text, match_count, matches, not_bol ? REG_NOTBOL : 0);
 }
 
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags)
@@ -3997,7 +4013,12 @@ static int anixops_apply_regex_replacement(
 	}
 	out[0] = '\0';
 
-	while (anixops_regex_exec(regex, cursor, sizeof(matches) / sizeof(matches[0]), matches) == 0) {
+	while (anixops_regex_exec_with_flags(
+		       regex,
+		       cursor,
+		       sizeof(matches) / sizeof(matches[0]),
+		       matches,
+		       cursor != input) == 0) {
 		size_t prefix_len;
 		size_t advance;
 		if (matches[0].rm_so < 0 || matches[0].rm_eo < matches[0].rm_so) {
@@ -4032,6 +4053,9 @@ static int anixops_apply_regex_replacement(
 			continue;
 		}
 		cursor += advance;
+		if (cursor[0] == '\0') {
+			break;
+		}
 	}
 	if (anixops_append_range(out, out_cap, &pos, cursor, strlen(cursor)) != ANIXOPS_OK) {
 		truncated = 1;

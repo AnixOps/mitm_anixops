@@ -18,13 +18,14 @@ publishing.
   rule-shaped lines inside supported `[Rewrite]`, `[Script]`, `[Argument]`, and `[MITM]` sections; more exact
   LOON/SURGE/QX behavioral differences still need to be implemented rule-by-rule.
 - Regex backend selection now has an initial C ABI foundation with a POSIX Lite default and optional PCRE2
-  compile/match/replace support behind `PCRE2=1`; NSRegularExpression still needs a real Darwin backend.
+  compile/match/replace support behind `PCRE2=1`; body/header empty-match replacement behavior is covered for `^`,
+  `$`, and lazy `.*?`; NSRegularExpression still needs a real Darwin backend.
 - Full JQ-style JSON body rewrite hardening beyond the optional libjq backend behind `JQ=1`. Default builds still
   fail-open with `jq backend unavailable`; remaining work includes resource limits, production cache/reuse policy,
   broad plugin-corpus coverage, and edge behavior for predicates, slices, recursive selectors, and computed filters.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand class subset, horizontal and vertical whitespace subset, control, hex, and Unicode escapes, lazy quantifier
-  normalization, absolute anchors, named capture groups, and quoted literal matching subset.
+  normalization, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement subset.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, `echo-response`, common
   reject/body/header rewrite actions, and redirect actions.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.

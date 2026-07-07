@@ -539,6 +539,96 @@ static void request_body_replace_regex_applies_all_matches(void)
 	anixops_engine_free(engine);
 }
 
+static void regex_replacement_empty_matches_are_stable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	anixops_header_rewrite_result_t header;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test/start request-body-replace-regex ^ start-"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test/end request-body-replace-regex $ -end"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://body\\.test/lazy request-body-replace-regex \".*?\" all"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://header\\.test/start response-header-replace-regex X-Test ^ start-"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://header\\.test/end response-header-replace-regex X-Test $ -end"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test/start",
+			ANIXOPS_PHASE_REQUEST,
+			"abc",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "start-abc");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test/end",
+			ANIXOPS_PHASE_REQUEST,
+			"abc",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "abc-end");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.test/lazy",
+			ANIXOPS_PHASE_REQUEST,
+			"abc",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "all");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.test/start",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"value",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.value, "start-value");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.test/end",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"value",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.value, "value-end");
+
+	anixops_engine_free(engine);
+}
+
 static void response_body_replace_regex_supports_backslash_capture(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -1646,6 +1736,11 @@ static void pcre2_backend_matches_lookaround_when_available(void)
 			engine,
 			"^https://body\\.test request-body-replace-regex \"(?<=token=)(\\d+)\" \"$1-ok\""),
 		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://word\\.test request-body-replace-regex \"\\btoken\\b\" word"),
+		ANIXOPS_OK);
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_evaluate_url(engine, "https://api.test/item/42", ANIXOPS_PHASE_REQUEST, &rewrite),
@@ -1665,6 +1760,19 @@ static void pcre2_backend_matches_lookaround_when_available(void)
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
 	ANIXOPS_EXPECT_STREQ(body, "token=123-ok&ok=1");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://word.test",
+			ANIXOPS_PHASE_REQUEST,
+			"token tokenized",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "word tokenized");
 
 	anixops_engine_free(engine);
 }
@@ -2596,6 +2704,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 	add_test(tests, count, cap, "rewrite/mock_response_body_rewrites_only_response_phase", mock_response_body_rewrites_only_response_phase);
 	add_test(tests, count, cap, "rewrite/body_apply_reports_truncation_without_overflow", body_apply_reports_truncation_without_overflow);
 	add_test(tests, count, cap, "rewrite/request_body_replace_regex_applies_all_matches", request_body_replace_regex_applies_all_matches);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/regex_replacement_empty_matches_are_stable",
+		regex_replacement_empty_matches_are_stable);
 	add_test(
 		tests,
 		count,
