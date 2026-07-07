@@ -31,34 +31,45 @@ img[class*="Pic"] {
   filter: brightness(0) !important;
   background: #000 !important;
 }
+.bili-video-card__info--tit,
+.video-card__info--tit,
+.feed-card .title,
+.bili-rank-list-video__title,
+.floor-single-card .title {
+  position: relative !important;
+  overflow: hidden !important;
+  color: transparent !important;
+  text-shadow: none !important;
+}
+.bili-video-card__info--tit *,
+.video-card__info--tit *,
+.feed-card .title *,
+.bili-rank-list-video__title *,
+.floor-single-card .title * {
+  visibility: hidden !important;
+}
+.bili-video-card__info--tit::after,
+.video-card__info--tit::after,
+.feed-card .title::after,
+.bili-rank-list-video__title::after,
+.floor-single-card .title::after {
+  content: "test";
+  position: absolute !important;
+  left: 0;
+  top: 0;
+  right: 0;
+  color: #18191c !important;
+  visibility: visible !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  pointer-events: none !important;
+}
 </style>
 <script id="${marker}-script">
 (() => {
-  const retryDelays = [0, 250, 750, 1500, 3000, 5000, 8000, 12000];
-  const titleSelectors = [
-    ".bili-video-card__info--tit",
-    ".video-card__info--tit",
-    ".feed-card .title",
-    ".bili-rank-list-video__title",
-    ".floor-single-card .title"
-  ];
-  function setTitle(node) {
-    if (!node || node.nodeType !== Node.ELEMENT_NODE) {
-      return;
-    }
-    if (node.children.length > 0 && node.querySelector("svg, img, picture, video")) {
-      return;
-    }
-    const text = (node.textContent || "").trim();
-    if (text && node.textContent !== "test") {
-      node.textContent = "test";
-    }
-    if (node.hasAttribute("title") && node.getAttribute("title") !== "test") {
-      node.setAttribute("title", "test");
-    }
-  }
-
-  function rewrite() {
+  let attempts = 0;
+  function setPageTitle() {
     if (document.title !== "test") {
       document.title = "test";
     }
@@ -66,35 +77,16 @@ img[class*="Pic"] {
     if (title && title.textContent !== "test") {
       title.textContent = "test";
     }
-    const seen = new Set();
-    for (const selector of titleSelectors) {
-      for (const node of document.querySelectorAll(selector)) {
-        if (seen.has(node)) {
-          continue;
-        }
-        seen.add(node);
-        setTitle(node);
-        if (seen.size >= 120) {
-          return;
-        }
-      }
-    }
-  }
-
-  function scheduleRewrite(delay) {
-    setTimeout(() => requestAnimationFrame(rewrite), delay);
-  }
-
-  function start() {
-    for (const delay of retryDelays) {
-      scheduleRewrite(delay);
+    attempts += 1;
+    if (attempts < 12) {
+      setTimeout(setPageTitle, attempts < 4 ? 250 : 1000);
     }
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start, { once: true });
+    document.addEventListener("DOMContentLoaded", setPageTitle, { once: true });
   } else {
-    start();
+    setPageTitle();
   }
 })();
 </script>`;
