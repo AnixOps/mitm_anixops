@@ -20,6 +20,8 @@ Implemented:
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.
 - AnixOps-style `[Rewrite]` URL rules for `302`, `307`, `reject`, `reject-200`, `reject-401`, `reject-img`,
   `reject-video`, `reject-dict`, `reject-array`.
+- Rewrite section aliases including `[URL Rewrite]`, `[Remote Rewrite]`, `[Header Rewrite]`, and
+  `[Remote Header Rewrite]`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.
 - JSON path request/response body replacement for already-buffered JSON bodies, using object paths, bracket string keys,
   and array indexes such as `$.enabled`, `$['profile.meta'].name`, and `$.items[0].title`, with raw JSON literals such

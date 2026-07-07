@@ -53,6 +53,36 @@ static void config_accepts_section_aliases_and_crlf(void)
 	anixops_engine_free(engine);
 }
 
+static void config_accepts_header_rewrite_section_aliases(void)
+{
+	const char *config =
+		"[Header Rewrite]\n"
+		"^https://api\\.test/request header-add X-Test value\n"
+		"[Remote Header Rewrite]\n"
+		"^https://api\\.test/response response-header-del Set-Cookie\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_rewrite_result_t header;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://api.test/request", ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_HEADER_ADD);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Test");
+	ANIXOPS_EXPECT_STREQ(header.value, "value");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(engine, "https://api.test/response", ANIXOPS_PHASE_RESPONSE, 1, NULL, &header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_DEL);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "Set-Cookie");
+
+	anixops_engine_free(engine);
+}
+
 static void config_parses_script_and_ignores_unknown_sections(void)
 {
 	const char *config =
@@ -152,6 +182,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 {
 	add_test(tests, count, cap, "config/config_parses_rewrite_and_mitm_sections", config_parses_rewrite_and_mitm_sections);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_accepts_header_rewrite_section_aliases",
+		config_accepts_header_rewrite_section_aliases);
 	add_test(
 		tests,
 		count,

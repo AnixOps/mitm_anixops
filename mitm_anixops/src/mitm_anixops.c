@@ -92,6 +92,7 @@ static void anixops_trim_inplace(char *value);
 static void anixops_lower_inplace(char *value);
 static int anixops_parse_bool(const char *value);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
+static int anixops_is_rewrite_section(const char *key);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
 static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags);
@@ -215,7 +216,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.14.0";
+	return "0.15.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -236,6 +237,20 @@ ANIXOPS_API const char *anixops_status_message(int status)
 	default:
 		return "unknown status";
 	}
+}
+
+static int anixops_is_rewrite_section(const char *key)
+{
+	return key != NULL &&
+		(strcasecmp(key, "rewrite") == 0 ||
+			strcasecmp(key, "rewrite_local") == 0 ||
+			strcasecmp(key, "rewrite local") == 0 ||
+			strcasecmp(key, "url rewrite") == 0 ||
+			strcasecmp(key, "remote rewrite") == 0 ||
+			strcasecmp(key, "header rewrite") == 0 ||
+			strcasecmp(key, "remote header rewrite") == 0 ||
+			strcasecmp(key, "header_rewrite") == 0 ||
+			strcasecmp(key, "remote_header_rewrite") == 0);
 }
 
 ANIXOPS_API anixops_engine_t *anixops_engine_new(void)
@@ -377,11 +392,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			line[len - 1] = '\0';
 			key = line + 2;
 			anixops_trim_inplace(key);
-			if (strcasecmp(key, "rewrite_local") == 0 ||
-				strcasecmp(key, "rewrite local") == 0 ||
-				strcasecmp(key, "rewrite") == 0 ||
-				strcasecmp(key, "url rewrite") == 0 ||
-				strcasecmp(key, "remote rewrite") == 0) {
+			if (anixops_is_rewrite_section(key)) {
 				section = SECTION_REWRITE;
 			}
 			else if (strcasecmp(key, "mitm") == 0) {
@@ -440,11 +451,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			if (strcasecmp(key, "argument") == 0 || strcasecmp(key, "arguments") == 0) {
 				section = SECTION_ARGUMENT;
 			}
-			else if (strcasecmp(key, "rewrite") == 0 ||
-				strcasecmp(key, "rewrite_local") == 0 ||
-				strcasecmp(key, "rewrite local") == 0 ||
-				strcasecmp(key, "url rewrite") == 0 ||
-				strcasecmp(key, "remote rewrite") == 0) {
+			else if (anixops_is_rewrite_section(key)) {
 				section = SECTION_REWRITE;
 			}
 			else if (strcasecmp(key, "mitm") == 0) {
