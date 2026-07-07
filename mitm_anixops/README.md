@@ -79,7 +79,8 @@ sh scripts/check.sh
 The check script cleans the build, compiles the static and shared libraries, runs the separated test fixture, verifies
 the complete exported C ABI symbol allowlist in `ci/abi_exports.txt` when `nm` is available, runs the minimal
 strategy-chain demo, runs the mihomo proxy-chain E2E when `MIHOMO_BIN` points to an executable binary, runs the
-BiliUniverse script-runtime E2E fixture, and checks the generic request/response script contract.
+BiliUniverse script-runtime E2E fixture, and checks the generic request/response script contract. GitHub Actions runs
+the same entrypoint after installing the pinned mihomo fixture with `scripts/ensure-mihomo.sh`.
 
 Test policy and layout are documented in `tests/README.md`.
 

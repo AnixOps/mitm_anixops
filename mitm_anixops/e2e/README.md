@@ -35,6 +35,12 @@ In this workspace the default is:
 ../downloads/mihomo-linux-amd64-compatible-v1.19.27
 ```
 
+To install the pinned fixture binary used by CI:
+
+```sh
+sh scripts/ensure-mihomo.sh
+```
+
 Covered:
 
 - loading a AnixOps-style `[Rewrite]` and `[MITM]` fixture through the C ABI

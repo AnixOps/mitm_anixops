@@ -13,11 +13,11 @@ jobs:
         working-directory: mitm_anixops
     steps:
       - uses: actions/checkout@v4
-      - name: Build and run unit tests
+      - name: Install mihomo fixture binary
+        run: sh scripts/ensure-mihomo.sh
+      - name: Run full project check
         run: |
-          make clean
-          make test
-          make all
+          sh scripts/check.sh
 
   windows-binary:
     runs-on: windows-latest

@@ -5,7 +5,8 @@ proxy client roadmap.
 
 ## Before A Stable Release
 
-- Keep `ci/abi_exports.txt` in sync with every intentional C ABI change.
+No additional release-blocking library tasks are tracked here. Keep the release checklist and CI gates green before
+publishing.
 
 ## Compatibility Gaps
 

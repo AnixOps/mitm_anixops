@@ -38,7 +38,8 @@ sh scripts/check.sh
 
 That command must pass before a commit is accepted. It includes the BiliUniverse script-runtime E2E fixture and the
 generic request/response script contract, plus the pure-C strategy-chain demo. It also runs the mihomo proxy-chain
-fixture when `MIHOMO_BIN` points to an executable binary.
+fixture when `MIHOMO_BIN` points to an executable binary. GitHub Actions installs the pinned mihomo fixture with
+`scripts/ensure-mihomo.sh` before running the same check entrypoint.
 
 The mihomo proxy-chain fixture can also be run directly:
 

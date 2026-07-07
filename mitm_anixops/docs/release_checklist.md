@@ -11,6 +11,8 @@ Use this checklist before publishing a `mitm_anixops` source tag, binary artifac
    sh scripts/check.sh
    ```
 
+   GitHub Actions runs the same check entrypoint on Linux after installing the pinned mihomo fixture.
+
 4. Confirm the check output includes:
 
    ```text
