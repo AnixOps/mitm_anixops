@@ -98,6 +98,13 @@ static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap
 static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags);
 static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
 static int anixops_normalize_regex_pattern(const char *pattern, char **out_pattern);
+static int anixops_regex_append_literal_bytes(
+	char *out,
+	size_t out_cap,
+	size_t *pos,
+	const char *bytes,
+	size_t len,
+	int in_class);
 static int anixops_regex_char_is_escaped(const char *pattern, size_t index);
 static int anixops_regex_closes_interval_quantifier(const char *pattern, size_t close_index);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
@@ -228,7 +235,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.22.0";
+	return "0.23.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1968,17 +1975,54 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 				int lo = anixops_hex_digit((unsigned char)pattern[i + 3]);
 				if (hi >= 0 && lo >= 0) {
 					unsigned char value = (unsigned char)((hi << 4) | lo);
-					const char *meta = in_class ? "\\]-^" : ".^$*+?()[]{}|\\";
 					if (value == '\0') {
 						free(out);
 						return ANIXOPS_ERR_PARSE;
 					}
-					if (strchr(meta, value) != NULL) {
-						out[pos++] = '\\';
+					if (anixops_regex_append_literal_bytes(out, cap, &pos, (const char *)&value, 1, in_class) !=
+						ANIXOPS_OK) {
+						free(out);
+						return ANIXOPS_ERR_PARSE;
 					}
-					out[pos++] = (char)value;
 					i += 3;
 					continue;
+				}
+			}
+			else if (next == 'u' && i + 5 < len) {
+				const char *cursor = pattern + i + 2;
+				const char *end = pattern + len;
+				unsigned long codepoint;
+				char utf8[4];
+				size_t utf8_len = 0;
+				int valid = 1;
+				if (anixops_json_read_hex4(&cursor, end, &codepoint)) {
+					if (codepoint >= 0xD800UL && codepoint <= 0xDBFFUL) {
+						unsigned long low;
+						if ((size_t)(end - cursor) < 6 || cursor[0] != '\\' || cursor[1] != 'u') {
+							valid = 0;
+						}
+						else {
+							cursor += 2;
+							if (!anixops_json_read_hex4(&cursor, end, &low) || low < 0xDC00UL || low > 0xDFFFUL) {
+								valid = 0;
+							}
+							else {
+								codepoint = 0x10000UL + ((codepoint - 0xD800UL) << 10) + (low - 0xDC00UL);
+							}
+						}
+					}
+					else if (codepoint >= 0xDC00UL && codepoint <= 0xDFFFUL) {
+						valid = 0;
+					}
+					if (valid) {
+						if (codepoint == 0 || !anixops_json_append_utf8(utf8, sizeof(utf8), &utf8_len, codepoint) ||
+							anixops_regex_append_literal_bytes(out, cap, &pos, utf8, utf8_len, in_class) != ANIXOPS_OK) {
+							free(out);
+							return ANIXOPS_ERR_PARSE;
+						}
+						i = (size_t)(cursor - pattern) - 1;
+						continue;
+					}
 				}
 			}
 			else if (next == 'A' && !in_class) {
@@ -2052,6 +2096,38 @@ static int anixops_normalize_regex_pattern(const char *pattern, char **out_patte
 	}
 	out[pos] = '\0';
 	*out_pattern = out;
+	return ANIXOPS_OK;
+}
+
+static int anixops_regex_append_literal_bytes(
+	char *out,
+	size_t out_cap,
+	size_t *pos,
+	const char *bytes,
+	size_t len,
+	int in_class)
+{
+	const char *meta = in_class ? "\\]-^" : ".^$*+?()[]{}|\\";
+	size_t i;
+	if (out == NULL || pos == NULL || bytes == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	for (i = 0; i < len; i++) {
+		unsigned char value = (unsigned char)bytes[i];
+		if (value == '\0') {
+			return ANIXOPS_ERR_PARSE;
+		}
+		if (value < 0x80 && strchr(meta, value) != NULL) {
+			if (*pos + 1 >= out_cap) {
+				return ANIXOPS_ERR_CAPACITY;
+			}
+			out[(*pos)++] = '\\';
+		}
+		if (*pos + 1 >= out_cap) {
+			return ANIXOPS_ERR_CAPACITY;
+		}
+		out[(*pos)++] = (char)value;
+	}
 	return ANIXOPS_OK;
 }
 
