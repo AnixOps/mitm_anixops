@@ -42,6 +42,7 @@ features it understands.
 | Unsupported Quantumult X `url` actions | Ignored | `unsupported_quantumultx_url_actions_are_ignored` |
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
 | Capture expansion | Supported subset | `$1` and `\1` tests |
+| Leading `(?i)` regex prefix | Supported subset | URL, body, header, and script regex test |
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, global replacement tests |

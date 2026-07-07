@@ -94,6 +94,8 @@ static int anixops_parse_bool(const char *value);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
+static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags);
+static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action);
@@ -204,7 +206,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.4.0";
+	return "0.5.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -699,14 +701,14 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying rewrite rule");
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
 	}
-	if (regcomp(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
+	if (anixops_compile_regex(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
 		anixops_free_rewrite_rule(rule);
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite URL regex failed to compile");
 		return ANIXOPS_ERR_REGEX;
 	}
 	rule->regex_ready = 1;
 	if (anixops_rewrite_action_replaces_body_regex(action)) {
-		if (regcomp(&rule->body_regex, rule->body_pattern, REG_EXTENDED) != 0) {
+		if (anixops_compile_regex(&rule->body_regex, rule->body_pattern, REG_EXTENDED) != 0) {
 			anixops_free_rewrite_rule(rule);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite body regex failed to compile");
 			return ANIXOPS_ERR_REGEX;
@@ -714,7 +716,7 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		rule->body_regex_ready = 1;
 	}
 	if (anixops_rewrite_action_replaces_header_regex(action)) {
-		if (regcomp(&rule->header_regex, rule->header_pattern, REG_EXTENDED) != 0) {
+		if (anixops_compile_regex(&rule->header_regex, rule->header_pattern, REG_EXTENDED) != 0) {
 			anixops_free_rewrite_rule(rule);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite header regex failed to compile");
 			return ANIXOPS_ERR_REGEX;
@@ -1075,7 +1077,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying script rule");
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
 	}
-	if (regcomp(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
+	if (anixops_compile_regex(&rule->regex, rule->pattern, REG_EXTENDED) != 0) {
 		anixops_free_script_rule(rule);
 		free(copy);
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "script URL regex failed to compile");
@@ -1845,6 +1847,25 @@ static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap
 	}
 	*cursor = p;
 	return 1;
+}
+
+static int anixops_compile_regex(regex_t *regex, const char *pattern, int flags)
+{
+	const char *compile_pattern;
+	if (regex == NULL || pattern == NULL) {
+		return -1;
+	}
+	compile_pattern = anixops_regex_pattern_after_inline_flags(pattern, &flags);
+	return regcomp(regex, compile_pattern, flags);
+}
+
+static const char *anixops_regex_pattern_after_inline_flags(const char *pattern, int *flags)
+{
+	if (pattern != NULL && flags != NULL && strncmp(pattern, "(?i)", 4) == 0) {
+		*flags |= REG_ICASE;
+		return pattern + 4;
+	}
+	return pattern;
 }
 
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code)
