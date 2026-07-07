@@ -377,7 +377,7 @@ int anixops_runtime_apply_plan(
 | P0 | Diagnostics | 每条规则有 parse 状态、line、section、action、backend requirement | malformed fixture 不再只能靠 last-error 判断 |
 | P0 | LOON parser | `[Plugin]`、`[Argument]`、`[MITM]`、`[Script]`、`[Rewrite]`、`[URL Rewrite]`、`[Header Rewrite]`、`[Body Rewrite]` section 归一化 | Representative LOON fixture 扩展后通过 unit test |
 | P0 | MITM | `hostname`、deny host、wildcard、`%APPEND%`、`skip-server-cert-verify`、`h2`、`disable-quic` 一致决策 | host matrix fixture 覆盖 exact、suffix、wildcard、deny、empty host |
-| P0 | Script | LOON `http-request` / `http-response`、request/response header/body、`requires-body`、`argument`、`tag`、`timeout` | script dispatch trace 覆盖四类脚本入口 |
+| P0 | Script | Alpha 已覆盖 LOON/Surge/QX request/response script dispatch、`requires-body`、`argument`、`tag`、规则级 `timeout`/`max-size` 元数据；后续补 `enable` 和更广 malformed 语义 | script dispatch trace 覆盖四类脚本入口 |
 | P0 | Rewrite | URL redirect/reject、header add/replace/del、body regex/mock/json path 顺序一致 | request/response pipeline replay trace 稳定 |
 | P1 | Surge parser | Alpha 已覆盖 `#!` metadata 诊断、`#!arguments`、`%APPEND%`/`%INSERT%`、attr-list template；后续补更广 corpus 和边界字段 | Surge corpus parse 报告无未知 P1 规则 |
 | P1 | Surge body | Alpha 已提供 body rewrite chain API，可按规则顺序串联 `[Body Rewrite]` regex/mock/JSON/JQ body 规则；`http-request-jq`、`http-response-jq` 已解析并可在 `JQ=1` 下执行，后续补更大 Surge corpus trace | jq fixture 输出和 trace 匹配预期 |

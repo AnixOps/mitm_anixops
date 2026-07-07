@@ -90,6 +90,8 @@ type ScriptResult struct {
 	Kind           ScriptKind
 	Phase          Phase
 	RequiresBody   bool
+	TimeoutMs      uint
+	MaxSize        uint
 	RuleIndex      int
 	MatchedPattern string
 	ScriptPath     string
@@ -389,6 +391,8 @@ func scriptResultFromC(result *C.anixops_script_result_t) ScriptResult {
 		Kind:           ScriptKind(result.kind),
 		Phase:          Phase(result.phase),
 		RequiresBody:   result.requires_body != 0,
+		TimeoutMs:      uint(result.timeout_ms),
+		MaxSize:        uint(result.max_size),
 		RuleIndex:      int(result.rule_index),
 		MatchedPattern: cArrayString(unsafe.Pointer(&result.matched_pattern[0])),
 		ScriptPath:     cArrayString(unsafe.Pointer(&result.script_path[0])),

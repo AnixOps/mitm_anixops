@@ -35,8 +35,9 @@ Included:
   JQ body rewrite rules in rule order, feeding each successful output into the next body rule while preserving the
   legacy single-rule `anixops_rewrite_apply_body` API.
 - P4 script foundation: script dispatch metadata, the Node-based contract runner, file-backed `$persistentStore`,
-  request/response script E2E, script timeout fail-open in the proxy shim, and runner `replay --script-runner`
-  writeback are supported. Embedded QuickJS/JavaScriptCore is still future work.
+  request/response script E2E, rule-level `timeout`/`max-size` scheduling metadata, script timeout/max-size fail-open
+  in the runner/proxy shim, and runner `replay --script-runner` writeback are supported. Embedded
+  QuickJS/JavaScriptCore is still future work.
 - P5 runner foundation: `scan`, `scan --corpus`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics,
   corpus count, sha256, and diagnostic-status checks, and comparable URL, rewrite, header, body, and script traces;
   `anixops_rewrite_build_plan`
@@ -54,8 +55,8 @@ Included:
 - No embedded QuickJS or JavaScriptCore runtime yet.
 - `$persistentStore` has an Alpha file-backed Node runner implementation; production namespacing, locking, transactions,
   and platform storage backends remain future work.
-- Script timeout/error fail-open is covered in the Alpha proxy shim; production script scheduling, cancellation, memory
-  limits, and cache policy remain future work.
+- Script timeout/max-size/error fail-open is covered in the Alpha runner/proxy shim; production script scheduling,
+  cancellation, memory limits, and cache policy remain future work.
 - Optional libjq execution exists, but resource limits, cache/reuse policy, and broad jq corpus coverage are not complete.
 - No NSRegularExpression Darwin backend yet.
 - The Rust and Go bindings are Alpha wrappers, not versioned registry/module releases yet. The CMake package config is

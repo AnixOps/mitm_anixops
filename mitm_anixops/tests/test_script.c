@@ -169,6 +169,8 @@ static void representative_surge_fixture_is_supported(void)
 		anixops_script_evaluate_url(engine, "https://api.surge.example/v1", ANIXOPS_PHASE_REQUEST, &script),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 5000);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 8192);
 	ANIXOPS_EXPECT_STREQ(script.tag, "Surge.Request");
 	ANIXOPS_EXPECT_STREQ(script.argument, "Feature=true&Mode=surge");
 
@@ -176,6 +178,8 @@ static void representative_surge_fixture_is_supported(void)
 		anixops_script_evaluate_url(engine, "https://api.surge.example/v1", ANIXOPS_PHASE_RESPONSE, &script),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 1250);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 4096);
 	ANIXOPS_EXPECT_STREQ(script.tag, "Surge.Response");
 	ANIXOPS_EXPECT_STREQ(script.argument, "Feature=\"true\"&Mode=surge");
 
@@ -462,6 +466,46 @@ static void quantumultx_url_prefixed_response_header_scripts_are_supported(void)
 	anixops_engine_free(engine);
 }
 
+static void script_scheduling_attributes_are_exposed(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"http-response ^https://api\\.script\\.test/v1 requires-body=1, timeout=\"3\", max-size=1234, "
+			"script-path=https://scripts.example/response.js, tag=response.scheduled"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"^https://api\\.script\\.test/qx url script-response-body https://scripts.example/qx.js "
+			"timeout-ms=250, max_size=512"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.script.test/v1", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 3000);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 1234);
+	ANIXOPS_EXPECT_STREQ(script.tag, "response.scheduled");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.script.test/qx", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 250);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 512);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example/qx.js");
+
+	anixops_engine_free(engine);
+}
+
 static void sgmodule_inline_arguments_are_supported(void)
 {
 	const char *config =
@@ -582,6 +626,7 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"script/quantumultx_url_prefixed_response_header_scripts_are_supported",
 		quantumultx_url_prefixed_response_header_scripts_are_supported);
+	add_test(tests, count, cap, "script/script_scheduling_attributes_are_exposed", script_scheduling_attributes_are_exposed);
 	add_test(tests, count, cap, "script/sgmodule_inline_arguments_are_supported", sgmodule_inline_arguments_are_supported);
 	add_test(
 		tests,

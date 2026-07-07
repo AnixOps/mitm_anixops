@@ -36,7 +36,7 @@
       "platform": "surge",
       "path": "../Representative.Surge.sgmodule",
       "source": "bundled fixture",
-      "sha256": "6ce92b321d4b83f41252bdd447040e595fa8974b41a5864937f7ab6a2eea517c",
+      "sha256": "be71da089e0951ffc537e0f0c314f449df41b65e6a94c2c938952f76e1186a32",
       "expectedStatus": 0,
       "expectedMitm": 1,
       "expectedRewrite": 0,

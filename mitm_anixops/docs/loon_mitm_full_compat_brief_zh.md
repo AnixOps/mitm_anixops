@@ -136,7 +136,7 @@ Surge：
 
 - 补齐 `.sgmodule` metadata、`#!arguments`、`%APPEND%`、`%INSERT%`。
 - 补齐 `[Body Rewrite]` regex chain 和 JQ body rewrite。
-- 扩展 `[Script]` attr-list：`type`、`pattern`、`script-path`、`requires-body`、`timeout`、`max-size`、`argument`。
+- Alpha 已扩展 `[Script]` attr-list 的 `type`、`pattern`、`script-path`、`requires-body`、`timeout`、`max-size`、`argument` 基础元数据；后续补 `enable`、`debug` 和更广 malformed 语义。
 
 Quantumult X：
 
@@ -152,7 +152,7 @@ Quantumult X：
 - 多条 body rewrite 是否按顺序串联。
 - 空 body、invalid UTF-8、binary body、超限 body 的处理。
 - header 大小写、multi-value、Set-Cookie 的 add/replace/delete 行为。
-- script timeout、exception、double `$done`、missing script asset 的 fail-open 策略。
+- script timeout、max-size overflow、exception、double `$done`、missing script asset 的 fail-open 策略。
 - gzip/brotli/zstd 解压重压后 Content-Encoding 与 Content-Length 的一致性。
 - HTTP/2 pseudo-header rewrite、mock、redirect、body buffering。
 

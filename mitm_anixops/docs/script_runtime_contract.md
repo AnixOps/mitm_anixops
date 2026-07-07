@@ -133,12 +133,14 @@ file-backed `$persistentStore` state shared across request and response script i
 ## Error Behavior
 
 The adapter should enforce a timeout for `$done`. The Node contract runner defaults to 5 seconds, `anixops-mitm-runner
-replay` exposes this as `--timeout-ms`, and the Alpha proxy shim exposes it as `--script-timeout-ms`.
+replay` exposes this as `--timeout-ms`, and the Alpha proxy shim exposes it as `--script-timeout-ms`. When a matched
+rule returns `timeout_ms`, the Alpha runner and proxy shim use it instead of the global default. When a matched rule
+returns `max_size` and the buffered body is larger, they fail open without executing the script.
 
 Recommended production behavior:
 
-- Script timeout or exception: log the rule tag and continue with the original HTTP object unless the product chooses a
-  stricter fail-closed policy.
+- Script timeout, max-size overflow, or exception: log the rule tag and continue with the original HTTP object unless
+  the product chooses a stricter fail-closed policy.
 - Invalid `$done` shape: ignore unsupported fields and preserve unchanged fields.
 - Missing script asset: log and preserve the original HTTP object.
 

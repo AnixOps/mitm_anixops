@@ -3,8 +3,10 @@
 #include "mitm_anixops.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <regex.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,6 +72,8 @@ typedef struct anixops_script_rule {
 	anixops_script_kind_t kind;
 	anixops_phase_t phase;
 	int requires_body;
+	size_t timeout_ms;
+	size_t max_size;
 } anixops_script_rule_t;
 
 typedef struct anixops_argument {
@@ -154,6 +158,8 @@ static int anixops_regex_backend_is_valid(anixops_regex_backend_t backend);
 static void anixops_trim_inplace(char *value);
 static void anixops_lower_inplace(char *value);
 static int anixops_parse_bool(const char *value);
+static int anixops_parse_size_value(const char *value, size_t *out_value);
+static int anixops_parse_timeout_seconds_value(const char *value, size_t *out_ms);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
 static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap);
 static int anixops_is_rewrite_section(const char *key);
@@ -370,7 +376,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.44.1";
+	return "0.45.0";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1530,6 +1536,11 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	char tag[2048];
 	char argument_template[4096];
 	char requires_body[128];
+	char timeout[128];
+	char timeout_ms[128];
+	char max_size[128];
+	size_t parsed_timeout_ms = 0;
+	size_t parsed_max_size = 0;
 	anixops_script_kind_t kind = ANIXOPS_SCRIPT_NONE;
 	anixops_phase_t phase = ANIXOPS_PHASE_REQUEST;
 	const char *attrs = NULL;
@@ -1562,6 +1573,9 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	tag[0] = '\0';
 	argument_template[0] = '\0';
 	requires_body[0] = '\0';
+	timeout[0] = '\0';
+	timeout_ms[0] = '\0';
+	max_size[0] = '\0';
 
 	cursor = trimmed;
 	if (anixops_next_token(&cursor, first, sizeof(first)) && anixops_parse_script_kind(first, &kind, &phase)) {
@@ -1572,43 +1586,39 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 		attrs = cursor;
 	}
 	else {
-		char *eq = strchr(trimmed, '=');
-		char *left;
-		if (eq == NULL) {
-			const char *rewrite_cursor = trimmed;
-			char mode[128];
-			char rewrite_type[128];
-			if (!anixops_next_token(&rewrite_cursor, pattern, sizeof(pattern)) ||
-				!anixops_next_token(&rewrite_cursor, mode, sizeof(mode))) {
-				free(copy);
-				return ANIXOPS_OK;
-			}
-			if (anixops_parse_script_kind(mode, &kind, &phase)) {
+		const char *rewrite_cursor = trimmed;
+		char mode[128];
+		char rewrite_type[128];
+		int parsed_direct_script = 0;
+
+		if (anixops_next_token(&rewrite_cursor, pattern, sizeof(pattern)) &&
+			anixops_next_token(&rewrite_cursor, mode, sizeof(mode))) {
+			if (anixops_parse_script_kind(mode, &kind, &phase) &&
+				anixops_next_token(&rewrite_cursor, script_path, sizeof(script_path))) {
 				anixops_copy_text(rewrite_type, sizeof(rewrite_type), mode);
-				if (!anixops_next_token(&rewrite_cursor, script_path, sizeof(script_path))) {
-					free(copy);
-					return ANIXOPS_OK;
-				}
+				parsed_direct_script = 1;
 			}
 			else if ((strcasecmp(mode, "url") == 0 || strcasecmp(mode, "header") == 0) &&
 				anixops_next_token(&rewrite_cursor, rewrite_type, sizeof(rewrite_type)) &&
-				anixops_parse_script_kind(rewrite_type, &kind, &phase)) {
-				if (!anixops_next_token(&rewrite_cursor, script_path, sizeof(script_path))) {
-					free(copy);
-					return ANIXOPS_OK;
-				}
+				anixops_parse_script_kind(rewrite_type, &kind, &phase) &&
+				anixops_next_token(&rewrite_cursor, script_path, sizeof(script_path))) {
+				parsed_direct_script = 1;
 			}
-			else {
-				free(copy);
-				return ANIXOPS_OK;
-			}
+		}
+		if (parsed_direct_script) {
 			if (anixops_script_kind_requires_body_token(rewrite_type)) {
 				anixops_copy_text(requires_body, sizeof(requires_body), "1");
 			}
 			direct_script_path = 1;
-			attrs = "";
+			attrs = rewrite_cursor;
 		}
 		else {
+			char *eq = strchr(trimmed, '=');
+			char *left;
+			if (eq == NULL) {
+				free(copy);
+				return ANIXOPS_OK;
+			}
 			*eq = '\0';
 			left = trimmed;
 			attrs = eq + 1;
@@ -1642,11 +1652,32 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	if (requires_body[0] == '\0') {
 		(void)anixops_extract_attr(attrs, "requires_body", requires_body, sizeof(requires_body));
 	}
+	(void)anixops_extract_attr(attrs, "timeout-ms", timeout_ms, sizeof(timeout_ms));
+	if (timeout_ms[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "timeout_ms", timeout_ms, sizeof(timeout_ms));
+	}
+	(void)anixops_extract_attr(attrs, "timeout", timeout, sizeof(timeout));
+	(void)anixops_extract_attr(attrs, "max-size", max_size, sizeof(max_size));
+	if (max_size[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "max_size", max_size, sizeof(max_size));
+	}
 	anixops_unquote_inplace(pattern);
 	anixops_unquote_inplace(script_path);
 	anixops_unquote_inplace(tag);
 	anixops_unquote_inplace(argument_template);
 	anixops_unquote_inplace(requires_body);
+	anixops_unquote_inplace(timeout_ms);
+	anixops_unquote_inplace(timeout);
+	anixops_unquote_inplace(max_size);
+	if (timeout_ms[0] != '\0') {
+		(void)anixops_parse_size_value(timeout_ms, &parsed_timeout_ms);
+	}
+	else if (timeout[0] != '\0') {
+		(void)anixops_parse_timeout_seconds_value(timeout, &parsed_timeout_ms);
+	}
+	if (max_size[0] != '\0') {
+		(void)anixops_parse_size_value(max_size, &parsed_max_size);
+	}
 
 	if (kind == ANIXOPS_SCRIPT_NONE || pattern[0] == '\0' || script_path[0] == '\0') {
 		free(copy);
@@ -1681,6 +1712,8 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	rule->kind = kind;
 	rule->phase = phase;
 	rule->requires_body = anixops_parse_bool(requires_body);
+	rule->timeout_ms = parsed_timeout_ms;
+	rule->max_size = parsed_max_size;
 	engine->script_len++;
 	free(copy);
 	return ANIXOPS_OK;
@@ -2504,6 +2537,8 @@ ANIXOPS_API int anixops_script_evaluate_url(
 		out_result->kind = rule->kind;
 		out_result->phase = rule->phase;
 		out_result->requires_body = rule->requires_body;
+		out_result->timeout_ms = rule->timeout_ms;
+		out_result->max_size = rule->max_size;
 		out_result->rule_index = (int)i;
 		anixops_copy_text(out_result->matched_pattern, sizeof(out_result->matched_pattern), rule->pattern);
 		anixops_copy_text(out_result->script_path, sizeof(out_result->script_path), rule->script_path);
@@ -2938,6 +2973,52 @@ static int anixops_parse_bool(const char *value)
 		strcasecmp(value, "yes") == 0 ||
 		strcasecmp(value, "on") == 0 ||
 		strcmp(value, "1") == 0;
+}
+
+static int anixops_parse_size_value(const char *value, size_t *out_value)
+{
+	char *end;
+	unsigned long long parsed;
+
+	if (value == NULL || out_value == NULL) {
+		return 0;
+	}
+	while (*value != '\0' && isspace((unsigned char)*value)) {
+		value++;
+	}
+	if (*value == '\0' || *value == '-') {
+		return 0;
+	}
+	errno = 0;
+	parsed = strtoull(value, &end, 10);
+	if (end == value || errno == ERANGE) {
+		return 0;
+	}
+	while (*end != '\0' && isspace((unsigned char)*end)) {
+		end++;
+	}
+	if (*end != '\0') {
+		return 0;
+	}
+	if (parsed > (unsigned long long)SIZE_MAX) {
+		return 0;
+	}
+	*out_value = (size_t)parsed;
+	return 1;
+}
+
+static int anixops_parse_timeout_seconds_value(const char *value, size_t *out_ms)
+{
+	size_t seconds;
+
+	if (!anixops_parse_size_value(value, &seconds)) {
+		return 0;
+	}
+	if (seconds > (SIZE_MAX / 1000u)) {
+		return 0;
+	}
+	*out_ms = seconds * 1000u;
+	return 1;
 }
 
 static int anixops_starts_with_ci(const char *value, const char *prefix)

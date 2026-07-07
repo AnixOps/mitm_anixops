@@ -69,6 +69,8 @@ struct AnixopsScriptResult {
     kind: c_int,
     phase: c_int,
     requires_body: c_int,
+    timeout_ms: usize,
+    max_size: usize,
     rule_index: c_int,
     matched_pattern: [c_char; ANIXOPS_PATTERN_CAP],
     script_path: [c_char; ANIXOPS_VALUE_CAP],
@@ -292,6 +294,8 @@ pub struct ScriptResult {
     pub kind: ScriptKind,
     pub phase: Phase,
     pub requires_body: bool,
+    pub timeout_ms: usize,
+    pub max_size: usize,
     pub rule_index: i32,
     pub matched_pattern: String,
     pub script_path: String,
@@ -583,6 +587,8 @@ fn script_result_from_c(result: &AnixopsScriptResult) -> ScriptResult {
         kind: ScriptKind::from(result.kind),
         phase,
         requires_body: result.requires_body != 0,
+        timeout_ms: result.timeout_ms,
+        max_size: result.max_size,
         rule_index: result.rule_index,
         matched_pattern: cstr_from_buf(&result.matched_pattern),
         script_path: cstr_from_buf(&result.script_path),
@@ -735,6 +741,8 @@ fn empty_script_result() -> AnixopsScriptResult {
         kind: 0,
         phase: 0,
         requires_body: 0,
+        timeout_ms: 0,
+        max_size: 0,
         rule_index: 0,
         matched_pattern: [0; ANIXOPS_PATTERN_CAP],
         script_path: [0; ANIXOPS_VALUE_CAP],
@@ -758,12 +766,12 @@ Mode = select,rust
 ^https:\/\/api\.rust\.example\/v1 response-body-replace-regex from to
 
 [Script]
-http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=https://scripts.example/rust-response.js, tag=rust.response, argument=[{Mode}]
+http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-size=2048, script-path=https://scripts.example/rust-response.js, tag=rust.response, argument=[{Mode}]
 "#;
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.44.1");
+        assert_eq!(version(), "0.45.0");
         let mut engine = Engine::new().unwrap();
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);
@@ -810,6 +818,8 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
         assert!(!plan.header_rewrite_truncated);
         assert_eq!(plan.script.kind, ScriptKind::HttpResponse);
         assert_eq!(plan.script.script_path, "https://scripts.example/rust-response.js");
+        assert_eq!(plan.script.timeout_ms, 4000);
+        assert_eq!(plan.script.max_size, 2048);
 
         let script = engine
             .evaluate_script("https://api.rust.example/v1", Phase::Response)
@@ -819,6 +829,8 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, script-path=htt
         assert_eq!(script.script_path, "https://scripts.example/rust-response.js");
         assert_eq!(script.tag, "rust.response");
         assert_eq!(script.argument, "Mode=rust");
+        assert_eq!(script.timeout_ms, 4000);
+        assert_eq!(script.max_size, 2048);
     }
 
     #[test]

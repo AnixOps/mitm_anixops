@@ -5,8 +5,8 @@
 #!requirement = Surge >= 5.0
 
 [Script]
-Surge.Request = type=http-request, pattern=^https:\/\/api\.surge\.example\/v1, requires-body=1, script-path=https://scripts.example/surge-request.js, argument=Feature={Feature}&Mode={Mode}
-Surge.Response = type=http-response, pattern=^https:\/\/api\.surge\.example\/v1, requires-body=1, script-path=https://scripts.example/surge-response.js, argument=Feature="{{{Feature}}}"&Mode={Mode}
+Surge.Request = type=http-request, pattern=^https:\/\/api\.surge\.example\/v1, requires-body=1, timeout=5, max-size=8192, script-path=https://scripts.example/surge-request.js, argument=Feature={Feature}&Mode={Mode}
+Surge.Response = type=http-response, pattern=^https:\/\/api\.surge\.example\/v1, requires-body=1, timeout-ms=1250, max_size=4096, script-path=https://scripts.example/surge-response.js, argument=Feature="{{{Feature}}}"&Mode={Mode}
 
 [MITM]
 hostname = %INSERT% api.surge.example

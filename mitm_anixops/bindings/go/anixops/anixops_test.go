@@ -12,11 +12,11 @@ Mode = select,go
 ^https:\/\/api\.go\.example\/v1 response-body-replace-regex from to
 
 [Script]
-http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, script-path=https://scripts.example/go-response.js, tag=go.response, argument=[{Mode}]
+http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, timeout=4, max-size=2048, script-path=https://scripts.example/go-response.js, tag=go.response, argument=[{Mode}]
 `
 
 func TestGoBindingEvaluatesPolicy(t *testing.T) {
-	if Version() != "0.44.1" {
+	if Version() != "0.45.0" {
 		t.Fatalf("Version() = %q", Version())
 	}
 	engine, err := NewEngine()
@@ -98,6 +98,9 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	if plan.Script.Kind != ScriptHTTPResponse || plan.Script.ScriptPath != "https://scripts.example/go-response.js" {
 		t.Fatalf("unexpected plan script: %+v", plan.Script)
 	}
+	if plan.Script.TimeoutMs != 4000 || plan.Script.MaxSize != 2048 {
+		t.Fatalf("unexpected plan script scheduling attrs: %+v", plan.Script)
+	}
 
 	script, err := engine.EvaluateScript("https://api.go.example/v1", PhaseResponse)
 	if err != nil {
@@ -105,6 +108,9 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	}
 	if script.Kind != ScriptHTTPResponse || !script.RequiresBody {
 		t.Fatalf("unexpected script result: %+v", script)
+	}
+	if script.TimeoutMs != 4000 || script.MaxSize != 2048 {
+		t.Fatalf("unexpected script scheduling attrs: %+v", script)
 	}
 	if script.ScriptPath != "https://scripts.example/go-response.js" {
 		t.Fatalf("script.ScriptPath = %q", script.ScriptPath)

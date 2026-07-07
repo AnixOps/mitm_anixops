@@ -50,7 +50,8 @@ Implemented:
 - PCRE quoted literal syntax `\Q...\E`, normalized as escaped POSIX ERE literal text.
 - Stable global regex replacement behavior for empty matches such as `^`, `$`, and lazy `.*?` normalization in body and
   header rewrite paths.
-- AnixOps/Surge-style module script metadata for HTTP request/response hooks.
+- AnixOps/Surge-style module script metadata for HTTP request/response hooks, including rule-level `timeout` and
+  `max-size` scheduling metadata.
 - AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, tolerated `#!` metadata diagnostics, plus
   per-argument overrides for script `$argument` generation.
 - Optional libjq execution for `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` when built
@@ -59,7 +60,7 @@ Implemented:
 - Status text and last-error diagnostics for config/add-rule failures, including config line numbers.
 - C ABI result structs with no exposed internal pointers.
 - C ABI plan builder, `anixops_rewrite_build_plan`, that aggregates the phase rewrite, matching header rewrites, script
-  dispatch, body-rewrite output, and `requires_body` signal for adapter pipelines.
+  dispatch, body-rewrite output, `requires_body`, and script scheduling metadata for adapter pipelines.
 
 Not implemented yet:
 
@@ -131,7 +132,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.44.1.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.45.0.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
@@ -141,7 +142,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.44.1/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.0/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:
@@ -219,8 +220,8 @@ optional PCRE2/libjq test builds when headers are present, verifies the complete
 `ci/abi_exports.txt` when `nm` is available, runs the minimal strategy-chain demo, runs the no-UI runner corpus scan and
 replay with and without script execution, runs the proxy-shim smoke check, runs the mihomo proxy-chain E2E when
 `MIHOMO_BIN` points to an executable binary, runs the BiliUniverse script-runtime E2E fixture, and checks the generic
-request/response script contract including `$persistentStore`, script timeout fail-open, static header/body rewrite
-ordering, and gzip/deflate response decode coverage. GitHub Actions runs the same entrypoint after installing the
+request/response script contract including `$persistentStore`, rule-level script timeout fail-open, static header/body
+rewrite ordering, and gzip/deflate response decode coverage. GitHub Actions runs the same entrypoint after installing the
 pinned mihomo fixture with `scripts/ensure-mihomo.sh`.
 
 Test policy and layout are documented in `tests/README.md`.
@@ -341,7 +342,7 @@ For iOS:
   the `requires_body` signal for a request or response phase. Adapters that need per-header current values can still
   enumerate matched header rewrite records directly with `anixops_rewrite_evaluate_header`.
 - Feed matched `anixops_script_result_t` records into the platform JavaScript runtime with `$request`, `$response`,
-  `$argument`, `$persistentStore`, and `$done` bindings.
+  `$argument`, `$persistentStore`, `$done`, and the returned `timeout_ms` / `max_size` scheduling metadata.
 - Treat `ANIXOPS_MITM_REJECT_QUIC` as a signal to reject/drop QUIC for a matched host so the client can retry over TCP/TLS.
 - Follow `docs/script_runtime_contract.md` for request/response script globals, `$done` writeback, timeout behavior, and
   body-framing ownership. The packaged Node contract runner supports file-backed `$persistentStore` through `--store`.

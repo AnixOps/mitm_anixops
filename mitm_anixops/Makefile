@@ -15,7 +15,7 @@ PROXY_SHIM_BIN := $(BUILD_DIR)/anixops-mitm-proxy-shim
 SCRIPT_RUNNER_JS := e2e/script_runtime/anixops_runner.js
 PKG_CONFIG_FILE := pkgconfig/mitm_anixops.pc
 CMAKE_CONFIG_FILES := cmake/mitm_anixops-config.cmake cmake/mitm_anixops-config-version.cmake
-ALPHA_NAME ?= anixops-mitm-alpha-0.44.1
+ALPHA_NAME ?= anixops-mitm-alpha-0.45.0
 
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror -fPIC
 CPPFLAGS ?= -I$(INCLUDE_DIR)
@@ -95,6 +95,9 @@ runner-check: $(RUNNER_BIN)
 	$(RUNNER_BIN) trace --plugin tests/fixtures/Representative.Loon.plugin --url https://api.loon.example/v1 --phase response > $(BUILD_DIR)/runner-trace.out
 	grep -F '"kind":2' $(BUILD_DIR)/runner-trace.out >/dev/null
 	grep -F '"tag":"loon.response"' $(BUILD_DIR)/runner-trace.out >/dev/null
+	$(RUNNER_BIN) trace --plugin tests/fixtures/Representative.Surge.sgmodule --url https://api.surge.example/v1 --phase response > $(BUILD_DIR)/runner-surge-trace.out
+	grep -F '"timeoutMs":1250' $(BUILD_DIR)/runner-surge-trace.out >/dev/null
+	grep -F '"maxSize":4096' $(BUILD_DIR)/runner-surge-trace.out >/dev/null
 	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv > $(BUILD_DIR)/runner-replay.out
 	grep -F '"name":"redirect"' $(BUILD_DIR)/runner-replay.out >/dev/null
 	grep -F '"value":"https://api.loon.example/v1"' $(BUILD_DIR)/runner-replay.out >/dev/null
@@ -151,7 +154,7 @@ cmake-package-check: all $(CMAKE_CONFIG_FILES)
 	cp $(STATIC_LIB) $(SHARED_LIB) $(BUILD_DIR)/cmake-package-check/lib/
 	cp $(CMAKE_CONFIG_FILES) $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/
 	grep -F 'mitm_anixops::mitm_anixops' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config.cmake >/dev/null
-	grep -F 'PACKAGE_VERSION "0.44.1"' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config-version.cmake >/dev/null
+	grep -F 'PACKAGE_VERSION "0.45.0"' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config-version.cmake >/dev/null
 	if command -v cmake >/dev/null 2>&1; then \
 		cmake -S tests/cmake_smoke -B $(BUILD_DIR)/cmake-smoke -DCMAKE_PREFIX_PATH="$(abspath $(BUILD_DIR)/cmake-package-check)" >/dev/null; \
 		cmake --build $(BUILD_DIR)/cmake-smoke >/dev/null; \

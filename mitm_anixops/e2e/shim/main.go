@@ -120,6 +120,8 @@ type proxyServer struct {
 type scriptMatch struct {
 	kind         C.anixops_script_kind_t
 	requiresBody int
+	timeoutMs    uint64
+	maxSize      uint64
 	scriptPath   string
 	tag          string
 	argument     string
@@ -772,6 +774,8 @@ func (e engine) script(rawURL string, phase C.anixops_phase_t) (scriptMatch, err
 	return scriptMatch{
 		kind:         result.kind,
 		requiresBody: int(result.requires_body),
+		timeoutMs:    uint64(result.timeout_ms),
+		maxSize:      uint64(result.max_size),
 		scriptPath:   cStringFromArray(unsafe.Pointer(&result.script_path[0])),
 		tag:          cStringFromArray(unsafe.Pointer(&result.tag[0])),
 		argument:     cStringFromArray(unsafe.Pointer(&result.argument[0])),
@@ -1274,6 +1278,9 @@ func (ps *proxyServer) runScript(
 		ps.debugf("builtin_script phase=%s tag=%s url=%s body_bytes=%d", phase, match.tag, scriptURL, len(bodyBytes))
 		return runBuiltinBilibiliScript(phase, responseStatus, responseHeader, bodyBytes), nil
 	}
+	if match.maxSize > 0 && uint64(len(bodyBytes)) > match.maxSize {
+		return scriptDone{}, fmt.Errorf("script body exceeds max-size %d", match.maxSize)
+	}
 	if ps.scriptRunner == "" {
 		return scriptDone{}, fmt.Errorf("no script runner configured for %s", match.scriptPath)
 	}
@@ -1304,6 +1311,10 @@ func (ps *proxyServer) runScript(
 	if err != nil {
 		return scriptDone{}, err
 	}
+	timeoutMs := ps.scriptTimeoutMs
+	if match.timeoutMs > 0 {
+		timeoutMs = strconv.FormatUint(match.timeoutMs, 10)
+	}
 
 	args := []string{
 		ps.scriptRunner,
@@ -1313,7 +1324,7 @@ func (ps *proxyServer) runScript(
 		"--body", bodyPath,
 		"--phase", phase,
 		"--method", method,
-		"--timeoutMs", ps.scriptTimeoutMs,
+		"--timeoutMs", timeoutMs,
 		"--requestHeaders", string(requestHeaderJSON),
 	}
 	if ps.scriptStore != "" {

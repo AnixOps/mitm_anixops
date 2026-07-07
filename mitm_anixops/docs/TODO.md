@@ -38,8 +38,8 @@ publishing.
   still needs broader fixtures.
 - Production `$persistentStore` beyond the Alpha Node runner's JSON file backend: platform namespace policy, locking,
   transaction semantics, quotas, and migration behavior.
-- Production script runtime scheduling beyond the Alpha proxy shim's timeout fail-open path: cancellation, memory limits,
-  script cache policy, and per-rule timeout/max-size attributes.
+- Production script runtime scheduling beyond the Alpha proxy shim's timeout/max-size fail-open path: cancellation,
+  memory limits, script cache policy, and platform scheduler integration.
 - Versioned Rust crate/Go module publication beyond the current Alpha wrapper sources and package metadata.
 
 ## Explicit Non-Goals For This Stage

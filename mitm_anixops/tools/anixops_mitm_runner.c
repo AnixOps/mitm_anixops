@@ -855,9 +855,11 @@ static void print_header_result(const anixops_header_rewrite_result_t *header)
 
 static void print_script_result(const anixops_script_result_t *script)
 {
-	printf("{\"kind\":%d,\"requiresBody\":%d,\"ruleIndex\":%d,\"scriptPath\":",
+	printf("{\"kind\":%d,\"requiresBody\":%d,\"timeoutMs\":%zu,\"maxSize\":%zu,\"ruleIndex\":%d,\"scriptPath\":",
 		script->kind,
 		script->requires_body,
+		script->timeout_ms,
+		script->max_size,
 		script->rule_index);
 	json_string(script->script_path);
 	printf(",\"tag\":");
@@ -1303,6 +1305,7 @@ static int cmd_replay(int argc, char **argv)
 		runtime_message[0] = '\0';
 		if (script.kind != ANIXOPS_SCRIPT_NONE) {
 			const char *script_file = find_script_map(script.script_path, script_maps, script_map_count);
+			char effective_timeout_ms[64];
 			runtime_present = 1;
 			if (script_runner == NULL) {
 				snprintf(runtime_message, sizeof(runtime_message), "%s", "script runner not configured");
@@ -1313,7 +1316,16 @@ static int cmd_replay(int argc, char **argv)
 			else if (!has_body) {
 				snprintf(runtime_message, sizeof(runtime_message), "%s", "body unavailable");
 			}
+			else if (script.max_size > 0 && strlen(out_body) > script.max_size) {
+				snprintf(runtime_message, sizeof(runtime_message), "%s", "body exceeds script max-size");
+			}
 			else {
+				if (script.timeout_ms > 0) {
+					snprintf(effective_timeout_ms, sizeof(effective_timeout_ms), "%zu", script.timeout_ms);
+				}
+				else {
+					snprintf(effective_timeout_ms, sizeof(effective_timeout_ms), "%s", timeout_ms);
+				}
 				runtime_status = run_script_runner(
 					script_runner,
 					script_file,
@@ -1321,7 +1333,7 @@ static int cmd_replay(int argc, char **argv)
 					fields[3],
 						script.argument,
 						out_body,
-						timeout_ms,
+						effective_timeout_ms,
 						script_store,
 						runtime_done,
 						sizeof(runtime_done));

@@ -20,8 +20,8 @@ extern "C" {
 #endif
 
 #define ANIXOPS_VERSION_MAJOR 0
-#define ANIXOPS_VERSION_MINOR 44
-#define ANIXOPS_VERSION_PATCH 1
+#define ANIXOPS_VERSION_MINOR 45
+#define ANIXOPS_VERSION_PATCH 0
 
 #define ANIXOPS_PATTERN_CAP 256
 #define ANIXOPS_VALUE_CAP 2048
@@ -176,6 +176,8 @@ typedef struct anixops_script_result {
 	anixops_script_kind_t kind;
 	anixops_phase_t phase;
 	int requires_body;
+	size_t timeout_ms;
+	size_t max_size;
 	int rule_index;
 	char matched_pattern[ANIXOPS_PATTERN_CAP];
 	char script_path[ANIXOPS_VALUE_CAP];
