@@ -255,3 +255,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   release tags, and release environment approval evidence.
 - [x] Align v1 release docs with GitHub Actions-only evidence and the v1
   compatibility matrix path.
+- [x] Add a release metadata static check for artifact, checksum, manifest,
+  release-note, compatibility-count, and publication-boundary evidence.

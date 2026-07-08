@@ -304,6 +304,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added a repository governance contract and static check for branch
   protection, protected `v*` release tags, and `github-release-publication`
   environment approval evidence.
+- Added a release metadata static check for release and dry-run artifact,
+  checksum, manifest, release-note, compatibility-count, and
+  publication-boundary evidence.
 
 ### Changed
 

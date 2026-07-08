@@ -65,6 +65,7 @@ grep -q "partial" "$MATRIX"
 grep -q "unsupported" "$MATRIX"
 sh "$ROOT/scripts/compatibility-matrix-check.sh" >/dev/null
 sh "$ROOT/scripts/compatibility-evidence-check.sh" >/dev/null
+sh "$ROOT/scripts/release-metadata-check.sh" >/dev/null
 compatibility_status="$(sh "$ROOT/scripts/compatibility-status-summary.sh")"
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_total_count="
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_planned_count=0"
@@ -111,6 +112,7 @@ grep -q "gh release create" "$RELEASE_WORKFLOW"
 grep -q "stable release readiness did not pass" "$RELEASE_WORKFLOW"
 grep -q "release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows" "$RELEASE_GATE"
 grep -q "release-workflow-windows-artifact=windows-x64-zip-with-checksum" "$RELEASE_GATE"
+grep -q "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "$RELEASE_GATE"
 
 sh "$ROOT/scripts/security-claim-check.sh" >/dev/null
 

@@ -13,6 +13,7 @@ release-dry-run-ci-gate=equivalent-full-check-in-workflow
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
 release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
+release-dry-run-metadata-static-check=scripts/release-metadata-check.sh
 release-dry-run-next-action=keep-dry-run-non-publishing-while-tag-release-workflow-publishes-after-gates
 ```
 

@@ -88,6 +88,7 @@ release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-plan
 release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
+release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
 repository-governance-status=blocked-until-branch-tag-and-environment-confirmation
 release-rollback-policy=accepted
