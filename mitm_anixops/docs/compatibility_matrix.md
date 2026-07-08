@@ -38,6 +38,7 @@ features it understands.
 | Allow host patterns | Supported | exact, wildcard, `*.` suffix tests |
 | Deny host patterns | Supported | `-host` and `!host` tests |
 | Certificate trust gate | Supported as adapter input | `anixops_engine_set_cert_state` |
+| Certificate lifecycle | Adapter-owned partial contract | `docs/architecture/certificate-lifecycle.md` records no automatic root trust, no non-target hostname decryption, and pending manual-intervention markers for CA stores, signing materials, protected environments, and trust UX |
 | Server certificate verification bypass flag | Supported as adapter-readable config | `skip-server-cert-verify` boolean and host-list forms, `anixops_engine_skip_server_cert_verify`, `config_exposes_skip_server_cert_verify`, representative Quantumult X corpus fixture |
 | QUIC rejection decision and config flag | Supported as adapter signal | `ANIXOPS_MITM_REJECT_QUIC`, `disable-quic`, `disable_quic`, `disable-mitm-quic`, and `disable_mitm_quic` tests |
 | HTTP/2 MITM config flag | Supported | `h2`, `h2-enable`, and `h2_enable` tests |

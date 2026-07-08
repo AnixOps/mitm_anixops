@@ -60,6 +60,11 @@ The v1.0.0 policy-core runtime dependency decision is recorded in
 C policy core does not embed QuickJS, JavaScriptCore, or another production
 JavaScript engine.
 
+The certificate lifecycle boundary is recorded in
+[Certificate Lifecycle Architecture Contract](certificate-lifecycle.md): the
+policy core consumes adapter-supplied trust state and never owns automatic root
+trust or non-target hostname decryption.
+
 ## NetworkCore Alignment
 
 `networkcore_anixops` currently integrates `mitm_anixops` as a MITM policy

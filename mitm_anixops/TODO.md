@@ -56,10 +56,10 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 
 ## P4 MITM Policy And Certificate Lifecycle
 
-- [ ] Add certificate lifecycle architecture contract.
-- [ ] Add manual-intervention markers for CA trust, platform certificate stores,
+- [x] Add certificate lifecycle architecture contract.
+- [x] Add manual-intervention markers for CA trust, platform certificate stores,
   protected environments, and signing materials.
-- [ ] Add CI checks preventing accidental claims of automatic root trust or
+- [x] Add CI checks preventing accidental claims of automatic root trust or
   non-target hostname decryption.
 
 ## P5 Integration Adapter

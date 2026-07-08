@@ -54,4 +54,6 @@ corresponding tests.
   adapter contract for globals, timeout/error behavior, and double `$done`.
 - [cron-task-trigger.md](cron-task-trigger.md): planned cron/task trigger
   contract and non-support guard until parser/runtime evidence exists.
+- [../architecture/certificate-lifecycle.md](../architecture/certificate-lifecycle.md):
+  P4 certificate lifecycle and MITM trust boundary contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

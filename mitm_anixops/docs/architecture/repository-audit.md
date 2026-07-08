@@ -143,8 +143,10 @@ status must be taken from GitHub Actions, not local execution.
   scheduler dispatch, and runtime execution remain unimplemented.
 - Production JS runtime remains out of scope for the C policy core; the
   dependency decision is recorded in `docs/architecture/script-runtime-dependency.md`.
-- Certificate lifecycle is adapter-owned and not yet documented as a v1.0.0
-  source contract in this repository.
+- Certificate lifecycle is adapter-owned; the v1.0.0 policy-core contract is
+  documented in `docs/architecture/certificate-lifecycle.md`, while production
+  CA stores, signing materials, and trust UX remain pending manual-intervention
+  items.
 
 ## Upstream Reference
 

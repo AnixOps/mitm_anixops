@@ -41,6 +41,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   support out of the supported surface until parser/runtime evidence exists.
 - Added a script runtime dependency decision recording no embedded QuickJS,
   JavaScriptCore, or other production JavaScript engine in the v1 policy core.
+- Added a certificate lifecycle architecture contract, manual-intervention
+  markers, and CI security-claim checks for root trust and target-host safety.
 
 ### Changed
 

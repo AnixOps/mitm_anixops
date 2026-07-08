@@ -152,6 +152,36 @@ Unimplemented items:
 - trust store mutation;
 - platform-specific revocation and expiry probes.
 
+### Certificate Lifecycle And Trust Gate
+
+Detailed contract:
+[Certificate Lifecycle Architecture Contract](../architecture/certificate-lifecycle.md).
+
+Capability: define the policy-core trust gate and adapter-owned certificate
+lifecycle boundary.
+
+Input form:
+
+- MITM hostname parser output;
+- adapter-supplied `anixops_cert_state_t`;
+- runtime hostname supplied by the adapter;
+- QUIC flag supplied by the adapter.
+
+Current CI evidence:
+
+- `mitm/certificate_state_matrix_blocks_untrusted_states`;
+- `mitm/no_host_match_bypasses`;
+- `mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard`;
+- `scripts/security-claim-check.sh`.
+
+Unimplemented items:
+
+- production root CA generation;
+- platform certificate store integration;
+- dynamic leaf certificate generation and signing;
+- trust install, revoke, remove, and rollback workflows;
+- protected storage for CA private keys and signing materials.
+
 ### Request Rewrite Common Subset
 
 Detailed contract: [Request Rewrite Common Source Contract](request-rewrite-common.md).

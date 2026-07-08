@@ -4,6 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 
+sh scripts/security-claim-check.sh
 make clean
 make test
 if [ -f /usr/include/pcre2.h ]; then
