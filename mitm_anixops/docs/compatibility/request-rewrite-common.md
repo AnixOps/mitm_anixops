@@ -20,8 +20,9 @@ The current common subset accepts:
 - `[Rewrite]`, `[URL Rewrite]`, and `[Remote Rewrite]` section aliases;
 - Quantumult X `[rewrite_local]`, `#[rewrite_local]`, `[rewrite_remote]`, and
   `#[rewrite_remote]` section aliases;
-- direct redirect lines such as `pattern replacement 302`;
+- direct redirect lines such as `pattern replacement 301`;
 - URL-prefixed redirect lines such as `pattern url 303 replacement`;
+- portable redirect status codes `301`, `302`, `303`, `307`, and `308`;
 - reject lines such as `pattern reject-200`;
 - regex capture expansion through `$1`, `${1}`, and compatible replacement
   forms already covered by the rewrite tests.
@@ -42,6 +43,7 @@ Parser case:
 
 ```text
 tests/fixtures/RequestRewrite.Common.conf
+tests/fixtures/RequestRewrite.RedirectStatus.Common.conf
 tests/fixtures/Loon.RequestRewrite.plugin
 tests/fixtures/QuantumultX.RequestRewrite.snippet
 tests/fixtures/Surge.RequestRewrite.sgmodule
@@ -52,12 +54,15 @@ Expected behavior:
 
 - config load succeeds;
 - the common fixture registers three rewrite rules;
+- the common redirect status fixture registers three rewrite rules;
 - the Loon fixture registers two rewrite rules;
 - the Quantumult X fixture registers two rewrite rules;
 - the Surge fixture registers two rewrite rules;
 - the Shadowrocket fixture registers two rewrite rules;
 - direct redirect, URL-prefixed redirect, and reject behavior are observable
   through `anixops_rewrite_evaluate_url`;
+- portable `301`, `307`, and `308` redirect behavior is observable through
+  `anixops_rewrite_evaluate_url`;
 - Loon `[URL Rewrite]` redirect and reject behavior is observable through
   `anixops_rewrite_evaluate_url`;
 - Quantumult X `url` redirect and reject behavior is observable through
@@ -75,6 +80,7 @@ Parser case:
 
 ```text
 tests/fixtures/RequestRewrite.Common.Malformed.conf
+tests/fixtures/RequestRewrite.RedirectStatus.Malformed.conf
 tests/fixtures/Loon.RequestRewrite.Malformed.plugin
 tests/fixtures/QuantumultX.RequestRewrite.Malformed.snippet
 tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule
@@ -84,6 +90,7 @@ tests/fixtures/Shadowrocket.RequestRewrite.Malformed.conf
 Expected behavior:
 
 - a strict compatibility profile rejects the malformed rewrite line;
+- a strict compatibility profile rejects an unsupported redirect status code;
 - an invalid Loon `[URL Rewrite]` URL regex rejects config load;
 - an invalid Quantumult X `url` rewrite URL regex rejects config load;
 - an invalid Surge `[URL Rewrite]` URL regex rejects config load;
@@ -116,6 +123,10 @@ Required CI evidence:
   `config/request_rewrite_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/request_rewrite_common_strict_fixture_rejects_malformed_rule`;
+- `tests/test_config.c` registers
+  `config/request_rewrite_redirect_status_common_fixture_maps_portable_statuses`;
+- `tests/test_config.c` registers
+  `config/request_rewrite_redirect_status_strict_fixture_rejects_unsupported_status`;
 - `tests/test_config.c` registers
   `config/loon_request_rewrite_fixture_maps_redirect_and_reject`;
 - `tests/test_config.c` registers

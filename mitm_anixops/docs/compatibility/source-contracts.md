@@ -1109,24 +1109,29 @@ Capability: parse and evaluate request URL rewrite rules.
 Input form:
 
 - `[Rewrite]`, `[URL Rewrite]`, and `[Remote Rewrite]`;
-- direct redirect rules;
+- direct redirect rules with status codes `301`, `302`, `303`, `307`, and
+  `308`;
 - URL-prefixed redirect rules;
 - reject rules.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/RequestRewrite.Common.conf`;
+- positive fixture `tests/fixtures/RequestRewrite.RedirectStatus.Common.conf`;
 - positive fixture `tests/fixtures/Loon.RequestRewrite.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.RequestRewrite.snippet`;
 - positive fixture `tests/fixtures/Surge.RequestRewrite.sgmodule`;
 - positive fixture `tests/fixtures/Shadowrocket.RequestRewrite.conf`;
 - negative fixture `tests/fixtures/RequestRewrite.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/RequestRewrite.RedirectStatus.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.RequestRewrite.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.RequestRewrite.Malformed.snippet`;
 - negative fixture `tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Shadowrocket.RequestRewrite.Malformed.conf`;
 - `config/request_rewrite_common_fixture_is_supported`;
 - `config/request_rewrite_common_strict_fixture_rejects_malformed_rule`;
+- `config/request_rewrite_redirect_status_common_fixture_maps_portable_statuses`;
+- `config/request_rewrite_redirect_status_strict_fixture_rejects_unsupported_status`;
 - `config/loon_request_rewrite_fixture_maps_redirect_and_reject`;
 - `config/loon_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - `config/quantumultx_request_rewrite_fixture_maps_redirect_and_reject`;

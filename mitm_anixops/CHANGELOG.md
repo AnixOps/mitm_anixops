@@ -65,6 +65,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added portable/common HTTP JQ alias mutation parser fixtures and CI-covered
   fail-open tests while keeping production JQ runtime limits and HTTP
   serialization adapter-owned.
+- Added portable/common request redirect status parser fixtures and CI-covered
+  tests for the `301`/`302`/`303`/`307`/`308` request rewrite subset while
+  keeping direct/proxy routing adapter-owned.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added Quantumult X `url echo-response` parser fixtures and CI-covered tests

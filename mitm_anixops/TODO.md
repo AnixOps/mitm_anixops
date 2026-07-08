@@ -131,6 +131,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 
 - [x] Define request rewrite source contract with parser fixtures and CI-covered
   positive/negative tests.
+- [x] Add portable/common request redirect status parser fixtures and
+  positive/negative tests for the request-rewrite contract.
 - [x] Add Loon `[URL Rewrite]` request redirect/reject parser fixtures and
   positive/negative tests for the request-rewrite contract.
 - [x] Add Quantumult X `url` request redirect/reject parser fixtures and
