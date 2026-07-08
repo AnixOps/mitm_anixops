@@ -47,12 +47,12 @@ make_target_exists() {
 
 go_test_exists() {
 	test_name=$1
-	grep -R -E "func[[:space:]]+$test_name[[:space:]]*\\(" "$GO_BINDING_DIR" >/dev/null 2>&1
+	grep -R -E "func[[:space:]]+${test_name}[[:space:]]*\\(" "$GO_BINDING_DIR" >/dev/null 2>&1
 }
 
 rust_test_exists() {
 	test_name=$1
-	grep -R -E "fn[[:space:]]+$test_name[[:space:]]*\\(" "$RUST_BINDING_DIR" >/dev/null 2>&1
+	grep -R -E "fn[[:space:]]+${test_name}[[:space:]]*\\(" "$RUST_BINDING_DIR" >/dev/null 2>&1
 }
 
 {
