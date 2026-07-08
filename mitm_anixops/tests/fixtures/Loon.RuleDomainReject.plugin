@@ -1,0 +1,5 @@
+# Loon rule domain-suffix reject fixture.
+[Rule]
+DOMAIN-SUFFIX,ads.rule.loon.test,REJECT-200
+DOMAIN-SUFFIX,media.rule.loon.test,REJECT-IMG
+DOMAIN-SUFFIX,route.rule.loon.test,DIRECT

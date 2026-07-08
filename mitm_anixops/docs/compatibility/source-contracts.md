@@ -38,6 +38,8 @@ Input form:
 - `[Rewrite]`, `[URL Rewrite]`, `[Header Rewrite]`, `[Body Rewrite]`
 - `[Script]`
 - `[Argument]`
+- `[Rule]` domain-suffix reject policy intent covered by
+  [Loon Rule Reject Source Contract](loon-rule-reject.md)
 - `[Plugin]` metadata tolerance
 
 Parser output:
@@ -318,6 +320,44 @@ Unimplemented items:
 - TLS interception and HTTP/2 transport behavior;
 - adapter certificate verification bypass behavior;
 - QUIC network fallback outside the policy-core decision signal.
+
+### Loon Rule Reject Policy Intent
+
+Detailed contract:
+[Loon Rule Reject Source Contract](loon-rule-reject.md).
+
+Capability: parse Loon `[Rule]` `DOMAIN-SUFFIX` reject policy intent.
+
+Input form:
+
+- `[Rule]` `DOMAIN-SUFFIX,<host>,REJECT`;
+- `[Rule]` `DOMAIN-SUFFIX,<host>,REJECT-NNN` and other common reject variants
+  already supported by the policy-core rewrite parser.
+
+Parser output:
+
+- request-phase rewrite reject rules visible through
+  `anixops_rewrite_evaluate_url`;
+- accepted diagnostics with section `Rule` and action `rule`;
+- ignored diagnostics for direct/proxy route-selection lines in the documented
+  fixture;
+- rejected diagnostics and parse failure for malformed host suffixes;
+- no direct/proxy route selection, DNS, rule-provider refresh, certificate
+  lifecycle, scheduler, runtime, or platform UI behavior.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.RuleDomainReject.plugin`;
+- negative fixture `tests/fixtures/Loon.RuleDomainReject.Malformed.plugin`;
+- `config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
+- `config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain`.
+
+Unimplemented items:
+
+- direct/proxy route selection;
+- `IP-CIDR`, `GEOIP`, and broader Loon rule matchers;
+- proxy groups, DNS/no-resolve, and rule providers;
+- platform networking behavior.
 
 ### Quantumult X Common Subset
 

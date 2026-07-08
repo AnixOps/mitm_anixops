@@ -29,7 +29,9 @@ The current common-field subset accepts:
   [Loon Task Metadata](loon-task-metadata.md);
 - `[MITM] hostname = ...` with exact and deny host entries;
 - `[MITM]` adapter-visible options covered by
-  [Loon MITM Options](loon-mitm-options.md).
+  [Loon MITM Options](loon-mitm-options.md);
+- `[Rule]` domain-suffix reject policy intent covered by
+  [Loon Rule Reject](loon-rule-reject.md).
 
 ## Parser Output
 
@@ -56,6 +58,7 @@ Expected behavior:
 - two script rules are registered;
 - two MITM host patterns are registered;
 - adapter-visible MITM options are covered by a dedicated fixture;
+- rule reject policy intent is covered by a dedicated fixture;
 - metadata is tolerated and does not block load;
 - URL rewrite, header rewrite, script dispatch, and MITM allow/deny behavior are
   observable through public ABI calls.

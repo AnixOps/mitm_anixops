@@ -39,6 +39,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-script-metadata.md
             mitm_anixops/docs/compatibility/loon-task-metadata.md
             mitm_anixops/docs/compatibility/loon-mitm-options.md
+            mitm_anixops/docs/compatibility/loon-rule-reject.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
             mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
@@ -78,6 +79,8 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.TaskMetadata.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.MitmOptions.plugin
             mitm_anixops/tests/fixtures/Loon.MitmOptions.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.RuleDomainReject.plugin
+            mitm_anixops/tests/fixtures/Loon.RuleDomainReject.Malformed.plugin
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.snippet
@@ -242,6 +245,13 @@ jobs:
           grep -q "config/loon_mitm_options_fixture_exposes_adapter_flags" mitm_anixops/tests/test_config.c
           grep -q "config/loon_mitm_options_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Loon MITM option parser fixtures" mitm_anixops/TODO.md
+          grep -q "Loon rule reject policy intent" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon Rule Reject Source Contract" mitm_anixops/docs/compatibility/loon-rule-reject.md
+          grep -q "Loon.RuleDomainReject.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.RuleDomainReject.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Loon .*Rule.*DOMAIN-SUFFIX reject parser fixtures" mitm_anixops/TODO.md
           grep -q "Quantumult X rewrite/task/mitm common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Quantumult X Common Config Source Contract" mitm_anixops/docs/compatibility/quantumultx-common-config.md
           grep -q "QuantumultX.CommonConfig.snippet" mitm_anixops/docs/compatibility/matrix.md

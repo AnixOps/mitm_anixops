@@ -46,6 +46,10 @@ corresponding tests.
   request/response dispatch metadata parser contract.
 - [loon-task-metadata.md](loon-task-metadata.md): Loon `[Script]` scheduled
   task descriptor parser contract.
+- [loon-mitm-options.md](loon-mitm-options.md): Loon `[MITM]` host/options
+  parser contract.
+- [loon-rule-reject.md](loon-rule-reject.md): Loon `[Rule]` domain-suffix
+  reject parser contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
 - [quantumultx-mitm-options.md](quantumultx-mitm-options.md): Quantumult X
@@ -65,7 +69,7 @@ corresponding tests.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
   Shadowrocket common-config parser contract.
 - [shadowrocket-rule-reject.md](shadowrocket-rule-reject.md): Shadowrocket
-  `[Rule]` URL-regex reject parser contract.
+  `[Rule]` reject parser contract.
 - [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): Stash
   migration notes and Shadowrocket app-profile boundary guards.
 - [request-rewrite-common.md](request-rewrite-common.md): request URL rewrite

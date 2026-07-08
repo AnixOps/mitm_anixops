@@ -1,0 +1,127 @@
+# Loon Rule Reject Source Contract
+
+Capability: Loon `[Rule]` domain-suffix reject policy intent.
+
+Ecosystem: `loon`.
+
+Status: `partial`.
+
+## Purpose
+
+This contract fixes the first Loon `[Rule]` parser evidence for high-frequency
+domain-suffix reject policy intent. It maps only documented reject rules to the
+existing request-phase policy-core rewrite reject decision.
+
+It does not implement Loon routing, proxy selection, DNS, rule provider,
+packet-level behavior, or profile UI behavior.
+
+## Input Forms
+
+The parser accepts this narrow form inside `[Rule]`:
+
+```text
+DOMAIN-SUFFIX,ads.example.test,REJECT-200
+DOMAIN-SUFFIX,media.example.test,REJECT-IMG
+```
+
+Supported fields:
+
+- `DOMAIN-SUFFIX` rule type;
+- a valid hostname suffix;
+- `REJECT`, `REJECT-200`, `REJECT-NNN`, `REJECT-IMG`, `REJECT-VIDEO`,
+  `REJECT-DICT`, and `REJECT-ARRAY` actions already supported by the common
+  rewrite parser.
+
+Unsupported or unclaimed Loon `[Rule]` forms remain route or adapter owned:
+
+- `DIRECT`, `PROXY`, proxy group names, route policy names, and `no-resolve`;
+- `IP-CIDR`, `GEOIP`, and DNS/network routing matchers;
+- Loon rule-provider refresh, subscription, UI, or packet-routing behavior.
+
+## Parser Output
+
+For supported `DOMAIN-SUFFIX` reject rules, the parser must:
+
+- register request-phase rewrite reject rules through the existing policy-core
+  rewrite store;
+- emit accepted diagnostics with section `Rule` and action `rule`;
+- expose reject action and status-code fields through
+  `anixops_rewrite_evaluate_url`;
+- keep unsupported route-selection rules ignored without registering rewrite,
+  script, MITM, task, argument, DNS, proxy-node, or route behavior.
+
+Malformed supported `DOMAIN-SUFFIX` reject rules are rejected when the hostname
+suffix is invalid.
+
+## Positive Case
+
+Parser case:
+
+```text
+tests/fixtures/Loon.RuleDomainReject.plugin
+```
+
+Expected behavior:
+
+- config load succeeds;
+- two `DOMAIN-SUFFIX` reject rules are registered;
+- one `DOMAIN-SUFFIX` direct route remains ignored;
+- exact suffix and subdomain request-phase URL evaluation returns the expected
+  reject actions;
+- unrelated hostnames do not match;
+- response-phase URL evaluation does not trigger the request-phase rule.
+
+## Negative Case
+
+Parser case:
+
+```text
+tests/fixtures/Loon.RuleDomainReject.Malformed.plugin
+```
+
+Expected behavior:
+
+- config load fails with `ANIXOPS_ERR_PARSE`;
+- no rewrite rules are registered;
+- a rejected diagnostic is recorded with section `Rule` and action `rule`;
+- last error reports the parse failure at the malformed line.
+
+## Runtime And Security Boundary
+
+This contract covers parser and policy-core URL decision output only.
+
+It does not implement:
+
+- upstream direct/proxy route selection;
+- proxy groups or proxy-node parsing;
+- DNS strategy or `no-resolve`;
+- rule provider download or refresh;
+- socket creation, network IO, VPN, TUN, or packet capture;
+- profile import UI;
+- certificate lifecycle behavior;
+- JavaScript runtime execution.
+
+Adapters remain responsible for any future route-selection contract and
+platform capability confirmation before claiming production route behavior.
+
+## CI Evidence
+
+Required CI evidence:
+
+- `tests/test_config.c` registers
+  `config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
+- `tests/test_config.c` registers
+  `config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
+- GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
+
+## Compatibility Matrix Row
+
+Row:
+
+```text
+Loon rule reject policy intent
+```
+
+The row remains `partial` because only `DOMAIN-SUFFIX` reject policy intent is
+covered. Direct/proxy route selection, proxy groups, DNS, rule providers,
+app-level profile UI, and platform networking behavior remain unimplemented.

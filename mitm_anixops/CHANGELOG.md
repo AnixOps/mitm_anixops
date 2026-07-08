@@ -146,6 +146,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Loon `[MITM]` option parser fixtures and CI-covered tests for
   adapter-visible `enable`, `hostname`, `skip-server-cert-verify`, `h2`, and
   `disable-quic` signals without claiming certificate lifecycle or TLS support.
+- Added Loon `[Rule]` DOMAIN-SUFFIX reject parser fixtures and CI-covered tests
+  while keeping direct/proxy route selection adapter-owned.
 
 ### Changed
 
