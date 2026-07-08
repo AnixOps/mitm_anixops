@@ -62,6 +62,8 @@ corresponding tests.
   `http.force-http-engine` option parser contract.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
   Shadowrocket common-config parser contract.
+- [shadowrocket-rule-reject.md](shadowrocket-rule-reject.md): Shadowrocket
+  `[Rule]` URL-regex reject parser contract.
 - [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): Stash
   migration notes and Shadowrocket app-profile boundary guards.
 - [request-rewrite-common.md](request-rewrite-common.md): request URL rewrite

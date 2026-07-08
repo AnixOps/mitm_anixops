@@ -1,0 +1,127 @@
+# Shadowrocket Rule Reject Source Contract
+
+Capability: Shadowrocket `[Rule]` reject policy intent.
+
+Ecosystem: `shadowrocket`.
+
+Status: `partial`.
+
+## Purpose
+
+This contract defines the first app-profile parser-supported Shadowrocket
+`[Rule]` subset for the v1.0.0 compatibility matrix. It covers only URL regex
+rules whose policy maps to the existing policy-core reject decision.
+
+It does not implement Shadowrocket routing, proxy selection, DNS, or profile UI
+behavior.
+
+## Input Forms
+
+The parser accepts this narrow form inside `[Rule]`:
+
+```text
+URL-REGEX,^https:\/\/rule\.shadowrocket\.test\/ads,REJECT
+URL-REGEX,^https:\/\/rule\.shadowrocket\.test\/gone,REJECT-410
+```
+
+Supported fields:
+
+- `URL-REGEX` rule type;
+- a policy-core URL regex pattern;
+- `REJECT`, `REJECT-200`, `REJECT-NNN`, `REJECT-IMG`, `REJECT-VIDEO`,
+  `REJECT-DICT`, and `REJECT-ARRAY` actions already supported by the common
+  rewrite parser.
+
+Unsupported Shadowrocket `[Rule]` forms remain ignored in the portable profile:
+
+- `DOMAIN`, `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`, `IP-CIDR`, `GEOIP`, `FINAL`,
+  and other routing matchers;
+- `DIRECT`, `PROXY`, proxy group names, route policy names, and `no-resolve`;
+- DNS, proxy-node, VPN, packet-capture, UI, or subscription behavior.
+
+## Parser Output
+
+For supported `URL-REGEX` reject rules, the parser must:
+
+- register request-phase rewrite reject rules through the existing policy-core
+  rewrite store;
+- emit accepted diagnostics with section `Rule` and action `rule`;
+- expose reject action and status-code fields through
+  `anixops_rewrite_evaluate_url`;
+- keep unsupported route-selection rules ignored without registering rewrite,
+  script, MITM, task, argument, DNS, proxy-node, or route behavior.
+
+Malformed supported `URL-REGEX` reject rules are rejected when the URL regex
+cannot compile.
+
+## Positive Case
+
+Parser case:
+
+```text
+tests/fixtures/Shadowrocket.RuleReject.conf
+```
+
+Expected behavior:
+
+- config load succeeds;
+- two `URL-REGEX` reject rules are registered;
+- one `DOMAIN-SUFFIX` proxy route remains ignored;
+- request-phase URL evaluation returns the expected reject actions;
+- response-phase URL evaluation does not trigger the request-phase rule.
+
+## Negative Case
+
+Parser case:
+
+```text
+tests/fixtures/Shadowrocket.RuleReject.Malformed.conf
+```
+
+Expected behavior:
+
+- config load fails with `ANIXOPS_ERR_REGEX`;
+- no rewrite rules are registered;
+- a rejected diagnostic is recorded with section `Rule` and action `rule`;
+- last error reports regex failure at the malformed line.
+
+## Runtime And Security Boundary
+
+This contract covers parser and policy-core URL decision output only.
+
+It does not implement:
+
+- upstream direct/proxy route selection;
+- proxy groups or proxy-node parsing;
+- DNS strategy or `no-resolve`;
+- socket creation, network IO, VPN, TUN, or packet capture;
+- profile import UI;
+- certificate lifecycle behavior;
+- JavaScript runtime execution.
+
+Adapters remain responsible for any future route-selection contract and platform
+capability confirmation before claiming production route behavior.
+
+## CI Evidence
+
+Required CI evidence:
+
+- `tests/test_config.c` registers
+  `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` keeps
+  `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
+- GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
+
+## Compatibility Matrix Row
+
+Row:
+
+```text
+Shadowrocket rule reject policy intent
+```
+
+The row remains `partial` because only URL-regex reject policy intent is covered.
+Direct/proxy route selection, proxy groups, DNS, app-level profile UI, and
+platform networking behavior remain unimplemented.

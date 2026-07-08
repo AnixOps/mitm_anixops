@@ -46,6 +46,7 @@ jobs:
             mitm_anixops/docs/compatibility/surge-task-metadata.md
             mitm_anixops/docs/compatibility/stash-http-mitm.md
             mitm_anixops/docs/compatibility/shadowrocket-common-config.md
+            mitm_anixops/docs/compatibility/shadowrocket-rule-reject.md
             mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
             mitm_anixops/docs/compatibility/policy-intent-common.md
@@ -94,6 +95,8 @@ jobs:
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.RuleReject.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.RuleReject.Malformed.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
@@ -280,6 +283,13 @@ jobs:
           grep -q "config/shadowrocket_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_common_config_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Shadowrocket common-config parser fixture and positive/negative tests" mitm_anixops/TODO.md
+          grep -q "Shadowrocket rule reject policy intent" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket Rule Reject Source Contract" mitm_anixops/docs/compatibility/shadowrocket-rule-reject.md
+          grep -q "Shadowrocket.RuleReject.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.RuleReject.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*URL-regex reject parser fixtures" mitm_anixops/TODO.md
           grep -q "MITM.Hostname.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/mitm_hostname_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard" mitm_anixops/tests/test_mitm.c
@@ -436,13 +446,15 @@ jobs:
           grep -q "stash-http-mitm-mode=partial-parser-support" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "stash-app-profile-mode=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "shadowrocket-common-config-mode=partial-parser-support" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "shadowrocket-app-profile-mode=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-rule-reject-mode=partial-parser-support" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-app-profile-mode=rule-reject-plus-migration-guard" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "stash-http-mitm-fixtures=positive-and-negative-parser-fixtures" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "stash-app-profile-fixtures=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "shadowrocket-app-profile-fixtures=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-rule-reject-fixtures=positive-and-negative-parser-fixtures" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-app-profile-fixtures=rule-reject-plus-migration-guard" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "stash-expanded-support-claim=forbidden-outside-http-mitm-contract" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "shadowrocket-expanded-support-claim=forbidden-outside-common-config-contract" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-expanded-support-claim=forbidden-outside-common-config-and-rule-reject-contracts" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "Stash.MigrationGuard.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.MigrationGuard.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/stash_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c

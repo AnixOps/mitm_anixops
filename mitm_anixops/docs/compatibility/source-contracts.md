@@ -573,10 +573,50 @@ Current CI evidence:
 
 Unimplemented items:
 
-- full Shadowrocket app-level profile grammar;
+- full Shadowrocket app-level profile grammar beyond the dedicated rule-reject
+  subset;
 - proxy nodes, routing policy, DNS, VPN, packet-capture, or UI behavior;
 - certificate lifecycle;
 - runtime and scheduler behavior.
+
+### Shadowrocket Rule Reject Subset
+
+Detailed contract:
+[Shadowrocket Rule Reject Source Contract](shadowrocket-rule-reject.md).
+
+Capability: parse Shadowrocket `[Rule]` URL-regex reject policy intent.
+
+Input form:
+
+- `[Rule]` `URL-REGEX,<pattern>,REJECT`;
+- `[Rule]` `URL-REGEX,<pattern>,REJECT-NNN` and other common reject variants
+  already supported by the policy-core rewrite parser.
+
+Parser output:
+
+- request-phase rewrite reject rules visible through
+  `anixops_rewrite_evaluate_url`;
+- accepted diagnostics with section `Rule` and action `rule`;
+- ignored diagnostics for unsupported direct/proxy route-selection lines;
+- no proxy-node, DNS, route, MITM, script, task, argument, UI, or network IO
+  behavior from Shadowrocket `[Rule]` input.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Shadowrocket.RuleReject.conf`;
+- negative fixture `tests/fixtures/Shadowrocket.RuleReject.Malformed.conf`;
+- `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
+- `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
+- `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`
+  continues to guard unsupported app-profile route/proxy syntax.
+
+Unimplemented items:
+
+- `DIRECT`, `PROXY`, proxy groups, and route policy names;
+- non-URL-regex matchers such as `DOMAIN-SUFFIX`, `DOMAIN-KEYWORD`,
+  `IP-CIDR`, `GEOIP`, and `FINAL`;
+- `no-resolve`, DNS behavior, app-profile UI, proxy-node parsing, and platform
+  networking behavior.
 
 ### Stash Migration And Shadowrocket App-Profile Boundary
 
@@ -592,17 +632,23 @@ Input form:
 - `tests/fixtures/Shadowrocket.MigrationGuard.conf` as a non-support guard;
 - Stash `http.mitm` host metadata is covered separately by
   [Stash HTTP MITM Source Contract](stash-http-mitm.md);
+- Shadowrocket `[Rule]` URL-regex reject policy intent is covered separately by
+  [Shadowrocket Rule Reject Source Contract](shadowrocket-rule-reject.md);
 - Shadowrocket app-level profile sections remain unsupported unless they are
-  explicitly covered by `shadowrocket-common-config.md`.
+  explicitly covered by `shadowrocket-common-config.md` or
+  `shadowrocket-rule-reject.md`.
 
 Current CI evidence:
 
 - Stash app-profile routing compatibility remains `planned`;
 - Stash `http.mitm` compatibility matrix row is `partial`;
 - Shadowrocket common-config matrix row is `partial`;
+- Shadowrocket rule-reject matrix row is `partial`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
+- `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
+- `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - governance checks require migration and app-profile boundary markers plus
   guard fixture/test links.
@@ -611,8 +657,8 @@ Unimplemented items:
 
 - expanded Stash app-level profile source contract, parser fixtures, positive
   tests, and negative tests;
-- expanded Shadowrocket app-level profile source contract, parser fixtures,
-  positive tests, and negative tests.
+- expanded Shadowrocket app-level profile source contracts beyond rule reject,
+  parser fixtures, positive tests, and negative tests.
 
 ### MITM Hostname Policy
 

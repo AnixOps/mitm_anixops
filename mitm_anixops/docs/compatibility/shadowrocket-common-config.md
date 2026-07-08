@@ -68,9 +68,12 @@ Expected behavior:
 
 ## App Profile Boundary
 
-This contract does not implement Shadowrocket app-level profile behavior. The
-existing migration guard fixture remains valid for unsupported sections such as
-`[General]`, `[Rule]`, and `[Proxy]`.
+This contract does not implement general Shadowrocket app-level profile
+behavior. `[Rule]` URL-regex reject policy intent is covered separately by
+[`shadowrocket-rule-reject.md`](shadowrocket-rule-reject.md). The existing
+migration guard fixture remains valid for unsupported sections and route
+selection syntax such as `[General]`, `[Proxy]`, and `[Rule]` direct/proxy
+routes.
 
 Out-of-scope behavior includes:
 

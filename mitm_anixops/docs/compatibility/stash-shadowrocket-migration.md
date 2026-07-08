@@ -6,20 +6,23 @@ compatibility.
 Ecosystem: `stash`, `shadowrocket`.
 
 Status: Stash `http.mitm` `partial`; Stash app profile `planned`;
-Shadowrocket common config `partial`; Shadowrocket app profile `planned`.
+Shadowrocket common config `partial`; Shadowrocket rule reject `partial`;
+remaining Shadowrocket app profile `planned`.
 
 ```text
 stash-http-mitm-mode=partial-parser-support
 stash-app-profile-mode=migration-guard-only
 shadowrocket-common-config-mode=partial-parser-support
-shadowrocket-app-profile-mode=migration-guard-only
+shadowrocket-rule-reject-mode=partial-parser-support
+shadowrocket-app-profile-mode=rule-reject-plus-migration-guard
 stash-http-mitm-fixtures=positive-and-negative-parser-fixtures
 stash-http-force-http-engine-fixtures=positive-and-negative-parser-fixtures
 stash-app-profile-fixtures=migration-guard-only
-shadowrocket-app-profile-fixtures=migration-guard-only
+shadowrocket-rule-reject-fixtures=positive-and-negative-parser-fixtures
+shadowrocket-app-profile-fixtures=rule-reject-plus-migration-guard
 shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures
 stash-expanded-support-claim=forbidden-outside-http-mitm-contract
-shadowrocket-expanded-support-claim=forbidden-outside-common-config-contract
+shadowrocket-expanded-support-claim=forbidden-outside-common-config-and-rule-reject-contracts
 ```
 
 ## Purpose
@@ -30,13 +33,16 @@ This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
   host-policy subset.
 - Shadowrocket has a dedicated common-config source contract for a narrow
   `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
+- Shadowrocket has a dedicated rule-reject source contract for a narrow
+  `[Rule]` `URL-REGEX` reject subset.
 - Stash app-level routing, proxy, DNS, UI, script, and cron syntax remains a
   migration guard unless a future source contract, fixture pair, positive test,
   negative test, compatibility matrix row, and GitHub Actions evidence
   explicitly cover it.
-- Shadowrocket app-level profile syntax remains a migration guard unless a
-  future source contract, fixture pair, positive test, negative test,
-  compatibility matrix row, and GitHub Actions evidence explicitly cover it.
+- Shadowrocket app-level profile syntax outside common config and `[Rule]`
+  URL-regex reject remains a migration guard unless a future source contract,
+  fixture pair, positive test, negative test, compatibility matrix row, and
+  GitHub Actions evidence explicitly cover it.
 
 The current migration guard fixtures are non-support evidence:
 
@@ -49,6 +55,13 @@ the subset described in
 
 - `tests/fixtures/Shadowrocket.CommonConfig.conf`;
 - `tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf`.
+
+The dedicated Shadowrocket rule-reject fixtures are support evidence only for
+the subset described in
+[`shadowrocket-rule-reject.md`](shadowrocket-rule-reject.md):
+
+- `tests/fixtures/Shadowrocket.RuleReject.conf`;
+- `tests/fixtures/Shadowrocket.RuleReject.Malformed.conf`.
 
 The dedicated Stash HTTP MITM fixtures are support evidence only for the subset
 described in [`stash-http-mitm.md`](stash-http-mitm.md):
@@ -66,9 +79,11 @@ Allowed statements:
 - Stash `http.force-http-engine` has parser support as an adapter-visible QUIC
   fallback decision signal.
 - Shadowrocket app-level profile syntax remains a migration target outside the
-  common-config contract.
+  common-config and rule-reject contracts.
 - Shadowrocket common config has partial parser support for documented URL
   rewrite, script metadata, and MITM host/options syntax.
+- Shadowrocket `[Rule]` `URL-REGEX` reject syntax has partial parser support as
+  policy-core reject intent.
 - Existing Loon, Quantumult X, Surge, Shadowrocket common-config, and portable
   AnixOps fixtures can inform how overlapping rules should be translated.
 - Operators may manually map overlapping rules into a currently covered fixture
@@ -80,8 +95,8 @@ Forbidden statements:
 - Stash `rules`, `proxies`, DNS, routing, UI, cron, script runtime, or
   transport-level HTTP engine behavior is implemented.
 - Full Shadowrocket parser support is implemented.
-- Shadowrocket `[General]`, `[Rule]`, `[Proxy]`, DNS, routing, profile UI, or
-  proxy-node behavior is implemented.
+- Shadowrocket `[General]`, `[Proxy]`, DNS, routing, profile UI, proxy-node
+  behavior, or `[Rule]` direct/proxy route selection is implemented.
 - App-level routing, DNS, proxy-node, certificate, UI, or script runtime
   behavior is supported by the C policy core.
 
@@ -96,6 +111,8 @@ Current CI evidence:
 - `config/stash_http_force_http_engine_fixture_exposes_quic_signal`;
 - `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
+- `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
+- `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_common_config_fixture_is_supported`;
 - `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
 - GitHub Actions `governance` requires the migration notes, common-config
@@ -127,10 +144,20 @@ Expected Stash HTTP MITM behavior:
 Expected Shadowrocket app-profile guard behavior:
 
 - config load succeeds in the portable profile;
-- `[General]`, `[Rule]`, and `[Proxy]` lines remain ignored;
+- `[General]`, `[Proxy]`, and unsupported `[Rule]` route-selection lines remain
+  ignored;
 - no rewrite rules, script rules, MITM host patterns, or argument defaults are
-  registered from that guard fixture;
-- no app-level profile behavior is claimed.
+  registered from unsupported guard lines;
+- no direct/proxy routing, DNS, proxy-node, UI, or platform network behavior is
+  claimed.
+
+Expected Shadowrocket rule-reject behavior:
+
+- config load succeeds for `tests/fixtures/Shadowrocket.RuleReject.conf`;
+- `[Rule]` `URL-REGEX` reject entries register request-phase rewrite reject
+  decisions;
+- unsupported `[Rule]` direct/proxy route-selection entries remain ignored;
+- malformed supported `URL-REGEX` reject entries fail with regex diagnostics.
 
 ## Migration Mapping
 
@@ -139,6 +166,7 @@ concepts:
 
 - MITM host allow/deny lists;
 - request URL redirect or reject;
+- Shadowrocket `[Rule]` `URL-REGEX` reject intent;
 - response rewrite where it maps to the documented response rewrite subset;
 - request and response header add, replace, replace-regex, or delete;
 - request and response body regex replacement;
@@ -166,7 +194,8 @@ These notes do not cover:
 
 Before Stash app-profile support can move beyond migration notes, before Stash
 support can expand beyond `http.mitm`, or before Shadowrocket app-profile
-support can move beyond the common-config contract, a future change must add:
+support can move beyond the common-config and rule-reject contracts, a future
+change must add:
 
 1. A dedicated source contract for the target ecosystem surface.
 2. At least one redistributable positive fixture for supported syntax.
@@ -176,6 +205,7 @@ support can move beyond the common-config contract, a future change must add:
 6. GitHub Actions governance checks proving the contract, fixture, tests, and
    matrix row stay linked.
 
-The current Stash app-profile and Shadowrocket app-profile migration guard
-fixtures do not satisfy those entry criteria. Keep those surfaces as migration
-notes only until dedicated parser evidence exists.
+The current Stash app-profile guard and remaining Shadowrocket app-profile guard
+fixtures do not satisfy those entry criteria for route selection, proxy nodes,
+DNS, UI, or platform networking. Keep those surfaces as migration notes only
+until dedicated parser evidence exists.

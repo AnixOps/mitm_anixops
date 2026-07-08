@@ -117,7 +117,8 @@ typedef enum anixops_config_section {
 	ANIXOPS_SECTION_REWRITE,
 	ANIXOPS_SECTION_SCRIPT,
 	ANIXOPS_SECTION_MITM,
-	ANIXOPS_SECTION_PLUGIN
+	ANIXOPS_SECTION_PLUGIN,
+	ANIXOPS_SECTION_RULE
 } anixops_config_section_t;
 
 struct anixops_engine {
@@ -297,6 +298,7 @@ static int anixops_regex_pattern_requires_pcre2(const char *pattern, const char 
 static int anixops_regex_char_is_escaped(const char *pattern, size_t index);
 static int anixops_regex_closes_interval_quantifier(const char *pattern, size_t close_index);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
+static int anixops_rewrite_action_is_reject(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action);
@@ -318,6 +320,7 @@ static int anixops_argument_index(const anixops_engine_t *engine, const char *na
 static int anixops_engine_set_argument_default(anixops_engine_t *engine, const char *name, const char *value);
 static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const char *line);
 static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *line);
+static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line);
 static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name);
 static int anixops_resolve_script_argument(
 	const anixops_engine_t *engine,
@@ -922,6 +925,9 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			else if (strcasecmp(key, "plugin") == 0) {
 				section = ANIXOPS_SECTION_PLUGIN;
 			}
+			else if (strcasecmp(key, "rule") == 0 || strcasecmp(key, "rules") == 0) {
+				section = ANIXOPS_SECTION_RULE;
+			}
 			else {
 				section = ANIXOPS_SECTION_NONE;
 				if (anixops_add_rule_diagnostic(
@@ -1031,6 +1037,9 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			else if (strcasecmp(key, "plugin") == 0) {
 				section = ANIXOPS_SECTION_PLUGIN;
 			}
+			else if (strcasecmp(key, "rule") == 0 || strcasecmp(key, "rules") == 0) {
+				section = ANIXOPS_SECTION_RULE;
+			}
 			else {
 				section = ANIXOPS_SECTION_NONE;
 				if (anixops_add_rule_diagnostic(
@@ -1116,6 +1125,50 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					section,
 					"rewrite",
 					"rewrite rule ignored");
+				if (diag_rc != ANIXOPS_OK) {
+					return anixops_config_line_error(engine, diag_rc, line_no, line);
+				}
+			}
+			free(line);
+			if (line_end == NULL) {
+				break;
+			}
+			cursor = line_end + 1;
+			line_no++;
+			continue;
+		}
+		if (section == ANIXOPS_SECTION_RULE) {
+			size_t rewrite_count = engine->rule_len;
+			int rc = anixops_engine_add_shadowrocket_rule(engine, line);
+			if (rc != ANIXOPS_OK) {
+				(void)anixops_add_rule_diagnostic(
+					engine,
+					ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
+					line_no,
+					section,
+					"rule",
+					engine->last_error_message);
+				return anixops_config_line_error(engine, rc, line_no, line);
+			}
+			if (engine->rule_len != rewrite_count) {
+				if (anixops_add_rule_diagnostic(
+						engine,
+						ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
+						line_no,
+						section,
+						"rule",
+						"shadowrocket rule accepted") != ANIXOPS_OK) {
+					free(line);
+					return ANIXOPS_ERR_OUT_OF_MEMORY;
+				}
+			}
+			else {
+				int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+					engine,
+					line_no,
+					section,
+					"rule",
+					"rule line ignored");
 				if (diag_rc != ANIXOPS_OK) {
 					return anixops_config_line_error(engine, diag_rc, line_no, line);
 				}
@@ -2111,6 +2164,68 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 	engine->task_len++;
 	free(copy);
 	return ANIXOPS_OK;
+}
+
+static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line)
+{
+	char *copy;
+	const char *cursor;
+	char kind[128];
+	char pattern[ANIXOPS_PATTERN_CAP];
+	char action_token[128];
+	anixops_rewrite_action_t action = ANIXOPS_REWRITE_NONE;
+	int status_code = 0;
+	char rewrite_line[ANIXOPS_VALUE_CAP];
+	int written;
+	int rc;
+
+	if (engine == NULL || line == NULL) {
+		if (engine != NULL) {
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_INVALID_ARGUMENT, 0, "shadowrocket rule line is null");
+		}
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	anixops_clear_diagnostic(engine);
+
+	copy = anixops_strdup(line);
+	if (copy == NULL) {
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying shadowrocket rule");
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	cursor = copy;
+	if (!anixops_next_csv_field(&cursor, kind, sizeof(kind))) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+	if (strcasecmp(kind, "URL-REGEX") != 0) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+	if (!anixops_next_csv_field(&cursor, pattern, sizeof(pattern)) || pattern[0] == '\0') {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket URL-REGEX rule pattern missing");
+		return ANIXOPS_ERR_PARSE;
+	}
+	if (!anixops_next_csv_field(&cursor, action_token, sizeof(action_token)) || action_token[0] == '\0') {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket URL-REGEX rule action missing");
+		return ANIXOPS_ERR_PARSE;
+	}
+	if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
+		!anixops_rewrite_action_is_reject(action)) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+
+	written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", pattern, action_token);
+	if (written < 0 || (size_t)written >= sizeof(rewrite_line)) {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket URL-REGEX rule is too long");
+		return ANIXOPS_ERR_PARSE;
+	}
+	rc = anixops_engine_add_rewrite_rule(engine, rewrite_line);
+	free(copy);
+	return rc;
 }
 
 ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const char *line)
@@ -3631,6 +3746,8 @@ static const char *anixops_section_name(anixops_config_section_t section)
 		return "MITM";
 	case ANIXOPS_SECTION_PLUGIN:
 		return "Plugin";
+	case ANIXOPS_SECTION_RULE:
+		return "Rule";
 	case ANIXOPS_SECTION_NONE:
 	default:
 		return "";
@@ -3651,7 +3768,8 @@ static int anixops_compat_profile_rejects_ignored_rule(
 		return 0;
 	}
 	return section == ANIXOPS_SECTION_REWRITE || section == ANIXOPS_SECTION_SCRIPT ||
-		section == ANIXOPS_SECTION_ARGUMENT || section == ANIXOPS_SECTION_MITM;
+		section == ANIXOPS_SECTION_ARGUMENT || section == ANIXOPS_SECTION_MITM ||
+		section == ANIXOPS_SECTION_RULE;
 }
 
 static int anixops_regex_backend_is_valid(anixops_regex_backend_t backend)
@@ -5029,6 +5147,16 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 		return 1;
 	}
 	return 0;
+}
+
+static int anixops_rewrite_action_is_reject(anixops_rewrite_action_t action)
+{
+	return action == ANIXOPS_REWRITE_REJECT ||
+		action == ANIXOPS_REWRITE_REJECT_200 ||
+		action == ANIXOPS_REWRITE_REJECT_IMG ||
+		action == ANIXOPS_REWRITE_REJECT_VIDEO ||
+		action == ANIXOPS_REWRITE_REJECT_DICT ||
+		action == ANIXOPS_REWRITE_REJECT_ARRAY;
 }
 
 static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action)

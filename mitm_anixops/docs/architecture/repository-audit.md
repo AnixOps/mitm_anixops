@@ -165,8 +165,8 @@ execution or source text scans.
 - No macOS release artifact, signing, notarization, entitlement, or platform
   adapter coverage yet.
 - Stash has a narrow `http.mitm` host/options parser contract and Shadowrocket
-  has a narrow common-config parser contract; remaining app-level profile
-  syntax remains migration-guarded.
+  has narrow common-config and rule-reject parser contracts; remaining
+  app-level profile syntax remains migration-guarded.
 - Cron/task trigger behavior has a parser descriptor contract, but scheduler
   dispatch and runtime execution remain unimplemented.
 - Production JS runtime remains out of scope for the C policy core; the
