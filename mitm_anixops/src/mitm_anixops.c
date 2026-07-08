@@ -302,6 +302,8 @@ static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t actio
 static int anixops_rewrite_action_replaces_header_regex(anixops_rewrite_action_t action);
 static int anixops_parse_script_kind(const char *token, anixops_script_kind_t *kind, anixops_phase_t *phase);
 static int anixops_script_kind_requires_body_token(const char *token);
+static int anixops_is_task_section(const char *key);
+static int anixops_task_cron_field_token_is_plausible(const char *token);
 static int anixops_parse_task_kind_token(const char *token, anixops_task_kind_t *kind);
 static int anixops_cron_expression_is_valid(const char *value);
 static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t action);
@@ -788,7 +790,8 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			else if (strcasecmp(key, "mitm") == 0) {
 				section = ANIXOPS_SECTION_MITM;
 			}
-			else if (strcasecmp(key, "script") == 0 || strcasecmp(key, "remote script") == 0) {
+			else if (strcasecmp(key, "script") == 0 || strcasecmp(key, "remote script") == 0 ||
+				anixops_is_task_section(key)) {
 				section = ANIXOPS_SECTION_SCRIPT;
 			}
 			else if (strcasecmp(key, "argument") == 0 || strcasecmp(key, "arguments") == 0) {
@@ -899,7 +902,8 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 			else if (strcasecmp(key, "mitm") == 0) {
 				section = ANIXOPS_SECTION_MITM;
 			}
-			else if (strcasecmp(key, "script") == 0 || strcasecmp(key, "remote script") == 0) {
+			else if (strcasecmp(key, "script") == 0 || strcasecmp(key, "remote script") == 0 ||
+				anixops_is_task_section(key)) {
 				section = ANIXOPS_SECTION_SCRIPT;
 			}
 			else if (strcasecmp(key, "plugin") == 0) {
@@ -1787,6 +1791,73 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 		kind = ANIXOPS_TASK_CRON;
 		attrs = cursor;
 		anixops_copy_text(origin, sizeof(origin), "script-section-cron");
+	}
+	else if (anixops_task_cron_field_token_is_plausible(first)) {
+		const char *task_cursor;
+		const char *task_attrs;
+		char field[6][128];
+		char maybe_script_path[2048];
+		char six_field_script_path[2048];
+		char *path_comma;
+		size_t field_count;
+		size_t schedule_pos = 0;
+		size_t pos = 0;
+		anixops_trim_inplace(trimmed);
+		task_cursor = trimmed;
+		for (field_count = 0; field_count < 5; field_count++) {
+			if (!anixops_next_token(&task_cursor, field[field_count], sizeof(field[field_count]))) {
+				free(copy);
+				anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "invalid task cron expression");
+				return ANIXOPS_ERR_PARSE;
+			}
+		}
+		if (!anixops_next_token(&task_cursor, maybe_script_path, sizeof(maybe_script_path))) {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task script path missing");
+			return ANIXOPS_ERR_PARSE;
+		}
+		if (anixops_task_cron_field_token_is_plausible(maybe_script_path) &&
+			anixops_next_token(&task_cursor, six_field_script_path, sizeof(six_field_script_path))) {
+			anixops_copy_text(field[5], sizeof(field[5]), maybe_script_path);
+			anixops_copy_text(script_path, sizeof(script_path), six_field_script_path);
+			field_count = 6;
+		}
+		else {
+			anixops_copy_text(script_path, sizeof(script_path), maybe_script_path);
+			field_count = 5;
+		}
+		task_attrs = task_cursor;
+		path_comma = strchr(script_path, ',');
+		if (path_comma != NULL) {
+			*path_comma = '\0';
+			if (path_comma[1] != '\0') {
+				task_attrs = path_comma + 1;
+			}
+		}
+		while (*task_attrs != '\0' && (isspace((unsigned char)*task_attrs) || *task_attrs == ',')) {
+			task_attrs++;
+		}
+		attrs = task_attrs;
+		schedule[0] = '\0';
+		for (pos = 0; pos < field_count; pos++) {
+			if (pos > 0 && anixops_append_char(schedule, sizeof(schedule), &schedule_pos, ' ') != ANIXOPS_OK) {
+				free(copy);
+				anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task cron expression too long");
+				return ANIXOPS_ERR_PARSE;
+			}
+			if (anixops_append_range(
+					schedule,
+					sizeof(schedule),
+					&schedule_pos,
+					field[pos],
+					strlen(field[pos])) != ANIXOPS_OK) {
+				free(copy);
+				anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task cron expression too long");
+				return ANIXOPS_ERR_PARSE;
+			}
+		}
+		kind = ANIXOPS_TASK_CRON;
+		anixops_copy_text(origin, sizeof(origin), "quantumultx-task-local-cron");
 	}
 	else {
 		char *eq = strchr(trimmed, '=');
@@ -4767,6 +4838,33 @@ static int anixops_parse_script_kind(const char *token, anixops_script_kind_t *k
 		return 1;
 	}
 	return 0;
+}
+
+static int anixops_is_task_section(const char *key)
+{
+	if (key == NULL) {
+		return 0;
+	}
+	return strcasecmp(key, "task_local") == 0 || strcasecmp(key, "task-local") == 0;
+}
+
+static int anixops_task_cron_field_token_is_plausible(const char *token)
+{
+	const char *p;
+	int has_cron_marker = 0;
+	if (token == NULL || token[0] == '\0') {
+		return 0;
+	}
+	for (p = token; *p != '\0'; p++) {
+		unsigned char ch = (unsigned char)*p;
+		if (isdigit(ch) || ch == '*' || ch == '?') {
+			has_cron_marker = 1;
+		}
+		if (!(isalnum(ch) || ch == '*' || ch == '?' || ch == '/' || ch == ',' || ch == '-')) {
+			return 0;
+		}
+	}
+	return has_cron_marker;
 }
 
 static int anixops_script_kind_requires_body_token(const char *token)

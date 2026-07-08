@@ -40,6 +40,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-task-metadata.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
+            mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
             mitm_anixops/docs/compatibility/surge-requirement-metadata.md
             mitm_anixops/docs/compatibility/shadowrocket-common-config.md
@@ -74,6 +75,8 @@ jobs:
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.Malformed.snippet
+            mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.snippet
+            mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
             mitm_anixops/tests/fixtures/Surge.CommonConfig.sgmodule
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             mitm_anixops/tests/fixtures/Surge.RequirementMetadata.sgmodule
@@ -207,6 +210,13 @@ jobs:
           grep -q "config/quantumultx_mitm_options_fixture_exposes_adapter_flags" mitm_anixops/tests/test_config.c
           grep -q "config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Quantumult X MITM option parser fixtures" mitm_anixops/TODO.md
+          grep -q "Quantumult X task metadata" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Quantumult X Task Metadata Source Contract" mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
+          grep -q "QuantumultX.TaskMetadata.snippet" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "QuantumultX.TaskMetadata.Malformed.snippet" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/quantumultx_task_metadata_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
+          grep -q "config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Quantumult X task metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Surge module common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge Module Common Config Source Contract" mitm_anixops/docs/compatibility/surge-module-common-config.md
           grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md

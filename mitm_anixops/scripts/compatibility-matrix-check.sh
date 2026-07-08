@@ -16,6 +16,7 @@ Loon argument section
 Loon script metadata
 Loon task metadata
 Quantumult X rewrite/task/mitm common config
+Quantumult X task metadata
 Surge module common config
 Surge requirement metadata
 hostname / MITM domain matching

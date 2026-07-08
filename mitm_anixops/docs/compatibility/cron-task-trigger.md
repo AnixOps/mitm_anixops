@@ -60,6 +60,7 @@ Parser case:
 ```text
 tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
 tests/fixtures/Loon.TaskMetadata.plugin
+tests/fixtures/QuantumultX.TaskMetadata.snippet
 ```
 
 Expected behavior:
@@ -72,6 +73,8 @@ Expected behavior:
 - cron and interval task descriptors are observable through the public ABI;
 - the Loon parser fixture exposes the same descriptor ABI while preserving HTTP
   script URL dispatch separation;
+- the Quantumult X parser fixture exposes `[task_local]` cron descriptors while
+  preserving HTTP script URL dispatch separation;
 - response-phase URL script evaluation does not return a task descriptor.
 
 ## Unsupported Case
@@ -96,6 +99,7 @@ Parser case:
 ```text
 tests/fixtures/CronTaskTrigger.Malformed.conf
 tests/fixtures/Loon.TaskMetadata.Malformed.plugin
+tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
 ```
 
 Expected behavior:
@@ -161,6 +165,10 @@ Current evidence:
   `config/loon_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/loon_task_metadata_malformed_fixture_rejects_invalid_cron`;
+- `tests/test_config.c` registers
+  `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
+- `tests/test_config.c` registers
+  `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
   guards against treating bare cron rules as supported HTTP scripts when using
@@ -170,7 +178,8 @@ Missing evidence:
 
 - scheduler/runtime replay or E2E test;
 - task JavaScript runtime bindings;
-- adapter compatibility notes beyond the current Loon parser boundary;
+- adapter compatibility notes beyond the current Loon and Quantumult X parser
+  boundaries;
 - permission, concurrency, and cancellation policy.
 
 ## Compatibility Matrix Row

@@ -9,8 +9,9 @@ Status: `partial`.
 ## Purpose
 
 This contract fixes the P1 parser milestone for the high-frequency Quantumult X
-rewrite and MITM subset. It explicitly keeps task and cron behavior planned
-until parser, scheduler, and runtime evidence exist.
+rewrite and MITM subset. Local cron task parser metadata is covered separately
+by [Quantumult X Task Metadata](quantumultx-task-metadata.md); scheduler and
+runtime behavior remain adapter-owned.
 
 ## Input Forms
 
@@ -25,7 +26,9 @@ The current common-config subset accepts:
 - `[mitm]` and `#[mitm]` section aliases;
 - `hostname`, `force-http-engine-hosts`, `skip-server-cert-verify`, `h2`,
   and QUIC fallback options covered by
-  [Quantumult X MITM Options](quantumultx-mitm-options.md).
+  [Quantumult X MITM Options](quantumultx-mitm-options.md);
+- `#[task_local]` cron descriptor lines covered by
+  [Quantumult X Task Metadata](quantumultx-task-metadata.md).
 
 ## Parser Output
 
@@ -35,8 +38,8 @@ The parser must produce:
 - ignored diagnostics for tolerated metadata or unsupported non-rule lines;
 - rejected diagnostics for malformed supported-section rules under
   `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
-- URL rewrite rules, header rewrite rules, script trigger rules, and MITM host
-  patterns observable through the public ABI.
+- URL rewrite rules, header rewrite rules, script trigger rules, task
+  descriptors, and MITM host patterns observable through the public ABI.
 
 ## Positive Case
 
@@ -73,16 +76,14 @@ Expected behavior:
 
 ## Task And Cron Boundary
 
-Quantumult X task and cron trigger behavior is not implemented by this
-contract. It remains a planned P3 feature because it requires:
+`#[task_local]` cron lines are parser metadata only. They are documented and
+tested in [Quantumult X Task Metadata](quantumultx-task-metadata.md), but the
+following remain unimplemented:
 
-- a task source contract;
-- parser fixtures for scheduled task forms;
-- scheduler/runtime dispatch semantics;
-- positive and negative CI tests.
-
-Until that evidence exists, task/cron capability must remain `planned` in the
-compatibility matrix.
+- task scheduler/runtime dispatch semantics;
+- JavaScript task bindings;
+- event-triggered task forms such as `event-network` and `event-interaction`;
+- permission, concurrency, and cancellation policy.
 
 ## Runtime And Security Boundary
 
@@ -118,4 +119,4 @@ Quantumult X rewrite/task/mitm common config
 ```
 
 The row remains `partial` because rewrite and MITM are covered by this
-contract, while task/cron behavior remains planned.
+contract, while task scheduling/runtime behavior remains adapter-owned.

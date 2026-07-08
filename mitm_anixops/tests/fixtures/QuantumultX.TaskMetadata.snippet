@@ -1,0 +1,4 @@
+#[task_local]
+*/15 * * * * https://scripts.example/qx-task-cron.js, tag=qx.task.cron, argument=Mode=cron, timeout=4, max-size=2048
+0 30 8 * * * https://scripts.example/qx-task-six-field.js, tag=qx.task.six, enabled=false
+event-network https://scripts.example/qx-task-network.js, tag=qx.task.network

@@ -289,6 +289,8 @@ Input form:
 - `#[rewrite_remote]`
 - `#[mitm]`
 - `url`-prefixed rewrite/script/header/body forms;
+- `#[task_local]` cron descriptor lines covered by
+  [Quantumult X Task Metadata](quantumultx-task-metadata.md);
 - `force-http-engine-hosts`;
 - host-list `skip-server-cert-verify`.
 
@@ -299,13 +301,58 @@ Current CI evidence:
 - `config/quantumultx_common_config_fixture_is_supported`;
 - `config/quantumultx_common_config_strict_fixture_rejects_malformed_rule`;
 - C parser/script/rewrite tests;
-- runner corpus entry `Representative.QuantumultX.snippet`.
+- runner corpus entry `Representative.QuantumultX.snippet`;
+- dedicated task parser evidence in
+  [Quantumult X Task Metadata Source Contract](quantumultx-task-metadata.md).
 
 Unimplemented items:
 
-- task/cron behavior;
+- task scheduler/runtime behavior;
+- event-triggered task forms;
 - full rewrite/task grammar;
 - broader corpus and migration notes.
+
+### Quantumult X Task Metadata
+
+Detailed contract:
+[Quantumult X Task Metadata Source Contract](quantumultx-task-metadata.md).
+
+Capability: parse Quantumult X `[task_local]` cron task descriptors without
+claiming scheduler or runtime execution.
+
+Input form:
+
+- `#[task_local]` or `[task_local]` sections;
+- five-field or six-field cron expressions followed by a script path token;
+- comma-separated `tag`, `argument`, `timeout`, `timeout-ms`, `max-size`,
+  `enable`, and `enabled` metadata;
+- unsupported event-triggered task forms remain ignored in the portable
+  profile.
+
+Parser output:
+
+- accepted diagnostics with section `Script` and action `task`;
+- task kind, schedule, script path, tag, resolved argument, timeout, max-size,
+  enabled state, and parser origin visible through
+  `anixops_engine_copy_task_descriptor`;
+- task descriptors remain separate from HTTP script URL dispatch;
+- no scheduler, background execution, JavaScript task runtime, certificate,
+  routing, or platform UI behavior from task metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/QuantumultX.TaskMetadata.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet`;
+- `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
+- `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`.
+
+Unimplemented items:
+
+- event-triggered task forms such as `event-network` and `event-interaction`;
+- scheduler/runtime execution;
+- task JavaScript bindings;
+- concurrency and permission policy;
+- broader Quantumult X task corpus.
 
 ### Quantumult X MITM Options
 

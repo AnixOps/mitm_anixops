@@ -41,6 +41,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Quantumult X MITM options source contract plus positive and negative
   parser fixtures for host/options adapter signals.
+- Added a Quantumult X task metadata source contract plus positive and negative
+  parser fixtures for `[task_local]` cron descriptors.
 - Added a Surge module common-config source contract plus positive and negative
   parser fixtures for the third P1 parser milestone.
 - Added a Surge requirement metadata source contract plus positive and negative

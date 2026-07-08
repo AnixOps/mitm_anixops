@@ -50,6 +50,8 @@ corresponding tests.
   Quantumult X rewrite/MITM common-config parser contract.
 - [quantumultx-mitm-options.md](quantumultx-mitm-options.md): Quantumult X
   MITM host/options parser contract.
+- [quantumultx-task-metadata.md](quantumultx-task-metadata.md): Quantumult X
+  `[task_local]` cron task descriptor parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
   module common-config parser contract.
 - [surge-requirement-metadata.md](surge-requirement-metadata.md): Surge
