@@ -156,6 +156,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   keeping direct/proxy route selection adapter-owned.
 - Added Loon `[Rule]` URL-REGEX reject parser fixtures and CI-covered tests
   while keeping direct/proxy route selection adapter-owned.
+- Added a Loon `[Rule]` route-selection guard fixture and CI-covered test
+  proving direct/proxy, `IP-CIDR`, `GEOIP`, and `no-resolve` remain
+  adapter-owned.
 
 ### Changed
 

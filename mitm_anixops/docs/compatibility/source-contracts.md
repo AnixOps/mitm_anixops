@@ -389,6 +389,41 @@ Unimplemented items:
 - proxy groups, DNS/no-resolve, and rule providers;
 - platform networking behavior.
 
+### Loon Rule Route-Selection Guard
+
+Detailed contract:
+[Loon Rule Routing Guard Source Contract](loon-rule-routing-guard.md).
+
+Capability: keep Loon route-selection and DNS-like `[Rule]` entries outside
+the policy-core rewrite contract until adapter evidence exists.
+
+Input form:
+
+- `[Rule]` `DOMAIN-SUFFIX,<host>,DIRECT`;
+- `[Rule]` `DOMAIN,<host>,PROXY`;
+- `[Rule]` `IP-CIDR,<cidr>,DIRECT,no-resolve`;
+- `[Rule]` `GEOIP,<country>,PROXY`;
+- `[Rule]` `FINAL,DIRECT`.
+
+Parser output:
+
+- ignored diagnostics with section `Rule` and action `rule`;
+- no request-phase rewrite reject or redirect rule;
+- no script, task, argument, MITM, DNS, proxy-group, rule-provider, or platform
+  route-selection state.
+
+Current CI evidence:
+
+- guard fixture `tests/fixtures/Loon.RuleRouteUnsupported.plugin`;
+- `config/loon_rule_route_unsupported_fixture_keeps_routes_ignored`.
+
+Unimplemented items:
+
+- direct/proxy route selection;
+- proxy groups and upstream selection;
+- IP-CIDR, GEOIP, DNS/no-resolve, fallback, and rule-provider semantics;
+- platform VPN, network-extension, and socket routing behavior.
+
 ### Quantumult X Common Subset
 
 Detailed contract:

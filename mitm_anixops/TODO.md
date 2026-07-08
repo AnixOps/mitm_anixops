@@ -47,6 +47,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
       tests.
 - [x] Add Loon `[Rule]` URL-REGEX reject parser fixtures and
       positive/negative tests.
+- [x] Add Loon `[Rule]` route-selection non-support guard fixture and test.
 - [x] Add Quantumult X MITM option parser fixtures and positive/negative
   tests.
 - [x] Add Quantumult X task metadata parser fixtures and positive/negative

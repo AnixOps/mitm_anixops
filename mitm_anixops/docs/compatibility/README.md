@@ -50,6 +50,8 @@ corresponding tests.
   parser contract.
 - [loon-rule-reject.md](loon-rule-reject.md): Loon `[Rule]` domain-suffix
   reject parser contract.
+- [loon-rule-routing-guard.md](loon-rule-routing-guard.md): Loon `[Rule]`
+  route-selection and DNS non-support guard contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
 - [quantumultx-mitm-options.md](quantumultx-mitm-options.md): Quantumult X

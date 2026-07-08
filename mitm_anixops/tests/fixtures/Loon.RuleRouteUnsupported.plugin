@@ -1,0 +1,7 @@
+# Loon route and DNS rule non-support guard.
+[Rule]
+DOMAIN-SUFFIX,route.guard.loon.test,DIRECT
+DOMAIN,proxy.guard.loon.test,PROXY
+IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+GEOIP,CN,PROXY
+FINAL,DIRECT
