@@ -94,6 +94,7 @@ jobs:
           grep -q "format-check:" .github/workflows/build.yml
           grep -q "static lint check passed" mitm_anixops/scripts/static-lint-check.sh
           grep -q "lint:" .github/workflows/build.yml
+          grep -q "macos-smoke:" .github/workflows/build.yml
           grep -q "P0 Repository Baseline" mitm_anixops/ROADMAP.md
           grep -q "P1 Plugin Parser" mitm_anixops/ROADMAP.md
           grep -q "P2 Rule Matching Engine" mitm_anixops/ROADMAP.md
@@ -105,9 +106,11 @@ jobs:
           grep -q "^- \\[x\\] Add a dedicated compatibility matrix CI job" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a dedicated static format check CI job" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a dedicated static lint CI job" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add a macOS policy-core smoke CI job" mitm_anixops/TODO.md
           grep -q "compatibility-matrix" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "format-check" mitm_anixops/docs/architecture/repository-audit.md
           grep -q '`lint`: runs `shellcheck`' mitm_anixops/docs/architecture/repository-audit.md
+          grep -q '`macos-smoke`: runs default C tests' mitm_anixops/docs/architecture/repository-audit.md
           grep -q "branch-protection-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "Loon plugin common fields" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Plugin Common Fields Source Contract" mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
@@ -229,6 +232,7 @@ jobs:
           grep -q "ci-workflow-lint-status=shellcheck-error-severity" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-format-status=static-format-check" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-compatibility-matrix-status=dedicated-job" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "ci-workflow-macos-status=policy-core-smoke" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-current-mode=tag-triggered-build-and-publish" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-publication=tag-publish-enabled" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-rollback-policy=accepted" mitm_anixops/docs/architecture/release-gate.md
@@ -298,6 +302,30 @@ jobs:
           sudo apt-get install -y shellcheck
       - name: Validate shell lint
         run: sh mitm_anixops/scripts/static-lint-check.sh
+
+  macos-smoke:
+    runs-on: macos-latest
+    needs:
+      - governance
+    defaults:
+      run:
+        working-directory: mitm_anixops
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.22.x"
+          cache: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+      - name: Run macOS policy-core smoke
+        run: |
+          make clean
+          make test
+          make demo-check
+          make runner-check
+          make proxy-shim-check
 
   linux-test:
     runs-on: ubuntu-latest

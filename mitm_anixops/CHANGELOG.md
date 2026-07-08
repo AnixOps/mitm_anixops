@@ -20,6 +20,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   CRLF, final newline, and shell syntax checks.
 - Added a dedicated static lint GitHub Actions job using `shellcheck` for
   repository shell scripts.
+- Added a macOS policy-core smoke GitHub Actions job for default C tests,
+  runner checks, demo checks, and proxy-shim build checks.
 - Added a release dry-run source contract before introducing release automation.
 - Added a Loon common-fields source contract plus positive and negative parser
   fixtures for the first P1 parser milestone.

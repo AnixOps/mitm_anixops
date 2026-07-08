@@ -78,6 +78,8 @@ Current jobs:
 - `format-check`: validates tracked text files for trailing whitespace, CRLF,
   final newlines, and POSIX shell syntax without running a build.
 - `lint`: runs `shellcheck` against repository shell scripts at error severity.
+- `macos-smoke`: runs default C tests, demo checks, runner checks, and
+  proxy-shim build checks on a macOS runner without producing release artifacts.
 - `windows-binary`: builds the Windows Bilibili demo binary with MSYS2 and
   uploads `anixops-mitm-windows-x64`.
 - `release-dry-run`: validates a dry-run version, runs an equivalent full check
@@ -95,8 +97,7 @@ Current jobs:
 Known CI/CD gaps for v1.0.0:
 
 - GitHub Release upload exists only for gated `v*` tag runs; release
-  environment approval still needs repository configuration;
-- no macOS runner coverage yet.
+  environment approval still needs repository configuration.
 
 The old `mitm_anixops/ci/github-actions.yml` file is a legacy workflow snippet,
 not the active GitHub workflow path.
@@ -154,7 +155,8 @@ status must be taken from GitHub Actions, not local execution.
   before matrix rows can be promoted.
 - Release environment approval is documented, but repository environment
   protection still requires manual configuration.
-- No macOS CI coverage.
+- No macOS release artifact, signing, notarization, entitlement, or platform
+  adapter coverage yet.
 - Stash and Shadowrocket are not yet first-class parser targets.
 - Cron/task trigger behavior has a planned source contract, but parser fixtures,
   scheduler dispatch, and runtime execution remain unimplemented.
