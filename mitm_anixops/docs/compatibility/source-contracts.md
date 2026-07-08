@@ -443,6 +443,8 @@ Input form:
 - `#[mitm]`
 - `url`-prefixed rewrite/script/header/body forms;
 - Quantumult X `url echo-response content-type body` response-body forms;
+- Quantumult X `url response-body-replace-regex pattern replacement`
+  response-body forms;
 - `#[task_local]` cron and event descriptor lines covered by
   [Quantumult X Task Metadata](quantumultx-task-metadata.md);
 - `force-http-engine-hosts`;
@@ -452,12 +454,16 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/QuantumultX.CommonConfig.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.EchoResponse.snippet`;
+- positive fixture `tests/fixtures/QuantumultX.BodyMutation.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet`;
 - `config/quantumultx_common_config_fixture_is_supported`;
 - `config/quantumultx_common_config_strict_fixture_rejects_malformed_rule`;
 - `config/quantumultx_echo_response_fixture_maps_response_body`;
 - `config/quantumultx_echo_response_malformed_fixture_rejects_missing_body`;
+- `config/quantumultx_body_mutation_fixture_maps_response_body_regex`;
+- `config/quantumultx_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - C parser/script/rewrite tests;
 - runner corpus entry `Representative.QuantumultX.snippet`;
 - dedicated task parser evidence in
@@ -1144,9 +1150,13 @@ Input form:
 Current CI evidence:
 
 - positive fixture `tests/fixtures/BodyMutation.Common.conf`;
+- positive fixture `tests/fixtures/QuantumultX.BodyMutation.snippet`;
 - negative fixture `tests/fixtures/BodyMutation.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet`;
 - `config/body_mutation_common_fixture_is_supported`;
 - `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
+- `config/quantumultx_body_mutation_fixture_maps_response_body_regex`;
+- `config/quantumultx_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - regex, JSON path, body-chain, and optional JQ tests under
   `tests/test_rewrite.c`.
 

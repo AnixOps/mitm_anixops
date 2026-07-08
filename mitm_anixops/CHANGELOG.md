@@ -46,6 +46,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Quantumult X `url echo-response` parser fixtures and CI-covered tests
   while keeping HTTP serialization, content-type writeback, and streaming
   adapter-owned.
+- Added Quantumult X `url response-body-replace-regex` parser fixtures and
+  CI-covered tests while keeping HTTP serialization, compression, and streaming
+  adapter-owned.
 - Added a Quantumult X MITM options source contract plus positive and negative
   parser fixtures for host/options adapter signals.
 - Added a Quantumult X MITM certificate-material and validation-bypass guard
