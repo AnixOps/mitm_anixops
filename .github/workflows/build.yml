@@ -27,10 +27,13 @@ jobs:
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
+            mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
             mitm_anixops/tests/fixtures/Loon.CommonFields.Malformed.plugin
+            mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
+            mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -51,6 +54,10 @@ jobs:
           grep -q "config/loon_common_fields_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/loon_common_fields_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
           grep -q "Quantumult X rewrite/task/mitm common config" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Quantumult X Common Config Source Contract" mitm_anixops/docs/compatibility/quantumultx-common-config.md
+          grep -q "QuantumultX.CommonConfig.snippet" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/quantumultx_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
+          grep -q "config/quantumultx_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
           grep -q "Surge module common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md

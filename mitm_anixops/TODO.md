@@ -20,7 +20,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 ## P1 Plugin Parser
 
 - [x] Define Loon plugin source contract for common sections and fields.
-- [ ] Define Quantumult X source contract for rewrite/task/mitm subsets.
+- [x] Define Quantumult X source contract for rewrite/task/mitm subsets.
 - [ ] Define Surge module source contract for module metadata, scripts, MITM,
   and rewrite subsets.
 - [ ] Add one parser fixture and one positive/negative parser test per new

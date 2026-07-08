@@ -17,6 +17,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added a release dry-run source contract before introducing release automation.
 - Added a Loon common-fields source contract plus positive and negative parser
   fixtures for the first P1 parser milestone.
+- Added a Quantumult X rewrite/MITM common-config source contract plus positive
+  and negative parser fixtures for the second P1 parser milestone.
 
 ### Changed
 

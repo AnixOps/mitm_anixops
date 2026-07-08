@@ -1,0 +1,14 @@
+#!name = Quantumult X Common Config Fixture
+#!desc = Minimal Quantumult X rewrite and MITM fields for P1 parser contract coverage.
+
+#[rewrite_local]
+^http:\/\/old\.common\.qx\.test\/(.*) url 302 https://api.common.qx.test/$1
+^https:\/\/ads\.common\.qx\.test url reject-dict
+^https:\/\/api\.common\.qx\.test\/v1 url header-add X-QX-Mode prod
+^https:\/\/api\.common\.qx\.test\/v1 url script-request-body https://scripts.example/qx-common-request.js
+^https:\/\/api\.common\.qx\.test\/v1 url script-response-header https://scripts.example/qx-common-response-header.js
+
+#[mitm]
+hostname = %APPEND% api.common.qx.test, ads.common.qx.test, old.common.qx.test
+force-http-engine-hosts = %APPEND% force.common.qx.test
+skip-server-cert-verify = api.common.qx.test, force.common.qx.test

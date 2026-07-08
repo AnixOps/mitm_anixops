@@ -63,6 +63,9 @@ Unimplemented items:
 
 ### Quantumult X Common Subset
 
+Detailed contract:
+[Quantumult X Common Config Source Contract](quantumultx-common-config.md).
+
 Capability: parse and evaluate the currently implemented Quantumult X subset.
 
 Input form:
@@ -76,6 +79,10 @@ Input form:
 
 Current CI evidence:
 
+- positive fixture `tests/fixtures/QuantumultX.CommonConfig.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet`;
+- `config/quantumultx_common_config_fixture_is_supported`;
+- `config/quantumultx_common_config_strict_fixture_rejects_malformed_rule`;
 - C parser/script/rewrite tests;
 - runner corpus entry `Representative.QuantumultX.snippet`.
 

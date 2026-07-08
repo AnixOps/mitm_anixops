@@ -34,4 +34,6 @@ corresponding tests.
   contracts.
 - [loon-plugin-common-fields.md](loon-plugin-common-fields.md): first P1 Loon
   common-fields parser contract.
+- [quantumultx-common-config.md](quantumultx-common-config.md): P1
+  Quantumult X rewrite/MITM common-config parser contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.
