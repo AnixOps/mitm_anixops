@@ -41,6 +41,7 @@ ci-workflow-current-jobs=governance,lint,format-check,compatibility-matrix,macos
 ci-workflow-lint-status=shellcheck-error-severity
 ci-workflow-format-status=static-format-check
 ci-workflow-compatibility-matrix-status=dedicated-job
+ci-workflow-manual-intervention-status=static-schema-check
 ci-workflow-macos-status=policy-core-smoke
 ```
 

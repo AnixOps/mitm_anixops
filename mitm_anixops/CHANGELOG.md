@@ -122,6 +122,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added tag-only GitHub Release publication for workflow-generated release
   artifacts after same-commit CI, metadata, immutable-release, and environment
   gates pass.
+- Added a manual-intervention register schema check and wired it into the full
+  GitHub Actions gate.
 
 ### Changed
 

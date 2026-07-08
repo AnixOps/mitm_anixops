@@ -72,6 +72,9 @@ Current jobs:
 - `linux-test`: installs CMake, pkg-config, PCRE2, libjq, Go, Node, and the
   pinned mihomo fixture; runs `sh scripts/check.sh`; builds Alpha tarball;
   uploads `anixops-mitm-alpha-linux`.
+- `governance`: verifies required v1.0.0 baseline files, roadmap markers,
+  compatibility evidence hooks, release gate markers, and the manual
+  intervention register schema.
 - `compatibility-matrix`: validates the v1.0.0 compatibility matrix row
   structure, allowed status values, source contract links, and required evidence
   fields without running a build.

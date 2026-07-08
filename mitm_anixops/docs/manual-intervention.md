@@ -21,16 +21,16 @@ protected-tags-next-action=configure-tag-protection-or-repository-ruleset-in-git
 
 ```text
 release-environment-approval-status=pending
-release-environment-scope=github-release-publication
-release-environment-required-before=v1.0.0-release
-release-environment-next-action=decide-whether-release-publication-needs-protected-environment-approval
+release-environment-approval-scope=github-release-publication
+release-environment-approval-required-before=v1.0.0-release
+release-environment-approval-next-action=decide-whether-release-publication-needs-protected-environment-approval
 ```
 
 ```text
 third-party-plugin-corpus-license-status=pending
-third-party-plugin-corpus-scope=expanded-real-plugin-corpus
-third-party-plugin-corpus-required-before=bundling-non-representative-third-party-fixtures
-third-party-plugin-corpus-next-action=confirm-source-url-license-redaction-and-redistribution-policy-before-adding-fixtures
+third-party-plugin-corpus-license-scope=expanded-real-plugin-corpus
+third-party-plugin-corpus-license-required-before=bundling-non-representative-third-party-fixtures
+third-party-plugin-corpus-license-next-action=confirm-source-url-license-redaction-and-redistribution-policy-before-adding-fixtures
 ```
 
 ```text

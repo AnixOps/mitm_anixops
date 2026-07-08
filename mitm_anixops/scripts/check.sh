@@ -4,6 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 
+sh scripts/manual-intervention-check.sh
 sh scripts/security-claim-check.sh
 make clean
 make test
