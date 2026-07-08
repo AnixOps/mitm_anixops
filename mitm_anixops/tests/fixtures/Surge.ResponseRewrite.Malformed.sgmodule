@@ -1,0 +1,2 @@
+[URL Rewrite]
+^https:\/\/response\.surge\.test\/bad response-body-replace-regex [ clean

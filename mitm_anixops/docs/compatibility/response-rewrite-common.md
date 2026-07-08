@@ -2,7 +2,7 @@
 
 Capability: response rewrite.
 
-Ecosystem: `portable`, `loon`, `quantumultx`.
+Ecosystem: `portable`, `loon`, `quantumultx`, `surge`.
 
 Status: `partial`.
 
@@ -23,6 +23,7 @@ The current common subset accepts:
 - Quantumult X style `url echo-response content-type body` forms;
 - response body regex replacement actions such as
   `response-body-replace-regex pattern replacement`;
+- Surge `[URL Rewrite]` `response-body-replace-regex` lines;
 - URL capture expansion for mock/echo response bodies.
 
 ## Parser Output
@@ -41,6 +42,7 @@ Parser case:
 tests/fixtures/ResponseRewrite.Common.conf
 tests/fixtures/Loon.ResponseRewrite.plugin
 tests/fixtures/QuantumultX.ResponseRewrite.snippet
+tests/fixtures/Surge.ResponseRewrite.sgmodule
 ```
 
 Expected behavior:
@@ -49,6 +51,7 @@ Expected behavior:
 - the common fixture registers three rewrite rules;
 - the Loon fixture registers two rewrite rules;
 - the Quantumult X fixture registers two rewrite rules;
+- the Surge fixture registers one response body regex rewrite rule;
 - request phase does not trigger response rewrite rules;
 - response mock body and echo-response behavior are observable through
   `anixops_rewrite_apply_body`;
@@ -57,6 +60,8 @@ Expected behavior:
   observable through `anixops_rewrite_apply_body`.
 - Quantumult X `url` response echo and response body regex rules are
   observable through `anixops_rewrite_apply_body`.
+- Surge `[URL Rewrite]` response body regex rules are observable through
+  `anixops_rewrite_apply_body`.
 
 ## Negative Case
 
@@ -66,6 +71,7 @@ Parser case:
 tests/fixtures/ResponseRewrite.Common.Malformed.conf
 tests/fixtures/Loon.ResponseRewrite.Malformed.plugin
 tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet
+tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule
 ```
 
 Expected behavior:
@@ -73,6 +79,7 @@ Expected behavior:
 - the invalid response body regex rejects config load;
 - the invalid Loon `[URL Rewrite]` response body regex rejects config load;
 - the invalid Quantumult X `url` response body regex rejects config load;
+- the invalid Surge `[URL Rewrite]` response body regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -108,6 +115,10 @@ Required CI evidence:
   `config/quantumultx_response_rewrite_fixture_maps_response_echo_and_body`;
 - `tests/test_config.c` registers
   `config/quantumultx_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/surge_response_rewrite_fixture_maps_response_body_regex`;
+- `tests/test_config.c` registers
+  `config/surge_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

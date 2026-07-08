@@ -632,10 +632,12 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/Surge.CommonConfig.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
+- positive fixture `tests/fixtures/Surge.ResponseRewrite.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.HeaderMutation.sgmodule`;
 - negative fixture `tests/fixtures/Surge.CommonConfig.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule`;
 - unsupported fixture `tests/fixtures/Surge.MitmCertificateUnsupported.sgmodule`;
@@ -643,6 +645,8 @@ Current CI evidence:
 - `config/surge_common_config_strict_fixture_rejects_malformed_rule`;
 - `config/surge_body_mutation_fixture_maps_response_body_regex`;
 - `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
+- `config/surge_response_rewrite_fixture_maps_response_body_regex`;
+- `config/surge_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
 - `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
 - `config/surge_header_mutation_fixture_maps_header_rewrites`;
@@ -1254,15 +1258,19 @@ Current CI evidence:
 - positive fixture `tests/fixtures/ResponseRewrite.Common.conf`;
 - positive fixture `tests/fixtures/Loon.ResponseRewrite.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.ResponseRewrite.snippet`;
+- positive fixture `tests/fixtures/Surge.ResponseRewrite.sgmodule`;
 - negative fixture `tests/fixtures/ResponseRewrite.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.ResponseRewrite.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet`;
+- negative fixture `tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule`;
 - `config/response_rewrite_common_fixture_is_supported`;
 - `config/response_rewrite_common_fixture_rejects_invalid_body_regex`;
 - `config/loon_response_rewrite_fixture_maps_response_echo_and_body`;
 - `config/loon_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - `config/quantumultx_response_rewrite_fixture_maps_response_echo_and_body`;
 - `config/quantumultx_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
+- `config/surge_response_rewrite_fixture_maps_response_body_regex`;
+- `config/surge_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - response phase rewrite tests under `tests/test_rewrite.c`;
 - script contract E2E coverage for Alpha response ordering.
 

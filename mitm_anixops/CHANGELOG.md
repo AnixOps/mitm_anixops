@@ -146,6 +146,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Quantumult X `url` response echo/body-regex parser fixtures and
   CI-covered tests while keeping streaming, compression, and HTTP serialization
   adapter-owned.
+- Added Surge `[URL Rewrite]` response body-regex parser fixtures and
+  CI-covered tests for the response-rewrite contract while keeping streaming,
+  compression, and HTTP serialization adapter-owned.
 - Added a body mutation source contract plus positive and negative parser
   fixtures for the fourth P2 rule-matching milestone.
 - Added a decision trace schema source contract plus CI-covered fixtures for
