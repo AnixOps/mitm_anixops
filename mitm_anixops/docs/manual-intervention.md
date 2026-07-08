@@ -186,8 +186,11 @@ script-runtime-policy-core-dependency-decision-doc=docs/architecture/script-runt
 
 ## Rules
 
+- Current pending-item markers must include exactly one `status`, `scope`,
+  `required-before`, and `confirmation-evidence` field.
 - Pending items must stay pending until a human or external platform completes
-  the action, and must use `confirmation-evidence=not-yet-confirmed`.
+  the action, must use `confirmation-evidence=not-yet-confirmed`, and must
+  include exactly one `next-action` field.
 - Confirmed items must include non-placeholder confirmation evidence. Use a
   redacted URL, audit note, or settings summary; never commit credentials,
   signing material, reviewer identity details, or private policy.

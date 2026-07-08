@@ -8,11 +8,15 @@ test -s "$MANUAL"
 
 confirmed_fixture=$(mktemp)
 all_confirmed_fixture=$(mktemp)
+duplicate_status_fixture=$(mktemp)
+duplicate_status_output=$(mktemp)
+missing_scope_fixture=$(mktemp)
+missing_scope_output=$(mktemp)
 missing_pending_evidence_fixture=$(mktemp)
 missing_pending_evidence_output=$(mktemp)
 missing_evidence_fixture=$(mktemp)
 missing_evidence_output=$(mktemp)
-trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$missing_pending_evidence_fixture" "$missing_pending_evidence_output" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
+trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$duplicate_status_fixture" "$duplicate_status_output" "$missing_scope_fixture" "$missing_scope_output" "$missing_pending_evidence_fixture" "$missing_pending_evidence_output" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
 
 sed \
 	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \
@@ -28,6 +32,29 @@ sed \
 
 MANUAL_INTERVENTION_FILE="$all_confirmed_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" >/dev/null
 
+{
+	cat "$MANUAL"
+	printf '%s\n' "branch-protection-status=pending"
+} > "$duplicate_status_fixture"
+
+if MANUAL_INTERVENTION_FILE="$duplicate_status_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" > "$duplicate_status_output" 2>&1; then
+	printf '%s\n' "manual intervention transition check failed: duplicate status field passed" >&2
+	exit 1
+fi
+
+grep -F "manual intervention marker must have exactly one status field: branch-protection" "$duplicate_status_output" >/dev/null
+
+sed \
+	-e '/^branch-protection-scope=/d' \
+	"$MANUAL" > "$missing_scope_fixture"
+
+if MANUAL_INTERVENTION_FILE="$missing_scope_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" > "$missing_scope_output" 2>&1; then
+	printf '%s\n' "manual intervention transition check failed: marker without scope passed" >&2
+	exit 1
+fi
+
+grep -F "manual intervention marker must have exactly one scope field: branch-protection" "$missing_scope_output" >/dev/null
+
 sed \
 	-e '/^branch-protection-confirmation-evidence=/d' \
 	"$MANUAL" > "$missing_pending_evidence_fixture"
@@ -37,7 +64,7 @@ if MANUAL_INTERVENTION_FILE="$missing_pending_evidence_fixture" sh "$ROOT/script
 	exit 1
 fi
 
-grep -F "manual intervention marker must have exactly one confirmation evidence field: branch-protection" "$missing_pending_evidence_output" >/dev/null
+grep -F "manual intervention marker must have exactly one confirmation-evidence field: branch-protection" "$missing_pending_evidence_output" >/dev/null
 
 sed \
 	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \

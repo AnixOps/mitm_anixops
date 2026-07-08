@@ -31,6 +31,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add manual-intervention register schema checks to CI.
 - [x] Require placeholder confirmation evidence on pending required
   manual-intervention markers.
+- [x] Require unique status, scope, release-boundary, evidence, and pending
+  next-action fields for required manual-intervention markers.
 - [x] Enforce compatibility-matrix status semantics for non-support guard rows.
 - [x] Add PR template fields for source contract, test, compatibility matrix,
   changelog, and manual-intervention impact.

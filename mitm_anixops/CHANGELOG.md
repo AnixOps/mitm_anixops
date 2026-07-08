@@ -261,6 +261,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   GitHub Actions gate.
 - Hardened the manual-intervention schema so pending required markers must
   carry exactly one `confirmation-evidence=not-yet-confirmed` placeholder.
+- Hardened the manual-intervention schema so required markers must have unique
+  status, scope, release-boundary, evidence, and pending next-action fields.
 - Added Stash `http.force-http-engine` parser fixtures and CI-covered tests as
   an adapter-visible QUIC fallback signal without claiming HTTP engine runtime
   behavior.
