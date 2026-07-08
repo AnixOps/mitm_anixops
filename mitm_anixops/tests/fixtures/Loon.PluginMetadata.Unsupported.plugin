@@ -1,0 +1,5 @@
+[Plugin]
+hostname = should.not.register.example
+rewrite = ^https://plugin-metadata.example https://target.example 302
+script = type=http-request, pattern=^https:\/\/plugin-metadata\.example, script-path=https://scripts.example/plugin-metadata.js
+argument = Token:secret

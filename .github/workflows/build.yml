@@ -32,6 +32,7 @@ jobs:
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
+            mitm_anixops/docs/compatibility/loon-plugin-metadata.md
             mitm_anixops/docs/compatibility/loon-hashbang-metadata.md
             mitm_anixops/docs/compatibility/loon-inline-arguments.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
@@ -52,6 +53,8 @@ jobs:
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
             mitm_anixops/tests/fixtures/Loon.CommonFields.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.PluginMetadata.plugin
+            mitm_anixops/tests/fixtures/Loon.PluginMetadata.Unsupported.plugin
             mitm_anixops/tests/fixtures/Loon.HashbangMetadata.plugin
             mitm_anixops/tests/fixtures/Loon.HashbangMetadata.Unsupported.plugin
             mitm_anixops/tests/fixtures/Loon.InlineArguments.plugin
@@ -135,6 +138,13 @@ jobs:
           grep -q "Loon.CommonFields.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/loon_common_fields_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/loon_common_fields_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "Loon plugin metadata" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon Plugin Metadata Source Contract" mitm_anixops/docs/compatibility/loon-plugin-metadata.md
+          grep -q "Loon.PluginMetadata.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.PluginMetadata.Unsupported.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/loon_plugin_metadata_fixture_records_ignored_lines" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_plugin_metadata_unsupported_keys_are_not_claimed" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Loon plugin metadata parser fixtures and positive/negative tests" mitm_anixops/TODO.md
           grep -q "Loon hashbang metadata" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Hashbang Metadata Source Contract" mitm_anixops/docs/compatibility/loon-hashbang-metadata.md
           grep -q "Loon.HashbangMetadata.plugin" mitm_anixops/docs/compatibility/matrix.md

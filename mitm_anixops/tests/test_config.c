@@ -2418,6 +2418,74 @@ static void plugin_metadata_section_is_tolerated_with_diagnostics(void)
 	anixops_engine_free(engine);
 }
 
+static void loon_plugin_metadata_fixture_records_ignored_lines(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.PluginMetadata.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_mitm_decision_t mitm;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 6);
+
+	for (i = 0; i < 5; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "plugin metadata ignored");
+	}
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 5, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "plugin.metadata.loon.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void loon_plugin_metadata_unsupported_keys_are_not_claimed(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.PluginMetadata.Unsupported.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 4);
+
+	for (i = 0; i < 4; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "plugin metadata ignored");
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_records_rejected_rule_diagnostic_before_returning_error(void)
 {
 	const char *config =
@@ -2793,6 +2861,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/plugin_metadata_section_is_tolerated_with_diagnostics",
 		plugin_metadata_section_is_tolerated_with_diagnostics);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_plugin_metadata_fixture_records_ignored_lines",
+		loon_plugin_metadata_fixture_records_ignored_lines);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_plugin_metadata_unsupported_keys_are_not_claimed",
+		loon_plugin_metadata_unsupported_keys_are_not_claimed);
 	add_test(
 		tests,
 		count,

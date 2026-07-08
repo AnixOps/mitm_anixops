@@ -1,0 +1,9 @@
+[Plugin]
+name = Loon Plugin Metadata Fixture
+desc = Plugin section metadata is parser diagnostics only.
+author = AnixOps
+icon = https://assets.example/loon-plugin-metadata.png
+homepage = https://docs.example/loon-plugin-metadata
+
+[MITM]
+hostname = plugin.metadata.loon.test

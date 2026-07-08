@@ -34,6 +34,8 @@ corresponding tests.
   contracts.
 - [loon-plugin-common-fields.md](loon-plugin-common-fields.md): first P1 Loon
   common-fields parser contract.
+- [loon-plugin-metadata.md](loon-plugin-metadata.md): Loon `[Plugin]`
+  metadata tolerance contract.
 - [loon-hashbang-metadata.md](loon-hashbang-metadata.md): Loon `#!`
   metadata tolerance contract.
 - [loon-inline-arguments.md](loon-inline-arguments.md): Loon `#!arguments`

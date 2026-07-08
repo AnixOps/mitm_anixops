@@ -17,7 +17,8 @@ The current common-field subset accepts:
 
 - common `#!` metadata lines covered by
   [Loon Hashbang Metadata Source Contract](loon-hashbang-metadata.md);
-- `[Plugin]` metadata key/value lines as tolerated diagnostics;
+- `[Plugin]` metadata lines covered by
+  [Loon Plugin Metadata Source Contract](loon-plugin-metadata.md);
 - `[Argument]` key/value defaults;
 - `[URL Rewrite]` URL redirect and reject rules;
 - `[Header Rewrite]` request/response header mutation rules;

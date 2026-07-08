@@ -15,7 +15,7 @@ unsupported unless a test or E2E fixture is added.
 | Style | Section Shape | Status | Evidence |
 | --- | --- | --- | --- |
 | AnixOps/Loon plugin | `[Argument]`, `[Script]`, `[MITM]`, `[Rewrite]` | Supported subset | `test_config.c`, `test_script.c`, BiliBili and representative Loon fixtures |
-| Loon plugin metadata | `[Plugin]` | Tolerated metadata section | `plugin_metadata_section_is_tolerated_with_diagnostics` |
+| Loon plugin metadata | `[Plugin]` | Tolerated metadata section | `Loon.PluginMetadata.plugin`, `Loon.PluginMetadata.Unsupported.plugin`, `config/loon_plugin_metadata_fixture_records_ignored_lines`, `config/loon_plugin_metadata_unsupported_keys_are_not_claimed` |
 | Hashbang metadata | `#!name`, `#!desc`, `#!arguments-desc`, `#!requirement` | Tolerated with ignored diagnostics | representative corpus fixtures |
 | Loon inline arguments | `#!arguments = Name:value` | Supported subset | `Loon.InlineArguments.plugin`, `Loon.InlineArguments.Malformed.plugin`, `config/loon_inline_arguments_fixture_resolves_script_defaults`, `config/loon_inline_arguments_malformed_fixture_rejects_missing_separator` |
 | Loon rewrite aliases | `[URL Rewrite]`, `[Remote Rewrite]` | Supported subset | `config_accepts_section_aliases_and_crlf` |

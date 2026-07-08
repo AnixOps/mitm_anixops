@@ -95,6 +95,40 @@ Unimplemented items:
 - broader Loon metadata corpus;
 - first-class validation of unsupported metadata keys.
 
+### Loon Plugin Metadata
+
+Detailed contract: [Loon Plugin Metadata Source Contract](loon-plugin-metadata.md).
+
+Capability: tolerate Loon `[Plugin]` metadata without claiming runtime,
+policy, or platform UI behavior.
+
+Input form:
+
+- `[Plugin]` section;
+- key/value metadata lines such as `name`, `desc`, `author`, `icon`, and
+  `homepage`;
+- unsupported rule-shaped lines remain metadata-only while inside `[Plugin]`.
+
+Parser output:
+
+- ignored diagnostics with section `Plugin`, action `line`, and message
+  `plugin metadata ignored`;
+- no MITM, rewrite, script, argument, task, routing, certificate, or UI
+  behavior from metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.PluginMetadata.plugin`;
+- negative fixture `tests/fixtures/Loon.PluginMetadata.Unsupported.plugin`;
+- `config/loon_plugin_metadata_fixture_records_ignored_lines`;
+- `config/loon_plugin_metadata_unsupported_keys_are_not_claimed`.
+
+Unimplemented items:
+
+- platform UI behavior for names, icons, homepages, or install prompts;
+- validation or typed extraction of individual plugin metadata keys;
+- broader Loon plugin metadata corpus.
+
 ### Loon Inline Arguments
 
 Detailed contract: [Loon Inline Arguments Source Contract](loon-inline-arguments.md).
