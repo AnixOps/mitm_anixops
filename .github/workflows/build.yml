@@ -36,6 +36,7 @@ jobs:
             mitm_anixops/docs/compatibility/decision-trace-schema.md
             mitm_anixops/docs/compatibility/plan-api-parity.md
             mitm_anixops/docs/compatibility/script-runtime-common.md
+            mitm_anixops/docs/compatibility/cron-task-trigger.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
@@ -124,6 +125,9 @@ jobs:
           grep -q "Script Runtime Common Source Contract" mitm_anixops/docs/compatibility/script-runtime-common.md
           grep -q "runner_double_done_script.js" mitm_anixops/Makefile
           grep -q "runner-replay-double-done.out" mitm_anixops/Makefile
+          grep -q "cron-task-trigger.md" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Cron And Task Trigger Source Contract" mitm_anixops/docs/compatibility/cron-task-trigger.md
+          grep -q "script/malformed_and_non_http_script_rules_are_ignored_or_rejected" mitm_anixops/tests/test_script.c
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md

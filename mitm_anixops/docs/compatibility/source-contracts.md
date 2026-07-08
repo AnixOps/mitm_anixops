@@ -385,3 +385,30 @@ Unimplemented items:
 - full platform Web API compatibility;
 - streaming and binary body runtime behavior;
 - production memory, CPU, storage, and log-redaction policy.
+
+### Cron And Task Trigger
+
+Detailed contract: [Cron And Task Trigger Source Contract](cron-task-trigger.md).
+
+Capability: define the planned scheduler/task boundary without claiming runtime
+support.
+
+Input form:
+
+- future Quantumult X task and cron forms;
+- future Surge scheduled script forms;
+- future Loon or AnixOps-style scheduled script/task declarations from the
+  supported corpus.
+
+Current CI evidence:
+
+- `script/malformed_and_non_http_script_rules_are_ignored_or_rejected` proves a
+  bare cron rule does not register as an HTTP script rule;
+- GitHub Actions governance requires the planned contract and matrix row.
+
+Unimplemented items:
+
+- parser fixtures and positive/negative parser tests;
+- public task descriptor API;
+- scheduler/runtime replay or E2E evidence;
+- task JavaScript bindings and concurrency policy.

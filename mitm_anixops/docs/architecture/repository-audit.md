@@ -139,7 +139,8 @@ status must be taken from GitHub Actions, not local execution.
 - No generated checksums, manifest, or release-note gate.
 - No macOS CI coverage.
 - Stash and Shadowrocket are not yet first-class parser targets.
-- Cron/task trigger behavior is not yet contracted.
+- Cron/task trigger behavior has a planned source contract, but parser fixtures,
+  scheduler dispatch, and runtime execution remain unimplemented.
 - Production JS runtime remains out of scope for the C policy core.
 - Certificate lifecycle is adapter-owned and not yet documented as a v1.0.0
   source contract in this repository.

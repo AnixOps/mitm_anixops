@@ -52,4 +52,6 @@ corresponding tests.
   `evaluate_*`/`apply_*` parity contract.
 - [script-runtime-common.md](script-runtime-common.md): portable script runtime
   adapter contract for globals, timeout/error behavior, and double `$done`.
+- [cron-task-trigger.md](cron-task-trigger.md): planned cron/task trigger
+  contract and non-support guard until parser/runtime evidence exists.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

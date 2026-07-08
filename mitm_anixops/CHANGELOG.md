@@ -37,6 +37,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   hosts do not register or intercept through wildcard policy.
 - Added a script runtime common source contract plus no-network replay evidence
   for double `$done` first-wins behavior.
+- Added a planned cron/task trigger source contract that keeps scheduler
+  support out of the supported surface until parser/runtime evidence exists.
 
 ### Changed
 

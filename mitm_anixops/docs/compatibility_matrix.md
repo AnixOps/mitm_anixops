@@ -98,6 +98,7 @@ features it understands.
 | Script asset bundle/digest | Alpha runner backend | `replay --script-bundle` resolves local offline assets, verifies sha256 pins, and reports digest mismatch/cache miss without network IO |
 | Script timeout/error policy | Alpha runner/proxy shim subset | Rule-level `timeout` metadata overrides the global runner timeout; max-size overflow fails open; `make runner-check` covers a throwing replay script, and `make script-contract-e2e` verifies timed-out and throwing response scripts fail open after static rewrites instead of returning 502 |
 | Double `$done` | Alpha runner backend | `make runner-check` covers no-network replay where the first `$done` body wins and a later `$done` call is ignored |
+| Cron/task trigger | Planned | Source contract is `docs/compatibility/cron-task-trigger.md`; existing script tests only prove bare cron rules are not registered as HTTP scripts |
 | Response compression for scripts | Alpha proxy shim subset | gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
 
 ## Diagnostics And ABI
