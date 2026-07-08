@@ -63,6 +63,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   JavaScriptCore, or other production JavaScript engine in the v1 policy core.
 - Added a certificate lifecycle architecture contract, manual-intervention
   markers, and CI security-claim checks for root trust and target-host safety.
+- Added an adapter redaction policy contract, manual-intervention marker, and
+  CI security-claim checks for default raw payload/header logging claims.
 - Added updated NetworkCore integration notes for the `v0.45.10-alpha`
   adapter baseline, deferred live-mutation gates, and v1.0.0 host-owned data
   plane boundary.

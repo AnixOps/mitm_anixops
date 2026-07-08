@@ -27,6 +27,7 @@ jobs:
             mitm_anixops/docs/architecture/release-rollback-policy.md
             mitm_anixops/docs/architecture/script-runtime-dependency.md
             mitm_anixops/docs/architecture/certificate-lifecycle.md
+            mitm_anixops/docs/architecture/adapter-redaction-policy.md
             mitm_anixops/docs/networkcore_integration.md
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md
@@ -284,11 +285,21 @@ jobs:
           grep -q "^- \\[x\\] Record any QuickJS, JavaScriptCore, or new runtime dependency decision" mitm_anixops/TODO.md
           grep -q "certificate-lifecycle-policy-core-ca-trust=adapter-supplied" mitm_anixops/docs/architecture/certificate-lifecycle.md
           grep -q "certificate lifecycle and trust gate" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "adapter-redaction-policy-core-sensitive-payload-logging=forbidden" mitm_anixops/docs/architecture/adapter-redaction-policy.md
+          grep -q "adapter-redaction-default-trace-export=metadata-only" mitm_anixops/docs/architecture/adapter-redaction-policy.md
+          grep -q "adapter-redaction-runner-trace-body=not-serialized" mitm_anixops/docs/architecture/adapter-redaction-policy.md
+          grep -q "adapter-redaction-implementation-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "docs/architecture/adapter-redaction-policy.md" mitm_anixops/README.md
+          grep -q "Adapter Redaction Policy" mitm_anixops/docs/architecture/overview.md
+          grep -q "adapter-redaction-policy.md" mitm_anixops/docs/compatibility/README.md
+          grep -q "adapter-redaction-policy.md" mitm_anixops/docs/compatibility/decision-trace-schema.md
+          grep -q "production adapter redaction implementation" mitm_anixops/docs/compatibility/matrix.md
           grep -q "ca-root-generation-policy-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "platform-certificate-store-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "protected-runtime-environment-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "mitm-signing-materials-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Add CI checks preventing accidental claims of automatic root trust" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add adapter redaction policy contract and CI checks" mitm_anixops/TODO.md
           grep -q "networkcore-integration-alpha-baseline=v0.45.10-alpha" mitm_anixops/docs/networkcore_integration.md
           grep -q "networkcore-integration-current-mode=vendored-policy-core-adapter" mitm_anixops/docs/networkcore_integration.md
           grep -q "networkcore-integration-v1-boundary=adapter-owned-data-plane" mitm_anixops/docs/networkcore_integration.md

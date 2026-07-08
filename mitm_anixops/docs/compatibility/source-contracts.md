@@ -460,11 +460,13 @@ Current CI evidence:
   `tests/fixtures/LoonCommonFields.MitmMalformedHostTrace.json`;
 - `config/decision_trace_schema_fixture_covers_policy_fields`;
 - `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
+- architecture contract `docs/architecture/adapter-redaction-policy.md`;
+- `scripts/security-claim-check.sh` payload logging claim guard;
 - runner `trace` smoke checks under `runner-check`.
 
 Unimplemented items:
 
-- adapter redaction policy;
+- production adapter redaction implementation;
 - direct/proxy route-selection contract;
 - serialized trace object for every ABI decision.
 

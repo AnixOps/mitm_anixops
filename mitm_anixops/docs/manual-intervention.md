@@ -113,6 +113,14 @@ route-selection-adapter-next-action=confirm-adapter-route-contract-proxy-group-r
 ```
 
 ```text
+adapter-redaction-implementation-status=pending
+adapter-redaction-implementation-scope=production-adapter-telemetry-logs-and-trace-export
+adapter-redaction-implementation-required-before=claiming-production-adapter-trace-export-or-payload-logging-support
+adapter-redaction-implementation-current-policy-core-decision=metadata-only-runner-trace-no-raw-body-or-full-header-map-export-by-default
+adapter-redaction-implementation-next-action=confirm-host-adapter-redaction-retention-sampling-access-control-operator-consent-and-github-actions-evidence
+```
+
+```text
 task-scheduler-runtime-status=pending
 task-scheduler-runtime-scope=cron-task-descriptor-scheduler-and-background-javascript-runtime
 task-scheduler-runtime-required-before=claiming-cron-or-task-runtime-support

@@ -137,9 +137,11 @@ Expected behavior:
 
 This contract covers policy-core decision fields only.
 
-Adapters must not log raw sensitive header or body values by default. Payload
-logging, redaction, retention, sampling, and export are adapter-owned privacy
-decisions.
+Adapters must not log raw sensitive header or body values by default. The
+policy-core redaction boundary is defined in
+[`adapter-redaction-policy.md`](../architecture/adapter-redaction-policy.md).
+Production payload logging, redaction implementation, retention, sampling, and
+export remain adapter-owned privacy decisions.
 
 This contract does not implement:
 
@@ -148,7 +150,7 @@ This contract does not implement:
 - production network I/O;
 - direct/proxy route selection;
 - full serialized JSON trace object for every ABI decision;
-- platform redaction policy.
+- production adapter redaction implementation.
 
 ## CI Evidence
 
@@ -170,6 +172,8 @@ Required CI evidence:
   `LoonCommonFields.MitmEmptyHostTrace.json`, and
   `LoonCommonFields.MitmMalformedHostTrace.json` against disabled and malformed
   runner `trace --host` output;
+- `scripts/security-claim-check.sh` verifies the adapter redaction policy
+  markers and rejects accidental default raw payload logging claims;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -180,6 +184,6 @@ Row:
 decision trace schema
 ```
 
-The row remains `partial` until adapter redaction policy, direct/proxy
-route-selection contracts, and a serialized trace object for every ABI decision
-exist.
+The row remains `partial` until production adapter redaction implementation,
+direct/proxy route-selection contracts, and a serialized trace object for every
+ABI decision exist.

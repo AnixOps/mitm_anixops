@@ -66,4 +66,6 @@ corresponding tests.
   contract with scheduler and runtime behavior still adapter-owned.
 - [../architecture/certificate-lifecycle.md](../architecture/certificate-lifecycle.md):
   P4 certificate lifecycle and MITM trust boundary contract.
+- [../architecture/adapter-redaction-policy.md](../architecture/adapter-redaction-policy.md):
+  adapter trace and telemetry redaction boundary contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

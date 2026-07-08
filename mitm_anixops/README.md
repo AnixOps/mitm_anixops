@@ -382,6 +382,9 @@ For the v1.0.0 script runtime dependency decision, see
 For the certificate lifecycle and MITM trust boundary, see
 `docs/architecture/certificate-lifecycle.md`.
 
+For adapter trace export and redaction boundaries, see
+`docs/architecture/adapter-redaction-policy.md`.
+
 For `networkcore_anixops` compatibility and integration staging, see `docs/networkcore_integration.md`.
 
 For release blockers, compatibility gaps, and stage non-goals, see `docs/TODO.md`.

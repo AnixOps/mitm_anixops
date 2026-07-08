@@ -83,6 +83,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   protected environments, and signing materials.
 - [x] Add CI checks preventing accidental claims of automatic root trust or
   non-target hostname decryption.
+- [x] Add adapter redaction policy contract and CI checks preventing default raw
+  payload logging claims.
 
 ## P5 Integration Adapter
 

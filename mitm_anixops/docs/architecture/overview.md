@@ -65,6 +65,11 @@ The certificate lifecycle boundary is recorded in
 policy core consumes adapter-supplied trust state and never owns automatic root
 trust or non-target hostname decryption.
 
+The adapter telemetry and trace privacy boundary is recorded in
+[Adapter Redaction Policy](adapter-redaction-policy.md): the runner and policy
+core provide metadata-oriented traces and do not claim default raw payload or
+full header-map logging.
+
 ## NetworkCore Alignment
 
 `networkcore_anixops` currently integrates `mitm_anixops` as a MITM policy
