@@ -47,6 +47,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added portable/common response header add/replace parser fixtures and
   CI-covered tests while keeping platform header maps and HTTP serialization
   adapter-owned.
+- Added portable/common request header regex parser fixtures and CI-covered
+  tests while keeping platform header maps and HTTP serialization
+  adapter-owned.
 - Added Loon `[Body Rewrite]` body mutation parser fixtures and CI-covered
   tests while keeping streaming, compression, and HTTP serialization
   adapter-owned.

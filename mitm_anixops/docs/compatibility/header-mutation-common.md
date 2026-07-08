@@ -41,6 +41,7 @@ Parser case:
 
 ```text
 tests/fixtures/HeaderMutation.Common.conf
+tests/fixtures/HeaderRequestRegexMutation.Common.conf
 tests/fixtures/HeaderResponseMutation.Common.conf
 tests/fixtures/Loon.HeaderMutation.plugin
 tests/fixtures/QuantumultX.HeaderAdd.snippet
@@ -59,6 +60,8 @@ Expected behavior:
 - config load succeeds;
 - five header mutation rules are registered;
 - request header add, replace, and delete behavior are observable through
+  `anixops_rewrite_evaluate_header`;
+- portable request header regex replacement behavior is observable through
   `anixops_rewrite_evaluate_header`;
 - response header regex replacement and delete behavior are observable through
   `anixops_rewrite_evaluate_header`;
@@ -93,6 +96,7 @@ Parser case:
 
 ```text
 tests/fixtures/HeaderMutation.Common.Malformed.conf
+tests/fixtures/HeaderRequestRegexMutation.Common.Malformed.conf
 tests/fixtures/HeaderResponseMutation.Common.Malformed.conf
 tests/fixtures/Loon.HeaderMutation.Malformed.plugin
 tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet
@@ -109,6 +113,7 @@ tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
 Expected behavior:
 
 - the invalid header regex rejects config load;
+- the invalid portable request header regex rejects config load;
 - the malformed portable response header add rule without a header name is
   rejected under `ANIXOPS_COMPAT_LOON_STRICT`;
 - the invalid Loon `[Header Rewrite]` header regex rejects config load;
@@ -156,6 +161,10 @@ Required CI evidence:
   `config/header_mutation_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/header_mutation_common_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/header_request_regex_mutation_common_fixture_maps_request_header_regex`;
+- `tests/test_config.c` registers
+  `config/header_request_regex_mutation_common_fixture_rejects_invalid_header_regex`;
 - `tests/test_config.c` registers
   `config/header_response_mutation_common_fixture_maps_response_header_add_replace`;
 - `tests/test_config.c` registers

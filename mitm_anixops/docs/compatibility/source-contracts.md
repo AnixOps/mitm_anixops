@@ -1195,6 +1195,7 @@ Input form:
 Current CI evidence:
 
 - positive fixture `tests/fixtures/HeaderMutation.Common.conf`;
+- positive fixture `tests/fixtures/HeaderRequestRegexMutation.Common.conf`;
 - positive fixture `tests/fixtures/HeaderResponseMutation.Common.conf`;
 - positive fixture `tests/fixtures/Loon.HeaderMutation.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderAdd.snippet`;
@@ -1207,6 +1208,7 @@ Current CI evidence:
 - positive fixture `tests/fixtures/QuantumultX.HeaderDelete.snippet`;
 - positive fixture `tests/fixtures/Surge.HeaderMutation.sgmodule`;
 - negative fixture `tests/fixtures/HeaderMutation.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/HeaderRequestRegexMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/HeaderResponseMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.HeaderMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet`;
@@ -1223,6 +1225,8 @@ Current CI evidence:
 - negative fixture `tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule`;
 - `config/header_mutation_common_fixture_is_supported`;
 - `config/header_mutation_common_fixture_rejects_invalid_regex`;
+- `config/header_request_regex_mutation_common_fixture_maps_request_header_regex`;
+- `config/header_request_regex_mutation_common_fixture_rejects_invalid_header_regex`;
 - `config/header_response_mutation_common_fixture_maps_response_header_add_replace`;
 - `config/header_response_mutation_common_strict_fixture_rejects_missing_header_name`;
 - `config/loon_header_mutation_fixture_maps_header_rewrites`;

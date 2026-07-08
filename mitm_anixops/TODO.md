@@ -143,6 +143,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   and positive/negative tests for the request-rewrite contract.
 - [x] Define header mutation source contract with parser fixtures and CI-covered
   positive/negative tests.
+- [x] Add portable/common request header regex parser fixtures and
+  positive/negative tests for the header-mutation contract.
 - [x] Add portable/common response header add/replace parser fixtures and
   positive/negative tests for the header-mutation contract.
 - [x] Add Loon `[Header Rewrite]` header mutation parser fixtures and
