@@ -45,10 +45,10 @@ Supported fields:
 - `argument`, including current argument-template substitution;
 - `timeout`, `timeout-ms`, `max-size`, `max_size`, `enable`, and `enabled`.
 
-Unsupported Surge script types such as `dns`, `rule`, and `policy-group`
-remain ignored until separate source contracts and tests exist. Unknown event
-names are rejected because accepting them would overstate event dispatch
-compatibility.
+Unsupported Surge script types such as `type=dns`, `type=rule`, and
+`type=policy-group` remain ignored until separate source contracts and tests
+exist. Unknown event names are rejected because accepting them would overstate
+event dispatch compatibility.
 
 ## Parser Output
 
@@ -108,6 +108,21 @@ Expected behavior:
 - last error reports cron expression, missing event name, or unsupported event
   name failure at the malformed line.
 
+## Unsupported Case
+
+Parser case:
+
+```text
+tests/fixtures/Surge.ScriptUnsupported.sgmodule
+```
+
+Expected behavior:
+
+- config load succeeds in the portable profile;
+- unsupported `[Script]` `type=dns`, `type=rule`, and `type=policy-group`
+  lines record ignored diagnostics;
+- no script rules or task descriptors are registered.
+
 ## Runtime And Security Boundary
 
 Surge task metadata must not:
@@ -137,6 +152,8 @@ Required CI evidence:
   `config/surge_task_event_malformed_fixture_rejects_missing_event_name`;
 - `tests/test_config.c` registers
   `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`;
+- `tests/test_config.c` registers
+  `config/surge_script_unsupported_fixture_keeps_non_task_types_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

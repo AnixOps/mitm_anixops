@@ -1,0 +1,4 @@
+[Script]
+Surge.DNS.Unsupported = type=dns, script-path=https://scripts.example/surge-dns.js, tag=surge.unsupported.dns
+Surge.Rule.Unsupported = type=rule, script-path=https://scripts.example/surge-rule.js, tag=surge.unsupported.rule
+Surge.PolicyGroup.Unsupported = type=policy-group, script-path=https://scripts.example/surge-policy-group.js, tag=surge.unsupported.policy-group

@@ -61,6 +61,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add Surge task metadata parser fixtures and positive/negative tests.
 - [x] Add Surge event task metadata parser fixture and positive/negative tests.
 - [x] Add Surge event unknown-name parser guard and negative test.
+- [x] Add Surge unsupported script-type guard and negative test.
 - [x] Add Stash HTTP MITM host parser fixtures and positive/negative tests.
 - [x] Normalize Stash HTTP MITM `host:*` port-wildcard entries to host-only
   policy patterns.

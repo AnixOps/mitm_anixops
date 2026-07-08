@@ -1892,6 +1892,44 @@ static void surge_common_config_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void surge_script_unsupported_fixture_keeps_non_task_types_ignored(void)
+{
+	static const size_t expected_lines[] = {2, 3, 4};
+	char *fixture = read_fixture("tests/fixtures/Surge.ScriptUnsupported.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_script_result_t script;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+
+	for (i = 0; i < sizeof(expected_lines) / sizeof(expected_lines[0]); i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, expected_lines[i]);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "script rule ignored");
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://scripts.example/surge-dns.js", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void surge_task_metadata_fixture_emits_task_descriptors(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Surge.TaskMetadata.sgmodule");
@@ -5479,6 +5517,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/surge_common_config_strict_fixture_rejects_malformed_rule",
 		surge_common_config_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_script_unsupported_fixture_keeps_non_task_types_ignored",
+		surge_script_unsupported_fixture_keeps_non_task_types_ignored);
 	add_test(
 		tests,
 		count,

@@ -607,11 +607,14 @@ Current CI evidence:
 - positive fixture `tests/fixtures/Surge.TaskEvent.sgmodule`;
 - negative fixture `tests/fixtures/Surge.TaskEvent.Malformed.sgmodule`;
 - unsupported-name fixture `tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule`;
+- unsupported script-type fixture
+  `tests/fixtures/Surge.ScriptUnsupported.sgmodule`;
 - `config/surge_task_metadata_fixture_emits_task_descriptors`;
 - `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - `config/surge_task_event_fixture_emits_event_descriptors`;
 - `config/surge_task_event_malformed_fixture_rejects_missing_event_name`;
-- `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`.
+- `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`;
+- `config/surge_script_unsupported_fixture_keeps_non_task_types_ignored`.
 
 Unimplemented items:
 

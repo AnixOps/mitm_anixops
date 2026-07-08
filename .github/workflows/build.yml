@@ -102,6 +102,7 @@ jobs:
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet
             mitm_anixops/tests/fixtures/Surge.CommonConfig.sgmodule
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
+            mitm_anixops/tests/fixtures/Surge.ScriptUnsupported.sgmodule
             mitm_anixops/tests/fixtures/Surge.RequirementMetadata.sgmodule
             mitm_anixops/tests/fixtures/Surge.RequirementMetadata.Unsupported.sgmodule
             mitm_anixops/tests/fixtures/Surge.TaskMetadata.sgmodule
@@ -341,6 +342,9 @@ jobs:
           grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/surge_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/surge_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "Surge.ScriptUnsupported.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/surge_script_unsupported_fixture_keeps_non_task_types_ignored" mitm_anixops/tests/test_config.c
+          grep -q "type=dns" mitm_anixops/docs/compatibility/surge-task-metadata.md
           grep -q "Surge task metadata" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge Task Metadata Source Contract" mitm_anixops/docs/compatibility/surge-task-metadata.md
           grep -q "Surge.TaskMetadata.sgmodule" mitm_anixops/docs/compatibility/matrix.md
