@@ -11,9 +11,9 @@ Status: `partial`.
 
 This contract adds a narrow Stash app-profile parser subset that maps directly
 onto the existing request-phase rewrite/reject policy core. It covers
-request-phase reject decisions and the conservative 302/307 redirect subset. It
-is intentionally smaller than Stash's full HTTP rewrite grammar and does not
-introduce a general YAML parser.
+request-phase reject decisions and the conservative 301/302/303/307/308
+redirect subset. It is intentionally smaller than Stash's full HTTP rewrite
+grammar and does not introduce a general YAML parser.
 
 The source form follows Stash HTTP rewrite configuration examples where
 `url-rewrite` entries live below a top-level `http:` mapping:
@@ -44,13 +44,16 @@ Supported forms:
 - `pattern - reject-NNN` for 100-599 status codes;
 - existing reject body variants already understood by the policy core, such as
   `reject-img`, `reject-video`, `reject-dict`, and `reject-array`;
+- `pattern replacement 301`;
 - `pattern replacement 302`;
-- `pattern replacement 307`.
+- `pattern replacement 303`;
+- `pattern replacement 307`;
+- `pattern replacement 308`.
 
 Unsupported forms remain ignored or outside this contract:
 
 - transparent URL rewrites such as `pattern replacement transparent`;
-- redirect status codes outside the contracted 302/307 subset;
+- redirect status codes outside the contracted 301/302/303/307/308 subset;
 - route-selection, direct, proxy, proxy-group, DNS, rule-provider, and TUN
   behavior;
 - Stash scripts, cron, shortcuts, UI fields, and proxy node definitions;
@@ -80,6 +83,7 @@ Parser case:
 ```text
 tests/fixtures/Stash.UrlRewrite.yaml
 tests/fixtures/Stash.UrlRewriteRedirect.yaml
+tests/fixtures/Stash.UrlRewriteRedirectStatus.yaml
 ```
 
 Expected behavior:
@@ -89,6 +93,8 @@ Expected behavior:
   `Stash.UrlRewrite.yaml`;
 - two request-phase redirect rules are registered from
   `Stash.UrlRewriteRedirect.yaml`;
+- three additional request-phase redirect rules are registered from
+  `Stash.UrlRewriteRedirectStatus.yaml`;
 - transparent `url-rewrite` entries remain ignored;
 - no script rules, task descriptors, MITM host patterns, arguments, route
   policies, proxy nodes, DNS settings, or certificate lifecycle behavior are
@@ -101,6 +107,7 @@ Parser case:
 ```text
 tests/fixtures/Stash.UrlRewrite.Malformed.yaml
 tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml
+tests/fixtures/Stash.UrlRewriteRedirectStatus.Malformed.yaml
 ```
 
 Expected behavior:
@@ -122,8 +129,9 @@ Stash `http.url-rewrite` parser support must not:
 - parse or execute Stash scripts;
 - log sensitive headers or body content.
 
-The C policy core only exposes a bounded reject decision. Adapter-visible
-routing, transport, UI, and certificate behavior remain outside this contract.
+The C policy core only exposes bounded reject and redirect decisions.
+Adapter-visible routing, transport, UI, and certificate behavior remain outside
+this contract.
 
 ## CI Evidence
 
@@ -137,6 +145,10 @@ Required CI evidence:
   `config/stash_url_rewrite_redirect_fixture_maps_redirect_subset`;
 - `tests/test_config.c` registers
   `config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/stash_url_rewrite_redirect_status_fixture_maps_portable_redirects`;
+- `tests/test_config.c` registers
+  `config/stash_url_rewrite_redirect_status_malformed_fixture_rejects_invalid_regex`;
 - `tests/test_config.c` keeps
   `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
@@ -150,6 +162,6 @@ Stash URL rewrite request policy intent
 ```
 
 The row remains `partial` because only the `http.url-rewrite` reject and
-302/307 redirect subsets are covered. Full Stash YAML profiles, transparent
+301/302/303/307/308 redirect subsets are covered. Full Stash YAML profiles, transparent
 rewrites, scripts, cron, routing, proxy nodes, DNS, UI, transport behavior, and
 certificate lifecycle behavior remain unimplemented.

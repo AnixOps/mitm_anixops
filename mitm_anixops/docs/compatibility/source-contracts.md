@@ -804,8 +804,9 @@ Unimplemented items:
 Detailed contract:
 [Stash URL Rewrite Source Contract](stash-url-rewrite.md).
 
-Capability: parse Stash `http.url-rewrite` request URL reject and 302/307
-redirect policy intent without claiming full Stash YAML profile support.
+Capability: parse Stash `http.url-rewrite` request URL reject and
+301/302/303/307/308 redirect policy intent without claiming full Stash YAML
+profile support.
 
 Input form:
 
@@ -814,8 +815,11 @@ Input form:
 - list scalar entries shaped as `pattern - reject`;
 - `reject-NNN` and existing reject body variants already accepted by the
   policy-core rewrite parser;
+- list scalar entries shaped as `pattern replacement 301`;
 - list scalar entries shaped as `pattern replacement 302`;
-- list scalar entries shaped as `pattern replacement 307`.
+- list scalar entries shaped as `pattern replacement 303`;
+- list scalar entries shaped as `pattern replacement 307`;
+- list scalar entries shaped as `pattern replacement 308`.
 
 Parser output:
 
@@ -834,16 +838,23 @@ Current CI evidence:
 - positive redirect fixture `tests/fixtures/Stash.UrlRewriteRedirect.yaml`;
 - negative redirect fixture
   `tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml`;
+- positive redirect-status fixture
+  `tests/fixtures/Stash.UrlRewriteRedirectStatus.yaml`;
+- negative redirect-status fixture
+  `tests/fixtures/Stash.UrlRewriteRedirectStatus.Malformed.yaml`;
 - `config/stash_url_rewrite_fixture_maps_reject_subset`;
 - `config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex`;
 - `config/stash_url_rewrite_redirect_fixture_maps_redirect_subset`;
 - `config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex`;
+- `config/stash_url_rewrite_redirect_status_fixture_maps_portable_redirects`;
+- `config/stash_url_rewrite_redirect_status_malformed_fixture_rejects_invalid_regex`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported` continues to
   guard unsupported Stash app-profile routing/proxy syntax.
 
 Unimplemented items:
 
-- transparent URL rewrites and redirect status codes outside 302/307;
+- transparent URL rewrites and redirect status codes outside
+  301/302/303/307/308;
 - `DIRECT`, `PROXY`, proxy groups, route policy names, and rule providers;
 - DNS, TUN, VPN, packet-capture, app-profile UI, proxy-node parsing, and
   platform networking behavior.
@@ -994,6 +1005,8 @@ Current CI evidence:
 - `config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex`;
 - `config/stash_url_rewrite_redirect_fixture_maps_redirect_subset`;
 - `config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex`;
+- `config/stash_url_rewrite_redirect_status_fixture_maps_portable_redirects`;
+- `config/stash_url_rewrite_redirect_status_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
 - `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;

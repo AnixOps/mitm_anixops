@@ -1,0 +1,6 @@
+# Stash url-rewrite redirect status fixture: parser-owned 301/303/308 subset.
+http:
+  url-rewrite:
+    - ^http:\/\/stash-status\.example\.test\/permanent\/(.*) https://edge.stash-status.example.test/$1 301
+    - ^https:\/\/stash-status\.example\.test\/see\/(.*) https://see.stash-status.example.test/$1 303
+    - ^https:\/\/stash-status\.example\.test\/preserve\/(.*) https://preserve.stash-status.example.test/$1 308

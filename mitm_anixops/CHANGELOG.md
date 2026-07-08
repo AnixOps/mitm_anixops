@@ -195,6 +195,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Stash `http.url-rewrite` 302/307 redirect parser fixtures and
   CI-covered tests while keeping transparent rewrite and route selection
   adapter-owned.
+- Added Stash `http.url-rewrite` 301/303/308 redirect parser fixtures and
+  CI-covered tests, aligned with the portable redirect status subset.
 - Added Shadowrocket `[Rule]` URL-regex reject parser fixtures and CI-covered
   tests while keeping direct/proxy route selection adapter-owned.
 - Added Shadowrocket `[Rule]` DOMAIN reject parser fixtures and CI-covered

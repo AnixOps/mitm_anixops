@@ -1,0 +1,4 @@
+# Stash malformed url-rewrite redirect status fixture.
+http:
+  url-rewrite:
+    - ^(https:\/\/broken\.stash-status\.example\.test https://stash-status.example.test/new 308

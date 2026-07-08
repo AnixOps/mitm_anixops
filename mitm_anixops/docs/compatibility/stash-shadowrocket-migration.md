@@ -35,7 +35,7 @@ This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
 - Stash has a dedicated HTTP MITM source contract for a narrow `http.mitm`
   host-policy subset.
 - Stash has a dedicated URL rewrite source contract for a narrow
-  `http.url-rewrite` reject and 302/307 redirect subset.
+  `http.url-rewrite` reject and 301/302/303/307/308 redirect subset.
 - Shadowrocket has a dedicated common-config source contract for a narrow
   `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
 - Shadowrocket has a dedicated rule-reject source contract for a narrow
@@ -91,7 +91,9 @@ subset described in [`stash-url-rewrite.md`](stash-url-rewrite.md):
 - `tests/fixtures/Stash.UrlRewrite.yaml`;
 - `tests/fixtures/Stash.UrlRewrite.Malformed.yaml`;
 - `tests/fixtures/Stash.UrlRewriteRedirect.yaml`;
-- `tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml`.
+- `tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml`;
+- `tests/fixtures/Stash.UrlRewriteRedirectStatus.yaml`;
+- `tests/fixtures/Stash.UrlRewriteRedirectStatus.Malformed.yaml`.
 
 ## Current Claim
 
@@ -103,7 +105,7 @@ Allowed statements:
 - Stash `http.force-http-engine` has parser support as an adapter-visible QUIC
   fallback decision signal.
 - Stash `http.url-rewrite` has partial parser support for documented reject and
-  302/307 redirect policy intent.
+  301/302/303/307/308 redirect policy intent.
 - Shadowrocket app-level profile syntax remains a migration target outside the
   common-config and rule-reject contracts.
 - Shadowrocket common config has partial parser support for documented URL
@@ -121,8 +123,8 @@ Forbidden statements:
 - Full Stash parser support is implemented.
 - Stash `rules`, `proxies`, DNS, routing, UI, cron, script runtime, or
   transport-level HTTP engine behavior is implemented.
-- Stash transparent rewrite, route selection, or redirect status codes beyond
-  302/307 are implemented.
+- Stash transparent rewrite, route selection, or redirect status codes outside
+  301/302/303/307/308 are implemented.
 - Full Shadowrocket parser support is implemented.
 - Shadowrocket `[General]`, `[Proxy]`, DNS, routing, profile UI, proxy-node
   behavior, or `[Rule]` direct/proxy route selection is implemented.
@@ -185,11 +187,13 @@ Expected Stash HTTP MITM behavior:
 Expected Stash URL rewrite behavior:
 
 - config load succeeds for `tests/fixtures/Stash.UrlRewrite.yaml` and
-  `tests/fixtures/Stash.UrlRewriteRedirect.yaml`;
+  `tests/fixtures/Stash.UrlRewriteRedirect.yaml` plus the dedicated
+  redirect-status fixture;
 - `http.url-rewrite` entries shaped as `pattern - reject*` register
   request-phase rewrite reject decisions;
-- `http.url-rewrite` entries shaped as `pattern replacement 302/307` register
-  request-phase redirect decisions;
+- `http.url-rewrite` entries shaped as
+  `pattern replacement 301/302/303/307/308` register request-phase redirect
+  decisions;
 - unsupported transparent-shaped `url-rewrite` entries remain ignored;
 - malformed supported reject or redirect entries fail with regex diagnostics;
 - no script rules, task descriptors, MITM host patterns, route policies, proxy
@@ -233,7 +237,7 @@ concepts:
 
 - MITM host allow/deny lists;
 - request URL redirect or reject;
-- Stash `http.url-rewrite` reject and 302/307 redirect intent;
+- Stash `http.url-rewrite` reject and 301/302/303/307/308 redirect intent;
 - Shadowrocket `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`,
   `DOMAIN-SUFFIX`, and `FINAL` reject intent;
 - response rewrite where it maps to the documented response rewrite subset;
@@ -276,6 +280,6 @@ add:
 
 The current Stash app-profile guard and remaining Shadowrocket app-profile guard
 fixtures do not satisfy those entry criteria for route selection, proxy nodes,
-DNS, UI, transparent rewrite, redirect status codes beyond 302/307, or platform
-networking. Keep those surfaces as migration notes only until dedicated parser
-evidence exists.
+DNS, UI, transparent rewrite, redirect status codes outside
+301/302/303/307/308, or platform networking. Keep those surfaces as migration
+notes only until dedicated parser evidence exists.

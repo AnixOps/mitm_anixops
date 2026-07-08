@@ -2359,7 +2359,7 @@ static int anixops_engine_add_stash_url_rewrite(anixops_engine_t *engine, const 
 	}
 	else {
 		if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
-			!(action == ANIXOPS_REWRITE_REDIRECT_302 || action == ANIXOPS_REWRITE_REDIRECT_307)) {
+			!anixops_rewrite_action_redirects(action)) {
 			return ANIXOPS_OK;
 		}
 		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s %s", pattern, replacement, action_token);
