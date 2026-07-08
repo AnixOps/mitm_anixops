@@ -1,0 +1,3 @@
+[URL Rewrite]
+^https:\/\/response\.loon\.test\/echo\/(.*) echo-response text/plain loon-$1
+^https:\/\/response\.loon\.test\/clean response-body-replace-regex ad clean

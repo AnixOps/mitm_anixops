@@ -39,16 +39,20 @@ Parser case:
 
 ```text
 tests/fixtures/ResponseRewrite.Common.conf
+tests/fixtures/Loon.ResponseRewrite.plugin
 ```
 
 Expected behavior:
 
 - config load succeeds;
-- three rewrite rules are registered;
+- the common fixture registers three rewrite rules;
+- the Loon fixture registers two rewrite rules;
 - request phase does not trigger response rewrite rules;
 - response mock body and echo-response behavior are observable through
   `anixops_rewrite_apply_body`;
 - response body regex replacement is observable for an already-buffered body.
+- Loon `[URL Rewrite]` response echo and response body regex rules are
+  observable through `anixops_rewrite_apply_body`.
 
 ## Negative Case
 
@@ -56,11 +60,13 @@ Parser case:
 
 ```text
 tests/fixtures/ResponseRewrite.Common.Malformed.conf
+tests/fixtures/Loon.ResponseRewrite.Malformed.plugin
 ```
 
 Expected behavior:
 
 - the invalid response body regex rejects config load;
+- the invalid Loon `[URL Rewrite]` response body regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -88,6 +94,10 @@ Required CI evidence:
   `config/response_rewrite_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/response_rewrite_common_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/loon_response_rewrite_fixture_maps_response_echo_and_body`;
+- `tests/test_config.c` registers
+  `config/loon_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
