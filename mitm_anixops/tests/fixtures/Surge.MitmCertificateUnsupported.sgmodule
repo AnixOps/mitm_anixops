@@ -1,0 +1,4 @@
+[MITM]
+hostname = cert-material.surge.test
+ca-p12 = https://certs.example/ignored.p12
+ca-passphrase = ignored-secret

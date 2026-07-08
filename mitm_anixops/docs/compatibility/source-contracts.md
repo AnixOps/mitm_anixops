@@ -565,14 +565,18 @@ Input form:
   requires-body, timeout, max-size, tag, and argument;
 - `[Script]` cron and interval task metadata covered by
   [Surge Task Metadata](surge-task-metadata.md);
+- `[MITM] hostname`;
+- unsupported certificate-material keys `ca-p12` and `ca-passphrase`;
 - selected body/JQ rewrite forms.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/Surge.CommonConfig.sgmodule`;
 - negative fixture `tests/fixtures/Surge.CommonConfig.Malformed.sgmodule`;
+- unsupported fixture `tests/fixtures/Surge.MitmCertificateUnsupported.sgmodule`;
 - `config/surge_common_config_fixture_is_supported`;
 - `config/surge_common_config_strict_fixture_rejects_malformed_rule`;
+- `config/surge_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - C parser/script tests;
 - runner corpus entry `Representative.Surge.sgmodule`;
 - optional `JQ=1` GitHub Actions coverage when libjq headers are installed.
@@ -580,6 +584,7 @@ Current CI evidence:
 Unimplemented items:
 
 - full Surge module grammar;
+- certificate material loading and platform trust-store mutation;
 - broader body rewrite and JQ corpus;
 - requirement runtime gating behavior.
 
