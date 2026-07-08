@@ -1784,7 +1784,7 @@ static void pcre_quoted_literals_match_all_regex_contexts(void)
 	anixops_engine_free(engine);
 }
 
-static void pcre2_backend_matches_lookaround_when_available(void)
+static void pcre2_backend_matches_advanced_features_when_available(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_rewrite_result_t rewrite;
@@ -1811,6 +1811,16 @@ static void pcre2_backend_matches_lookaround_when_available(void)
 		anixops_engine_add_rewrite_rule(
 			engine,
 			"^https://word\\.test request-body-replace-regex \"\\btoken\\b\" word"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://backref\\.test/(?:scope/)?([a-z]+)/\\1$ https://dest.test/$1 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://unicode\\.test request-body-replace-regex \"\\p{L}+\" letters"),
 		ANIXOPS_OK);
 
 	ANIXOPS_EXPECT_EQ_INT(
@@ -1844,6 +1854,29 @@ static void pcre2_backend_matches_lookaround_when_available(void)
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
 	ANIXOPS_EXPECT_STREQ(body, "word tokenized");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://backref.test/scope/item/item",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/item");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://unicode.test",
+			ANIXOPS_PHASE_REQUEST,
+			"caf" "\xC3" "\xA9" "=123",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "letters=123");
 
 	anixops_engine_free(engine);
 }
@@ -3157,8 +3190,8 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		tests,
 		count,
 		cap,
-		"rewrite/pcre2_backend_matches_lookaround_when_available",
-		pcre2_backend_matches_lookaround_when_available);
+		"rewrite/pcre2_backend_matches_advanced_features_when_available",
+		pcre2_backend_matches_advanced_features_when_available);
 	add_test(
 		tests,
 		count,

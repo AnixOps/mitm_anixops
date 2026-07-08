@@ -106,7 +106,7 @@ features it understands.
 | Corpus manifest scan | Supported foundation | `tests/fixtures/corpus/manifest.json`, `anixops-mitm-runner scan --corpus`, runner-check verifies representative Loon/Surge/Quantumult X and BiliBili fixture counts, sha256 digests, and accepted/ignored/rejected diagnostic counts |
 | Request/response plan builder | Supported foundation | `anixops_rewrite_build_plan` aggregates phase rewrite, matching header rewrites, script dispatch, body-rewrite output, and `requires_body`; unit test compares it against individual evaluation APIs |
 | Regex backend selector | Supported foundation | `anixops_regex_backend_available`, `anixops_engine_set_regex_backend`, POSIX Lite default |
-| Optional PCRE2 backend | Supported optional backend | `make pcre2-test`, `PCRE2=1`, lookahead/lookbehind and word-boundary fixtures |
+| Optional PCRE2 backend | Supported optional backend | `make pcre2-test`, `PCRE2=1`, lookahead/lookbehind, backreference, Unicode property, and word-boundary fixtures |
 | Optional libjq backend | Supported optional backend | `make jq-test`, `JQ=1`, body rewrite and fail-open policy fixtures |
 | ABI export allowlist | Supported | `ci/abi_exports.txt` checked by `scripts/check.sh` |
 | pkg-config metadata | Supported Alpha packaging | `make pkg-config-check`, relocatable `lib/pkgconfig/mitm_anixops.pc` in `alpha-dist` |

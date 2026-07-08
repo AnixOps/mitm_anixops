@@ -18,8 +18,9 @@ publishing.
   rule-shaped lines inside supported `[Rewrite]`, `[Script]`, `[Argument]`, and `[MITM]` sections; more exact
   LOON/SURGE/QX behavioral differences still need to be implemented rule-by-rule.
 - Regex backend selection now has an initial C ABI foundation with a POSIX Lite default and optional PCRE2
-  compile/match/replace support behind `PCRE2=1`; body/header empty-match replacement behavior is covered for `^`,
-  `$`, and lazy `.*?`; NSRegularExpression still needs a real Darwin backend.
+  compile/match/replace support behind `PCRE2=1`; lookaround, backreference, Unicode property, and word-boundary
+  fixtures are covered for PCRE2, and body/header empty-match replacement behavior is covered for `^`, `$`, and lazy
+  `.*?`; NSRegularExpression still needs a real Darwin backend.
 - Full JQ-style JSON body rewrite hardening beyond the optional libjq backend behind `JQ=1`. Default builds still
   fail-open with `jq backend unavailable`; remaining work includes resource limits, production cache/reuse policy,
   broad plugin-corpus coverage, and edge behavior for predicates, slices, recursive selectors, and computed filters.

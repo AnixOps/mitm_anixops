@@ -131,7 +131,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.45.2.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.45.3.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
@@ -141,7 +141,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.2/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.3/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:

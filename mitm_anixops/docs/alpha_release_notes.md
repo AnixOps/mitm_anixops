@@ -27,7 +27,7 @@ Included:
   aliases.
 - P2 regex foundation: regex backend selector with POSIX Lite default, stable empty-match replacement behavior for `^`,
   `$`, and lazy `.*?`, named capture replacement with `${name}` / `$<name>`, and optional PCRE2 compile/match/replace
-  support when built with `PCRE2=1`;
+  support for lookaround, backreference, Unicode property, and word-boundary fixtures when built with `PCRE2=1`;
   NSRegularExpression is still a future Darwin backend.
 - P3 JQ foundation: `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` rules parse and
   match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with tested

@@ -423,7 +423,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.2";
+	return "0.45.3";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -3263,7 +3263,7 @@ static int anixops_compile_regex(
 			char *ignored = NULL;
 			int name_flags = flags;
 			const char *name_pattern = anixops_regex_pattern_after_inline_flags(pattern, &name_flags);
-			(void)anixops_normalize_regex_pattern(name_pattern, &ignored, capture_map, capture_map_cap, capture_names);
+			(void)anixops_normalize_regex_pattern(name_pattern, &ignored, NULL, 0, capture_names);
 			free(ignored);
 		}
 		if ((flags & REG_ICASE) != 0) {
