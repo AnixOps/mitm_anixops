@@ -1818,7 +1818,11 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 		}
 		if (anixops_task_cron_field_token_is_plausible(maybe_script_path) &&
 			anixops_next_token(&task_cursor, six_field_script_path, sizeof(six_field_script_path))) {
-			anixops_copy_text(field[5], sizeof(field[5]), maybe_script_path);
+			if (anixops_copy_text_checked(field[5], sizeof(field[5]), maybe_script_path) != ANIXOPS_OK) {
+				free(copy);
+				anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task cron expression too long");
+				return ANIXOPS_ERR_PARSE;
+			}
 			anixops_copy_text(script_path, sizeof(script_path), six_field_script_path);
 			field_count = 6;
 		}
