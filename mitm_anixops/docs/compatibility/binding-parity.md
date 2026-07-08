@@ -27,8 +27,10 @@ It covers:
 - MITM hostname parsing;
 - request URL redirect;
 - request header mutation;
+- request named-header current-value mutation;
 - request body mutation;
 - response header mutation;
+- response named-header current-value mutation;
 - response body mutation;
 - request and response script dispatch metadata;
 - argument substitution for script metadata.
@@ -42,7 +44,8 @@ Expected behavior:
   that bindings expose through plan APIs.
 - Go wrapper `TestGoBindingLoadsSharedParityFixture` loads the fixture and
   verifies redirect, request plan, response plan, body rewrite, header rewrite,
-  script tag, script path, timeout, max-size, and argument output.
+  named-header current-value rewrite, script tag, script path, timeout,
+  max-size, and argument output.
 - Rust wrapper `rust_binding_loads_shared_parity_fixture` verifies the same
   policy outputs through the Rust safe wrapper.
 
@@ -52,7 +55,9 @@ This contract is not a production adapter claim. Existing negative coverage
 continues to guard unsafe or mismatched behavior:
 
 - phase mismatch remains covered by `PlanApiParity.PhaseMismatch.conf`;
-- missing named-header checks remain covered in Go and Rust wrapper tests;
+- missing named-header lookups remain covered in Go and Rust wrapper tests;
+- current-value header regex matching is covered by direct named-header checks
+  in Go and Rust wrapper tests;
 - malformed MITM host parsing remains covered by `MITM.Hostname.Malformed.conf`;
 - live traffic mutation remains adapter-owned and deferred.
 
@@ -75,8 +80,10 @@ Required CI evidence:
 
 - `make runner-check` runs C runner `scan` and `trace` checks against
   `BindingParity.Common.conf`;
-- `make go-binding-check` runs `TestGoBindingLoadsSharedParityFixture`;
-- `make rust-binding-check` runs `rust_binding_loads_shared_parity_fixture`;
+- `make go-binding-check` runs `TestGoBindingLoadsSharedParityFixture`,
+  including named-header current-value rewrite checks;
+- `make rust-binding-check` runs `rust_binding_loads_shared_parity_fixture`,
+  including named-header current-value rewrite checks;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -87,5 +94,5 @@ Row:
 binding parity
 ```
 
-The row remains `partial` until parity expands to golden JSON trace fixtures,
-named-header current-value behavior, and every release-package binding surface.
+The row remains `partial` until parity expands to golden JSON trace fixtures
+and every release-package binding surface.

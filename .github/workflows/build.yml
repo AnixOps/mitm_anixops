@@ -189,10 +189,17 @@ jobs:
           grep -q "binding parity" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Binding Parity Source Contract" mitm_anixops/docs/compatibility/binding-parity.md
           grep -q "BindingParity.Common.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "X-Binding-Current" mitm_anixops/tests/fixtures/BindingParity.Common.conf
           grep -q "runner-binding-parity-response-trace.out" mitm_anixops/Makefile
           grep -q "TestGoBindingLoadsSharedParityFixture" mitm_anixops/bindings/go/anixops/anixops_test.go
+          grep -q "requestHeader, err := engine.EvaluateNamedHeader" mitm_anixops/bindings/go/anixops/anixops_test.go
+          grep -q "responseHeader, err := engine.EvaluateNamedHeader" mitm_anixops/bindings/go/anixops/anixops_test.go
           grep -q "rust_binding_loads_shared_parity_fixture" mitm_anixops/bindings/rust/mitm-anixops/src/lib.rs
+          grep -q "request_header = engine" mitm_anixops/bindings/rust/mitm-anixops/src/lib.rs
+          grep -q "response_header = engine" mitm_anixops/bindings/rust/mitm-anixops/src/lib.rs
+          grep -q "named-header current-value" mitm_anixops/docs/compatibility/binding-parity.md
           grep -q "^- \\[x\\] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add named-header current-value parity checks for Go and Rust wrappers" mitm_anixops/TODO.md
           grep -q "script runtime contract" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Script Runtime Common Source Contract" mitm_anixops/docs/compatibility/script-runtime-common.md
           grep -q "script-runtime-dependency.md" mitm_anixops/docs/compatibility/matrix.md

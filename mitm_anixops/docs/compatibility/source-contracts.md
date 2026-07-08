@@ -496,18 +496,20 @@ Input form:
 
 - `tests/fixtures/BindingParity.Common.conf`;
 - request/response URL, header, body, and script policy rules;
+- request/response named-header current-value rewrite rules;
 - argument substitution shared across all binding surfaces.
 
 Current CI evidence:
 
 - C runner `scan` and `trace` checks in `make runner-check`;
-- Go wrapper `TestGoBindingLoadsSharedParityFixture`;
-- Rust wrapper `rust_binding_loads_shared_parity_fixture`.
+- Go wrapper `TestGoBindingLoadsSharedParityFixture`, including named-header
+  current-value rewrite checks;
+- Rust wrapper `rust_binding_loads_shared_parity_fixture`, including
+  named-header current-value rewrite checks.
 
 Unimplemented items:
 
 - golden JSON fixtures for runner traces;
-- named-header current-value parity matrix;
 - release-package binding surface parity.
 
 ### Script Trigger Metadata

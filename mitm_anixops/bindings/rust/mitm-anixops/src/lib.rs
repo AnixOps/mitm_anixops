@@ -860,7 +860,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
     fn rust_binding_loads_shared_parity_fixture() {
         let mut engine = Engine::new().unwrap();
         engine.load_config(SHARED_PARITY_CONFIG).unwrap();
-        assert_eq!(engine.rewrite_rule_count(), 5);
+        assert_eq!(engine.rewrite_rule_count(), 7);
         assert_eq!(engine.script_rule_count(), 2);
 
         let redirect = engine
@@ -892,6 +892,18 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert_eq!(request_plan.script.argument, "Mode=binding");
         assert_eq!(request_plan.script.timeout_ms, 333);
         assert_eq!(request_plan.script.max_size, 777);
+        let request_header = engine
+            .evaluate_named_header(
+                "https://api.binding.test/request-current/item",
+                Phase::Request,
+                0,
+                "x-binding-current",
+                "old-item",
+            )
+            .unwrap();
+        assert_eq!(request_header.action, RewriteAction::HeaderReplaceRegex);
+        assert_eq!(request_header.header_name, "X-Binding-Current");
+        assert_eq!(request_header.value, "req-item");
 
         let (response_plan, response_body) = engine
             .build_plan(
@@ -921,6 +933,21 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert_eq!(response_plan.script.argument, "Mode=binding");
         assert_eq!(response_plan.script.timeout_ms, 444);
         assert_eq!(response_plan.script.max_size, 888);
+        let response_header = engine
+            .evaluate_named_header(
+                "https://api.binding.test/response-current/item",
+                Phase::Response,
+                0,
+                "x-binding-current",
+                "old-item",
+            )
+            .unwrap();
+        assert_eq!(
+            response_header.action,
+            RewriteAction::ResponseHeaderReplaceRegex
+        );
+        assert_eq!(response_header.header_name, "X-Binding-Current");
+        assert_eq!(response_header.value, "resp-item");
     }
 
     #[test]

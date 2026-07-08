@@ -149,7 +149,7 @@ func TestGoBindingLoadsSharedParityFixture(t *testing.T) {
 	if err := engine.LoadConfig(string(config)); err != nil {
 		t.Fatal(err)
 	}
-	if engine.RewriteRuleCount() != 5 {
+	if engine.RewriteRuleCount() != 7 {
 		t.Fatalf("RewriteRuleCount() = %d", engine.RewriteRuleCount())
 	}
 	if engine.ScriptRuleCount() != 2 {
@@ -191,6 +191,21 @@ func TestGoBindingLoadsSharedParityFixture(t *testing.T) {
 		requestPlan.Script.MaxSize != 777 {
 		t.Fatalf("unexpected request script: %+v", requestPlan.Script)
 	}
+	requestHeader, err := engine.EvaluateNamedHeader(
+		"https://api.binding.test/request-current/item",
+		PhaseRequest,
+		0,
+		"x-binding-current",
+		"old-item",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requestHeader.Action != RewriteHeaderReplaceRegex ||
+		requestHeader.HeaderName != "X-Binding-Current" ||
+		requestHeader.Value != "req-item" {
+		t.Fatalf("unexpected request named header: %+v", requestHeader)
+	}
 
 	responsePlan, responseBody, err := engine.BuildPlan("https://api.binding.test/response/item", PhaseResponse, "ad=1&ok=1")
 	if err != nil {
@@ -215,6 +230,21 @@ func TestGoBindingLoadsSharedParityFixture(t *testing.T) {
 		responsePlan.Script.TimeoutMs != 444 ||
 		responsePlan.Script.MaxSize != 888 {
 		t.Fatalf("unexpected response script: %+v", responsePlan.Script)
+	}
+	responseHeader, err := engine.EvaluateNamedHeader(
+		"https://api.binding.test/response-current/item",
+		PhaseResponse,
+		0,
+		"x-binding-current",
+		"old-item",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if responseHeader.Action != RewriteResponseHeaderReplaceRegex ||
+		responseHeader.HeaderName != "X-Binding-Current" ||
+		responseHeader.Value != "resp-item" {
+		t.Fatalf("unexpected response named header: %+v", responseHeader)
 	}
 }
 

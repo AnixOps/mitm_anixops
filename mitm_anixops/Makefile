@@ -106,7 +106,7 @@ runner-check: $(RUNNER_BIN)
 	grep -F '"tag":"loon.request"' $(BUILD_DIR)/runner-replay.out >/dev/null
 	grep -F '"tag":"loon.response"' $(BUILD_DIR)/runner-replay.out >/dev/null
 	$(RUNNER_BIN) scan tests/fixtures/BindingParity.Common.conf > $(BUILD_DIR)/runner-binding-parity-scan.out
-	grep -F '"counts":{"mitm":1,"rewrite":5,"script":2,"argument":1}' $(BUILD_DIR)/runner-binding-parity-scan.out >/dev/null
+	grep -F '"counts":{"mitm":1,"rewrite":7,"script":2,"argument":1}' $(BUILD_DIR)/runner-binding-parity-scan.out >/dev/null
 	$(RUNNER_BIN) trace --plugin tests/fixtures/BindingParity.Common.conf --url http://old.binding.test/item --phase request > $(BUILD_DIR)/runner-binding-parity-redirect-trace.out
 	grep -F '"action":1' $(BUILD_DIR)/runner-binding-parity-redirect-trace.out >/dev/null
 	grep -F '"value":"https://api.binding.test/item"' $(BUILD_DIR)/runner-binding-parity-redirect-trace.out >/dev/null
