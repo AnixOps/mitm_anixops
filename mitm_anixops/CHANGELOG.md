@@ -51,6 +51,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for `#!requirement` diagnostics.
 - Added a Surge task metadata source contract plus positive and negative parser
   fixtures for `[Script]` cron and interval task descriptors.
+- Added Surge `[Script]` `type=event` parser descriptors for
+  `network-changed` and `notification` events while keeping event dispatch
+  adapter-owned.
 - Added a Stash HTTP MITM source contract plus positive and negative parser
   fixtures for `http.mitm` host policy metadata.
 - Added Stash HTTP MITM `host:*` port-wildcard fixture coverage, normalized to

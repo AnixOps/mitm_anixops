@@ -2005,6 +2005,80 @@ static void surge_task_metadata_malformed_fixture_rejects_invalid_cron(void)
 	free(fixture);
 }
 
+static void surge_task_event_fixture_emits_event_descriptors(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.TaskEvent.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_task_descriptor_t task;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 0, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_EVENT);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 2750);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 5120);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "network-changed");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/surge-event-network.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "surge.event.network");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=event");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 1, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_EVENT);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 0);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 0);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "notification");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/surge-event-notification.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "surge.event.notification");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void surge_task_event_malformed_fixture_rejects_missing_event_name(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.TaskEvent.Malformed.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_SURGE_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "event name") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "event name") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void surge_requirement_metadata_fixture_records_tolerated_keys(void)
 {
 	static const char *expected_actions[] = {
@@ -5343,6 +5417,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/surge_task_metadata_malformed_fixture_rejects_invalid_cron",
 		surge_task_metadata_malformed_fixture_rejects_invalid_cron);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_task_event_fixture_emits_event_descriptors",
+		surge_task_event_fixture_emits_event_descriptors);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_task_event_malformed_fixture_rejects_missing_event_name",
+		surge_task_event_malformed_fixture_rejects_missing_event_name);
 	add_test(
 		tests,
 		count,

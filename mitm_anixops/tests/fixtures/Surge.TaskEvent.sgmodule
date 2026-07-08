@@ -1,0 +1,4 @@
+#!name = Surge Event Task Metadata Fixture
+[Script]
+Surge.Event.Network = type=event, event-name=network-changed, script-path=https://scripts.example/surge-event-network.js, tag=surge.event.network, argument=Mode=event, timeout-ms=2750, max_size=5120
+Surge.Event.Notification = script-path=https://scripts.example/surge-event-notification.js, type=event, event-name=notification, tag=surge.event.notification, enabled=false

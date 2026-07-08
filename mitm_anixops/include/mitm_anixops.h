@@ -135,7 +135,8 @@ typedef enum anixops_task_kind {
 	ANIXOPS_TASK_INTERVAL = 2,
 	ANIXOPS_TASK_MANUAL = 3,
 	ANIXOPS_TASK_EVENT_NETWORK = 4,
-	ANIXOPS_TASK_EVENT_INTERACTION = 5
+	ANIXOPS_TASK_EVENT_INTERACTION = 5,
+	ANIXOPS_TASK_EVENT = 6
 } anixops_task_kind_t;
 
 typedef struct anixops_mitm_decision {

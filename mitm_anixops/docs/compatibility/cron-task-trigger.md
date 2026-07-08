@@ -26,6 +26,8 @@ to parse:
   scheduler kind;
 - Quantumult X `[task_local]` `event-network` and `event-interaction`
   descriptor lines;
+- Surge `[Script]` `type=event` descriptor lines for `network-changed` and
+  `notification`;
 - `script-path` or `script_path`;
 - `tag`, `argument`, `timeout`, `timeout-ms`, `max-size`, `max_size`,
   `enable`, and `enabled` metadata.
@@ -43,8 +45,8 @@ The parser produces adapter-owned task descriptors through:
 
 Descriptors separate:
 
-- task kind: cron, interval, manual placeholder, or Quantumult X event
-  descriptor;
+- task kind: cron, interval, manual placeholder, Quantumult X event descriptor,
+  or Surge event descriptor;
 - cron expression or interval seconds;
 - script path;
 - resolved argument string;
@@ -64,6 +66,7 @@ Parser case:
 tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
 tests/fixtures/Loon.TaskMetadata.plugin
 tests/fixtures/QuantumultX.TaskMetadata.snippet
+tests/fixtures/Surge.TaskEvent.sgmodule
 tests/fixtures/Surge.TaskMetadata.sgmodule
 ```
 
@@ -81,6 +84,8 @@ Expected behavior:
   descriptors while preserving HTTP script URL dispatch separation;
 - the Surge parser fixture exposes `[Script]` `type=cron` and `type=interval`
   task descriptors while preserving HTTP script URL dispatch separation;
+- the Surge event parser fixture exposes `[Script]` `type=event` descriptors
+  while preserving HTTP script URL dispatch separation;
 - response-phase URL script evaluation does not return a task descriptor.
 
 ## Unsupported Case
@@ -107,6 +112,7 @@ tests/fixtures/CronTaskTrigger.Malformed.conf
 tests/fixtures/Loon.TaskMetadata.Malformed.plugin
 tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
 tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet
+tests/fixtures/Surge.TaskEvent.Malformed.sgmodule
 tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule
 ```
 
@@ -141,6 +147,7 @@ Current diagnostics cover:
 - accepted cron task descriptor;
 - accepted interval task descriptor;
 - accepted Quantumult X event task descriptor;
+- accepted Surge event task descriptor;
 - ignored unsupported scheduler type;
 - rejected malformed cron expression;
 - rejected malformed event task missing a script path.
@@ -185,6 +192,10 @@ Current evidence:
   `config/surge_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`;
+- `tests/test_config.c` registers
+  `config/surge_task_event_fixture_emits_event_descriptors`;
+- `tests/test_config.c` registers
+  `config/surge_task_event_malformed_fixture_rejects_missing_event_name`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
   guards against treating bare cron rules as supported HTTP scripts when using
@@ -194,6 +205,7 @@ Missing evidence:
 
 - scheduler/runtime replay or E2E test;
 - Quantumult X event dispatch runtime evidence;
+- Surge event dispatch runtime evidence;
 - task JavaScript runtime bindings;
 - adapter compatibility notes beyond the current Loon, Quantumult X, and Surge
   parser boundaries;
@@ -211,6 +223,7 @@ while scheduling and task runtime behavior remain unimplemented.
 
 - scheduler and execution adapter;
 - Quantumult X event dispatch adapter;
+- Surge event dispatch adapter;
 - task JavaScript runtime bindings;
 - persistence/locking policy for scheduled runs;
 - runtime cancellation and quota enforcement;

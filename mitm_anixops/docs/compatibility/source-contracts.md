@@ -574,13 +574,14 @@ Unimplemented items:
 Detailed contract:
 [Surge Task Metadata Source Contract](surge-task-metadata.md).
 
-Capability: parse Surge `[Script]` cron and interval task descriptors without
-claiming scheduler or runtime execution.
+Capability: parse Surge `[Script]` cron, interval, and event task descriptors
+without claiming scheduler, event dispatch, or runtime execution.
 
 Input form:
 
 - `[Script]` attr-list rules with `type=cron`, `type=scheduled`,
   `type=scheduled-script`, `type=interval`, or `type=task`;
+- `[Script]` attr-list rules with `type=event` and `event-name`;
 - `cronexp`, `cron`, `schedule`, `interval`, `script-path`, `script_path`,
   `tag`, `argument`, `timeout`, `timeout-ms`, `max-size`, `max_size`,
   `enable`, and `enabled` metadata;
@@ -600,13 +601,18 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/Surge.TaskMetadata.sgmodule`;
 - negative fixture `tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule`;
+- positive fixture `tests/fixtures/Surge.TaskEvent.sgmodule`;
+- negative fixture `tests/fixtures/Surge.TaskEvent.Malformed.sgmodule`;
 - `config/surge_task_metadata_fixture_emits_task_descriptors`;
-- `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`.
+- `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`;
+- `config/surge_task_event_fixture_emits_event_descriptors`;
+- `config/surge_task_event_malformed_fixture_rejects_missing_event_name`.
 
 Unimplemented items:
 
 - scheduler/runtime execution;
-- event, DNS, rule, and policy-group script task forms;
+- event dispatch execution;
+- DNS, rule, and policy-group script task forms;
 - task JavaScript bindings;
 - concurrency and permission policy;
 - broader Surge task corpus.
@@ -1278,8 +1284,8 @@ Unimplemented items:
 
 Detailed contract: [Cron And Task Trigger Source Contract](cron-task-trigger.md).
 
-Capability: parse cron, interval, and Quantumult X event task trigger metadata
-without claiming scheduler/runtime support.
+Capability: parse cron, interval, Quantumult X event, and Surge event task
+trigger metadata without claiming scheduler/runtime support.
 
 Input form:
 
@@ -1287,13 +1293,16 @@ Input form:
 - `[Script]` attr-list rules with `type=cron`, `type=interval`, or
   `type=task` plus a concrete cron expression or interval;
 - Quantumult X `event-network` and `event-interaction` descriptor lines;
+- Surge `type=event` descriptor lines for `network-changed` and
+  `notification`;
 - `script-path`, `tag`, `argument`, `timeout`, `max-size`, and `enabled`
   metadata;
 - positive parser fixture `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
 - unsupported parser fixture `tests/fixtures/CronTaskTrigger.Unsupported.conf`;
-- malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`.
+- malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`;
 - ecosystem-specific parser fixtures including
-  `tests/fixtures/QuantumultX.TaskMetadata.snippet` and
+  `tests/fixtures/QuantumultX.TaskMetadata.snippet`,
+  `tests/fixtures/Surge.TaskEvent.sgmodule`, and
   `tests/fixtures/Surge.TaskMetadata.sgmodule`.
 
 Current CI evidence:
@@ -1311,6 +1320,9 @@ Current CI evidence:
 - `config/surge_task_metadata_fixture_emits_task_descriptors` and
   `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron` prove the
   documented Surge `type=cron` shape is covered;
+- `config/surge_task_event_fixture_emits_event_descriptors` and
+  `config/surge_task_event_malformed_fixture_rejects_missing_event_name` prove
+  the documented Surge `type=event` descriptor shape is covered;
 - public ABI functions `anixops_engine_task_descriptor_count` and
   `anixops_engine_copy_task_descriptor`;
 - GitHub Actions governance requires the contract and matrix row.
@@ -1319,4 +1331,5 @@ Unimplemented items:
 
 - scheduler/runtime replay or E2E evidence;
 - Quantumult X event dispatch runtime evidence;
+- Surge event dispatch runtime evidence;
 - task JavaScript bindings and concurrency policy.

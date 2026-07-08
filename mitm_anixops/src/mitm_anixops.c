@@ -313,6 +313,7 @@ static int anixops_is_task_section(const char *key);
 static int anixops_task_cron_field_token_is_plausible(const char *token);
 static int anixops_parse_task_kind_token(const char *token, anixops_task_kind_t *kind);
 static int anixops_cron_expression_is_valid(const char *value);
+static int anixops_task_event_name_is_supported(const char *value);
 static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t action);
 static int anixops_extract_attr(const char *attrs, const char *key, char *out, size_t out_cap);
 static int anixops_split_attr_segment(const char *segment, char *key, size_t key_cap, char *value, size_t value_cap);
@@ -2164,6 +2165,12 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 	if (schedule[0] == '\0') {
 		(void)anixops_extract_attr(attrs, "schedule", schedule, sizeof(schedule));
 	}
+	if (schedule[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "event-name", schedule, sizeof(schedule));
+	}
+	if (schedule[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "event_name", schedule, sizeof(schedule));
+	}
 	(void)anixops_extract_attr(attrs, "interval", interval, sizeof(interval));
 	(void)anixops_extract_attr(attrs, "script-path", script_path, sizeof(script_path));
 	if (script_path[0] == '\0') {
@@ -2207,6 +2214,16 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 	if ((kind == ANIXOPS_TASK_EVENT_NETWORK || kind == ANIXOPS_TASK_EVENT_INTERACTION) &&
 		schedule[0] == '\0') {
 		anixops_copy_text(schedule, sizeof(schedule), type);
+	}
+	if (kind == ANIXOPS_TASK_EVENT && schedule[0] == '\0') {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task event name missing");
+		return ANIXOPS_ERR_PARSE;
+	}
+	if (kind == ANIXOPS_TASK_EVENT && !anixops_task_event_name_is_supported(schedule)) {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "unsupported task event name");
+		return ANIXOPS_ERR_PARSE;
 	}
 	if (kind == ANIXOPS_TASK_CRON && !anixops_cron_expression_is_valid(schedule)) {
 		free(copy);
@@ -5626,11 +5643,24 @@ static int anixops_parse_task_kind_token(const char *token, anixops_task_kind_t 
 		*kind = ANIXOPS_TASK_EVENT_INTERACTION;
 		return 1;
 	}
+	if (strcasecmp(token, "event") == 0) {
+		*kind = ANIXOPS_TASK_EVENT;
+		return 1;
+	}
 	if (strcasecmp(token, "task") == 0 || strcasecmp(token, "manual") == 0) {
 		*kind = ANIXOPS_TASK_MANUAL;
 		return 1;
 	}
 	return 0;
+}
+
+static int anixops_task_event_name_is_supported(const char *value)
+{
+	if (value == NULL) {
+		return 0;
+	}
+	return strcasecmp(value, "network-changed") == 0 ||
+		strcasecmp(value, "notification") == 0;
 }
 
 static int anixops_cron_expression_is_valid(const char *value)
