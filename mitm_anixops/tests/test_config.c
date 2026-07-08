@@ -943,6 +943,353 @@ static void decision_trace_schema_fixture_ignores_unsupported_policy_intent(void
 	free(fixture);
 }
 
+static void plan_api_parity_fixture_matches_legacy_evaluation(void)
+{
+	char *fixture = read_fixture("tests/fixtures/PlanApiParity.Golden.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_plan_t plan;
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	anixops_script_result_t script;
+	char plan_body[128];
+	char legacy_body[128];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 6);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://parity.plan.test/redirect/item",
+			ANIXOPS_PHASE_REQUEST,
+			NULL,
+			NULL,
+			0,
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://parity.plan.test/redirect/item",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, rewrite.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.status_code, rewrite.status_code);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, rewrite.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.matched_pattern, rewrite.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.value, rewrite.value);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.message, rewrite.message);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrite_truncated, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, ANIXOPS_SCRIPT_NONE);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://parity.plan.test/request/item",
+			ANIXOPS_PHASE_REQUEST,
+			"token=42",
+			plan_body,
+			sizeof(plan_body),
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://parity.plan.test/request/item",
+			ANIXOPS_PHASE_REQUEST,
+			"token=42",
+			legacy_body,
+			sizeof(legacy_body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, rewrite.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, rewrite.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.matched_pattern, rewrite.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.message, rewrite.message);
+	ANIXOPS_EXPECT_STREQ(plan_body, legacy_body);
+	ANIXOPS_EXPECT_STREQ(plan_body, "token=42-ok");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 2);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrite_truncated, 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://parity.plan.test/request/item",
+			ANIXOPS_PHASE_REQUEST,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, header.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].rule_index, header.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].matched_pattern, header.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].header_name, header.header_name);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].value, header.value);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].message, header.message);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Trace");
+	ANIXOPS_EXPECT_STREQ(header.value, "trace-item");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://parity.plan.test/request/item",
+			ANIXOPS_PHASE_REQUEST,
+			(size_t)header.rule_index + 1,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].action, header.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[1].rule_index, header.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].matched_pattern, header.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].header_name, header.header_name);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].value, header.value);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[1].message, header.message);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(header.value, "mode-item");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://parity.plan.test/request/item",
+			ANIXOPS_PHASE_REQUEST,
+			(size_t)header.rule_index + 1,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(
+			engine,
+			"https://parity.plan.test/request/item",
+			ANIXOPS_PHASE_REQUEST,
+			&script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, script.kind);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.phase, script.phase);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.requires_body, script.requires_body);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.script.timeout_ms, script.timeout_ms);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.script.max_size, script.max_size);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.rule_index, script.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.script.matched_pattern, script.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.script.script_path, script.script_path);
+	ANIXOPS_EXPECT_STREQ(plan.script.tag, script.tag);
+	ANIXOPS_EXPECT_STREQ(plan.script.argument, script.argument);
+	ANIXOPS_EXPECT_STREQ(plan.script.message, script.message);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 250);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 1024);
+	ANIXOPS_EXPECT_STREQ(script.tag, "parity.request");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://parity.plan.test/response/item",
+			ANIXOPS_PHASE_RESPONSE,
+			"ad=1&ok=1",
+			plan_body,
+			sizeof(plan_body),
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://parity.plan.test/response/item",
+			ANIXOPS_PHASE_RESPONSE,
+			"ad=1&ok=1",
+			legacy_body,
+			sizeof(legacy_body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.phase, ANIXOPS_PHASE_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, rewrite.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, rewrite.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.matched_pattern, rewrite.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.message, rewrite.message);
+	ANIXOPS_EXPECT_STREQ(plan_body, legacy_body);
+	ANIXOPS_EXPECT_STREQ(plan_body, "clean=1&ok=1");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrite_truncated, 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://parity.plan.test/response/item",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, header.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].rule_index, header.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].matched_pattern, header.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].header_name, header.header_name);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].value, header.value);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].message, header.message);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Resp");
+	ANIXOPS_EXPECT_STREQ(header.value, "resp-item");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(
+			engine,
+			"https://parity.plan.test/response/item",
+			ANIXOPS_PHASE_RESPONSE,
+			&script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, script.kind);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.phase, script.phase);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.requires_body, script.requires_body);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.script.timeout_ms, script.timeout_ms);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.script.max_size, script.max_size);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.rule_index, script.rule_index);
+	ANIXOPS_EXPECT_STREQ(plan.script.matched_pattern, script.matched_pattern);
+	ANIXOPS_EXPECT_STREQ(plan.script.script_path, script.script_path);
+	ANIXOPS_EXPECT_STREQ(plan.script.tag, script.tag);
+	ANIXOPS_EXPECT_STREQ(plan.script.argument, script.argument);
+	ANIXOPS_EXPECT_STREQ(plan.script.message, script.message);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 500);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 2048);
+	ANIXOPS_EXPECT_STREQ(script.tag, "parity.response");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void plan_api_parity_fixture_keeps_phase_mismatches_empty(void)
+{
+	char *fixture = read_fixture("tests/fixtures/PlanApiParity.PhaseMismatch.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_plan_t plan;
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	anixops_script_result_t script;
+	char plan_body[128];
+	char legacy_body[128];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 4);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://parity.phase.test/request",
+			ANIXOPS_PHASE_RESPONSE,
+			"token=7",
+			plan_body,
+			sizeof(plan_body),
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://parity.phase.test/request",
+			ANIXOPS_PHASE_RESPONSE,
+			"token=7",
+			legacy_body,
+			sizeof(legacy_body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.phase, ANIXOPS_PHASE_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, rewrite.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, -1);
+	ANIXOPS_EXPECT_STREQ(plan_body, legacy_body);
+	ANIXOPS_EXPECT_STREQ(plan_body, "token=7");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://parity.phase.test/request",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(
+			engine,
+			"https://parity.phase.test/request",
+			ANIXOPS_PHASE_RESPONSE,
+			&script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://parity.phase.test/response",
+			ANIXOPS_PHASE_REQUEST,
+			"ad=1",
+			plan_body,
+			sizeof(plan_body),
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://parity.phase.test/response",
+			ANIXOPS_PHASE_REQUEST,
+			"ad=1",
+			legacy_body,
+			sizeof(legacy_body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, rewrite.action);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, -1);
+	ANIXOPS_EXPECT_STREQ(plan_body, legacy_body);
+	ANIXOPS_EXPECT_STREQ(plan_body, "ad=1");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://parity.phase.test/response",
+			ANIXOPS_PHASE_REQUEST,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(
+			engine,
+			"https://parity.phase.test/response",
+			ANIXOPS_PHASE_REQUEST,
+			&script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -1570,6 +1917,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/decision_trace_schema_fixture_ignores_unsupported_policy_intent",
 		decision_trace_schema_fixture_ignores_unsupported_policy_intent);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/plan_api_parity_fixture_matches_legacy_evaluation",
+		plan_api_parity_fixture_matches_legacy_evaluation);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/plan_api_parity_fixture_keeps_phase_mismatches_empty",
+		plan_api_parity_fixture_keeps_phase_mismatches_empty);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

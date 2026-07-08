@@ -48,4 +48,6 @@ corresponding tests.
   response body mutation parser and policy-core contract.
 - [decision-trace-schema.md](decision-trace-schema.md): structured MITM,
   rewrite, header, body, script, and policy-intent trace contract.
+- [plan-api-parity.md](plan-api-parity.md): plan API and legacy
+  `evaluate_*`/`apply_*` parity contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

@@ -297,6 +297,34 @@ Unimplemented items:
 - direct/proxy route-selection contract;
 - serialized trace object for every ABI decision.
 
+### Plan API Parity
+
+Detailed contract: [Plan API Parity Source Contract](plan-api-parity.md).
+
+Capability: prove `anixops_rewrite_build_plan` matches the legacy evaluation
+APIs for the same input.
+
+Input form:
+
+- `tests/fixtures/PlanApiParity.Golden.conf`;
+- `tests/fixtures/PlanApiParity.PhaseMismatch.conf`;
+- request and response URL/header/body/script rules.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/PlanApiParity.Golden.conf`;
+- negative fixture `tests/fixtures/PlanApiParity.PhaseMismatch.conf`;
+- `config/plan_api_parity_fixture_matches_legacy_evaluation`;
+- `config/plan_api_parity_fixture_keeps_phase_mismatches_empty`;
+- `rewrite/rewrite_plan_matches_individual_evaluation_order`.
+
+Unimplemented items:
+
+- runner golden JSON trace fixtures;
+- binding parity fixtures for Go and Rust wrappers;
+- named-header current-value parity matrix;
+- adapter ordering coverage.
+
 ### Script Trigger Metadata
 
 Capability: select request/response script rules and expose script metadata.
