@@ -265,6 +265,38 @@ Unimplemented items:
 - broader JSON/JQ corpus and production runtime limits;
 - production adapter HTTP body serialization.
 
+### Decision Trace Schema
+
+Detailed contract: [Decision Trace Schema Source Contract](decision-trace-schema.md).
+
+Capability: expose structured policy-core trace fields for host, URL, header,
+body, script trigger, and policy intent decisions.
+
+Input form:
+
+- `tests/fixtures/DecisionTrace.Schema.conf`;
+- MITM hostname policy;
+- URL redirect and reject rewrite rules;
+- request header mutation;
+- request body mutation;
+- request script trigger metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/DecisionTrace.Schema.conf`;
+- negative fixture `tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf`;
+- `config/decision_trace_schema_fixture_covers_policy_fields`;
+- `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
+- runner `trace` smoke checks under `runner-check`.
+
+Unimplemented items:
+
+- golden JSON trace fixtures;
+- full runner MITM trace coverage;
+- adapter redaction policy;
+- direct/proxy route-selection contract;
+- serialized trace object for every ABI decision.
+
 ### Script Trigger Metadata
 
 Capability: select request/response script rules and expose script metadata.

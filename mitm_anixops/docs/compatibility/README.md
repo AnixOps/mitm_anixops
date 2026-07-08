@@ -46,4 +46,6 @@ corresponding tests.
   response header mutation parser and policy-core contract.
 - [body-mutation-common.md](body-mutation-common.md): bounded request and
   response body mutation parser and policy-core contract.
+- [decision-trace-schema.md](decision-trace-schema.md): structured MITM,
+  rewrite, header, body, script, and policy-intent trace contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

@@ -11,7 +11,7 @@ static void add_group(anixops_test_case_t *tests, size_t *count, size_t cap, voi
 
 int main(void)
 {
-	anixops_test_case_t tests[128];
+	anixops_test_case_t tests[160];
 	size_t count = 0;
 	size_t i;
 	size_t failed = 0;

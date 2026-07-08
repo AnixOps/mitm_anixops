@@ -797,6 +797,152 @@ static void body_mutation_common_fixture_rejects_invalid_body_regex(void)
 	free(fixture);
 }
 
+static void decision_trace_schema_fixture_covers_policy_fields(void)
+{
+	char *fixture = read_fixture("tests/fixtures/DecisionTrace.Schema.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_mitm_decision_t mitm;
+	anixops_rewrite_result_t rewrite;
+	anixops_rewrite_plan_t plan;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 4);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "trace.schema.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_ALLOWED);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "trace.schema.test");
+	ANIXOPS_EXPECT_STREQ(mitm.message, "mitm allowed");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://trace.schema.test/redirect",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 302);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(rewrite.matched_pattern, "^https:\\/\\/trace\\.schema\\.test\\/redirect");
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://trace.schema.test/new");
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "rewrite matched");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://trace.schema.test/reject", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 0);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(rewrite.matched_pattern, "^https:\\/\\/trace\\.schema\\.test\\/reject");
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "");
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "rewrite matched");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://trace.schema.test/header",
+			ANIXOPS_PHASE_REQUEST,
+			NULL,
+			NULL,
+			0,
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, -1);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrite_truncated, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].action, ANIXOPS_REWRITE_HEADER_ADD);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.header_rewrites[0].rule_index, 3);
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].matched_pattern, "^https:\\/\\/trace\\.schema\\.test\\/header");
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].header_name, "X-Trace");
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].value, "trace-ok");
+	ANIXOPS_EXPECT_STREQ(plan.header_rewrites[0].message, "header rewrite matched");
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.script.timeout_ms, 1000);
+	ANIXOPS_EXPECT_EQ_SIZE(plan.script.max_size, 2048);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(plan.script.matched_pattern, "^https:\\/\\/trace\\.schema\\.test\\/header");
+	ANIXOPS_EXPECT_STREQ(plan.script.script_path, "https://scripts.test/trace.js");
+	ANIXOPS_EXPECT_STREQ(plan.script.tag, "trace.request");
+	ANIXOPS_EXPECT_STREQ(plan.script.argument, "Mode=trace");
+	ANIXOPS_EXPECT_STREQ(plan.script.message, "script matched");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://trace.schema.test/body",
+			ANIXOPS_PHASE_REQUEST,
+			"token=Fast",
+			body,
+			sizeof(body),
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.body_available, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.rule_index, 2);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.matched_pattern, "^https:\\/\\/trace\\.schema\\.test\\/body");
+	ANIXOPS_EXPECT_STREQ(body, "token=Fast-ok");
+	ANIXOPS_EXPECT_EQ_SIZE(plan.header_rewrite_count, 0);
+	ANIXOPS_EXPECT_EQ_INT(plan.script.kind, ANIXOPS_SCRIPT_NONE);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void decision_trace_schema_fixture_ignores_unsupported_policy_intent(void)
+{
+	char *fixture = read_fixture("tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_rewrite_result_t rewrite;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "rewrite rule ignored") != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "rewrite rule ignored") != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://trace.schema.test/direct", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -1412,6 +1558,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/body_mutation_common_fixture_rejects_invalid_body_regex",
 		body_mutation_common_fixture_rejects_invalid_body_regex);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/decision_trace_schema_fixture_covers_policy_fields",
+		decision_trace_schema_fixture_covers_policy_fields);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/decision_trace_schema_fixture_ignores_unsupported_policy_intent",
+		decision_trace_schema_fixture_ignores_unsupported_policy_intent);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

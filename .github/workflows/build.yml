@@ -33,6 +33,7 @@ jobs:
             mitm_anixops/docs/compatibility/response-rewrite-common.md
             mitm_anixops/docs/compatibility/header-mutation-common.md
             mitm_anixops/docs/compatibility/body-mutation-common.md
+            mitm_anixops/docs/compatibility/decision-trace-schema.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
@@ -49,6 +50,8 @@ jobs:
             mitm_anixops/tests/fixtures/ResponseRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/BodyMutation.Common.conf
             mitm_anixops/tests/fixtures/BodyMutation.Common.Malformed.conf
+            mitm_anixops/tests/fixtures/DecisionTrace.Schema.conf
+            mitm_anixops/tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -98,6 +101,11 @@ jobs:
           grep -q "BodyMutation.Common.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/body_mutation_common_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/body_mutation_common_fixture_rejects_invalid_body_regex" mitm_anixops/tests/test_config.c
+          grep -q "decision trace schema" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Decision Trace Schema Source Contract" mitm_anixops/docs/compatibility/decision-trace-schema.md
+          grep -q "DecisionTrace.Schema.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/decision_trace_schema_fixture_covers_policy_fields" mitm_anixops/tests/test_config.c
+          grep -q "config/decision_trace_schema_fixture_ignores_unsupported_policy_intent" mitm_anixops/tests/test_config.c
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
