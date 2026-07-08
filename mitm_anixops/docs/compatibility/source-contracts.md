@@ -296,6 +296,8 @@ Input form:
 - `h2`, `h2-enable`, and `h2_enable`;
 - `disable-quic`, `disable_quic`, `disable-mitm-quic`, and
   `disable_mitm_quic`.
+- unsupported certificate-material keys `ca-p12`, `ca-passphrase`, and
+  `ca-cert` remain ignored policy-core non-support evidence.
 
 Parser output:
 
@@ -311,8 +313,11 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/Loon.MitmOptions.plugin`;
 - negative fixture `tests/fixtures/Loon.MitmOptions.Malformed.plugin`;
+- unsupported fixture
+  `tests/fixtures/Loon.MitmCertificateUnsupported.plugin`;
 - `config/loon_mitm_options_fixture_exposes_adapter_flags`;
 - `config/loon_mitm_options_malformed_fixture_rejects_invalid_host`.
+- `config/loon_mitm_certificate_unsupported_fixture_keeps_material_ignored`.
 
 Unimplemented items:
 

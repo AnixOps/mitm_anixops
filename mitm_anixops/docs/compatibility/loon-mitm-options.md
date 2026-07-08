@@ -87,6 +87,24 @@ Expected behavior:
 - later options are not consumed after the parse failure;
 - a rejected diagnostic is recorded with section `MITM` and action `hostname`.
 
+## Unsupported Case
+
+Parser case:
+
+```text
+tests/fixtures/Loon.MitmCertificateUnsupported.plugin
+```
+
+Expected behavior:
+
+- config load succeeds in the portable profile;
+- `ca-p12`, `ca-passphrase`, and `ca-cert` lines record ignored diagnostics;
+- certificate material lines do not set `skip-server-cert-verify`, trust state,
+  or any rewrite, script, task, route, DNS, proxy, UI, or certificate lifecycle
+  behavior;
+- a matched hostname still bypasses interception until the adapter explicitly
+  supplies a trusted certificate state.
+
 ## Runtime And Security Boundary
 
 This contract covers parser and policy-core output only.
@@ -113,6 +131,8 @@ Required CI evidence:
   `config/loon_mitm_options_fixture_exposes_adapter_flags`;
 - `tests/test_config.c` registers
   `config/loon_mitm_options_malformed_fixture_rejects_invalid_host`;
+- `tests/test_config.c` registers
+  `config/loon_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -123,6 +143,7 @@ Row:
 Loon MITM options
 ```
 
-The row remains `partial` because parser and policy-core signals are covered,
-but platform certificate lifecycle, trust mutation, TLS interception, and
-adapter network behavior remain unimplemented.
+The row remains `partial` because parser and policy-core signals plus
+certificate-material non-support guards are covered, but platform certificate
+lifecycle, trust mutation, TLS interception, and adapter network behavior
+remain unimplemented.

@@ -82,6 +82,7 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.TaskUnsupported.plugin
             mitm_anixops/tests/fixtures/Loon.MitmOptions.plugin
             mitm_anixops/tests/fixtures/Loon.MitmOptions.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.MitmCertificateUnsupported.plugin
             mitm_anixops/tests/fixtures/Loon.RuleDomainReject.plugin
             mitm_anixops/tests/fixtures/Loon.RuleDomainReject.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.RuleDomainExactReject.plugin
@@ -277,9 +278,13 @@ jobs:
           grep -q "Loon MITM Options Source Contract" mitm_anixops/docs/compatibility/loon-mitm-options.md
           grep -q "Loon.MitmOptions.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon.MitmOptions.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.MitmCertificateUnsupported.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/loon_mitm_options_fixture_exposes_adapter_flags" mitm_anixops/tests/test_config.c
           grep -q "config/loon_mitm_options_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_mitm_certificate_unsupported_fixture_keeps_material_ignored" mitm_anixops/tests/test_config.c
+          grep -q "ca-p12" mitm_anixops/docs/compatibility/loon-mitm-options.md
           grep -q "^- \\[x\\] Add Loon MITM option parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Loon MITM certificate-material non-support guard" mitm_anixops/TODO.md
           grep -q "Loon rule reject policy intent" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Rule Reject Source Contract" mitm_anixops/docs/compatibility/loon-rule-reject.md
           grep -q "Loon.RuleDomainReject.plugin" mitm_anixops/docs/compatibility/matrix.md

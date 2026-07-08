@@ -39,6 +39,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   fixtures for scheduled task descriptors.
 - Added a Loon unsupported script-type guard proving `type=dns`, `type=rule`,
   and `type=policy` remain ignored until separately contracted.
+- Added a Loon MITM certificate-material guard proving `ca-p12`,
+  `ca-passphrase`, and `ca-cert` remain ignored and do not establish trust.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Quantumult X MITM options source contract plus positive and negative

@@ -1,0 +1,6 @@
+[MITM]
+enable = true
+hostname = cert-material.loon.test
+ca-p12 = https://certs.example/ignored.p12
+ca-passphrase = ignored-secret
+ca-cert = https://certs.example/ignored-ca.pem

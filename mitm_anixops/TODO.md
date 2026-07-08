@@ -39,6 +39,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add Loon task metadata parser fixtures and positive/negative tests.
 - [x] Add Loon unsupported script-type guard and negative test.
 - [x] Add Loon MITM option parser fixtures and positive/negative tests.
+- [x] Add Loon MITM certificate-material non-support guard and negative test.
 - [x] Add Loon `[Rule]` DOMAIN-SUFFIX reject parser fixtures and
       positive/negative tests.
 - [x] Add Loon `[Rule]` DOMAIN reject parser fixtures and positive/negative
