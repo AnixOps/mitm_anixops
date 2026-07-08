@@ -1,0 +1,2 @@
+[Body Rewrite]
+^https:\/\/body-json\.loon\.test\/response response-body-json-replace $.enabled true
