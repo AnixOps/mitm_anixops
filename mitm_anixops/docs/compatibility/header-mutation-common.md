@@ -42,6 +42,7 @@ Parser case:
 ```text
 tests/fixtures/HeaderMutation.Common.conf
 tests/fixtures/QuantumultX.HeaderMutation.snippet
+tests/fixtures/QuantumultX.HeaderDelete.snippet
 ```
 
 Expected behavior:
@@ -54,6 +55,8 @@ Expected behavior:
   `anixops_rewrite_evaluate_header`;
 - Quantumult X `url response-header-replace-regex` response header mutation is
   observable through `anixops_rewrite_evaluate_header`;
+- Quantumult X `url header-del` request header deletion is observable through
+  `anixops_rewrite_evaluate_header`;
 - phase separation prevents request header rules from matching response phase
   evaluation.
 
@@ -64,6 +67,7 @@ Parser case:
 ```text
 tests/fixtures/HeaderMutation.Common.Malformed.conf
 tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
+tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet
 ```
 
 Expected behavior:
@@ -71,6 +75,8 @@ Expected behavior:
 - the invalid header regex rejects config load;
 - the invalid Quantumult X `url response-header-replace-regex` pattern rejects
   config load;
+- the malformed Quantumult X `url header-del` rule without a header name is
+  rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -102,6 +108,10 @@ Required CI evidence:
   `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `tests/test_config.c` registers
   `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_header_delete_fixture_maps_request_header_delete`;
+- `tests/test_config.c` registers
+  `config/quantumultx_header_delete_malformed_fixture_rejects_missing_header_name`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

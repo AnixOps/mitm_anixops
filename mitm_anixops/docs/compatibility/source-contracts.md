@@ -445,6 +445,7 @@ Input form:
 - Quantumult X `url echo-response content-type body` response-body forms;
 - Quantumult X `url response-body-replace-regex pattern replacement`
   response-body forms;
+- Quantumult X `url header-del header` request header forms;
 - Quantumult X
   `url response-header-replace-regex header pattern replacement` response
   header forms;
@@ -459,10 +460,12 @@ Current CI evidence:
 - positive fixture `tests/fixtures/QuantumultX.EchoResponse.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.BodyMutation.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderMutation.snippet`;
+- positive fixture `tests/fixtures/QuantumultX.HeaderDelete.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet`;
 - `config/quantumultx_common_config_fixture_is_supported`;
 - `config/quantumultx_common_config_strict_fixture_rejects_malformed_rule`;
 - `config/quantumultx_echo_response_fixture_maps_response_body`;
@@ -471,6 +474,8 @@ Current CI evidence:
 - `config/quantumultx_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
+- `config/quantumultx_header_delete_fixture_maps_request_header_delete`;
+- `config/quantumultx_header_delete_malformed_fixture_rejects_missing_header_name`;
 - C parser/script/rewrite tests;
 - runner corpus entry `Representative.QuantumultX.snippet`;
 - dedicated task parser evidence in
@@ -1101,12 +1106,16 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/HeaderMutation.Common.conf`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderMutation.snippet`;
+- positive fixture `tests/fixtures/QuantumultX.HeaderDelete.snippet`;
 - negative fixture `tests/fixtures/HeaderMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet`;
 - `config/header_mutation_common_fixture_is_supported`;
 - `config/header_mutation_common_fixture_rejects_invalid_regex`;
 - `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
+- `config/quantumultx_header_delete_fixture_maps_request_header_delete`;
+- `config/quantumultx_header_delete_malformed_fixture_rejects_missing_header_name`;
 - named-header and header-list tests under `tests/test_rewrite.c`.
 
 Unimplemented items:
