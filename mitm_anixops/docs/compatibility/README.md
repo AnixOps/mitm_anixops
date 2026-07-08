@@ -62,9 +62,8 @@ corresponding tests.
   wrapper parity contract for shared policy fixtures.
 - [script-runtime-common.md](script-runtime-common.md): portable script runtime
   adapter contract for globals, timeout/error behavior, and double `$done`.
-- [cron-task-trigger.md](cron-task-trigger.md): planned cron/task trigger
-  contract and non-support parser guards until task descriptor and runtime
-  evidence exists.
+- [cron-task-trigger.md](cron-task-trigger.md): cron/task descriptor parser
+  contract with scheduler and runtime behavior still adapter-owned.
 - [../architecture/certificate-lifecycle.md](../architecture/certificate-lifecycle.md):
   P4 certificate lifecycle and MITM trust boundary contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

@@ -129,6 +129,7 @@ Current test assets include:
 - MITM host, certificate state, wildcard, deny, and QUIC decision tests.
 - URL/header/body rewrite tests.
 - script dispatch tests.
+- cron/task descriptor parser tests.
 - fixture corpus manifest with Loon, Surge, Quantumult X, and BiliUniverse
   fixtures, plus dedicated compatibility fixtures for Shadowrocket common
   config.
@@ -137,8 +138,8 @@ Current test assets include:
 - ABI export allowlist check.
 - pkg-config, CMake, Go wrapper, and Rust wrapper checks.
 
-Source inspection currently shows 118 registered C test entries. Actual pass/fail
-status must be taken from GitHub Actions, not local execution.
+Source inspection currently shows 147 `add_test` registrations by text scan.
+Actual pass/fail status must be taken from GitHub Actions, not local execution.
 
 ## Current Strengths
 
@@ -160,8 +161,8 @@ status must be taken from GitHub Actions, not local execution.
   adapter coverage yet.
 - Stash remains migration notes only; Shadowrocket has a narrow common-config
   parser contract, while app-level profile syntax remains migration-guarded.
-- Cron/task trigger behavior has a planned source contract, but parser fixtures,
-  scheduler dispatch, and runtime execution remain unimplemented.
+- Cron/task trigger behavior has a parser descriptor contract, but scheduler
+  dispatch and runtime execution remain unimplemented.
 - Production JS runtime remains out of scope for the C policy core; the
   dependency decision is recorded in `docs/architecture/script-runtime-dependency.md`.
 - Certificate lifecycle is adapter-owned; the v1.0.0 policy-core contract is

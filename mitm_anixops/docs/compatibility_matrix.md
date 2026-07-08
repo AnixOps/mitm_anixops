@@ -96,12 +96,13 @@ features it understands.
 | Surge template arguments `{Name}`, `{{{Name}}}` | Supported subset | `surge_style_script_rule_template_is_supported` |
 | Malformed Surge attr-list script rules | Ignored, except invalid regex reports an error | `malformed_and_non_http_script_rules_are_ignored_or_rejected` |
 | Quantumult X `url script-request-body` / `script-request-header` / `script-response-body` / `script-response-header` | Supported subset | snippet and `[rewrite_local]` tests |
+| Cron/task descriptor parser | Supported metadata subset | `CronTaskTrigger.HttpScriptGuard.conf`, `CronTaskTrigger.Malformed.conf`, `anixops_engine_task_descriptor_count`, and `anixops_engine_copy_task_descriptor`; scheduler/runtime remains adapter-owned |
 | JavaScript runtime | Adapter contract supported | C library returns dispatch metadata; Alpha runner can execute mapped scripts or offline script bundles through the Node contract runner during `replay --script-runner`; `docs/architecture/script-runtime-dependency.md` records no embedded JS engine for the v1.0.0 policy core |
 | `$persistentStore` | Alpha runner backend | Node contract runner supports `--store <file>` with read/write/remove; runner replay and proxy script-contract E2E verify state shared across invocations |
 | Script asset bundle/digest | Alpha runner backend | `replay --script-bundle` resolves local offline assets, verifies sha256 pins, and reports digest mismatch/cache miss without network IO |
 | Script timeout/error policy | Alpha runner/proxy shim subset | Rule-level `timeout` metadata overrides the global runner timeout; max-size overflow fails open; `make runner-check` covers a throwing replay script, and `make script-contract-e2e` verifies timed-out and throwing response scripts fail open after static rewrites instead of returning 502 |
 | Double `$done` | Alpha runner backend | `make runner-check` covers no-network replay where the first `$done` body wins and a later `$done` call is ignored |
-| Cron/task trigger | Planned | Source contract is `docs/compatibility/cron-task-trigger.md`; existing script tests only prove bare cron rules are not registered as HTTP scripts |
+| Cron/task trigger runtime | Planned | Source contract is `docs/compatibility/cron-task-trigger.md`; parser descriptors are exposed through the C ABI, while scheduler, task runtime bindings, permissions, and concurrency policy remain future work |
 | Response compression for scripts | Alpha proxy shim subset | gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
 
 ## Diagnostics And ABI
@@ -143,8 +144,8 @@ features it understands.
   dispatch, and plan helper.
 - `make rust-binding-check`: Rust FFI wrapper tests over config load, rewrite, body rewrite, body-chain rewrite, script
   dispatch, and plan helper.
-- `make test`: public C ABI unit tests, including the plan builder, representative Loon, Surge, Quantumult X, and
-  Shadowrocket common-config fixture parsing.
+- `make test`: public C ABI unit tests, including the plan builder, representative Loon, Surge, Quantumult X,
+  Shadowrocket common-config, and cron/task descriptor fixture parsing.
 - `make e2e`: local shim plus mihomo, proving library decisions through a proxy path.
 - `make bili-e2e`: BiliUniverse Enhanced plugin/script dispatch and script execution fixture.
 - `make script-contract-e2e`: request/response script metadata, persistentStore, timeout/exception fail-open, and

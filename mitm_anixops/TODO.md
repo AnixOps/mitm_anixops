@@ -61,9 +61,11 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 
 - [x] Define script runtime source contract for `$request`, `$response`,
   `$argument`, `$persistentStore`, `$done`, timeout, exception, and double done.
-- [x] Define cron/task trigger as planned until parser and runtime tests exist.
-- [x] Add CI-covered parser guards proving cron/task-like lines do not register
-  as HTTP script triggers.
+- [x] Define cron/task trigger as parser metadata until runtime tests exist.
+- [x] Add CI-covered parser guards proving unsupported cron/task-like lines do
+  not register as HTTP script triggers.
+- [x] Add cron/task descriptor parser fixtures, public ABI, and
+  positive/negative tests.
 - [x] Record any QuickJS, JavaScriptCore, or new runtime dependency decision
   before implementation.
 

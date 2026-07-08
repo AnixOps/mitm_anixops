@@ -115,9 +115,9 @@ route-selection-adapter-next-action=confirm-adapter-route-contract-proxy-group-r
 ```text
 task-scheduler-runtime-status=pending
 task-scheduler-runtime-scope=cron-task-descriptor-scheduler-and-background-javascript-runtime
-task-scheduler-runtime-required-before=claiming-cron-or-task-trigger-support
-task-scheduler-runtime-current-policy-core-decision=no-task-descriptor-api-and-task-like-lines-do-not-register-as-http-scripts
-task-scheduler-runtime-next-action=confirm-task-descriptor-api-scheduler-runtime-bindings-permission-model-concurrency-policy-and-github-actions-evidence
+task-scheduler-runtime-required-before=claiming-cron-or-task-runtime-support
+task-scheduler-runtime-current-policy-core-decision=task-descriptor-parser-api-only-no-scheduler-or-background-runtime
+task-scheduler-runtime-next-action=confirm-scheduler-runtime-bindings-permission-model-concurrency-policy-and-github-actions-evidence
 ```
 
 ```text

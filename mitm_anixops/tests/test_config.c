@@ -653,14 +653,15 @@ static void policy_intent_unsupported_routes_are_ignored(void)
 	free(fixture);
 }
 
-static void cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored(void)
+static void cron_task_trigger_common_fixture_emits_task_descriptors(void)
 {
 	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf");
 	anixops_engine_t *engine = anixops_engine_new();
 	anixops_script_result_t script;
+	anixops_task_descriptor_t task;
 	size_t diagnostic_count;
-	size_t accepted = 0;
-	size_t ignored = 0;
+	size_t accepted_scripts = 0;
+	size_t accepted_tasks = 0;
 	size_t i;
 	ANIXOPS_EXPECT_TRUE(fixture != NULL);
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
@@ -668,6 +669,7 @@ static void cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored(void
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 3);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
 
 	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
@@ -676,20 +678,22 @@ static void cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored(void
 		anixops_rule_diagnostic_t diagnostic;
 		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
 		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
-		ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
 		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
-			accepted++;
-			ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
-			ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule accepted") != NULL);
-		}
-		else if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED) {
-			ignored++;
-			ANIXOPS_EXPECT_TRUE(diagnostic.line == 3 || diagnostic.line == 4 || diagnostic.line == 5);
-			ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule ignored") != NULL);
+			if (strcmp(diagnostic.action, "script") == 0) {
+				accepted_scripts++;
+				ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+				ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule accepted") != NULL);
+			}
+			else if (strcmp(diagnostic.action, "task") == 0) {
+				accepted_tasks++;
+				ANIXOPS_EXPECT_TRUE(diagnostic.line == 3 || diagnostic.line == 4 || diagnostic.line == 5);
+				ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "task descriptor accepted") != NULL);
+			}
 		}
 	}
-	ANIXOPS_EXPECT_EQ_SIZE(accepted, 1);
-	ANIXOPS_EXPECT_EQ_SIZE(ignored, 3);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_scripts, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_tasks, 3);
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_script_evaluate_url(engine, "https://cron.task.test/http", ANIXOPS_PHASE_REQUEST, &script),
@@ -708,11 +712,41 @@ static void cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored(void
 	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
 	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
 
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 0, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 2000);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 2048);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "0 * * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.test/cron.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "cron.task.common");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=cron");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-cron");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 1, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 1500);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 4096);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "0 8 * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.test/task.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "task.common");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=task");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 2, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_INTERVAL);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 3600);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 0);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "3600");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.test/interval.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "interval.common");
+
 	anixops_engine_free(engine);
 	free(fixture);
 }
 
-static void cron_task_trigger_unsupported_fixture_does_not_register_http_scripts(void)
+static void cron_task_trigger_unsupported_fixture_does_not_register_descriptors(void)
 {
 	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.Unsupported.conf");
 	anixops_engine_t *engine = anixops_engine_new();
@@ -724,6 +758,7 @@ static void cron_task_trigger_unsupported_fixture_does_not_register_http_scripts
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
 
 	for (i = 0; i < 3; i++) {
@@ -740,6 +775,38 @@ static void cron_task_trigger_unsupported_fixture_does_not_register_http_scripts
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
 	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void cron_task_trigger_malformed_fixture_rejects_invalid_cron(void)
+{
+	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "cron expression") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "cron expression") != NULL);
 
 	anixops_engine_free(engine);
 	free(fixture);
@@ -2385,14 +2452,20 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		tests,
 		count,
 		cap,
-		"config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored",
-		cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored);
+		"config/cron_task_trigger_common_fixture_emits_task_descriptors",
+		cron_task_trigger_common_fixture_emits_task_descriptors);
 	add_test(
 		tests,
 		count,
 		cap,
-		"config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts",
-		cron_task_trigger_unsupported_fixture_does_not_register_http_scripts);
+		"config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors",
+		cron_task_trigger_unsupported_fixture_does_not_register_descriptors);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/cron_task_trigger_malformed_fixture_rejects_invalid_cron",
+		cron_task_trigger_malformed_fixture_rejects_invalid_cron);
 	add_test(
 		tests,
 		count,

@@ -66,6 +66,7 @@ jobs:
             mitm_anixops/tests/fixtures/PolicyIntent.Unsupported.conf
             mitm_anixops/tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
             mitm_anixops/tests/fixtures/CronTaskTrigger.Unsupported.conf
+            mitm_anixops/tests/fixtures/CronTaskTrigger.Malformed.conf
             mitm_anixops/tests/fixtures/HeaderMutation.Common.conf
             mitm_anixops/tests/fixtures/HeaderMutation.Common.Malformed.conf
             mitm_anixops/tests/fixtures/ResponseRewrite.Common.conf
@@ -201,11 +202,19 @@ jobs:
           grep -q "Cron And Task Trigger Source Contract" mitm_anixops/docs/compatibility/cron-task-trigger.md
           grep -q "CronTaskTrigger.HttpScriptGuard.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "CronTaskTrigger.Unsupported.conf" mitm_anixops/docs/compatibility/matrix.md
-          grep -q "config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored" mitm_anixops/tests/test_config.c
-          grep -q "config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts" mitm_anixops/tests/test_config.c
+          grep -q "CronTaskTrigger.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/cron_task_trigger_common_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
+          grep -q "config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors" mitm_anixops/tests/test_config.c
+          grep -q "config/cron_task_trigger_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
+          grep -q "anixops_engine_task_descriptor_count" mitm_anixops/include/mitm_anixops.h
+          grep -q "anixops_engine_copy_task_descriptor" mitm_anixops/include/mitm_anixops.h
+          grep -q "anixops_engine_task_descriptor_count" mitm_anixops/ci/abi_exports.txt
+          grep -q "anixops_engine_copy_task_descriptor" mitm_anixops/ci/abi_exports.txt
           grep -q "script/malformed_and_non_http_script_rules_are_ignored_or_rejected" mitm_anixops/tests/test_script.c
           grep -q "task-scheduler-runtime-status=pending" mitm_anixops/docs/manual-intervention.md
-          grep -q "^- \\[x\\] Add cron/task non-support parser fixtures" mitm_anixops/TODO.md
+          grep -q "task-descriptor-parser-api-only-no-scheduler-or-background-runtime" mitm_anixops/docs/manual-intervention.md
+          grep -q "^- \\[x\\] Add CI-covered parser guards proving unsupported cron/task-like lines" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add cron/task descriptor parser fixtures, public ABI, and" mitm_anixops/TODO.md
           grep -q "script-runtime-policy-core-dependency=none" mitm_anixops/docs/architecture/script-runtime-dependency.md
           grep -q "script-runtime-engine-selection-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Record any QuickJS, JavaScriptCore, or new runtime dependency decision" mitm_anixops/TODO.md

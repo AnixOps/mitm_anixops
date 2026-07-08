@@ -52,10 +52,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   hosts do not register or intercept through wildcard policy.
 - Added a script runtime common source contract plus no-network replay evidence
   for double `$done` first-wins behavior.
-- Added a planned cron/task trigger source contract that keeps scheduler
-  support out of the supported surface until parser/runtime evidence exists.
-- Added cron/task parser guard fixtures proving scheduler-like lines do not
-  register as HTTP script triggers while cron/task support remains planned.
+- Added a cron/task trigger source contract and parser descriptor ABI while
+  keeping scheduler/runtime support out of the supported surface.
+- Added cron/task parser fixtures proving supported task descriptors, ignored
+  unsupported scheduler forms, malformed cron rejection, and separation from
+  HTTP script URL dispatch.
 - Added a script runtime dependency decision recording no embedded QuickJS,
   JavaScriptCore, or other production JavaScript engine in the v1 policy core.
 - Added a certificate lifecycle architecture contract, manual-intervention

@@ -4,51 +4,56 @@ Capability: cron and scheduled task trigger metadata.
 
 Ecosystem: `loon`, `quantumultx`, `surge`, `portable`.
 
-Status: `planned`.
+Status: `partial`.
 
 ## Purpose
 
-This contract fixes the P3 boundary for cron and task trigger compatibility. It
-does not implement a scheduler, task descriptor API, or JavaScript task runtime.
-Until those exist, cron/task capability must remain `planned` and must not be
-described as `partial` or `supported`.
+This contract fixes the P3 boundary for cron and task trigger compatibility.
+The policy core now parses a narrow task descriptor subset, but it still does
+not implement a scheduler, JavaScript task runtime, background execution, or
+platform permission flow.
 
 ## Input Forms
 
-Future parser work must evaluate representative forms from the common
-ecosystems before this row can move out of `planned`:
+The current task descriptor subset accepts task-like declarations in `[Script]`
+sections after HTTP request/response script triggers have had the first chance
+to parse:
 
-- Quantumult X task and cron forms from task sections or task-like URL
-  prefixes.
-- Surge module scheduled script forms, when represented as script metadata
-  rather than HTTP request/response hooks.
-- Loon or AnixOps-style scheduled script/task declarations if they are used by
-  the supported plugin corpus.
+- `cron "0 * * * *" script-path=..., tag=...`;
+- attr-list rules with `type=cron` and `cronexp=...`;
+- attr-list rules with `type=interval` and `interval=...`;
+- attr-list `type=task` when `cronexp` or `interval` identifies the concrete
+  scheduler kind;
+- `script-path` or `script_path`;
+- `tag`, `argument`, `timeout`, `timeout-ms`, `max-size`, `max_size`,
+  `enable`, and `enabled` metadata.
 
-No cron/task parser fixture is currently accepted as a supported capability.
-The current fixtures are non-support guards only:
-
-- `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
-- `tests/fixtures/CronTaskTrigger.Unsupported.conf`.
+The parser validates that cron expressions have five or six fields and that
+interval values are positive integer seconds. It records unsupported scheduler
+types as ignored diagnostics in the portable profile.
 
 ## Parser Output
 
-Future implementation must produce an adapter-owned task descriptor instead of
-an HTTP request/response script rule. The descriptor must separate:
+The parser produces adapter-owned task descriptors through:
 
-- task kind, such as cron expression, interval, event, or manual task;
-- script path or local asset identity;
+- `anixops_engine_task_descriptor_count`;
+- `anixops_engine_copy_task_descriptor`.
+
+Descriptors separate:
+
+- task kind: cron, interval, or manual placeholder;
+- cron expression or interval seconds;
+- script path;
 - resolved argument string;
 - tag/name;
 - timeout and max-size limits when present;
 - disabled/enabled state;
-- ecosystem/profile origin.
+- parser origin.
 
-Current parser behavior must not register bare cron/task forms as HTTP script
-rules. Existing script evaluation APIs only return HTTP request/response script
-dispatch metadata.
+Task descriptors are separate from HTTP request/response script rules and are
+not returned by `anixops_script_evaluate_url`.
 
-## Positive Guard Case
+## Positive Case
 
 Parser case:
 
@@ -60,33 +65,15 @@ Expected behavior:
 
 - config load succeeds;
 - one HTTP request script trigger is registered;
-- scheduler-like cron/task lines in the same `[Script]` section are ignored;
-- `anixops_script_evaluate_url` can match the HTTP request script trigger;
-- no task descriptor or scheduler behavior is claimed.
+- three task descriptors are registered;
+- the HTTP request script trigger remains matchable by
+  `anixops_script_evaluate_url`;
+- cron and interval task descriptors are observable through the public ABI;
+- response-phase URL script evaluation does not return a task descriptor.
 
-This is a positive parser guard for the already-supported HTTP script trigger,
-not a positive cron/task support case.
+## Unsupported Case
 
-Before this capability can become `partial`, the same change must add:
-
-- at least one representative cron/task parser fixture;
-- one positive test proving the fixture emits a task descriptor;
-- a runner or adapter contract showing how the task is scheduled and executed;
-- a matrix update that names that evidence.
-
-## Negative Case
-
-Existing CI-covered guard:
-
-```text
-script/malformed_and_non_http_script_rules_are_ignored_or_rejected
-```
-
-That test includes a bare `cron "0 * * * *" script-path=...` rule and verifies
-it does not register an HTTP script rule. This is only a non-support guard; it
-does not prove cron/task compatibility.
-
-Dedicated parser case:
+Parser case:
 
 ```text
 tests/fixtures/CronTaskTrigger.Unsupported.conf
@@ -95,13 +82,24 @@ tests/fixtures/CronTaskTrigger.Unsupported.conf
 Expected behavior:
 
 - config load succeeds in the portable profile;
-- cron/task-like lines are ignored with diagnostics;
+- unsupported scheduler-like lines are ignored with diagnostics;
 - no HTTP script rules are registered;
-- URL script evaluation returns `ANIXOPS_SCRIPT_NONE`.
+- no task descriptors are registered.
 
-Future negative tests must cover malformed cron expressions, missing script
-assets, disabled tasks, duplicate tags, unsupported scheduler types, and
-runtime timeout/error behavior.
+## Negative Case
+
+Parser case:
+
+```text
+tests/fixtures/CronTaskTrigger.Malformed.conf
+```
+
+Expected behavior:
+
+- config load fails with `ANIXOPS_ERR_PARSE`;
+- a rejected rule diagnostic is recorded with section `Script` and action
+  `task`;
+- last error reports cron expression failure at the malformed line.
 
 ## Runtime And Matching Behavior
 
@@ -116,17 +114,22 @@ Cron/task execution is scheduler-owned and must not be routed through
 - whether concurrent runs of the same task are skipped, queued, or allowed;
 - what result, if any, is written back to a caller.
 
+Until that adapter evidence exists, cron/task trigger support remains parser
+metadata only.
+
 ## Diagnostics
 
-Future task descriptors must expose diagnostics for at least:
+Current diagnostics cover:
 
-- accepted task rule;
-- ignored unsupported task form;
-- rejected malformed cron expression;
-- missing script path;
-- disabled task;
-- scheduler/runtime not configured;
-- timeout or exception fail-open.
+- accepted HTTP script rule beside task descriptors;
+- accepted cron task descriptor;
+- accepted interval task descriptor;
+- ignored unsupported scheduler type;
+- rejected malformed cron expression.
+
+Future diagnostics must cover missing script assets, disabled task scheduling
+policy, scheduler/runtime not configured, timeout behavior, exception behavior,
+and concurrency policy.
 
 ## Security Boundary
 
@@ -142,36 +145,39 @@ Task execution must be conservative by default:
 
 Current evidence:
 
-- GitHub Actions `governance` requires this planned source contract and matrix
-  row.
+- GitHub Actions `governance` requires this source contract and matrix row.
 - GitHub Actions `linux-test` runs `sh scripts/check.sh`.
 - `tests/test_config.c` registers
-  `config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored`;
+  `config/cron_task_trigger_common_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
-  `config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts`;
+  `config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors`;
+- `tests/test_config.c` registers
+  `config/cron_task_trigger_malformed_fixture_rejects_invalid_cron`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
-  guards against treating bare cron rules as supported HTTP scripts.
+  guards against treating bare cron rules as supported HTTP scripts when using
+  the HTTP script parser directly.
 
 Missing evidence:
 
-- positive cron/task parser fixture that emits a task descriptor;
-- negative malformed cron/task parser fixture for task descriptors;
-- task descriptor public API;
 - scheduler/runtime replay or E2E test;
-- adapter compatibility note for each ecosystem.
+- task JavaScript runtime bindings;
+- adapter compatibility note for each ecosystem;
+- permission, concurrency, and cancellation policy.
 
 ## Compatibility Matrix Row
 
 The matrix row is `cron/task trigger` in
 [matrix.md](matrix.md).
 
+The row remains `partial` because parser metadata and ABI exposure are covered,
+while scheduling and task runtime behavior remain unimplemented.
+
 ## Unimplemented Items
 
-- parser fixtures for Loon, Quantumult X, and Surge task forms;
-- public task descriptor API;
 - scheduler and execution adapter;
 - task JavaScript runtime bindings;
 - persistence/locking policy for scheduled runs;
 - runtime cancellation and quota enforcement;
-- release evidence proving task behavior through GitHub Actions.
+- broader ecosystem task corpus;
+- release evidence proving task runtime behavior through GitHub Actions.

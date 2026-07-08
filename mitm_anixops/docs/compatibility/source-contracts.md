@@ -530,7 +530,7 @@ Current CI evidence:
 Unimplemented items:
 
 - production embedded JS runtime;
-- cron/task triggers;
+- cron/task scheduler/runtime execution;
 - remote script cache refresh policy;
 - memory limits.
 
@@ -573,33 +573,37 @@ Unimplemented items:
 
 Detailed contract: [Cron And Task Trigger Source Contract](cron-task-trigger.md).
 
-Capability: define the planned scheduler/task boundary without claiming runtime
-support.
+Capability: parse cron and interval task trigger metadata without claiming
+scheduler/runtime support.
 
 Input form:
 
-- future Quantumult X task and cron forms;
-- future Surge scheduled script forms;
-- future Loon or AnixOps-style scheduled script/task declarations from the
-  supported corpus.
-- current non-support guard fixtures
-  `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf` and
-  `tests/fixtures/CronTaskTrigger.Unsupported.conf`.
+- direct `[Script]` cron task declarations;
+- `[Script]` attr-list rules with `type=cron`, `type=interval`, or
+  `type=task` plus a concrete cron expression or interval;
+- `script-path`, `tag`, `argument`, `timeout`, `max-size`, and `enabled`
+  metadata;
+- positive parser fixture `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
+- unsupported parser fixture `tests/fixtures/CronTaskTrigger.Unsupported.conf`;
+- malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`.
 
 Current CI evidence:
 
-- `config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored`
-  proves HTTP script triggers stay separate from scheduler-like task lines;
-- `config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts`
-  proves task-like lines do not register as HTTP script rules;
+- `config/cron_task_trigger_common_fixture_emits_task_descriptors` proves HTTP
+  script triggers stay separate from cron and interval task descriptors;
+- `config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors`
+  proves unsupported scheduler-like lines do not register as HTTP scripts or
+  task descriptors;
+- `config/cron_task_trigger_malformed_fixture_rejects_invalid_cron` proves
+  malformed cron descriptors are rejected;
 - `script/malformed_and_non_http_script_rules_are_ignored_or_rejected` proves a
-  bare cron rule does not register as an HTTP script rule;
-- GitHub Actions governance requires the planned contract and matrix row.
+  bare cron rule does not register as an HTTP script rule when using the HTTP
+  script parser directly;
+- public ABI functions `anixops_engine_task_descriptor_count` and
+  `anixops_engine_copy_task_descriptor`;
+- GitHub Actions governance requires the contract and matrix row.
 
 Unimplemented items:
 
-- positive parser fixture that emits a task descriptor;
-- negative malformed task descriptor parser fixture;
-- public task descriptor API;
 - scheduler/runtime replay or E2E evidence;
 - task JavaScript bindings and concurrency policy.

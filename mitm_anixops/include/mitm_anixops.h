@@ -129,6 +129,13 @@ typedef enum anixops_script_kind {
 	ANIXOPS_SCRIPT_HTTP_RESPONSE = 2
 } anixops_script_kind_t;
 
+typedef enum anixops_task_kind {
+	ANIXOPS_TASK_NONE = 0,
+	ANIXOPS_TASK_CRON = 1,
+	ANIXOPS_TASK_INTERVAL = 2,
+	ANIXOPS_TASK_MANUAL = 3
+} anixops_task_kind_t;
+
 typedef struct anixops_mitm_decision {
 	anixops_mitm_decision_type_t decision;
 	anixops_mitm_reason_t reason;
@@ -187,6 +194,19 @@ typedef struct anixops_script_result {
 	char message[ANIXOPS_MESSAGE_CAP];
 } anixops_script_result_t;
 
+typedef struct anixops_task_descriptor {
+	anixops_task_kind_t kind;
+	size_t interval_seconds;
+	size_t timeout_ms;
+	size_t max_size;
+	int enabled;
+	char schedule[ANIXOPS_PATTERN_CAP];
+	char script_path[ANIXOPS_VALUE_CAP];
+	char tag[ANIXOPS_VALUE_CAP];
+	char argument[ANIXOPS_ARGUMENT_CAP];
+	char origin[ANIXOPS_PATTERN_CAP];
+} anixops_task_descriptor_t;
+
 typedef struct anixops_rewrite_plan {
 	anixops_phase_t phase;
 	int body_available;
@@ -232,6 +252,11 @@ ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
 	const anixops_engine_t *engine,
 	size_t index,
 	anixops_rule_diagnostic_t *out_diagnostic);
+ANIXOPS_API size_t anixops_engine_task_descriptor_count(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_copy_task_descriptor(
+	const anixops_engine_t *engine,
+	size_t index,
+	anixops_task_descriptor_t *out_descriptor);
 
 ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char *config_text);
 ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const char *line);

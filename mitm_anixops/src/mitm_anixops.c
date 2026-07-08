@@ -91,6 +91,20 @@ typedef struct anixops_script_rule {
 	int enabled;
 } anixops_script_rule_t;
 
+typedef struct anixops_task_rule {
+	char *source;
+	char *schedule;
+	char *script_path;
+	char *tag;
+	char *argument_template;
+	char *origin;
+	anixops_task_kind_t kind;
+	size_t interval_seconds;
+	size_t timeout_ms;
+	size_t max_size;
+	int enabled;
+} anixops_task_rule_t;
+
 typedef struct anixops_argument {
 	char *name;
 	char *default_value;
@@ -119,6 +133,10 @@ struct anixops_engine {
 	size_t script_len;
 	size_t script_cap;
 
+	anixops_task_rule_t *tasks;
+	size_t task_len;
+	size_t task_cap;
+
 	anixops_argument_t *arguments;
 	size_t argument_len;
 	size_t argument_cap;
@@ -145,10 +163,12 @@ static char *anixops_strdup(const char *value);
 static char *anixops_strndup(const char *value, size_t len);
 static void anixops_free_rewrite_rule(anixops_rewrite_rule_t *rule);
 static void anixops_free_script_rule(anixops_script_rule_t *rule);
+static void anixops_free_task_rule(anixops_task_rule_t *rule);
 static void anixops_free_argument(anixops_argument_t *argument);
 static int anixops_reserve_hosts(anixops_engine_t *engine, size_t want);
 static int anixops_reserve_rules(anixops_engine_t *engine, size_t want);
 static int anixops_reserve_scripts(anixops_engine_t *engine, size_t want);
+static int anixops_reserve_tasks(anixops_engine_t *engine, size_t want);
 static int anixops_reserve_arguments(anixops_engine_t *engine, size_t want);
 static int anixops_reserve_rule_diagnostics(anixops_engine_t *engine, size_t want);
 static void anixops_clear_rule_diagnostics(anixops_engine_t *engine);
@@ -282,6 +302,8 @@ static int anixops_rewrite_action_rewrites_header(anixops_rewrite_action_t actio
 static int anixops_rewrite_action_replaces_header_regex(anixops_rewrite_action_t action);
 static int anixops_parse_script_kind(const char *token, anixops_script_kind_t *kind, anixops_phase_t *phase);
 static int anixops_script_kind_requires_body_token(const char *token);
+static int anixops_parse_task_kind_token(const char *token, anixops_task_kind_t *kind);
+static int anixops_cron_expression_is_valid(const char *value);
 static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t action);
 static int anixops_extract_attr(const char *attrs, const char *key, char *out, size_t out_cap);
 static int anixops_split_attr_segment(const char *segment, char *key, size_t key_cap, char *value, size_t value_cap);
@@ -289,6 +311,7 @@ static void anixops_unquote_inplace(char *value);
 static int anixops_argument_index(const anixops_engine_t *engine, const char *name);
 static int anixops_engine_set_argument_default(anixops_engine_t *engine, const char *name, const char *value);
 static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const char *line);
+static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *line);
 static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name);
 static int anixops_resolve_script_argument(
 	const anixops_engine_t *engine,
@@ -538,6 +561,14 @@ ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine)
 	engine->script_len = 0;
 	engine->script_cap = 0;
 
+	for (i = 0; i < engine->task_len; i++) {
+		anixops_free_task_rule(&engine->tasks[i]);
+	}
+	free(engine->tasks);
+	engine->tasks = NULL;
+	engine->task_len = 0;
+	engine->task_cap = 0;
+
 	for (i = 0; i < engine->argument_len; i++) {
 		anixops_free_argument(&engine->arguments[i]);
 	}
@@ -677,6 +708,38 @@ ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
 	}
 	*out_diagnostic = engine->rule_diagnostics[index];
 	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_task_descriptor_count(const anixops_engine_t *engine)
+{
+	return engine == NULL ? 0 : engine->task_len;
+}
+
+ANIXOPS_API int anixops_engine_copy_task_descriptor(
+	const anixops_engine_t *engine,
+	size_t index,
+	anixops_task_descriptor_t *out_descriptor)
+{
+	const anixops_task_rule_t *rule;
+	if (engine == NULL || out_descriptor == NULL || index >= engine->task_len) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	rule = &engine->tasks[index];
+	memset(out_descriptor, 0, sizeof(*out_descriptor));
+	out_descriptor->kind = rule->kind;
+	out_descriptor->interval_seconds = rule->interval_seconds;
+	out_descriptor->timeout_ms = rule->timeout_ms;
+	out_descriptor->max_size = rule->max_size;
+	out_descriptor->enabled = rule->enabled;
+	anixops_copy_text(out_descriptor->schedule, sizeof(out_descriptor->schedule), rule->schedule);
+	anixops_copy_text(out_descriptor->script_path, sizeof(out_descriptor->script_path), rule->script_path);
+	anixops_copy_text(out_descriptor->tag, sizeof(out_descriptor->tag), rule->tag);
+	anixops_copy_text(out_descriptor->origin, sizeof(out_descriptor->origin), rule->origin);
+	return anixops_resolve_script_argument(
+		engine,
+		rule->argument_template,
+		out_descriptor->argument,
+		sizeof(out_descriptor->argument));
 }
 
 ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char *config_text)
@@ -941,6 +1004,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 		}
 		if (section == ANIXOPS_SECTION_SCRIPT) {
 			size_t script_count = engine->script_len;
+			size_t task_count = engine->task_len;
 			int rc = anixops_engine_add_script_rule(engine, line);
 			if (rc != ANIXOPS_OK) {
 				(void)anixops_add_rule_diagnostic(
@@ -965,14 +1029,39 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 				}
 			}
 			else {
-				int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
-					engine,
-					line_no,
-					section,
-					"script",
-					"script rule ignored");
-				if (diag_rc != ANIXOPS_OK) {
-					return anixops_config_line_error(engine, diag_rc, line_no, line);
+				rc = anixops_engine_add_task_rule(engine, line);
+				if (rc != ANIXOPS_OK) {
+					(void)anixops_add_rule_diagnostic(
+						engine,
+						ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
+						line_no,
+						section,
+						"task",
+						engine->last_error_message);
+					return anixops_config_line_error(engine, rc, line_no, line);
+				}
+				if (engine->task_len != task_count) {
+					if (anixops_add_rule_diagnostic(
+							engine,
+							ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
+							line_no,
+							section,
+							"task",
+							"task descriptor accepted") != ANIXOPS_OK) {
+						free(line);
+						return ANIXOPS_ERR_OUT_OF_MEMORY;
+					}
+				}
+				else {
+					int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+						engine,
+						line_no,
+						section,
+						"script",
+						"script rule ignored");
+					if (diag_rc != ANIXOPS_OK) {
+						return anixops_config_line_error(engine, diag_rc, line_no, line);
+					}
 				}
 			}
 			free(line);
@@ -1617,6 +1706,205 @@ static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const c
 			return rc;
 		}
 	}
+	free(copy);
+	return ANIXOPS_OK;
+}
+
+static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *line)
+{
+	char *copy;
+	char *trimmed;
+	const char *cursor;
+	const char *attrs = NULL;
+	char first[128];
+	char left_tag[2048];
+	char type[128];
+	char schedule[ANIXOPS_PATTERN_CAP];
+	char interval[128];
+	char script_path[2048];
+	char tag[2048];
+	char argument_template[4096];
+	char timeout[128];
+	char timeout_ms[128];
+	char max_size[128];
+	char enable[128];
+	char origin[128];
+	size_t parsed_interval = 0;
+	size_t parsed_timeout_ms = 0;
+	size_t parsed_max_size = 0;
+	int parsed_enabled = 1;
+	anixops_task_kind_t kind = ANIXOPS_TASK_NONE;
+	anixops_task_rule_t *rule;
+
+	if (engine == NULL || line == NULL) {
+		if (engine != NULL) {
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_INVALID_ARGUMENT, 0, "task rule line is null");
+		}
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	anixops_clear_diagnostic(engine);
+
+	copy = anixops_strdup(line);
+	if (copy == NULL) {
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying task rule");
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	trimmed = copy;
+	anixops_trim_inplace(trimmed);
+	if (trimmed[0] == '\0' || trimmed[0] == '#' || (trimmed[0] == '/' && trimmed[1] == '/')) {
+		free(copy);
+		return ANIXOPS_OK;
+	}
+
+	left_tag[0] = '\0';
+	type[0] = '\0';
+	schedule[0] = '\0';
+	interval[0] = '\0';
+	script_path[0] = '\0';
+	tag[0] = '\0';
+	argument_template[0] = '\0';
+	timeout[0] = '\0';
+	timeout_ms[0] = '\0';
+	max_size[0] = '\0';
+	enable[0] = '\0';
+	origin[0] = '\0';
+
+	cursor = trimmed;
+	if (anixops_next_token(&cursor, first, sizeof(first)) &&
+		strcasecmp(first, "cron") == 0) {
+		if (!anixops_next_token(&cursor, schedule, sizeof(schedule))) {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task cron expression missing");
+			return ANIXOPS_ERR_PARSE;
+		}
+		kind = ANIXOPS_TASK_CRON;
+		attrs = cursor;
+		anixops_copy_text(origin, sizeof(origin), "script-section-cron");
+	}
+	else {
+		char *eq = strchr(trimmed, '=');
+		char *left;
+		if (eq == NULL) {
+			free(copy);
+			return ANIXOPS_OK;
+		}
+		*eq = '\0';
+		left = trimmed;
+		attrs = eq + 1;
+		anixops_trim_inplace(left);
+		anixops_copy_text(left_tag, sizeof(left_tag), left);
+		if (!anixops_extract_attr(attrs, "type", type, sizeof(type)) ||
+			!anixops_parse_task_kind_token(type, &kind)) {
+			free(copy);
+			return ANIXOPS_OK;
+		}
+		anixops_copy_text(origin, sizeof(origin), "script-section-attr-list");
+	}
+
+	(void)anixops_extract_attr(attrs, "cronexp", schedule, sizeof(schedule));
+	if (schedule[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "cron", schedule, sizeof(schedule));
+	}
+	if (schedule[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "schedule", schedule, sizeof(schedule));
+	}
+	(void)anixops_extract_attr(attrs, "interval", interval, sizeof(interval));
+	(void)anixops_extract_attr(attrs, "script-path", script_path, sizeof(script_path));
+	if (script_path[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "script_path", script_path, sizeof(script_path));
+	}
+	(void)anixops_extract_attr(attrs, "tag", tag, sizeof(tag));
+	if (tag[0] == '\0') {
+		anixops_copy_text(tag, sizeof(tag), left_tag);
+	}
+	(void)anixops_extract_attr(attrs, "argument", argument_template, sizeof(argument_template));
+	(void)anixops_extract_attr(attrs, "timeout-ms", timeout_ms, sizeof(timeout_ms));
+	if (timeout_ms[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "timeout_ms", timeout_ms, sizeof(timeout_ms));
+	}
+	(void)anixops_extract_attr(attrs, "timeout", timeout, sizeof(timeout));
+	(void)anixops_extract_attr(attrs, "max-size", max_size, sizeof(max_size));
+	if (max_size[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "max_size", max_size, sizeof(max_size));
+	}
+	(void)anixops_extract_attr(attrs, "enable", enable, sizeof(enable));
+	if (enable[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "enabled", enable, sizeof(enable));
+	}
+
+	anixops_unquote_inplace(schedule);
+	anixops_unquote_inplace(interval);
+	anixops_unquote_inplace(script_path);
+	anixops_unquote_inplace(tag);
+	anixops_unquote_inplace(argument_template);
+	anixops_unquote_inplace(timeout_ms);
+	anixops_unquote_inplace(timeout);
+	anixops_unquote_inplace(max_size);
+	anixops_unquote_inplace(enable);
+
+	if (kind == ANIXOPS_TASK_MANUAL && schedule[0] != '\0') {
+		kind = ANIXOPS_TASK_CRON;
+	}
+	else if (kind == ANIXOPS_TASK_MANUAL && interval[0] != '\0') {
+		kind = ANIXOPS_TASK_INTERVAL;
+	}
+	if (kind == ANIXOPS_TASK_CRON && !anixops_cron_expression_is_valid(schedule)) {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "invalid task cron expression");
+		return ANIXOPS_ERR_PARSE;
+	}
+	if (kind == ANIXOPS_TASK_INTERVAL) {
+		if (!anixops_parse_size_value(interval, &parsed_interval) || parsed_interval == 0) {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "invalid task interval");
+			return ANIXOPS_ERR_PARSE;
+		}
+		anixops_copy_text(schedule, sizeof(schedule), interval);
+	}
+	if (script_path[0] == '\0') {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task script path missing");
+		return ANIXOPS_ERR_PARSE;
+	}
+	if (timeout_ms[0] != '\0') {
+		(void)anixops_parse_size_value(timeout_ms, &parsed_timeout_ms);
+	}
+	else if (timeout[0] != '\0') {
+		(void)anixops_parse_timeout_seconds_value(timeout, &parsed_timeout_ms);
+	}
+	if (max_size[0] != '\0') {
+		(void)anixops_parse_size_value(max_size, &parsed_max_size);
+	}
+	if (enable[0] != '\0') {
+		parsed_enabled = anixops_parse_bool(enable);
+	}
+
+	if (anixops_reserve_tasks(engine, engine->task_len + 1) != ANIXOPS_OK) {
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory reserving task rule");
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	rule = &engine->tasks[engine->task_len];
+	memset(rule, 0, sizeof(*rule));
+	rule->source = anixops_strdup(line);
+	rule->schedule = anixops_strdup(schedule);
+	rule->script_path = anixops_strdup(script_path);
+	rule->tag = anixops_strdup(tag);
+	rule->argument_template = anixops_strdup(argument_template);
+	rule->origin = anixops_strdup(origin);
+	if (rule->source == NULL || rule->schedule == NULL || rule->script_path == NULL ||
+		rule->tag == NULL || rule->argument_template == NULL || rule->origin == NULL) {
+		anixops_free_task_rule(rule);
+		free(copy);
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying task rule");
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	rule->kind = kind;
+	rule->interval_seconds = parsed_interval;
+	rule->timeout_ms = parsed_timeout_ms;
+	rule->max_size = parsed_max_size;
+	rule->enabled = parsed_enabled;
+	engine->task_len++;
 	free(copy);
 	return ANIXOPS_OK;
 }
@@ -2904,6 +3192,20 @@ static void anixops_free_script_rule(anixops_script_rule_t *rule)
 	memset(rule, 0, sizeof(*rule));
 }
 
+static void anixops_free_task_rule(anixops_task_rule_t *rule)
+{
+	if (rule == NULL) {
+		return;
+	}
+	free(rule->source);
+	free(rule->schedule);
+	free(rule->script_path);
+	free(rule->tag);
+	free(rule->argument_template);
+	free(rule->origin);
+	memset(rule, 0, sizeof(*rule));
+}
+
 static void anixops_free_argument(anixops_argument_t *argument)
 {
 	if (argument == NULL) {
@@ -2974,6 +3276,27 @@ static int anixops_reserve_scripts(anixops_engine_t *engine, size_t want)
 	memset(next + engine->script_cap, 0, (next_cap - engine->script_cap) * sizeof(*next));
 	engine->scripts = next;
 	engine->script_cap = next_cap;
+	return ANIXOPS_OK;
+}
+
+static int anixops_reserve_tasks(anixops_engine_t *engine, size_t want)
+{
+	anixops_task_rule_t *next;
+	size_t next_cap;
+	if (want <= engine->task_cap) {
+		return ANIXOPS_OK;
+	}
+	next_cap = engine->task_cap == 0 ? 8 : engine->task_cap * 2;
+	while (next_cap < want) {
+		next_cap *= 2;
+	}
+	next = (anixops_task_rule_t *)realloc(engine->tasks, next_cap * sizeof(*next));
+	if (next == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	memset(next + engine->task_cap, 0, (next_cap - engine->task_cap) * sizeof(*next));
+	engine->tasks = next;
+	engine->task_cap = next_cap;
 	return ANIXOPS_OK;
 }
 
@@ -4453,6 +4776,54 @@ static int anixops_script_kind_requires_body_token(const char *token)
 		token++;
 	}
 	return 0;
+}
+
+static int anixops_parse_task_kind_token(const char *token, anixops_task_kind_t *kind)
+{
+	if (token == NULL || kind == NULL) {
+		return 0;
+	}
+	if (strcasecmp(token, "cron") == 0 || strcasecmp(token, "scheduled") == 0 ||
+		strcasecmp(token, "scheduled-script") == 0) {
+		*kind = ANIXOPS_TASK_CRON;
+		return 1;
+	}
+	if (strcasecmp(token, "interval") == 0) {
+		*kind = ANIXOPS_TASK_INTERVAL;
+		return 1;
+	}
+	if (strcasecmp(token, "task") == 0 || strcasecmp(token, "manual") == 0) {
+		*kind = ANIXOPS_TASK_MANUAL;
+		return 1;
+	}
+	return 0;
+}
+
+static int anixops_cron_expression_is_valid(const char *value)
+{
+	const char *p;
+	size_t fields = 0;
+	int in_field = 0;
+	if (value == NULL || value[0] == '\0') {
+		return 0;
+	}
+	p = value;
+	while (*p != '\0') {
+		if (isspace((unsigned char)*p)) {
+			if (in_field) {
+				fields++;
+				in_field = 0;
+			}
+		}
+		else {
+			in_field = 1;
+		}
+		p++;
+	}
+	if (in_field) {
+		fields++;
+	}
+	return fields == 5 || fields == 6;
 }
 
 static anixops_phase_t anixops_default_phase_for_action(anixops_rewrite_action_t action)

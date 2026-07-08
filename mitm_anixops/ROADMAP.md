@@ -104,7 +104,7 @@ Scope:
 - `$request`, `$response`, `$argument`, `$persistentStore`, `$done` contract.
 - async, timeout, exception, double-done, max-size, and fail-open behavior.
 - offline script bundle, digest, cache miss, and future remote-cache policy.
-- cron/task trigger source contracts before implementation.
+- cron/task descriptor parsing before scheduler/runtime implementation.
 
 Required evidence:
 
