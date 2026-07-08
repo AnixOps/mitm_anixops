@@ -22,6 +22,7 @@ unsupported unless a test or E2E fixture is added.
 | Loon body rewrite aliases | `[Body Rewrite]`, `[Remote Body Rewrite]` | Supported subset | `config_accepts_body_rewrite_section_aliases` |
 | Loon header rewrite aliases | `[Header Rewrite]`, `[Remote Header Rewrite]` | Supported subset | `config_accepts_header_rewrite_section_aliases` |
 | Quantumult X / snippet | `#[rewrite_local]`, `#[rewrite_remote]`, `#[mitm]` | Supported subset | `anixops_snippet_rewrite_script_lines_are_supported`, representative Quantumult X fixture |
+| Quantumult X MITM options | `force-http-engine-hosts`, `skip-server-cert-verify`, `h2`, `disable-quic` | Supported parser/adapter-signal subset | `QuantumultX.MitmOptions.snippet`, `QuantumultX.MitmOptions.Malformed.snippet`, `config/quantumultx_mitm_options_fixture_exposes_adapter_flags`, `config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host` |
 | Quantumult X | `[rewrite_local]`, `[rewrite_remote]`, `[mitm]` | Supported subset | `quantumultx_rewrite_local_section_is_supported`, `config_accepts_quantumultx_rewrite_remote_section_aliases` |
 | Surge module | `[Script]` plus `name = type=http-response, pattern=...` | Supported subset | `surge_style_script_rule_template_is_supported`, representative Surge fixture |
 | Surge module arguments | `#!arguments = Name:value` | Supported subset | `sgmodule_inline_arguments_are_supported` |

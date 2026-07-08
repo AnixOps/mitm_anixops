@@ -33,6 +33,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for `#!arguments` script argument defaults.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
+- Added a Quantumult X MITM options source contract plus positive and negative
+  parser fixtures for host/options adapter signals.
 - Added a Surge module common-config source contract plus positive and negative
   parser fixtures for the third P1 parser milestone.
 - Added a Shadowrocket common-config source contract plus positive and negative

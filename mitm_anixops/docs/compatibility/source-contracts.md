@@ -193,6 +193,37 @@ Unimplemented items:
 - full rewrite/task grammar;
 - broader corpus and migration notes.
 
+### Quantumult X MITM Options
+
+Detailed contract:
+[Quantumult X MITM Options Source Contract](quantumultx-mitm-options.md).
+
+Capability: parse Quantumult X `[mitm]` and `#[mitm]` host/options lines as
+policy-core and adapter-visible signals.
+
+Input form:
+
+- `enable`;
+- `hostname` and `force-http-engine-hosts`;
+- `skip-server-cert-verify` and `skip_server_cert_verify`;
+- `h2`, `h2-enable`, and `h2_enable`;
+- `disable-quic`, `disable_quic`, `disable-mitm-quic`, and
+  `disable_mitm_quic`.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/QuantumultX.MitmOptions.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.MitmOptions.Malformed.snippet`;
+- `config/quantumultx_mitm_options_fixture_exposes_adapter_flags`;
+- `config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host`.
+
+Unimplemented items:
+
+- root CA installation or trust-store mutation;
+- TLS interception and HTTP/2 transport behavior;
+- adapter certificate verification bypass behavior;
+- QUIC network fallback outside the policy-core decision signal.
+
 ### Surge Module Common Subset
 
 Detailed contract: [Surge Module Common Config Source Contract](surge-module-common-config.md).

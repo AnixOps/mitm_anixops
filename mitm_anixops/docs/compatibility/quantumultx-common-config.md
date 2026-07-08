@@ -23,9 +23,9 @@ The current common-config subset accepts:
 - URL-prefixed request/response header mutation rules;
 - URL-prefixed request/response script trigger rules;
 - `[mitm]` and `#[mitm]` section aliases;
-- `hostname = ...` with optional `%APPEND%`;
-- `force-http-engine-hosts = ...` with optional `%APPEND%`;
-- host-list `skip-server-cert-verify = ...`.
+- `hostname`, `force-http-engine-hosts`, `skip-server-cert-verify`, `h2`,
+  and QUIC fallback options covered by
+  [Quantumult X MITM Options](quantumultx-mitm-options.md).
 
 ## Parser Output
 

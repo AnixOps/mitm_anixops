@@ -42,6 +42,8 @@ corresponding tests.
   inline default parser contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
+- [quantumultx-mitm-options.md](quantumultx-mitm-options.md): Quantumult X
+  MITM host/options parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
   module common-config parser contract.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1

@@ -1,0 +1,7 @@
+#[mitm]
+enable = true
+hostname = %APPEND% api.options.qx.test
+force-http-engine-hosts = %APPEND% forced.options.qx.test, *.engine.options.qx.test
+skip-server-cert-verify = forced.options.qx.test, cert.options.qx.test
+h2 = false
+disable-quic = false
