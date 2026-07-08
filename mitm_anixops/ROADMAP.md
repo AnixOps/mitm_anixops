@@ -10,7 +10,16 @@ GitHub Actions.
 
 ## Current Phase
 
-Current phase: P0 Repository Baseline.
+Current track: v1.0.0 evidence hardening and compatibility expansion.
+
+roadmap-current-track=v1.0.0-evidence-hardening
+roadmap-p0-baseline-status=complete
+roadmap-v1-release-status=not-ready
+
+The P0 repository baseline is complete. Foundation work now exists across P1
+through P6, but the project is not ready for `v1.0.0` because compatibility
+matrix rows still include `partial` and `planned` scope, and manual-intervention
+items still require repository or platform confirmation.
 
 The latest published artifact is `v0.45.10-alpha`. It proves an embeddable C ABI
 policy core, representative fixtures, an Alpha runner, an Alpha proxy shim, and

@@ -127,6 +127,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 - Clarified that GitHub Actions is the acceptance source of truth for build,
   test, package, release dry-run, and release publication.
+- Updated the ROADMAP current-track marker and repository audit test-status
+  language so governance docs no longer imply the project is still at P0 only
+  or rely on hard-coded local test counts.
 
 ## v0.45.10-alpha - 2026-07-08
 

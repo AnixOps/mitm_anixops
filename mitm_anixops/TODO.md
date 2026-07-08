@@ -20,6 +20,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add PR template fields for source contract, test, compatibility matrix,
   changelog, and manual-intervention impact.
 - [x] Add a release dry-run design before changing release automation.
+- [x] Align ROADMAP current-track markers and repository audit test-status
+  language with current CI evidence.
 
 ## P1 Plugin Parser
 

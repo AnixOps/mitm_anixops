@@ -148,15 +148,20 @@ jobs:
           grep -q "P4 MITM Policy And Certificate Lifecycle" mitm_anixops/ROADMAP.md
           grep -q "P5 Integration Adapter" mitm_anixops/ROADMAP.md
           grep -q "P6 Release Hardening" mitm_anixops/ROADMAP.md
+          grep -q "roadmap-current-track=v1.0.0-evidence-hardening" mitm_anixops/ROADMAP.md
+          grep -q "roadmap-p0-baseline-status=complete" mitm_anixops/ROADMAP.md
+          grep -q "roadmap-v1-release-status=not-ready" mitm_anixops/ROADMAP.md
           grep -q "GitHub Actions" mitm_anixops/CONTRIBUTING.md
           grep -q "^- \\[x\\] Add a dedicated compatibility matrix CI job" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a dedicated static format check CI job" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a dedicated static lint CI job" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a macOS policy-core smoke CI job" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Align ROADMAP current-track markers" mitm_anixops/TODO.md
           grep -q "compatibility-matrix" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "format-check" mitm_anixops/docs/architecture/repository-audit.md
           grep -q '`lint`: runs `shellcheck`' mitm_anixops/docs/architecture/repository-audit.md
           grep -q '`macos-smoke`: runs default C tests' mitm_anixops/docs/architecture/repository-audit.md
+          grep -q "Test registration counts are intentionally not hard-coded" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "branch-protection-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "Loon plugin common fields" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Plugin Common Fields Source Contract" mitm_anixops/docs/compatibility/loon-plugin-common-fields.md

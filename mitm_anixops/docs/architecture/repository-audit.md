@@ -138,8 +138,10 @@ Current test assets include:
 - ABI export allowlist check.
 - pkg-config, CMake, Go wrapper, and Rust wrapper checks.
 
-Source inspection currently shows 147 `add_test` registrations by text scan.
-Actual pass/fail status must be taken from GitHub Actions, not local execution.
+Test registration counts are intentionally not hard-coded in this audit because
+the registry grows with each compatibility unit. Actual pass/fail status and the
+current executed test count must be taken from GitHub Actions, not local
+execution or source text scans.
 
 ## Current Strengths
 
