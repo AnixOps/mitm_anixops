@@ -1,6 +1,7 @@
 # Stash URL Rewrite Source Contract
 
-Capability: Stash `http.url-rewrite` reject policy intent.
+Capability: Stash `http.url-rewrite` request URL reject and redirect policy
+intent.
 
 Ecosystem: `stash`.
 
@@ -9,9 +10,10 @@ Status: `partial`.
 ## Purpose
 
 This contract adds a narrow Stash app-profile parser subset that maps directly
-onto the existing request-phase rewrite/reject policy core. It is intentionally
-smaller than Stash's full HTTP rewrite grammar and does not introduce a general
-YAML parser.
+onto the existing request-phase rewrite/reject policy core. It covers
+request-phase reject decisions and the conservative 302/307 redirect subset. It
+is intentionally smaller than Stash's full HTTP rewrite grammar and does not
+introduce a general YAML parser.
 
 The source form follows Stash HTTP rewrite configuration examples where
 `url-rewrite` entries live below a top-level `http:` mapping:
@@ -29,6 +31,7 @@ http:
   url-rewrite:
     - ^https:\/\/example\.test\/ads - reject
     - ^https:\/\/example\.test\/gone - reject-410
+    - ^http:\/\/example\.test\/(.*) https://example.test/$1 302
 ```
 
 Supported forms:
@@ -40,11 +43,14 @@ Supported forms:
 - `pattern - reject-200`;
 - `pattern - reject-NNN` for 100-599 status codes;
 - existing reject body variants already understood by the policy core, such as
-  `reject-img`, `reject-video`, `reject-dict`, and `reject-array`.
+  `reject-img`, `reject-video`, `reject-dict`, and `reject-array`;
+- `pattern replacement 302`;
+- `pattern replacement 307`.
 
 Unsupported forms remain ignored or outside this contract:
 
-- redirect rewrites such as `pattern replacement 302`;
+- transparent URL rewrites such as `pattern replacement transparent`;
+- redirect status codes outside the contracted 302/307 subset;
 - route-selection, direct, proxy, proxy-group, DNS, rule-provider, and TUN
   behavior;
 - Stash scripts, cron, shortcuts, UI fields, and proxy node definitions;
@@ -53,18 +59,19 @@ Unsupported forms remain ignored or outside this contract:
 
 ## Parser Output
 
-For valid supported `http.url-rewrite` reject entries, the parser must:
+For valid supported `http.url-rewrite` reject and redirect entries, the parser
+must:
 
-- register request-phase rewrite reject rules through the existing policy-core
-  rewrite store;
+- register request-phase rewrite reject or redirect rules through the existing
+  policy-core rewrite store;
 - emit accepted diagnostics with section `Rewrite` and action `url-rewrite`;
-- preserve existing reject status-code behavior from the portable rewrite
-  parser;
-- ignore unsupported redirect or route-like entries without registering rewrite,
-  script, task, MITM, proxy, DNS, or certificate behavior.
+- preserve existing reject status-code and redirect replacement behavior from
+  the portable rewrite parser;
+- ignore unsupported transparent, route-like, or out-of-subset entries without
+  registering rewrite, script, task, MITM, proxy, DNS, or certificate behavior.
 
-Malformed supported reject entries are rejected when the parser recognizes the
-`pattern - reject*` shape but the regex is invalid.
+Malformed supported reject or redirect entries are rejected when the parser
+recognizes the contracted shape but the regex is invalid.
 
 ## Positive Case
 
@@ -72,13 +79,17 @@ Parser case:
 
 ```text
 tests/fixtures/Stash.UrlRewrite.yaml
+tests/fixtures/Stash.UrlRewriteRedirect.yaml
 ```
 
 Expected behavior:
 
 - config load succeeds;
-- two request-phase rewrite reject rules are registered;
-- a redirect-shaped `url-rewrite` entry remains ignored;
+- two request-phase rewrite reject rules are registered from
+  `Stash.UrlRewrite.yaml`;
+- two request-phase redirect rules are registered from
+  `Stash.UrlRewriteRedirect.yaml`;
+- transparent `url-rewrite` entries remain ignored;
 - no script rules, task descriptors, MITM host patterns, arguments, route
   policies, proxy nodes, DNS settings, or certificate lifecycle behavior are
   registered.
@@ -89,6 +100,7 @@ Parser case:
 
 ```text
 tests/fixtures/Stash.UrlRewrite.Malformed.yaml
+tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml
 ```
 
 Expected behavior:
@@ -121,6 +133,10 @@ Required CI evidence:
   `config/stash_url_rewrite_fixture_maps_reject_subset`;
 - `tests/test_config.c` registers
   `config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/stash_url_rewrite_redirect_fixture_maps_redirect_subset`;
+- `tests/test_config.c` registers
+  `config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex`;
 - `tests/test_config.c` keeps
   `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
@@ -130,10 +146,10 @@ Required CI evidence:
 Row:
 
 ```text
-Stash URL rewrite reject policy intent
+Stash URL rewrite request policy intent
 ```
 
-The row remains `partial` because only the `http.url-rewrite` reject subset is
-covered. Full Stash YAML profiles, redirect rewrites, scripts, cron, routing,
-proxy nodes, DNS, UI, transport behavior, and certificate lifecycle behavior
-remain unimplemented.
+The row remains `partial` because only the `http.url-rewrite` reject and
+302/307 redirect subsets are covered. Full Stash YAML profiles, transparent
+rewrites, scripts, cron, routing, proxy nodes, DNS, UI, transport behavior, and
+certificate lifecycle behavior remain unimplemented.

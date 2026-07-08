@@ -1,0 +1,6 @@
+# Stash url-rewrite redirect fixture: parser-owned 302/307 subset only.
+http:
+  url-rewrite:
+    - ^http:\/\/stash-redirect\.example\.test\/(.*) https://stash-redirect.example.test/$1 302
+    - ^https:\/\/stash-redirect\.example\.test\/temp\/(.*) https://edge.stash-redirect.example.test/$1 307
+    - ^https:\/\/stash-redirect\.example\.test\/transparent https://stash-redirect.example.test/new transparent

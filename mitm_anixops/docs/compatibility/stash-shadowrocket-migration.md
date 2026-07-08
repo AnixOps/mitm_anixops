@@ -5,7 +5,7 @@ compatibility.
 
 Ecosystem: `stash`, `shadowrocket`.
 
-Status: Stash `http.mitm` `partial`; Stash URL rewrite reject `partial`;
+Status: Stash `http.mitm` `partial`; Stash URL rewrite request `partial`;
 remaining Stash app-profile syntax `planned`; Shadowrocket common config
 `partial`; Shadowrocket rule reject `partial`; remaining Shadowrocket app
 profile syntax `planned`.
@@ -35,12 +35,13 @@ This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
 - Stash has a dedicated HTTP MITM source contract for a narrow `http.mitm`
   host-policy subset.
 - Stash has a dedicated URL rewrite source contract for a narrow
-  `http.url-rewrite` reject subset.
+  `http.url-rewrite` reject and 302/307 redirect subset.
 - Shadowrocket has a dedicated common-config source contract for a narrow
   `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
 - Shadowrocket has a dedicated rule-reject source contract for a narrow
   `[Rule]` `URL-REGEX` reject subset.
-- Stash app-level routing, proxy, DNS, UI, script, cron, and redirect rewrite
+- Stash app-level routing, proxy, DNS, UI, script, cron, transparent rewrite,
+  and expanded redirect rewrite
   syntax remains a migration guard unless a future source contract, fixture
   pair, positive test, negative test, compatibility matrix row, and GitHub
   Actions evidence explicitly cover it.
@@ -79,6 +80,8 @@ subset described in [`stash-url-rewrite.md`](stash-url-rewrite.md):
 
 - `tests/fixtures/Stash.UrlRewrite.yaml`;
 - `tests/fixtures/Stash.UrlRewrite.Malformed.yaml`.
+- `tests/fixtures/Stash.UrlRewriteRedirect.yaml`;
+- `tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml`.
 
 ## Current Claim
 
@@ -89,8 +92,8 @@ Allowed statements:
   including host-only normalization for `host:*` port-wildcard entries.
 - Stash `http.force-http-engine` has parser support as an adapter-visible QUIC
   fallback decision signal.
-- Stash `http.url-rewrite` has partial parser support for documented reject
-  policy intent only.
+- Stash `http.url-rewrite` has partial parser support for documented reject and
+  302/307 redirect policy intent.
 - Shadowrocket app-level profile syntax remains a migration target outside the
   common-config and rule-reject contracts.
 - Shadowrocket common config has partial parser support for documented URL
@@ -107,7 +110,8 @@ Forbidden statements:
 - Full Stash parser support is implemented.
 - Stash `rules`, `proxies`, DNS, routing, UI, cron, script runtime, or
   transport-level HTTP engine behavior is implemented.
-- Stash redirect rewrite behavior is implemented.
+- Stash transparent rewrite, route selection, or redirect status codes beyond
+  302/307 are implemented.
 - Full Shadowrocket parser support is implemented.
 - Shadowrocket `[General]`, `[Proxy]`, DNS, routing, profile UI, proxy-node
   behavior, or `[Rule]` direct/proxy route selection is implemented.
@@ -126,6 +130,8 @@ Current CI evidence:
 - `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
 - `config/stash_url_rewrite_fixture_maps_reject_subset`;
 - `config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex`;
+- `config/stash_url_rewrite_redirect_fixture_maps_redirect_subset`;
+- `config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
 - `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
@@ -159,11 +165,14 @@ Expected Stash HTTP MITM behavior:
 
 Expected Stash URL rewrite behavior:
 
-- config load succeeds for `tests/fixtures/Stash.UrlRewrite.yaml`;
+- config load succeeds for `tests/fixtures/Stash.UrlRewrite.yaml` and
+  `tests/fixtures/Stash.UrlRewriteRedirect.yaml`;
 - `http.url-rewrite` entries shaped as `pattern - reject*` register
   request-phase rewrite reject decisions;
-- unsupported redirect-shaped `url-rewrite` entries remain ignored;
-- malformed supported reject entries fail with regex diagnostics;
+- `http.url-rewrite` entries shaped as `pattern replacement 302/307` register
+  request-phase redirect decisions;
+- unsupported transparent-shaped `url-rewrite` entries remain ignored;
+- malformed supported reject or redirect entries fail with regex diagnostics;
 - no script rules, task descriptors, MITM host patterns, route policies, proxy
   nodes, DNS settings, or argument defaults are registered from URL rewrite
   input.
@@ -193,7 +202,7 @@ concepts:
 
 - MITM host allow/deny lists;
 - request URL redirect or reject;
-- Stash `http.url-rewrite` reject intent;
+- Stash `http.url-rewrite` reject and 302/307 redirect intent;
 - Shadowrocket `[Rule]` `URL-REGEX` reject intent;
 - response rewrite where it maps to the documented response rewrite subset;
 - request and response header add, replace, replace-regex, or delete;
@@ -235,5 +244,6 @@ add:
 
 The current Stash app-profile guard and remaining Shadowrocket app-profile guard
 fixtures do not satisfy those entry criteria for route selection, proxy nodes,
-DNS, UI, redirect rewrite, or platform networking. Keep those surfaces as
-migration notes only until dedicated parser evidence exists.
+DNS, UI, transparent rewrite, redirect status codes beyond 302/307, or platform
+networking. Keep those surfaces as migration notes only until dedicated parser
+evidence exists.

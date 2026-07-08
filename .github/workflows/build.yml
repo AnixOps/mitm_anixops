@@ -94,6 +94,8 @@ jobs:
             mitm_anixops/tests/fixtures/Stash.HttpForceHttpEngine.Malformed.yaml
             mitm_anixops/tests/fixtures/Stash.UrlRewrite.yaml
             mitm_anixops/tests/fixtures/Stash.UrlRewrite.Malformed.yaml
+            mitm_anixops/tests/fixtures/Stash.UrlRewriteRedirect.yaml
+            mitm_anixops/tests/fixtures/Stash.UrlRewriteRedirect.Malformed.yaml
             mitm_anixops/tests/fixtures/Stash.MigrationGuard.yaml
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
@@ -279,13 +281,18 @@ jobs:
           grep -q "^- \\[x\\] Add Stash HTTP .*force-http-engine.*parser fixtures" mitm_anixops/TODO.md
           grep -q "force-http-engine: true" mitm_anixops/tests/fixtures/Stash.HttpForceHttpEngine.yaml
           grep -q "force-http-engine boolean" mitm_anixops/tests/test_config.c
-          grep -q "Stash URL rewrite reject policy intent" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash URL rewrite request policy intent" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash URL Rewrite Source Contract" mitm_anixops/docs/compatibility/stash-url-rewrite.md
           grep -q "Stash.UrlRewrite.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash.UrlRewrite.Malformed.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash.UrlRewriteRedirect.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash.UrlRewriteRedirect.Malformed.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/stash_url_rewrite_fixture_maps_reject_subset" mitm_anixops/tests/test_config.c
           grep -q "config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
+          grep -q "config/stash_url_rewrite_redirect_fixture_maps_redirect_subset" mitm_anixops/tests/test_config.c
+          grep -q "config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Stash .*url-rewrite.*reject parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Stash .*url-rewrite.*302/307 redirect parser fixtures" mitm_anixops/TODO.md
           grep -q "stash url-rewrite accepted" mitm_anixops/tests/test_config.c
           grep -q "Shadowrocket common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket Common Config Source Contract" mitm_anixops/docs/compatibility/shadowrocket-common-config.md
@@ -452,7 +459,7 @@ jobs:
           grep -q "networkcore-v1-adapter-boundary-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Update NetworkCore integration notes for the latest" mitm_anixops/TODO.md
           grep -q "Stash HTTP MITM hosts" mitm_anixops/docs/compatibility/matrix.md
-          grep -q "Stash URL rewrite reject policy intent" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash URL rewrite request policy intent" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash app profile migration guard" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket app profile migration guard" mitm_anixops/docs/compatibility/matrix.md
           grep -q "stash-http-mitm-mode=partial-parser-support" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
@@ -472,10 +479,14 @@ jobs:
           grep -q "Stash.MigrationGuard.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash.UrlRewrite.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash.UrlRewrite.Malformed.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash.UrlRewriteRedirect.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash.UrlRewriteRedirect.Malformed.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.MigrationGuard.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/stash_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c
           grep -q "config/stash_url_rewrite_fixture_maps_reject_subset" mitm_anixops/tests/test_config.c
           grep -q "config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
+          grep -q "config/stash_url_rewrite_redirect_fixture_maps_redirect_subset" mitm_anixops/tests/test_config.c
+          grep -q "config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c
           grep -q "stash-expanded-parser-support-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "shadowrocket-expanded-parser-support-status=pending" mitm_anixops/docs/manual-intervention.md

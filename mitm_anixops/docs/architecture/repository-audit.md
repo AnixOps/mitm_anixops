@@ -164,7 +164,7 @@ execution or source text scans.
   protection still requires manual configuration.
 - No macOS release artifact, signing, notarization, entitlement, or platform
   adapter coverage yet.
-- Stash has narrow `http.mitm` host/options and `http.url-rewrite` reject
+- Stash has narrow `http.mitm` host/options and `http.url-rewrite` request URL
   parser contracts, and Shadowrocket has narrow common-config and rule-reject
   parser contracts; remaining
   app-level profile syntax remains migration-guarded.

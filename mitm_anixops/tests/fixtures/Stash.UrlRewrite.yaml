@@ -3,4 +3,4 @@ http:
   url-rewrite:
     - ^https:\/\/stash-rewrite\.example\.test\/ads - reject
     - ^https:\/\/stash-rewrite\.example\.test\/gone - reject-410
-    - ^https:\/\/stash-rewrite\.example\.test\/old https://stash-rewrite.example.test/new 302
+    - ^https:\/\/stash-rewrite\.example\.test\/transparent https://stash-rewrite.example.test/new transparent

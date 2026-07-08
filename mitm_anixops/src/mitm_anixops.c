@@ -2257,18 +2257,23 @@ static int anixops_engine_add_stash_url_rewrite(anixops_engine_t *engine, const 
 	if (!anixops_next_token(&cursor, replacement, sizeof(replacement))) {
 		return ANIXOPS_OK;
 	}
-	if (strcmp(replacement, "-") != 0) {
-		return ANIXOPS_OK;
-	}
 	if (!anixops_next_token(&cursor, action_token, sizeof(action_token)) || action_token[0] == '\0') {
-		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "stash url-rewrite reject action missing");
-		return ANIXOPS_ERR_PARSE;
-	}
-	if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
-		!anixops_rewrite_action_is_reject(action)) {
 		return ANIXOPS_OK;
 	}
-	written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", pattern, action_token);
+	if (strcmp(replacement, "-") == 0) {
+		if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
+			!anixops_rewrite_action_is_reject(action)) {
+			return ANIXOPS_OK;
+		}
+		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", pattern, action_token);
+	}
+	else {
+		if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
+			!(action == ANIXOPS_REWRITE_REDIRECT_302 || action == ANIXOPS_REWRITE_REDIRECT_307)) {
+			return ANIXOPS_OK;
+		}
+		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s %s", pattern, replacement, action_token);
+	}
 	if (written < 0 || (size_t)written >= sizeof(rewrite_line)) {
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "stash url-rewrite rule is too long");
 		return ANIXOPS_ERR_PARSE;

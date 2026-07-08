@@ -1,0 +1,4 @@
+# Stash malformed url-rewrite redirect fixture.
+http:
+  url-rewrite:
+    - ^(http:\/\/broken\.stash-redirect\.example\.test https://stash-redirect.example.test/new 302
