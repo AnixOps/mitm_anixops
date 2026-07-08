@@ -1,0 +1,6 @@
+# Stash HTTP MITM certificate material fixture: parser-owned non-support guard.
+http:
+  ca: https://certs.example/ignored-ca.pem
+  ca-passphrase: ignored-secret
+  mitm:
+    - cert-material.stash.test

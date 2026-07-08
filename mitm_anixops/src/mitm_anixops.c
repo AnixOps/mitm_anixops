@@ -888,6 +888,41 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 							continue;
 						}
 					}
+					{
+						char option_value[ANIXOPS_PATTERN_CAP];
+						const char *cert_key = NULL;
+						if (anixops_yaml_extract_mapping_scalar(raw, "ca", option_value, sizeof(option_value))) {
+							cert_key = "ca";
+						}
+						else if (anixops_yaml_extract_mapping_scalar(
+								raw,
+								"ca-passphrase",
+								option_value,
+								sizeof(option_value))) {
+							cert_key = "ca-passphrase";
+						}
+						if (cert_key != NULL) {
+							if (anixops_add_rule_diagnostic(
+									engine,
+									ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
+									line_no,
+									ANIXOPS_SECTION_MITM,
+									cert_key,
+									"unsupported stash mitm option ignored") != ANIXOPS_OK) {
+								free(line);
+								return ANIXOPS_ERR_OUT_OF_MEMORY;
+							}
+							stash_http_mitm_list = 0;
+							stash_http_url_rewrite_list = 0;
+							free(line);
+							if (line_end == NULL) {
+								break;
+							}
+							cursor = line_end + 1;
+							line_no++;
+							continue;
+						}
+					}
 					if (strchr(raw, ':') != NULL) {
 						stash_http_mitm_list = 0;
 						stash_http_url_rewrite_list = 0;

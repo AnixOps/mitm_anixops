@@ -687,12 +687,14 @@ Input form:
 - nested `mitm:` list;
 - list scalar host patterns;
 - exact, wildcard, deny, and `host:*` port-wildcard host patterns accepted by
-  the policy core.
+  the policy core;
+- unsupported certificate-material keys `ca` and `ca-passphrase`.
 
 Parser output:
 
 - accepted diagnostics with section `MITM` and action `mitm`;
 - accepted diagnostics with section `MITM` and action `force-http-engine`;
+- ignored diagnostics with section `MITM` and action `ca` or `ca-passphrase`;
 - host patterns visible through `anixops_engine_mitm_pattern_count`;
 - existing MITM evaluation semantics for exact, wildcard, deny, and normalized
   `host:*` inputs;
@@ -707,12 +709,15 @@ Current CI evidence:
 - negative fixture `tests/fixtures/Stash.HttpMitm.Malformed.yaml`;
 - unsupported port-specific fixture
   `tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml`;
+- unsupported certificate-material fixture
+  `tests/fixtures/Stash.HttpMitmCertificateUnsupported.yaml`;
 - positive option fixture `tests/fixtures/Stash.HttpForceHttpEngine.yaml`;
 - negative option fixture
   `tests/fixtures/Stash.HttpForceHttpEngine.Malformed.yaml`;
 - `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
 - `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
+- `config/stash_http_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - `config/stash_http_force_http_engine_fixture_exposes_quic_signal`;
 - `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported` continues to
@@ -722,6 +727,7 @@ Unimplemented items:
 
 - full YAML parser behavior;
 - port-specific MITM matching such as `host:443`;
+- certificate material loading and platform trust-store mutation;
 - transport-level HTTP engine behavior, transparent/expanded rewrite, script,
   cron, DNS, routing, proxy, and UI behavior;
 - certificate lifecycle and platform trust handling.

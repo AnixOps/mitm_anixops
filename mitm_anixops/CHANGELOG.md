@@ -74,6 +74,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Stash HTTP MITM `host:*` port-wildcard fixture coverage, normalized to
   host-only policy-core matching while keeping port-specific behavior
   adapter-owned.
+- Added a Stash HTTP MITM certificate-material guard proving `http.ca` and
+  `http.ca-passphrase` remain ignored and do not establish trust.
 - Added a Shadowrocket common-config source contract plus positive and negative
   parser fixtures for a P1 parser milestone.
 - Added a request rewrite source contract plus positive and negative parser

@@ -72,6 +72,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   policy patterns.
 - [x] Add Stash HTTP `force-http-engine` parser fixtures and
   positive/negative tests.
+- [x] Add Stash HTTP MITM certificate-material non-support guard and negative
+  test.
 - [x] Add Stash `http.url-rewrite` reject parser fixtures and
   positive/negative tests.
 - [x] Add Stash `http.url-rewrite` 302/307 redirect parser fixtures and
