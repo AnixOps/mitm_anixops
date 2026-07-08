@@ -626,16 +626,19 @@ Input form:
   [Surge Task Metadata](surge-task-metadata.md);
 - `[MITM] hostname`;
 - unsupported certificate-material keys `ca-p12` and `ca-passphrase`;
-- selected body regex, JSON, JQ, and header mutation rewrite forms.
+- selected request redirect/reject, body regex, JSON, JQ, and header mutation
+  rewrite forms.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/Surge.CommonConfig.sgmodule`;
+- positive fixture `tests/fixtures/Surge.RequestRewrite.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.ResponseRewrite.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.HeaderMutation.sgmodule`;
 - negative fixture `tests/fixtures/Surge.CommonConfig.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
@@ -643,6 +646,8 @@ Current CI evidence:
 - unsupported fixture `tests/fixtures/Surge.MitmCertificateUnsupported.sgmodule`;
 - `config/surge_common_config_fixture_is_supported`;
 - `config/surge_common_config_strict_fixture_rejects_malformed_rule`;
+- `config/surge_request_rewrite_fixture_maps_redirect_and_reject`;
+- `config/surge_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - `config/surge_body_mutation_fixture_maps_response_body_regex`;
 - `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/surge_response_rewrite_fixture_maps_response_body_regex`;
