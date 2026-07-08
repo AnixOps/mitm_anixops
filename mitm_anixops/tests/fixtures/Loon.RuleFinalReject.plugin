@@ -1,0 +1,4 @@
+# Loon rule final reject fixture.
+[Rule]
+FINAL,REJECT-200
+FINAL,DIRECT

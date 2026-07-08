@@ -326,8 +326,8 @@ Unimplemented items:
 Detailed contract:
 [Loon Rule Reject Source Contract](loon-rule-reject.md).
 
-Capability: parse Loon `[Rule]` `DOMAIN`, `DOMAIN-KEYWORD`, and
-`DOMAIN-SUFFIX` reject policy intent.
+Capability: parse Loon `[Rule]` `DOMAIN`, `DOMAIN-KEYWORD`, `DOMAIN-SUFFIX`,
+and `FINAL` reject policy intent.
 
 Input form:
 
@@ -340,6 +340,9 @@ Input form:
 - `[Rule]` `DOMAIN-KEYWORD,<keyword>,REJECT`;
 - `[Rule]` `DOMAIN-KEYWORD,<keyword>,REJECT-NNN` and other common reject
   variants already supported by the policy-core rewrite parser.
+- `[Rule]` `FINAL,REJECT`;
+- `[Rule]` `FINAL,REJECT-NNN` and other common reject variants already
+  supported by the policy-core rewrite parser.
 
 Parser output:
 
@@ -349,7 +352,7 @@ Parser output:
 - ignored diagnostics for direct/proxy route-selection lines in the documented
   fixture;
 - rejected diagnostics and parse failure for malformed exact hosts, host
-  suffixes, or host keywords;
+  suffixes, host keywords, or final reject action lines;
 - no direct/proxy route selection, DNS, rule-provider refresh, certificate
   lifecycle, scheduler, runtime, or platform UI behavior.
 
@@ -361,17 +364,21 @@ Current CI evidence:
 - negative fixture `tests/fixtures/Loon.RuleDomainExactReject.Malformed.plugin`;
 - positive fixture `tests/fixtures/Loon.RuleDomainKeywordReject.plugin`;
 - negative fixture `tests/fixtures/Loon.RuleDomainKeywordReject.Malformed.plugin`;
+- positive fixture `tests/fixtures/Loon.RuleFinalReject.plugin`;
+- negative fixture `tests/fixtures/Loon.RuleFinalReject.Malformed.plugin`;
 - `config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
 - `config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
 - `config/loon_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;
 - `config/loon_rule_domain_exact_reject_malformed_fixture_rejects_invalid_domain`;
 - `config/loon_rule_domain_keyword_reject_fixture_maps_domain_keyword_rejects`;
-- `config/loon_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword`.
+- `config/loon_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword`;
+- `config/loon_rule_final_reject_fixture_maps_final_reject`;
+- `config/loon_rule_final_reject_malformed_fixture_rejects_missing_action`.
 
 Unimplemented items:
 
 - direct/proxy route selection;
-- `URL-REGEX`, `FINAL`, `IP-CIDR`, `GEOIP`, and broader Loon rule matchers;
+- `URL-REGEX`, `IP-CIDR`, `GEOIP`, and broader Loon rule matchers;
 - proxy groups, DNS/no-resolve, and rule providers;
 - platform networking behavior.
 
