@@ -444,6 +444,82 @@ static void config_records_rejected_rule_diagnostic_before_returning_error(void)
 	anixops_engine_free(engine);
 }
 
+static void pcre2_only_regex_features_report_backend_requirement(void)
+{
+	struct regex_case {
+		const char *config;
+		const char *section;
+		const char *action;
+		const char *context;
+		const char *feature;
+	} cases[] = {
+		{
+			"[Rewrite]\n"
+			"^https://api\\.test/(?=item)item https://dest.test 302\n",
+			"Rewrite",
+			"rewrite",
+			"rewrite URL regex",
+			"lookahead",
+		},
+		{
+			"[Rewrite]\n"
+			"^https://body\\.test request-body-replace-regex \"\\p{L}+\" letters\n",
+			"Rewrite",
+			"rewrite",
+			"rewrite body regex",
+			"unicode property",
+		},
+		{
+			"[Rewrite]\n"
+			"^https://header\\.test response-header-replace-regex X-Test \"\\d++\" digits\n",
+			"Rewrite",
+			"rewrite",
+			"rewrite header regex",
+			"possessive quantifier",
+		},
+		{
+			"[Script]\n"
+			"http-response ^https://script\\.test/(?<name>item)-\\k<name> script-path=https://x.test/a.js\n",
+			"Script",
+			"script",
+			"script URL regex",
+			"named backreference",
+		},
+	};
+	size_t i;
+
+	for (i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+		anixops_engine_t *engine = anixops_engine_new();
+		anixops_rule_diagnostic_t diagnostic;
+		int status = 0;
+		size_t line = 0;
+		char message[ANIXOPS_MESSAGE_CAP];
+		ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, cases[i].config), ANIXOPS_ERR_REGEX);
+		ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, cases[i].section);
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, cases[i].action);
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, cases[i].context) != NULL);
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "requires pcre2 backend") != NULL);
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, cases[i].feature) != NULL);
+
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_REGEX);
+		ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+		ANIXOPS_EXPECT_TRUE(strstr(message, cases[i].context) != NULL);
+		ANIXOPS_EXPECT_TRUE(strstr(message, "requires pcre2 backend") != NULL);
+		ANIXOPS_EXPECT_TRUE(strstr(message, cases[i].feature) != NULL);
+
+		anixops_engine_free(engine);
+	}
+}
+
 static void quoted_replacement_is_parsed_as_one_token(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -535,5 +611,11 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_records_rejected_rule_diagnostic_before_returning_error",
 		config_records_rejected_rule_diagnostic_before_returning_error);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/pcre2_only_regex_features_report_backend_requirement",
+		pcre2_only_regex_features_report_backend_requirement);
 	add_test(tests, count, cap, "config/quoted_replacement_is_parsed_as_one_token", quoted_replacement_is_parsed_as_one_token);
 }

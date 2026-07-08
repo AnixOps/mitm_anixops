@@ -20,7 +20,8 @@ publishing.
 - Regex backend selection now has an initial C ABI foundation with a POSIX Lite default and optional PCRE2
   compile/match/replace support behind `PCRE2=1`; lookaround, backreference, Unicode property, word-boundary,
   atomic group, possessive quantifier, and named-backreference fixtures are covered for PCRE2, and body/header
-  empty-match replacement behavior is covered for `^`, `$`, and lazy `.*?`; NSRegularExpression still needs a real
+  empty-match replacement behavior is covered for `^`, `$`, and lazy `.*?`; POSIX Lite reports `requires pcre2 backend`
+  diagnostics for PCRE2-only constructs; NSRegularExpression still needs a real
   Darwin backend.
 - Full JQ-style JSON body rewrite hardening beyond the optional libjq backend behind `JQ=1`. Default builds still
   fail-open with `jq backend unavailable`; remaining work includes resource limits, production cache/reuse policy,

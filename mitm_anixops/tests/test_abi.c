@@ -17,10 +17,10 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.45.4");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.45.5");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 45);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 4);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 5);
 }
 
 static void null_arguments_are_rejected(void)

@@ -188,6 +188,14 @@ static int anixops_compile_regex(
 	size_t *capture_map,
 	size_t capture_map_cap,
 	anixops_capture_names_t *capture_names);
+static int anixops_set_regex_backend_requirement_diagnostic(
+	anixops_engine_t *engine,
+	const char *context,
+	const char *pattern);
+static void anixops_set_regex_compile_failure_diagnostic(
+	anixops_engine_t *engine,
+	const char *context,
+	const char *pattern);
 static void anixops_free_compiled_regex(anixops_compiled_regex_t *regex);
 static int anixops_regex_exec(
 	const anixops_compiled_regex_t *regex,
@@ -259,6 +267,7 @@ static int anixops_regex_append_literal_bytes(
 	const char *bytes,
 	size_t len,
 	int in_class);
+static int anixops_regex_pattern_requires_pcre2(const char *pattern, const char **out_feature);
 static int anixops_regex_char_is_escaped(const char *pattern, size_t index);
 static int anixops_regex_closes_interval_quantifier(const char *pattern, size_t close_index);
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
@@ -423,7 +432,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.4";
+	return "0.45.5";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1330,6 +1339,10 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying rewrite rule");
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
 	}
+	if (anixops_set_regex_backend_requirement_diagnostic(engine, "rewrite URL regex", rule->pattern)) {
+		anixops_free_rewrite_rule(rule);
+		return ANIXOPS_ERR_REGEX;
+	}
 	if (anixops_compile_regex(
 			&rule->regex,
 			engine->regex_backend,
@@ -1339,11 +1352,15 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 			ANIXOPS_MATCH_CAP,
 			&rule->capture_names) != 0) {
 		anixops_free_rewrite_rule(rule);
-		anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite URL regex failed to compile");
+		anixops_set_regex_compile_failure_diagnostic(engine, "rewrite URL regex", rule->pattern);
 		return ANIXOPS_ERR_REGEX;
 	}
 	rule->regex_ready = 1;
 	if (anixops_rewrite_action_replaces_body_regex(action)) {
+		if (anixops_set_regex_backend_requirement_diagnostic(engine, "rewrite body regex", rule->body_pattern)) {
+			anixops_free_rewrite_rule(rule);
+			return ANIXOPS_ERR_REGEX;
+		}
 		if (anixops_compile_regex(
 				&rule->body_regex,
 				engine->regex_backend,
@@ -1353,12 +1370,16 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 				ANIXOPS_MATCH_CAP,
 				&rule->body_capture_names) != 0) {
 			anixops_free_rewrite_rule(rule);
-			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite body regex failed to compile");
+			anixops_set_regex_compile_failure_diagnostic(engine, "rewrite body regex", rule->body_pattern);
 			return ANIXOPS_ERR_REGEX;
 		}
 		rule->body_regex_ready = 1;
 	}
 	if (anixops_rewrite_action_replaces_header_regex(action)) {
+		if (anixops_set_regex_backend_requirement_diagnostic(engine, "rewrite header regex", rule->header_pattern)) {
+			anixops_free_rewrite_rule(rule);
+			return ANIXOPS_ERR_REGEX;
+		}
 		if (anixops_compile_regex(
 				&rule->header_regex,
 				engine->regex_backend,
@@ -1368,7 +1389,7 @@ ANIXOPS_API int anixops_engine_add_rewrite_rule(anixops_engine_t *engine, const 
 				ANIXOPS_MATCH_CAP,
 				&rule->header_capture_names) != 0) {
 			anixops_free_rewrite_rule(rule);
-			anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "rewrite header regex failed to compile");
+			anixops_set_regex_compile_failure_diagnostic(engine, "rewrite header regex", rule->header_pattern);
 			return ANIXOPS_ERR_REGEX;
 		}
 		rule->header_regex_ready = 1;
@@ -1763,10 +1784,15 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying script rule");
 		return ANIXOPS_ERR_OUT_OF_MEMORY;
 	}
+	if (anixops_set_regex_backend_requirement_diagnostic(engine, "script URL regex", rule->pattern)) {
+		anixops_free_script_rule(rule);
+		free(copy);
+		return ANIXOPS_ERR_REGEX;
+	}
 	if (anixops_compile_regex(&rule->regex, engine->regex_backend, rule->pattern, REG_EXTENDED, NULL, 0, NULL) != 0) {
 		anixops_free_script_rule(rule);
 		free(copy);
-		anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, "script URL regex failed to compile");
+		anixops_set_regex_compile_failure_diagnostic(engine, "script URL regex", rule->pattern);
 		return ANIXOPS_ERR_REGEX;
 	}
 	rule->regex_ready = 1;
@@ -3298,6 +3324,40 @@ static int anixops_compile_regex(
 	return rc;
 }
 
+static int anixops_set_regex_backend_requirement_diagnostic(
+	anixops_engine_t *engine,
+	const char *context,
+	const char *pattern)
+{
+	const char *feature = NULL;
+	char message[ANIXOPS_MESSAGE_CAP];
+	if (engine == NULL || engine->regex_backend == ANIXOPS_REGEX_BACKEND_PCRE2 ||
+		!anixops_regex_pattern_requires_pcre2(pattern, &feature)) {
+		return 0;
+	}
+	snprintf(
+		message,
+		sizeof(message),
+		"%s requires pcre2 backend: %s",
+		context == NULL ? "regex" : context,
+		feature == NULL ? "advanced regex feature" : feature);
+	anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, message);
+	return 1;
+}
+
+static void anixops_set_regex_compile_failure_diagnostic(
+	anixops_engine_t *engine,
+	const char *context,
+	const char *pattern)
+{
+	char message[ANIXOPS_MESSAGE_CAP];
+	if (anixops_set_regex_backend_requirement_diagnostic(engine, context, pattern)) {
+		return;
+	}
+	snprintf(message, sizeof(message), "%s failed to compile", context == NULL ? "regex" : context);
+	anixops_set_diagnostic(engine, ANIXOPS_ERR_REGEX, 0, message);
+}
+
 static void anixops_free_compiled_regex(anixops_compiled_regex_t *regex)
 {
 	if (regex == NULL) {
@@ -3872,6 +3932,103 @@ static int anixops_regex_append_literal_bytes(
 		out[(*pos)++] = (char)value;
 	}
 	return ANIXOPS_OK;
+}
+
+static int anixops_regex_mark_pcre2_feature(const char **out_feature, const char *feature)
+{
+	if (out_feature != NULL) {
+		*out_feature = feature;
+	}
+	return 1;
+}
+
+static int anixops_regex_pattern_requires_pcre2(const char *pattern, const char **out_feature)
+{
+	size_t len;
+	size_t i;
+	int in_class = 0;
+	if (out_feature != NULL) {
+		*out_feature = NULL;
+	}
+	if (pattern == NULL) {
+		return 0;
+	}
+	len = strlen(pattern);
+	for (i = 0; i < len; i++) {
+		char ch = pattern[i];
+		if (ch == '\\') {
+			char next;
+			if (i + 1 >= len) {
+				continue;
+			}
+			next = pattern[i + 1];
+			if (!in_class) {
+				if (next >= '1' && next <= '9') {
+					return anixops_regex_mark_pcre2_feature(out_feature, "backreference");
+				}
+				if (next == 'b' || next == 'B') {
+					return anixops_regex_mark_pcre2_feature(out_feature, "word boundary");
+				}
+				if ((next == 'p' || next == 'P') && i + 2 < len && pattern[i + 2] == '{') {
+					return anixops_regex_mark_pcre2_feature(out_feature, "unicode property");
+				}
+				if (next == 'k' && i + 2 < len &&
+					(pattern[i + 2] == '<' || pattern[i + 2] == '\'' || pattern[i + 2] == '{')) {
+					return anixops_regex_mark_pcre2_feature(out_feature, "named backreference");
+				}
+				if (next == 'g' && i + 2 < len &&
+					(pattern[i + 2] == '<' || pattern[i + 2] == '\'' || pattern[i + 2] == '{')) {
+					return anixops_regex_mark_pcre2_feature(out_feature, "subroutine or backreference");
+				}
+				if (next == 'K') {
+					return anixops_regex_mark_pcre2_feature(out_feature, "match reset");
+				}
+				if (next == 'R' || next == 'X') {
+					return anixops_regex_mark_pcre2_feature(out_feature, "unicode escape class");
+				}
+			}
+			i++;
+			continue;
+		}
+		if (in_class) {
+			if (ch == ']') {
+				in_class = 0;
+			}
+			continue;
+		}
+		if (ch == '[') {
+			in_class = 1;
+			continue;
+		}
+		if (ch == '(' && i + 2 < len && pattern[i + 1] == '?') {
+			char op = pattern[i + 2];
+			if (op == '=' || op == '!') {
+				return anixops_regex_mark_pcre2_feature(out_feature, "lookahead");
+			}
+			if (op == '>') {
+				return anixops_regex_mark_pcre2_feature(out_feature, "atomic group");
+			}
+			if (op == '<' && i + 3 < len && (pattern[i + 3] == '=' || pattern[i + 3] == '!')) {
+				return anixops_regex_mark_pcre2_feature(out_feature, "lookbehind");
+			}
+			if (op == 'P' && i + 3 < len && (pattern[i + 3] == '<' || pattern[i + 3] == '=')) {
+				return anixops_regex_mark_pcre2_feature(out_feature, "named capture or backreference");
+			}
+			if (op == '(') {
+				return anixops_regex_mark_pcre2_feature(out_feature, "conditional subpattern");
+			}
+			if (op == 'R' || op == '&' || isdigit((unsigned char)op)) {
+				return anixops_regex_mark_pcre2_feature(out_feature, "subroutine");
+			}
+		}
+		if (ch == '+' && i > 0 && !anixops_regex_char_is_escaped(pattern, i) &&
+			!anixops_regex_char_is_escaped(pattern, i - 1) &&
+			(pattern[i - 1] == '*' || pattern[i - 1] == '+' || pattern[i - 1] == '?' ||
+				(pattern[i - 1] == '}' && anixops_regex_closes_interval_quantifier(pattern, i - 1)))) {
+			return anixops_regex_mark_pcre2_feature(out_feature, "possessive quantifier");
+		}
+	}
+	return 0;
 }
 
 static int anixops_regex_char_is_escaped(const char *pattern, size_t index)

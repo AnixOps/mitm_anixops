@@ -197,7 +197,8 @@ anixops-mitm-runner trace --plugin plugin.plugin --url https://example.com/api
 1. 保留 `posix-lite`：纯 C、无依赖、作为最小 portable backend。
 2. 增加 `pcre2`：桌面和服务端默认 backend，覆盖 lookahead/lookbehind、backreference、Unicode property、word boundary、atomic/possessive、named backreference 等。
 3. 增加 `icu` 或平台 `NSRegularExpression` 对照测试：用于验证 iOS/macOS 行为，必要时在 Darwin adapter 使用系统行为。
-4. 增加 regex feature diagnostics：编译失败时能提示 “requires pcre2 backend” 或 “unsupported in portable backend”。
+4. 扩展 regex feature diagnostics：当前 Alpha 已对 PCRE2-only 特性输出 “requires pcre2 backend”；后续补齐更细的
+   “unsupported in portable backend” 和平台 backend 差异说明。
 
 验收：
 

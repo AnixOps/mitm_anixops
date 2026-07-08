@@ -122,7 +122,7 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 - 增加 `pcre2`，Alpha 可选 backend 已覆盖 lookaround、backreference、Unicode property、word boundary、
   atomic/possessive、named backreference fixture。
 - Darwin 平台增加 NSRegularExpression/ICU 对照测试。
-- 编译失败时输出明确诊断，例如 “requires pcre2 backend”。
+- 当前 Alpha 已对 PCRE2-only 写法输出 “requires pcre2 backend”，后续继续补齐平台 backend 差异诊断。
 
 验收标准：URL regex、body regex、header regex、script regex 共用同一套 backend，capture 和 replacement 行为一致。
 
