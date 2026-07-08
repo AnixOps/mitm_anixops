@@ -451,6 +451,7 @@ Input form:
 - Quantumult X `url header-replace-regex header pattern replacement` request
   header forms;
 - Quantumult X `url response-header-add header value` response header forms;
+- Quantumult X `url response-header-del header` response header forms;
 - Quantumult X
   `url response-header-replace-regex header pattern replacement` response
   header forms;
@@ -467,6 +468,7 @@ Current CI evidence:
 - positive fixture `tests/fixtures/QuantumultX.HeaderAdd.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderReplace.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.ResponseHeaderAdd.snippet`;
+- positive fixture `tests/fixtures/QuantumultX.ResponseHeaderDelete.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderMutation.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.RequestHeaderMutation.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderDelete.snippet`;
@@ -476,6 +478,8 @@ Current CI evidence:
 - negative fixture `tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderReplace.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.ResponseHeaderAdd.Malformed.snippet`;
+- negative fixture
+  `tests/fixtures/QuantumultX.ResponseHeaderDelete.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet`;
 - negative fixture
   `tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet`;
@@ -492,6 +496,8 @@ Current CI evidence:
 - `config/quantumultx_header_replace_malformed_fixture_rejects_missing_header_name`;
 - `config/quantumultx_response_header_add_fixture_maps_response_header_add`;
 - `config/quantumultx_response_header_add_malformed_fixture_rejects_missing_header_name`;
+- `config/quantumultx_response_header_delete_fixture_maps_response_header_delete`;
+- `config/quantumultx_response_header_delete_malformed_fixture_rejects_missing_header_name`;
 - `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/quantumultx_request_header_mutation_fixture_maps_request_header_regex`;
@@ -1138,6 +1144,7 @@ Current CI evidence:
 - positive fixture `tests/fixtures/QuantumultX.HeaderAdd.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderReplace.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.ResponseHeaderAdd.snippet`;
+- positive fixture `tests/fixtures/QuantumultX.ResponseHeaderDelete.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderMutation.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.RequestHeaderMutation.snippet`;
 - positive fixture `tests/fixtures/QuantumultX.HeaderDelete.snippet`;
@@ -1145,6 +1152,8 @@ Current CI evidence:
 - negative fixture `tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderReplace.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.ResponseHeaderAdd.Malformed.snippet`;
+- negative fixture
+  `tests/fixtures/QuantumultX.ResponseHeaderDelete.Malformed.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet`;
 - negative fixture
   `tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet`;
@@ -1157,6 +1166,8 @@ Current CI evidence:
 - `config/quantumultx_header_replace_malformed_fixture_rejects_missing_header_name`;
 - `config/quantumultx_response_header_add_fixture_maps_response_header_add`;
 - `config/quantumultx_response_header_add_malformed_fixture_rejects_missing_header_name`;
+- `config/quantumultx_response_header_delete_fixture_maps_response_header_delete`;
+- `config/quantumultx_response_header_delete_malformed_fixture_rejects_missing_header_name`;
 - `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/quantumultx_request_header_mutation_fixture_maps_request_header_regex`;
