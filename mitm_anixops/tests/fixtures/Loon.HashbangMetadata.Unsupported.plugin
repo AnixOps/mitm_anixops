@@ -1,0 +1,5 @@
+#!open-url = https://unsupported.example/open
+#!unknown-loon-field = value
+
+[MITM]
+hostname = unsupported.metadata.loon.test

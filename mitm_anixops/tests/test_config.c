@@ -183,6 +183,95 @@ static void loon_common_fields_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void loon_hashbang_metadata_fixture_records_tolerated_keys(void)
+{
+	static const char *expected_actions[] = {
+		"name",
+		"desc",
+		"description",
+		"author",
+		"category",
+		"icon",
+		"homepage",
+		"date",
+		"system",
+		"requirement",
+		"arguments-desc",
+	};
+	char *fixture = read_fixture("tests/fixtures/Loon.HashbangMetadata.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	size_t diagnostic_count;
+	size_t ignored = 0;
+	size_t accepted = 0;
+	size_t i;
+	size_t action_index;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+
+	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic_count, 13);
+	for (i = 0; i < diagnostic_count; i++) {
+		anixops_rule_diagnostic_t diagnostic;
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED) {
+			ignored++;
+			ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+			ANIXOPS_EXPECT_STREQ(diagnostic.message, "#! metadata ignored");
+		}
+		else if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
+			accepted++;
+		}
+	}
+	ANIXOPS_EXPECT_EQ_SIZE(ignored, 11);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted, 2);
+
+	for (action_index = 0; action_index < sizeof(expected_actions) / sizeof(expected_actions[0]); action_index++) {
+		int found = 0;
+		for (i = 0; i < diagnostic_count; i++) {
+			anixops_rule_diagnostic_t diagnostic;
+			ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+			if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED &&
+				strcmp(diagnostic.action, expected_actions[action_index]) == 0) {
+				found = 1;
+			}
+		}
+		ANIXOPS_EXPECT_TRUE(found);
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void loon_hashbang_metadata_unsupported_keys_are_not_claimed(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.HashbangMetadata.Unsupported.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void quantumultx_common_config_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/QuantumultX.CommonConfig.snippet");
@@ -1864,6 +1953,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/loon_common_fields_strict_fixture_rejects_malformed_rule",
 		loon_common_fields_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_hashbang_metadata_fixture_records_tolerated_keys",
+		loon_hashbang_metadata_fixture_records_tolerated_keys);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_hashbang_metadata_unsupported_keys_are_not_claimed",
+		loon_hashbang_metadata_unsupported_keys_are_not_claimed);
 	add_test(
 		tests,
 		count,

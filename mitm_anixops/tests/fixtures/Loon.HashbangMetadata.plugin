@@ -1,0 +1,17 @@
+#!name = Loon Hashbang Metadata Fixture
+#!desc = Common hashbang metadata is tolerated as parser diagnostics.
+#!description = Longer metadata should not become policy-core behavior.
+#!author = AnixOps
+#!category = Utilities
+#!icon = https://assets.example/loon-hashbang.png
+#!homepage = https://docs.example/loon-hashbang
+#!date = 2026-07-08
+#!system = iOS
+#!requirement = Loon >= 3.0
+#!arguments-desc = Mode: fixture mode
+
+[Argument]
+Mode = select,prod
+
+[MITM]
+hostname = metadata.loon.test

@@ -23,6 +23,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define Quantumult X source contract for rewrite/task/mitm subsets.
 - [x] Define Surge module source contract for module metadata, scripts, MITM,
   and rewrite subsets.
+- [x] Add Loon hashbang metadata parser fixture and positive/negative tests.
 - [ ] Add one parser fixture and one positive/negative parser test per new
   grammar unit.
 - [ ] Extend compatibility matrix rows only after the corresponding CI test

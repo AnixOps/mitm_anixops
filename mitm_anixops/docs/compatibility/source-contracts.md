@@ -61,6 +61,40 @@ Unimplemented items:
 - cron/task trigger contract;
 - platform JS runtime beyond Alpha Node runner.
 
+### Loon Hashbang Metadata
+
+Detailed contract: [Loon Hashbang Metadata Source Contract](loon-hashbang-metadata.md).
+
+Capability: tolerate common Loon `#!` metadata without claiming runtime or
+platform UI behavior.
+
+Input form:
+
+- `#!name`, `#!desc`, `#!description`;
+- `#!author`, `#!category`, `#!icon`, `#!homepage`;
+- `#!date`, `#!system`, `#!requirement`, `#!arguments-desc`.
+
+Parser output:
+
+- ignored diagnostics with section `Plugin` and action equal to the metadata
+  key;
+- no MITM, rewrite, script, body, header, routing, certificate, or UI behavior
+  from metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.HashbangMetadata.plugin`;
+- negative fixture `tests/fixtures/Loon.HashbangMetadata.Unsupported.plugin`;
+- `config/loon_hashbang_metadata_fixture_records_tolerated_keys`;
+- `config/loon_hashbang_metadata_unsupported_keys_are_not_claimed`.
+
+Unimplemented items:
+
+- platform UI behavior for icons, homepages, external links, or install
+  prompts;
+- broader Loon metadata corpus;
+- first-class validation of unsupported metadata keys.
+
 ### Quantumult X Common Subset
 
 Detailed contract:

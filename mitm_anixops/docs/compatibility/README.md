@@ -34,6 +34,8 @@ corresponding tests.
   contracts.
 - [loon-plugin-common-fields.md](loon-plugin-common-fields.md): first P1 Loon
   common-fields parser contract.
+- [loon-hashbang-metadata.md](loon-hashbang-metadata.md): Loon `#!`
+  metadata tolerance contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
