@@ -11,6 +11,8 @@ release-dry-run-workflow=.github/workflows/release-dry-run.yml
 release-dry-run-publication=blocked
 release-dry-run-ci-gate=equivalent-full-check-in-workflow
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
+release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
+release-dry-run-windows-artifact=windows-x64-zip-with-checksum
 release-dry-run-next-action=keep-dry-run-non-publishing-while-tag-release-workflow-publishes-after-gates
 ```
 
@@ -34,8 +36,9 @@ The dry-run workflow supports:
 
 Tag-triggered artifact builds and GitHub Release asset publication are handled
 by `.github/workflows/release.yml`. Dry-run mode remains non-publishing and
-continues to prove the equivalent artifact, checksum, manifest, release-note,
-and rollback evidence without creating a GitHub Release.
+continues to prove the equivalent Linux x64 artifact, Windows x64 artifact,
+checksum, manifest, release-note, and rollback evidence without creating a
+GitHub Release.
 
 ## Required Jobs
 
@@ -63,7 +66,7 @@ The dry-run workflow includes these logical gates:
 
 ## Required Outputs
 
-The dry-run must output these fields before a tag release workflow is added:
+The dry-run must output these fields:
 
 ```text
 release_version
@@ -76,6 +79,10 @@ artifact_name
 artifact_path
 artifact_sha256
 artifact_sha256_file
+windows_artifact_name
+windows_artifact_path
+windows_artifact_sha256
+windows_artifact_sha256_file
 manifest_name
 manifest_path
 manifest_sha256
@@ -99,7 +106,7 @@ The dry-run must fail when:
 
 - version format is invalid;
 - run is not from `main`;
-- same-commit CI success cannot be proven;
+- the same-workflow CI gate fails;
 - artifact is missing, empty, or created outside the workflow;
 - checksum sidecar format is invalid;
 - manifest omits commit, version, artifact names, checksum values, or supported

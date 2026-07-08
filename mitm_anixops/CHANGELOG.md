@@ -167,6 +167,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   notes, and GitHub Step Summaries.
 - Added Windows x64 release artifact generation, checksum validation, and
   manifest coverage to the tag-triggered release workflow.
+- Added Windows x64 dry-run artifact generation, checksum validation, manifest
+  coverage, release notes, and Step Summary evidence to keep release dry-run
+  metadata aligned with the tag-triggered release artifact set.
 
 ### Changed
 

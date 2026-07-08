@@ -34,6 +34,15 @@ Current dry-run workflow: .github/workflows/release-dry-run.yml.
 
 Current release workflow: .github/workflows/release.yml.
 
+Current dry-run workflow status:
+
+```text
+release-dry-run-publication=blocked
+release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
+release-dry-run-windows-artifact=windows-x64-zip-with-checksum
+release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
+```
+
 Current CI workflow status:
 
 ```text

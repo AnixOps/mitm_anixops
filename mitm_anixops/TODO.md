@@ -160,3 +160,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   summaries.
 - [x] Add Windows x64 release artifact generation and checksum coverage to the
   tag-triggered release workflow.
+- [x] Align release dry-run Windows x64 artifact metadata with the
+  tag-triggered release artifact set.
