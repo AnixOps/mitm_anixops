@@ -39,14 +39,13 @@ Implemented:
   independent `Set-Cookie` fields.
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, header rewrite,
   `echo-response`, and request/response script actions.
-- Regex capture replacement with `$1`, `${1}`, and `\1`.
+- Regex capture replacement with `$1`, `${1}`, `\1`, `${name}`, and `$<name>`.
 - POSIX ERE regex matching with supported leading `(?i)`, `(?m)`, `(?s)`, and combined flag prefixes, PCRE shorthand classes
   `\d`, `\D`, `\w`, `\W`, `\s`, `\S`, `\h`, `\H`, `\v`, and `\V`, PCRE control escapes such as `\t`, PCRE hex
   byte escapes such as `\x2e`, PCRE Unicode escapes such as `\u00e9`, lazy quantifier suffixes normalized to greedy
   equivalents, plus PCRE absolute anchors `\A`, `\z`, and `\Z`.
 - PCRE non-capturing group syntax `(?:...)` for matching without consuming replacement capture indexes.
-- PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching, normalized as regular POSIX capturing
-  groups.
+- PCRE named capture group syntax `(?<name>...)` and `(?'name'...)` for matching and replacement.
 - PCRE quoted literal syntax `\Q...\E`, normalized as escaped POSIX ERE literal text.
 - Stable global regex replacement behavior for empty matches such as `^`, `$`, and lazy `.*?` normalization in body and
   header rewrite paths.
@@ -132,7 +131,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.45.1.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.45.2.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
@@ -142,7 +141,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.1/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.2/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:

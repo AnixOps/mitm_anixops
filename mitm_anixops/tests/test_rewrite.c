@@ -1656,6 +1656,70 @@ static void pcre_named_capture_groups_match_all_regex_contexts(void)
 	anixops_engine_free(engine);
 }
 
+static void named_capture_replacements_are_supported_all_regex_contexts(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_header_rewrite_result_t header;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://(?<host>api)\\.named\\.test/(?<item>[A-Za-z0-9]+)$ https://dest.test/${host}/$<item> 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://body\\.named\\.test request-body-replace-regex \"(?<key>token)=(?<value>[0-9]+)\" "
+			"\"${key}:$<value>\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://header\\.named\\.test response-header-replace-regex X-Test "
+			"\"(?'prefix'user)=(?<name>[A-Za-z]+)\" \"$<prefix>=${name}\""),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://api.named.test/item42",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/api/item42");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://body.named.test",
+			ANIXOPS_PHASE_REQUEST,
+			"token=42",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "token:42");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://header.named.test",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"user=Alice",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.value, "user=Alice");
+
+	anixops_engine_free(engine);
+}
+
 static void pcre_quoted_literals_match_all_regex_contexts(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -3077,6 +3141,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/pcre_named_capture_groups_match_all_regex_contexts",
 		pcre_named_capture_groups_match_all_regex_contexts);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/named_capture_replacements_are_supported_all_regex_contexts",
+		named_capture_replacements_are_supported_all_regex_contexts);
 	add_test(
 		tests,
 		count,

@@ -16,7 +16,7 @@ http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, timeout=4, max-si
 `
 
 func TestGoBindingEvaluatesPolicy(t *testing.T) {
-	if Version() != "0.45.1" {
+	if Version() != "0.45.2" {
 		t.Fatalf("Version() = %q", Version())
 	}
 	engine, err := NewEngine()

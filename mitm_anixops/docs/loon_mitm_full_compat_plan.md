@@ -405,7 +405,7 @@ int anixops_runtime_apply_plan(
 | --- | --- | --- | --- |
 | P0 | Abstraction | `anixops_regex_backend_t`，统一 URL/body/header/script regex | POSIX backend 现有测试全通过 |
 | P1 | PCRE2 | Alpha 可选 PCRE2 backend 已覆盖 lookaround/lookbehind 和 word boundary fixture；后续补 backreference、Unicode property 等完整矩阵 | PCRE2 feature matrix 通过 |
-| P1 | Replacement | `$1`、`${1}`、`\1`、named capture replacement 行为统一 | URL redirect、body regex、header regex 三类 golden test |
+| P1 | Replacement | Alpha 已统一 `$1`、`${1}`、`\1`、`${name}`、`$<name>` replacement 行为 | URL redirect、body regex、header regex 三类 golden test |
 | P1 | Empty match | Alpha 已固定 body/header global replace 对 `^`、`$`、`.*?` 空匹配的行为；`\b` 当前在 PCRE2 word-boundary fixture 覆盖 | `^`、`$`、`\b`、`.*?` fixture 通过 |
 | P2 | Darwin parity | NSRegularExpression/ICU 对照 runner | macOS/iOS adapter 声明支持前必须跑通 |
 | P2 | Safety | match timeout 或 backtracking budget | catastrophic regex fixture 不阻塞 runner |

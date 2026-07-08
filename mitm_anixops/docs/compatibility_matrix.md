@@ -46,7 +46,7 @@ features it understands.
 | Reject variants | Supported | `reject`, `reject-200`, numeric `reject-NNN`, `reject-img`, `reject-tinygif`, `reject-video`, `reject-dict`, `reject-array` |
 | Quantumult X `url`-prefixed redirect/reject/body/header/echo-response rewrites | Supported subset | `quantumultx_url_prefixed_rewrites_are_supported`, `quantumultx_echo_response_is_supported` |
 | Unsupported recognized ecosystem rewrite actions | Ignored for 0.x compatibility | `unsupported_recognized_rewrite_actions_are_ignored` |
-| Capture expansion | Supported subset | `$1`, `${1}`, and `\1` tests |
+| Capture expansion | Supported subset | `$1`, `${1}`, `\1`, `${name}`, and `$<name>` tests |
 | Leading `(?i)`, `(?m)`, `(?s)`, and combined regex prefixes | Supported subset | URL, body, header, and script regex tests |
 | PCRE shorthand classes `\d`, `\D`, `\w`, `\W`, `\s`, `\S` | Supported subset | URL, body, header, and script regex tests |
 | PCRE horizontal whitespace classes `\h`, `\H` | Supported subset | URL, body, header, and script regex test |
@@ -57,7 +57,7 @@ features it understands.
 | PCRE lazy quantifier suffixes `*?`, `+?`, `??`, `{m,n}?` | Supported as greedy equivalents | URL, body, header, and script regex test |
 | PCRE absolute anchors `\A`, `\z`, `\Z` | Supported subset | URL, body, header, and script regex test |
 | PCRE non-capturing groups `(?:...)` | Supported without replacement capture numbering side effects | URL, body, header, and script regex test |
-| PCRE named capture groups `(?<name>...)`, `(?'name'...)` | Supported as regular capturing groups | URL, body, header, and script regex test |
+| PCRE named capture groups `(?<name>...)`, `(?'name'...)` | Supported for matching and replacement | URL, body, header, and script regex test; named replacement golden test |
 | PCRE quoted literals `\Q...\E` | Supported subset | URL, body, header, and script regex test |
 | Empty regex replacement matches | Supported subset | Body/header global replacement tests cover `^`, `$`, and lazy `.*?` normalization without repeated anchor replacement |
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` and chain-capable `anixops_rewrite_apply_body_chain` |
