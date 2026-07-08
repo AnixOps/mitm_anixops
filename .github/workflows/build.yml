@@ -88,6 +88,8 @@ jobs:
             mitm_anixops/tests/fixtures/Stash.HttpMitm.yaml
             mitm_anixops/tests/fixtures/Stash.HttpMitm.Malformed.yaml
             mitm_anixops/tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml
+            mitm_anixops/tests/fixtures/Stash.HttpForceHttpEngine.yaml
+            mitm_anixops/tests/fixtures/Stash.HttpForceHttpEngine.Malformed.yaml
             mitm_anixops/tests/fixtures/Stash.MigrationGuard.yaml
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
@@ -257,13 +259,20 @@ jobs:
           grep -q "Stash.HttpMitm.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash.HttpMitm.Malformed.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Stash.HttpMitm.PortSpecificUnsupported.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash.HttpForceHttpEngine.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash.HttpForceHttpEngine.Malformed.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/stash_http_mitm_fixture_exposes_host_patterns" mitm_anixops/tests/test_config.c
           grep -q "config/stash_http_mitm_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "config/stash_http_mitm_port_specific_fixture_stays_unsupported" mitm_anixops/tests/test_config.c
+          grep -q "config/stash_http_force_http_engine_fixture_exposes_quic_signal" mitm_anixops/tests/test_config.c
+          grep -q "config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Stash HTTP MITM host parser fixtures" mitm_anixops/TODO.md
           grep -Fq "weather-data.port-stash.test:*" mitm_anixops/tests/fixtures/Stash.HttpMitm.yaml
           grep -Fq 'host:*` port-wildcard' mitm_anixops/docs/compatibility/stash-http-mitm.md
           grep -q "^- \\[x\\] Normalize Stash HTTP MITM .*port-wildcard entries" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Stash HTTP .*force-http-engine.*parser fixtures" mitm_anixops/TODO.md
+          grep -q "force-http-engine: true" mitm_anixops/tests/fixtures/Stash.HttpForceHttpEngine.yaml
+          grep -q "force-http-engine boolean" mitm_anixops/tests/test_config.c
           grep -q "Shadowrocket common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket Common Config Source Contract" mitm_anixops/docs/compatibility/shadowrocket-common-config.md
           grep -q "Shadowrocket.CommonConfig.conf" mitm_anixops/docs/compatibility/matrix.md

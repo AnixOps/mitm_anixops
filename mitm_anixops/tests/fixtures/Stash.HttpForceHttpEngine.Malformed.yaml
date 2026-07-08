@@ -1,0 +1,5 @@
+# Stash malformed force-http-engine fixture.
+http:
+  force-http-engine: maybe
+  mitm:
+    - should-not-load.force-http-engine.stash.test

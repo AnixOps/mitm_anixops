@@ -124,6 +124,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   gates pass.
 - Added a manual-intervention register schema check and wired it into the full
   GitHub Actions gate.
+- Added Stash `http.force-http-engine` parser fixtures and CI-covered tests as
+  an adapter-visible QUIC fallback signal without claiming HTTP engine runtime
+  behavior.
 
 ### Changed
 

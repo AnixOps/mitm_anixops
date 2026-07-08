@@ -1,0 +1,5 @@
+# Stash HTTP force-http-engine fixture: adapter-visible QUIC fallback signal only.
+http:
+  force-http-engine: true
+  mitm:
+    - quic.force-http-engine.stash.test

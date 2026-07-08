@@ -1789,6 +1789,85 @@ static void stash_http_mitm_port_specific_fixture_stays_unsupported(void)
 	free(fixture);
 }
 
+static void stash_http_force_http_engine_fixture_exposes_quic_signal(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Stash.HttpForceHttpEngine.yaml");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	anixops_engine_set_disable_quic_for_mitm(engine, 0);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "force-http-engine");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "stash mitm option accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 5);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "mitm");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "quic.force-http-engine.stash.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "quic.force-http-engine.stash.test", 1, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_REJECT_QUIC);
+	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_QUIC_DISABLED_FOR_MITM);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "quic.force-http-engine.stash.test");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Stash.HttpForceHttpEngine.Malformed.yaml");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "force-http-engine");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "force-http-engine boolean") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 3);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "force-http-engine boolean") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void stash_migration_guard_fixture_stays_parser_unsupported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Stash.MigrationGuard.yaml");
@@ -3697,6 +3776,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/stash_http_mitm_port_specific_fixture_stays_unsupported",
 		stash_http_mitm_port_specific_fixture_stays_unsupported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/stash_http_force_http_engine_fixture_exposes_quic_signal",
+		stash_http_force_http_engine_fixture_exposes_quic_signal);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool",
+		stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool);
 	add_test(
 		tests,
 		count,

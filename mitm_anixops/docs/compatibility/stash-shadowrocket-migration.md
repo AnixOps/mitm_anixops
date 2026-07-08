@@ -14,6 +14,7 @@ stash-app-profile-mode=migration-guard-only
 shadowrocket-common-config-mode=partial-parser-support
 shadowrocket-app-profile-mode=migration-guard-only
 stash-http-mitm-fixtures=positive-and-negative-parser-fixtures
+stash-http-force-http-engine-fixtures=positive-and-negative-parser-fixtures
 stash-app-profile-fixtures=migration-guard-only
 shadowrocket-app-profile-fixtures=migration-guard-only
 shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures
@@ -62,6 +63,8 @@ Allowed statements:
 - Stash is a migration target.
 - Stash `http.mitm` has partial parser support for documented MITM host lists,
   including host-only normalization for `host:*` port-wildcard entries.
+- Stash `http.force-http-engine` has parser support as an adapter-visible QUIC
+  fallback decision signal.
 - Shadowrocket app-level profile syntax remains a migration target outside the
   common-config contract.
 - Shadowrocket common config has partial parser support for documented URL
@@ -75,7 +78,7 @@ Forbidden statements:
 
 - Full Stash parser support is implemented.
 - Stash `rules`, `proxies`, DNS, routing, UI, cron, script runtime, or
-  `force-http-engine` behavior is implemented.
+  transport-level HTTP engine behavior is implemented.
 - Full Shadowrocket parser support is implemented.
 - Shadowrocket `[General]`, `[Rule]`, `[Proxy]`, DNS, routing, profile UI, or
   proxy-node behavior is implemented.
@@ -90,6 +93,8 @@ Current CI evidence:
 - `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
 - `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
+- `config/stash_http_force_http_engine_fixture_exposes_quic_signal`;
+- `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_common_config_fixture_is_supported`;
 - `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
@@ -113,6 +118,8 @@ Expected Stash HTTP MITM behavior:
 - `host:*` entries expose host-only matched patterns because port-specific MITM
   decisions are adapter-owned;
 - `host:443` entries remain unsupported and do not register MITM host patterns;
+- `force-http-engine: true` is parsed only as the existing QUIC fallback
+  policy-core decision signal for matched trusted hosts;
 - no rewrite rules, script rules, task descriptors, route policies, proxy
   nodes, DNS settings, or argument defaults are registered;
 - malformed `http.mitm` host entries reject with parse diagnostics.

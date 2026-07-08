@@ -511,9 +511,12 @@ Input form:
 Parser output:
 
 - accepted diagnostics with section `MITM` and action `mitm`;
+- accepted diagnostics with section `MITM` and action `force-http-engine`;
 - host patterns visible through `anixops_engine_mitm_pattern_count`;
 - existing MITM evaluation semantics for exact, wildcard, deny, and normalized
   `host:*` inputs;
+- `force-http-engine: true` visible as the existing QUIC fallback policy-core
+  decision signal for matched trusted hosts;
 - no rewrite, script, task, argument, route, proxy, DNS, certificate lifecycle,
   or platform UI behavior from Stash YAML input.
 
@@ -523,9 +526,14 @@ Current CI evidence:
 - negative fixture `tests/fixtures/Stash.HttpMitm.Malformed.yaml`;
 - unsupported port-specific fixture
   `tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml`;
+- positive option fixture `tests/fixtures/Stash.HttpForceHttpEngine.yaml`;
+- negative option fixture
+  `tests/fixtures/Stash.HttpForceHttpEngine.Malformed.yaml`;
 - `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
 - `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
+- `config/stash_http_force_http_engine_fixture_exposes_quic_signal`;
+- `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported` continues to
   guard unsupported Stash app-profile routing syntax.
 
@@ -533,8 +541,8 @@ Unimplemented items:
 
 - full YAML parser behavior;
 - port-specific MITM matching such as `host:443`;
-- `force-http-engine`, `url-rewrite`, script, cron, DNS, routing, proxy, and UI
-  behavior;
+- transport-level HTTP engine behavior, `url-rewrite`, script, cron, DNS,
+  routing, proxy, and UI behavior;
 - certificate lifecycle and platform trust handling.
 
 ### Shadowrocket Common Config Subset

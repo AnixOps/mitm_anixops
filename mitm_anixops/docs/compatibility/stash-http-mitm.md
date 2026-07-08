@@ -1,6 +1,7 @@
 # Stash HTTP MITM Source Contract
 
-Capability: Stash `http.mitm` host policy metadata.
+Capability: Stash `http.mitm` host policy metadata and `force-http-engine`
+option metadata.
 
 Ecosystem: `stash`.
 
@@ -9,8 +10,9 @@ Status: `partial`.
 ## Purpose
 
 This contract establishes the first Stash parser-supported subset for the
-v1.0.0 compatibility matrix. It covers only the host policy metadata that maps
-directly onto the policy-core MITM hostname matcher.
+v1.0.0 compatibility matrix. It covers only host policy metadata that maps
+directly onto the policy-core MITM hostname matcher and the
+`force-http-engine` boolean option as an adapter-visible QUIC fallback signal.
 
 The source form is based on the Stash configuration example, which models HTTP
 settings under a top-level `http:` YAML mapping and includes an `http.mitm`
@@ -28,6 +30,7 @@ The parser accepts this narrow YAML shape:
 
 ```yaml
 http:
+  force-http-engine: true
   mitm:
     - stash.example.test
     - "*.stash.example.test"
@@ -38,6 +41,7 @@ http:
 Supported forms:
 
 - top-level `http:`;
+- `http.force-http-engine: true|false`;
 - nested `mitm:`;
 - list scalar host patterns below `mitm`;
 - exact host patterns;
@@ -50,7 +54,6 @@ Supported forms:
 Unsupported forms remain ignored or outside this contract:
 
 - port-specific matching such as `host:443`;
-- Stash `force-http-engine`;
 - `url-rewrite`, `script`, `cron`, `rules`, `proxies`, DNS, and routing keys;
 - anchors, aliases, folded scalars, inline arrays, maps, or arbitrary YAML
   expressions.
@@ -61,6 +64,10 @@ For valid `http.mitm` list entries, the parser must:
 
 - register MITM hostname patterns through the existing policy-core host store;
 - emit accepted diagnostics with section `MITM` and action `mitm`;
+- emit accepted diagnostics with section `MITM` and action
+  `force-http-engine` for the boolean option;
+- map `force-http-engine: true` to the existing QUIC fallback decision signal
+  (`ANIXOPS_MITM_REJECT_QUIC`) for matched, trusted MITM hosts;
 - preserve existing exact, wildcard, deny-host, and normalized `host:*` MITM
   evaluation behavior;
 - avoid registering rewrite rules, script rules, task descriptors, arguments,
@@ -75,6 +82,7 @@ Parser case:
 
 ```text
 tests/fixtures/Stash.HttpMitm.yaml
+tests/fixtures/Stash.HttpForceHttpEngine.yaml
 ```
 
 Expected behavior:
@@ -82,6 +90,9 @@ Expected behavior:
 - config load succeeds;
 - four MITM host patterns are registered;
 - `host:*` input is normalized to the host-only matched pattern;
+- `force-http-engine: true` is accepted as adapter-visible metadata and causes
+  QUIC evaluation for a matched trusted host to return the existing reject-QUIC
+  policy-core decision;
 - no rewrite, script, task, or argument entries are registered;
 - exact and wildcard hosts can be intercepted only after the adapter supplies
   enabled MITM and trusted certificate state;
@@ -94,6 +105,7 @@ Parser case:
 ```text
 tests/fixtures/Stash.HttpMitm.Malformed.yaml
 tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml
+tests/fixtures/Stash.HttpForceHttpEngine.Malformed.yaml
 ```
 
 Expected behavior:
@@ -104,6 +116,9 @@ Expected behavior:
 - last error reports invalid MITM hostname context at the malformed line.
 - port-specific `host:443` input loads as unsupported syntax, does not register
   any MITM host pattern, and records an ignored diagnostic.
+- malformed `force-http-engine` values fail with `ANIXOPS_ERR_PARSE`, do not
+  register later MITM hosts, and record a rejected diagnostic with action
+  `force-http-engine`.
 
 ## Runtime And Security Boundary
 
@@ -113,6 +128,8 @@ Stash `http.mitm` parser support must not:
 - decrypt traffic for non-target hostnames;
 - enable MITM without adapter-provided enabled and trusted certificate state;
 - parse or execute Stash scripts;
+- implement a Stash HTTP engine or transport fallback outside the existing
+  policy-core QUIC decision signal;
 - change DNS, routing, proxy, TUN, VPN, or packet-capture behavior;
 - log sensitive headers or body content.
 
@@ -129,6 +146,10 @@ Required CI evidence:
   `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
 - `tests/test_config.c` registers
   `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
+- `tests/test_config.c` registers
+  `config/stash_http_force_http_engine_fixture_exposes_quic_signal`;
+- `tests/test_config.c` registers
+  `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
 - `tests/test_config.c` keeps
   `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
@@ -141,7 +162,8 @@ Row:
 Stash HTTP MITM hosts
 ```
 
-The row remains `partial` because only the `http.mitm` host-policy subset is
-covered. Full Stash YAML profiles, port-specific matching, `rules`, `proxies`,
-DNS, routing, `force-http-engine`, `url-rewrite`, scripts, cron, UI, and
-certificate lifecycle behavior remain unimplemented.
+The row remains `partial` because only the `http.mitm` host-policy subset and
+`force-http-engine` option metadata are covered. Full Stash YAML profiles,
+port-specific matching, `rules`, `proxies`, DNS, routing, transport-level HTTP
+engine behavior, `url-rewrite`, scripts, cron, UI, and certificate lifecycle
+behavior remain unimplemented.

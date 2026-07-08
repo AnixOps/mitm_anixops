@@ -194,11 +194,13 @@ static int anixops_regex_backend_is_valid(anixops_regex_backend_t backend);
 static void anixops_trim_inplace(char *value);
 static void anixops_lower_inplace(char *value);
 static int anixops_parse_bool(const char *value);
+static int anixops_parse_strict_bool(const char *value, int *out_value);
 static int anixops_parse_bool_or_nonempty_flag(const char *value);
 static int anixops_parse_size_value(const char *value, size_t *out_value);
 static int anixops_parse_timeout_seconds_value(const char *value, size_t *out_ms);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
 static int anixops_yaml_mapping_key_is_empty(const char *line, const char *key);
+static int anixops_yaml_extract_mapping_scalar(const char *line, const char *key, char *out, size_t out_cap);
 static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap);
 static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap);
 static int anixops_is_rewrite_section(const char *key);
@@ -814,6 +816,50 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 						cursor = line_end + 1;
 						line_no++;
 						continue;
+					}
+					{
+						char option_value[ANIXOPS_PATTERN_CAP];
+						int force_http_engine = 0;
+						if (anixops_yaml_extract_mapping_scalar(
+								raw,
+								"force-http-engine",
+								option_value,
+								sizeof(option_value))) {
+							if (!anixops_parse_strict_bool(option_value, &force_http_engine)) {
+								anixops_set_diagnostic(
+									engine,
+									ANIXOPS_ERR_PARSE,
+									line_no,
+									"invalid force-http-engine boolean value");
+								(void)anixops_add_rule_diagnostic(
+									engine,
+									ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
+									line_no,
+									ANIXOPS_SECTION_MITM,
+									"force-http-engine",
+									engine->last_error_message);
+								return anixops_config_line_error(engine, ANIXOPS_ERR_PARSE, line_no, line);
+							}
+							engine->disable_quic_for_mitm = force_http_engine;
+							if (anixops_add_rule_diagnostic(
+									engine,
+									ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
+									line_no,
+									ANIXOPS_SECTION_MITM,
+									"force-http-engine",
+									"stash mitm option accepted") != ANIXOPS_OK) {
+								free(line);
+								return ANIXOPS_ERR_OUT_OF_MEMORY;
+							}
+							stash_http_mitm_list = 0;
+							free(line);
+							if (line_end == NULL) {
+								break;
+							}
+							cursor = line_end + 1;
+							line_no++;
+							continue;
+						}
 					}
 					if (strchr(raw, ':') != NULL) {
 						stash_http_mitm_list = 0;
@@ -3657,6 +3703,28 @@ static int anixops_parse_bool(const char *value)
 		strcmp(value, "1") == 0;
 }
 
+static int anixops_parse_strict_bool(const char *value, int *out_value)
+{
+	if (value == NULL || out_value == NULL) {
+		return 0;
+	}
+	if (strcasecmp(value, "true") == 0 ||
+		strcasecmp(value, "yes") == 0 ||
+		strcasecmp(value, "on") == 0 ||
+		strcmp(value, "1") == 0) {
+		*out_value = 1;
+		return 1;
+	}
+	if (strcasecmp(value, "false") == 0 ||
+		strcasecmp(value, "no") == 0 ||
+		strcasecmp(value, "off") == 0 ||
+		strcmp(value, "0") == 0) {
+		*out_value = 0;
+		return 1;
+	}
+	return 0;
+}
+
 static int anixops_parse_bool_or_nonempty_flag(const char *value)
 {
 	if (value == NULL) {
@@ -3753,6 +3821,50 @@ static int anixops_yaml_mapping_key_is_empty(const char *line, const char *key)
 		rest++;
 	}
 	return *rest == '\0' || *rest == '#';
+}
+
+static int anixops_yaml_extract_mapping_scalar(const char *line, const char *key, char *out, size_t out_cap)
+{
+	const char *colon;
+	size_t key_len;
+	size_t i;
+	char quote = '\0';
+	if (line == NULL || key == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	colon = strchr(line, ':');
+	if (colon == NULL) {
+		return 0;
+	}
+	key_len = strlen(key);
+	if ((size_t)(colon - line) != key_len || strncasecmp(line, key, key_len) != 0) {
+		return 0;
+	}
+	anixops_copy_text(out, out_cap, colon + 1);
+	anixops_trim_inplace(out);
+	for (i = 0; out[i] != '\0'; i++) {
+		if (quote != '\0') {
+			if (out[i] == '\\' && out[i + 1] != '\0') {
+				i++;
+			}
+			else if (out[i] == quote) {
+				quote = '\0';
+			}
+			continue;
+		}
+		if (out[i] == '"' || out[i] == '\'') {
+			quote = out[i];
+			continue;
+		}
+		if (out[i] == '#' && (i == 0 || isspace((unsigned char)out[i - 1]))) {
+			out[i] = '\0';
+			break;
+		}
+	}
+	anixops_trim_inplace(out);
+	anixops_unquote_inplace(out);
+	anixops_trim_inplace(out);
+	return out[0] != '\0';
 }
 
 static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap)
