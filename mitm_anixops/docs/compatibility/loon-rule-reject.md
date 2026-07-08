@@ -1,6 +1,7 @@
 # Loon Rule Reject Source Contract
 
-Capability: Loon `[Rule]` exact-domain and domain-suffix reject policy intent.
+Capability: Loon `[Rule]` exact-domain, domain-keyword, and domain-suffix
+reject policy intent.
 
 Ecosystem: `loon`.
 
@@ -8,9 +9,10 @@ Status: `partial`.
 
 ## Purpose
 
-This contract fixes Loon `[Rule]` parser evidence for high-frequency exact-domain
-and domain-suffix reject policy intent. It maps only documented reject rules to
-the existing request-phase policy-core rewrite reject decision.
+This contract fixes Loon `[Rule]` parser evidence for high-frequency
+exact-domain, domain-keyword, and domain-suffix reject policy intent. It maps
+only documented reject rules to the existing request-phase policy-core rewrite
+reject decision.
 
 It does not implement Loon routing, proxy selection, DNS, rule provider,
 packet-level behavior, or profile UI behavior.
@@ -24,13 +26,16 @@ DOMAIN-SUFFIX,ads.example.test,REJECT-200
 DOMAIN-SUFFIX,media.example.test,REJECT-IMG
 DOMAIN,exact.example.test,REJECT
 DOMAIN,media.example.test,REJECT-IMG
+DOMAIN-KEYWORD,tracking,REJECT-200
+DOMAIN-KEYWORD,media-keyword,REJECT-IMG
 ```
 
 Supported fields:
 
 - `DOMAIN` exact-host rule type;
+- `DOMAIN-KEYWORD` host substring rule type;
 - `DOMAIN-SUFFIX` rule type;
-- a valid exact hostname or hostname suffix;
+- a valid exact hostname, hostname suffix, or host keyword;
 - `REJECT`, `REJECT-200`, `REJECT-NNN`, `REJECT-IMG`, `REJECT-VIDEO`,
   `REJECT-DICT`, and `REJECT-ARRAY` actions already supported by the common
   rewrite parser.
@@ -38,13 +43,13 @@ Supported fields:
 Unsupported or unclaimed Loon `[Rule]` forms remain route or adapter owned:
 
 - `DIRECT`, `PROXY`, proxy group names, route policy names, and `no-resolve`;
-- `URL-REGEX`, `DOMAIN-KEYWORD`, `FINAL`, `IP-CIDR`, `GEOIP`, and DNS/network
-  routing matchers;
+- `URL-REGEX`, `FINAL`, `IP-CIDR`, `GEOIP`, and DNS/network routing matchers;
 - Loon rule-provider refresh, subscription, UI, or packet-routing behavior.
 
 ## Parser Output
 
-For supported `DOMAIN` and `DOMAIN-SUFFIX` reject rules, the parser must:
+For supported `DOMAIN`, `DOMAIN-KEYWORD`, and `DOMAIN-SUFFIX` reject rules, the
+parser must:
 
 - register request-phase rewrite reject rules through the existing policy-core
   rewrite store;
@@ -54,8 +59,8 @@ For supported `DOMAIN` and `DOMAIN-SUFFIX` reject rules, the parser must:
 - keep unsupported route-selection rules ignored without registering rewrite,
   script, MITM, task, argument, DNS, proxy-node, or route behavior.
 
-Malformed supported `DOMAIN` and `DOMAIN-SUFFIX` reject rules are rejected when
-the hostname is invalid.
+Malformed supported `DOMAIN`, `DOMAIN-KEYWORD`, and `DOMAIN-SUFFIX` reject rules
+are rejected when the hostname or keyword is invalid.
 
 ## Positive Case
 
@@ -64,6 +69,7 @@ Parser case:
 ```text
 tests/fixtures/Loon.RuleDomainReject.plugin
 tests/fixtures/Loon.RuleDomainExactReject.plugin
+tests/fixtures/Loon.RuleDomainKeywordReject.plugin
 ```
 
 Expected behavior:
@@ -78,6 +84,11 @@ Expected behavior:
 - one `DOMAIN` direct route remains ignored;
 - exact-host request-phase URL evaluation returns the expected reject actions;
 - subdomains do not match exact-host rules;
+- two `DOMAIN-KEYWORD` host-substring reject rules are registered in the
+  keyword fixture;
+- one `DOMAIN-KEYWORD` direct route remains ignored;
+- matching hostnames return the expected reject actions;
+- path-only keyword occurrences do not match host keyword rules;
 - unrelated hostnames do not match;
 - response-phase URL evaluation does not trigger the request-phase rule.
 
@@ -88,6 +99,7 @@ Parser case:
 ```text
 tests/fixtures/Loon.RuleDomainReject.Malformed.plugin
 tests/fixtures/Loon.RuleDomainExactReject.Malformed.plugin
+tests/fixtures/Loon.RuleDomainKeywordReject.Malformed.plugin
 ```
 
 Expected behavior:
@@ -127,6 +139,10 @@ Required CI evidence:
   `config/loon_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;
 - `tests/test_config.c` registers
   `config/loon_rule_domain_exact_reject_malformed_fixture_rejects_invalid_domain`;
+- `tests/test_config.c` registers
+  `config/loon_rule_domain_keyword_reject_fixture_maps_domain_keyword_rejects`;
+- `tests/test_config.c` registers
+  `config/loon_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -137,7 +153,7 @@ Row:
 Loon rule reject policy intent
 ```
 
-The row remains `partial` because only `DOMAIN` and `DOMAIN-SUFFIX` reject
-policy intent is covered. Direct/proxy route selection, proxy groups, DNS, rule
-providers, app-level profile UI, and platform networking behavior remain
-unimplemented.
+The row remains `partial` because only `DOMAIN`, `DOMAIN-KEYWORD`, and
+`DOMAIN-SUFFIX` reject policy intent is covered. Direct/proxy route selection,
+proxy groups, DNS, rule providers, app-level profile UI, and platform networking
+behavior remain unimplemented.

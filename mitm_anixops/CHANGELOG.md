@@ -150,6 +150,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   while keeping direct/proxy route selection adapter-owned.
 - Added Loon `[Rule]` DOMAIN reject parser fixtures and CI-covered tests while
   keeping direct/proxy route selection adapter-owned.
+- Added Loon `[Rule]` DOMAIN-KEYWORD reject parser fixtures and CI-covered
+  tests while keeping direct/proxy route selection adapter-owned.
 
 ### Changed
 

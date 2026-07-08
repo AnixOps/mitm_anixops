@@ -1,0 +1,5 @@
+# Loon rule domain-keyword reject fixture.
+[Rule]
+DOMAIN-KEYWORD,tracking-loon,REJECT-200
+DOMAIN-KEYWORD,media-keyword-loon,REJECT-IMG
+DOMAIN-KEYWORD,tracking-loon,DIRECT
