@@ -1,0 +1,137 @@
+# Stash HTTP MITM Source Contract
+
+Capability: Stash `http.mitm` host policy metadata.
+
+Ecosystem: `stash`.
+
+Status: `partial`.
+
+## Purpose
+
+This contract establishes the first Stash parser-supported subset for the
+v1.0.0 compatibility matrix. It covers only the host policy metadata that maps
+directly onto the policy-core MITM hostname matcher.
+
+The source form is based on the Stash configuration example, which models HTTP
+settings under a top-level `http:` YAML mapping and includes an `http.mitm`
+host list:
+
+```text
+https://stash.wiki/en/configuration/example-config
+```
+
+This is not a general YAML parser contract.
+
+## Input Forms
+
+The parser accepts this narrow YAML shape:
+
+```yaml
+http:
+  mitm:
+    - stash.example.test
+    - "*.stash.example.test"
+    - -blocked.stash.example.test
+```
+
+Supported forms:
+
+- top-level `http:`;
+- nested `mitm:`;
+- list scalar host patterns below `mitm`;
+- exact host patterns;
+- wildcard host patterns already accepted by the policy core;
+- deny host patterns using the existing `-host` marker after the YAML list
+  marker.
+
+Unsupported forms remain ignored or outside this contract:
+
+- port-qualified host patterns such as `host:*`;
+- Stash `force-http-engine`;
+- `url-rewrite`, `script`, `cron`, `rules`, `proxies`, DNS, and routing keys;
+- anchors, aliases, folded scalars, inline arrays, maps, or arbitrary YAML
+  expressions.
+
+## Parser Output
+
+For valid `http.mitm` list entries, the parser must:
+
+- register MITM hostname patterns through the existing policy-core host store;
+- emit accepted diagnostics with section `MITM` and action `mitm`;
+- preserve existing exact, wildcard, and deny-host MITM evaluation behavior;
+- avoid registering rewrite rules, script rules, task descriptors, arguments,
+  route policies, proxy nodes, DNS settings, or certificate lifecycle behavior.
+
+Malformed host entries are rejected when the parser recognizes an `http.mitm`
+list entry but the host pattern is invalid.
+
+## Positive Case
+
+Parser case:
+
+```text
+tests/fixtures/Stash.HttpMitm.yaml
+```
+
+Expected behavior:
+
+- config load succeeds;
+- three MITM host patterns are registered;
+- no rewrite, script, task, or argument entries are registered;
+- exact and wildcard hosts can be intercepted only after the adapter supplies
+  enabled MITM and trusted certificate state;
+- deny hosts bypass with the existing deny-host reason.
+
+## Negative Case
+
+Parser case:
+
+```text
+tests/fixtures/Stash.HttpMitm.Malformed.yaml
+```
+
+Expected behavior:
+
+- config load fails with `ANIXOPS_ERR_PARSE`;
+- no MITM host patterns are registered;
+- a rejected diagnostic is recorded with section `MITM` and action `mitm`;
+- last error reports invalid MITM hostname context at the malformed line.
+
+## Runtime And Security Boundary
+
+Stash `http.mitm` parser support must not:
+
+- install, trust, generate, rotate, revoke, or persist certificates;
+- decrypt traffic for non-target hostnames;
+- enable MITM without adapter-provided enabled and trusted certificate state;
+- parse or execute Stash scripts;
+- change DNS, routing, proxy, TUN, VPN, or packet-capture behavior;
+- log sensitive headers or body content.
+
+Certificate lifecycle and platform trust remain adapter/manual-intervention
+responsibilities.
+
+## CI Evidence
+
+Required CI evidence:
+
+- `tests/test_config.c` registers
+  `config/stash_http_mitm_fixture_exposes_host_patterns`;
+- `tests/test_config.c` registers
+  `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
+- `tests/test_config.c` keeps
+  `config/stash_migration_guard_fixture_stays_parser_unsupported`;
+- GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
+
+## Compatibility Matrix Row
+
+Row:
+
+```text
+Stash HTTP MITM hosts
+```
+
+The row remains `partial` because only the `http.mitm` host-policy subset is
+covered. Full Stash YAML profiles, `rules`, `proxies`, DNS, routing,
+`force-http-engine`, `url-rewrite`, scripts, cron, UI, and certificate
+lifecycle behavior remain unimplemented.

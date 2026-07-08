@@ -198,6 +198,8 @@ static int anixops_parse_bool_or_nonempty_flag(const char *value);
 static int anixops_parse_size_value(const char *value, size_t *out_value);
 static int anixops_parse_timeout_seconds_value(const char *value, size_t *out_ms);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
+static int anixops_yaml_mapping_key_is_empty(const char *line, const char *key);
+static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap);
 static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap);
 static int anixops_is_rewrite_section(const char *key);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
@@ -749,6 +751,8 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 	const char *cursor;
 	size_t line_no = 1;
 	anixops_config_section_t section = ANIXOPS_SECTION_NONE;
+	int stash_http_section = 0;
+	int stash_http_mitm_list = 0;
 
 	if (engine == NULL || config_text == NULL) {
 		if (engine != NULL) {
@@ -777,6 +781,78 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 		}
 		if (line[0] != '\0' && line[strlen(line) - 1] == '\r') {
 			line[strlen(line) - 1] = '\0';
+		}
+		{
+			size_t raw_indent = 0;
+			char *raw;
+			while (line[raw_indent] == ' ') {
+				raw_indent++;
+			}
+			raw = line + raw_indent;
+			if (raw[0] != '\0' && raw[0] != '#') {
+				if (raw_indent == 0) {
+					stash_http_section = anixops_yaml_mapping_key_is_empty(raw, "http");
+					stash_http_mitm_list = 0;
+					if (stash_http_section) {
+						section = ANIXOPS_SECTION_NONE;
+						free(line);
+						if (line_end == NULL) {
+							break;
+						}
+						cursor = line_end + 1;
+						line_no++;
+						continue;
+					}
+				}
+				else if (stash_http_section && raw_indent == 2) {
+					if (anixops_yaml_mapping_key_is_empty(raw, "mitm")) {
+						stash_http_mitm_list = 1;
+						free(line);
+						if (line_end == NULL) {
+							break;
+						}
+						cursor = line_end + 1;
+						line_no++;
+						continue;
+					}
+					if (strchr(raw, ':') != NULL) {
+						stash_http_mitm_list = 0;
+					}
+				}
+				if (stash_http_section && stash_http_mitm_list && raw_indent >= 4) {
+					char host_pattern[ANIXOPS_PATTERN_CAP];
+					if (anixops_yaml_extract_list_scalar(raw, host_pattern, sizeof(host_pattern))) {
+						int rc = anixops_engine_add_mitm_hostname(engine, host_pattern);
+						if (rc != ANIXOPS_OK) {
+							(void)anixops_add_rule_diagnostic(
+								engine,
+								ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
+								line_no,
+								ANIXOPS_SECTION_MITM,
+								"mitm",
+								engine->last_error_message);
+							return anixops_config_line_error(engine, rc, line_no, line);
+						}
+						if (anixops_add_rule_diagnostic(
+								engine,
+								ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
+								line_no,
+								ANIXOPS_SECTION_MITM,
+								"mitm",
+								"stash mitm hostname accepted") != ANIXOPS_OK) {
+							free(line);
+							return ANIXOPS_ERR_OUT_OF_MEMORY;
+						}
+						free(line);
+						if (line_end == NULL) {
+							break;
+						}
+						cursor = line_end + 1;
+						line_no++;
+						continue;
+					}
+				}
+			}
 		}
 		anixops_trim_inplace(line);
 		len = strlen(line);
@@ -3654,6 +3730,71 @@ static int anixops_starts_with_ci(const char *value, const char *prefix)
 {
 	size_t prefix_len = strlen(prefix);
 	return strncasecmp(value, prefix, prefix_len) == 0;
+}
+
+static int anixops_yaml_mapping_key_is_empty(const char *line, const char *key)
+{
+	const char *colon;
+	const char *rest;
+	size_t key_len;
+	if (line == NULL || key == NULL) {
+		return 0;
+	}
+	colon = strchr(line, ':');
+	if (colon == NULL) {
+		return 0;
+	}
+	key_len = strlen(key);
+	if ((size_t)(colon - line) != key_len || strncasecmp(line, key, key_len) != 0) {
+		return 0;
+	}
+	rest = colon + 1;
+	while (*rest != '\0' && isspace((unsigned char)*rest)) {
+		rest++;
+	}
+	return *rest == '\0' || *rest == '#';
+}
+
+static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap)
+{
+	char *p;
+	char quote = '\0';
+	size_t i;
+	if (line == NULL || out == NULL || out_cap == 0 || line[0] != '-') {
+		return 0;
+	}
+	if (line[1] != '\0' && !isspace((unsigned char)line[1])) {
+		return 0;
+	}
+	anixops_copy_text(out, out_cap, line + 1);
+	anixops_trim_inplace(out);
+	for (i = 0; out[i] != '\0'; i++) {
+		if (quote != '\0') {
+			if (out[i] == '\\' && out[i + 1] != '\0') {
+				i++;
+			}
+			else if (out[i] == quote) {
+				quote = '\0';
+			}
+			continue;
+		}
+		if (out[i] == '"' || out[i] == '\'') {
+			quote = out[i];
+			continue;
+		}
+		if (out[i] == '#' && (i == 0 || isspace((unsigned char)out[i - 1]))) {
+			out[i] = '\0';
+			break;
+		}
+	}
+	anixops_trim_inplace(out);
+	anixops_unquote_inplace(out);
+	for (p = out; *p != '\0'; p++) {
+		if (*p == ':') {
+			return 0;
+		}
+	}
+	return out[0] != '\0';
 }
 
 static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap)

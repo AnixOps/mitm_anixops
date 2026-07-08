@@ -20,6 +20,7 @@ Quantumult X task metadata
 Surge module common config
 Surge task metadata
 Surge requirement metadata
+Stash HTTP MITM hosts
 hostname / MITM domain matching
 request rewrite
 response rewrite

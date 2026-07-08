@@ -100,7 +100,8 @@ The v1.0.0 compatibility strategy is corpus-driven:
 
 - Loon high-frequency plugin subset first.
 - Quantumult X and Surge common grammar where it maps cleanly.
-- Stash and Shadowrocket as migration notes until fixtures and tests exist.
+- Stash `http.mitm` and Shadowrocket common-config subsets where fixtures and
+  tests exist; remaining app-profile syntax stays migration-guarded.
 - Unsupported behavior must be structured, documented, and testable.
 - Compatibility matrix status values are `supported`, `partial`, `planned`, and
   `unsupported`.

@@ -1,0 +1,3 @@
+http:
+  mitm:
+    - bad host

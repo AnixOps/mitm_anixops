@@ -492,6 +492,46 @@ Unimplemented items:
 - platform UI or install behavior;
 - broader Surge metadata corpus.
 
+### Stash HTTP MITM Hosts
+
+Detailed contract:
+[Stash HTTP MITM Source Contract](stash-http-mitm.md).
+
+Capability: parse Stash `http.mitm` host policy metadata without claiming full
+Stash YAML profile support.
+
+Input form:
+
+- top-level YAML `http:` mapping;
+- nested `mitm:` list;
+- list scalar host patterns;
+- exact, wildcard, and deny host patterns accepted by the policy core.
+
+Parser output:
+
+- accepted diagnostics with section `MITM` and action `mitm`;
+- host patterns visible through `anixops_engine_mitm_pattern_count`;
+- existing MITM evaluation semantics for exact, wildcard, and deny hosts;
+- no rewrite, script, task, argument, route, proxy, DNS, certificate lifecycle,
+  or platform UI behavior from Stash YAML input.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Stash.HttpMitm.yaml`;
+- negative fixture `tests/fixtures/Stash.HttpMitm.Malformed.yaml`;
+- `config/stash_http_mitm_fixture_exposes_host_patterns`;
+- `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
+- `config/stash_migration_guard_fixture_stays_parser_unsupported` continues to
+  guard unsupported Stash app-profile routing syntax.
+
+Unimplemented items:
+
+- full YAML parser behavior;
+- port-qualified MITM patterns such as `host:*`;
+- `force-http-engine`, `url-rewrite`, script, cron, DNS, routing, proxy, and UI
+  behavior;
+- certificate lifecycle and platform trust handling.
+
 ### Shadowrocket Common Config Subset
 
 Detailed contract:
@@ -531,29 +571,33 @@ Detailed notes:
 [Stash And Shadowrocket Migration Notes](stash-shadowrocket-migration.md).
 
 Capability: record migration guidance for Stash and for Shadowrocket syntax
-outside the dedicated common-config source contract.
+outside currently parser-supported subsets.
 
 Input form:
 
 - `tests/fixtures/Stash.MigrationGuard.yaml` as a non-support guard;
 - `tests/fixtures/Shadowrocket.MigrationGuard.conf` as a non-support guard;
-- no first-class Stash parser fixture is accepted as supported syntax yet;
+- Stash `http.mitm` host metadata is covered separately by
+  [Stash HTTP MITM Source Contract](stash-http-mitm.md);
 - Shadowrocket app-level profile sections remain unsupported unless they are
   explicitly covered by `shadowrocket-common-config.md`.
 
 Current CI evidence:
 
-- Stash compatibility matrix row remains `planned`;
+- Stash app-profile routing compatibility remains `planned`;
+- Stash `http.mitm` compatibility matrix row is `partial`;
 - Shadowrocket common-config matrix row is `partial`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported`;
+- `config/stash_http_mitm_fixture_exposes_host_patterns`;
+- `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - governance checks require migration and app-profile boundary markers plus
   guard fixture/test links.
 
 Unimplemented items:
 
-- dedicated Stash source contract, parser fixtures, positive tests, and negative
-  tests;
+- expanded Stash app-level profile source contract, parser fixtures, positive
+  tests, and negative tests;
 - expanded Shadowrocket app-level profile source contract, parser fixtures,
   positive tests, and negative tests.
 

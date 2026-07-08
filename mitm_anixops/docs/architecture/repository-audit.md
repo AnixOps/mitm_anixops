@@ -159,8 +159,9 @@ Actual pass/fail status must be taken from GitHub Actions, not local execution.
   protection still requires manual configuration.
 - No macOS release artifact, signing, notarization, entitlement, or platform
   adapter coverage yet.
-- Stash remains migration notes only; Shadowrocket has a narrow common-config
-  parser contract, while app-level profile syntax remains migration-guarded.
+- Stash has a narrow `http.mitm` parser contract and Shadowrocket has a narrow
+  common-config parser contract; remaining app-level profile syntax remains
+  migration-guarded.
 - Cron/task trigger behavior has a parser descriptor contract, but scheduler
   dispatch and runtime execution remain unimplemented.
 - Production JS runtime remains out of scope for the C policy core; the

@@ -49,6 +49,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for `#!requirement` diagnostics.
 - Added a Surge task metadata source contract plus positive and negative parser
   fixtures for `[Script]` cron and interval task descriptors.
+- Added a Stash HTTP MITM source contract plus positive and negative parser
+  fixtures for `http.mitm` host policy metadata.
 - Added a Shadowrocket common-config source contract plus positive and negative
   parser fixtures for a P1 parser milestone.
 - Added a request rewrite source contract plus positive and negative parser
@@ -98,11 +100,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   certificate-not-trusted, deny-host, and no-host-match bypass decisions.
 - Added runner disabled and malformed MITM decision golden JSON trace fixtures
   for disabled, empty-host, and invalid-host bypass decisions.
-- Added Stash and Shadowrocket migration notes that keep Stash and
-  Shadowrocket app-profile behavior planned outside dedicated parser fixtures
-  and tests.
-- Added Stash and Shadowrocket migration guard fixtures proving app-level
-  profile syntax remains ignored until dedicated parser support exists.
+- Added Stash and Shadowrocket migration notes that keep app-profile behavior
+  planned outside dedicated parser fixtures and tests.
+- Added Stash and Shadowrocket migration guard fixtures proving unsupported
+  app-level profile syntax remains ignored until dedicated parser support
+  exists.
 - Added a dedicated GitHub Actions release dry-run workflow that runs a
   same-workflow CI gate, builds dry-run artifacts, and generates checksum,
   manifest, release-note, and summary evidence without publishing a release.

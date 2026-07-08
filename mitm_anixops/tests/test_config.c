@@ -1678,6 +1678,87 @@ static void cron_task_trigger_malformed_fixture_rejects_invalid_cron(void)
 	free(fixture);
 }
 
+static void stash_http_mitm_fixture_exposes_host_patterns(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Stash.HttpMitm.yaml");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_mitm_decision_t mitm;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+
+	for (i = 0; i < 3; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 4);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "mitm");
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "stash mitm hostname accepted") != NULL);
+	}
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "stash.example.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "stash.example.test");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.stash.example.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "*.stash.example.test");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "blocked.stash.example.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_DENY_HOST);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "blocked.stash.example.test");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void stash_http_mitm_malformed_fixture_rejects_invalid_host(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Stash.HttpMitm.Malformed.yaml");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "mitm");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "invalid mitm hostname pattern") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 3);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "invalid mitm hostname pattern") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void stash_migration_guard_fixture_stays_parser_unsupported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Stash.MigrationGuard.yaml");
@@ -3568,6 +3649,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/cron_task_trigger_malformed_fixture_rejects_invalid_cron",
 		cron_task_trigger_malformed_fixture_rejects_invalid_cron);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/stash_http_mitm_fixture_exposes_host_patterns",
+		stash_http_mitm_fixture_exposes_host_patterns);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/stash_http_mitm_malformed_fixture_rejects_invalid_host",
+		stash_http_mitm_malformed_fixture_rejects_invalid_host);
 	add_test(
 		tests,
 		count,

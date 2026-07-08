@@ -1,0 +1,6 @@
+# Stash HTTP MITM fixture: parser-owned host policy subset only.
+http:
+  mitm:
+    - stash.example.test
+    - "*.stash.example.test"
+    - -blocked.stash.example.test

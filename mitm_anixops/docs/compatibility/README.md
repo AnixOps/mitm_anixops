@@ -58,6 +58,8 @@ corresponding tests.
   `#!requirement` metadata tolerance contract.
 - [surge-task-metadata.md](surge-task-metadata.md): Surge `[Script]`
   cron and interval task descriptor parser contract.
+- [stash-http-mitm.md](stash-http-mitm.md): Stash `http.mitm` host policy
+  parser contract.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
   Shadowrocket common-config parser contract.
 - [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): Stash

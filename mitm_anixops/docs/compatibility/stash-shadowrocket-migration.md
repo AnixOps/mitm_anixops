@@ -5,17 +5,19 @@ compatibility.
 
 Ecosystem: `stash`, `shadowrocket`.
 
-Status: Stash `planned`; Shadowrocket common config `partial`; Shadowrocket app
-profile `planned`.
+Status: Stash `http.mitm` `partial`; Stash app profile `planned`;
+Shadowrocket common config `partial`; Shadowrocket app profile `planned`.
 
 ```text
-stash-compatibility-mode=migration-notes-only
+stash-http-mitm-mode=partial-parser-support
+stash-app-profile-mode=migration-guard-only
 shadowrocket-common-config-mode=partial-parser-support
 shadowrocket-app-profile-mode=migration-guard-only
-stash-parser-fixtures=migration-guard-only
+stash-http-mitm-fixtures=positive-and-negative-parser-fixtures
+stash-app-profile-fixtures=migration-guard-only
 shadowrocket-app-profile-fixtures=migration-guard-only
 shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures
-stash-support-claim=forbidden-until-dedicated-contract-fixtures-and-tests
+stash-expanded-support-claim=forbidden-outside-http-mitm-contract
 shadowrocket-expanded-support-claim=forbidden-outside-common-config-contract
 ```
 
@@ -23,9 +25,14 @@ shadowrocket-expanded-support-claim=forbidden-outside-common-config-contract
 
 This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
 
-- Stash remains migration notes only.
+- Stash has a dedicated HTTP MITM source contract for a narrow `http.mitm`
+  host-policy subset.
 - Shadowrocket has a dedicated common-config source contract for a narrow
   `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
+- Stash app-level routing, proxy, DNS, UI, script, and cron syntax remains a
+  migration guard unless a future source contract, fixture pair, positive test,
+  negative test, compatibility matrix row, and GitHub Actions evidence
+  explicitly cover it.
 - Shadowrocket app-level profile syntax remains a migration guard unless a
   future source contract, fixture pair, positive test, negative test,
   compatibility matrix row, and GitHub Actions evidence explicitly cover it.
@@ -42,11 +49,18 @@ the subset described in
 - `tests/fixtures/Shadowrocket.CommonConfig.conf`;
 - `tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf`.
 
+The dedicated Stash HTTP MITM fixtures are support evidence only for the subset
+described in [`stash-http-mitm.md`](stash-http-mitm.md):
+
+- `tests/fixtures/Stash.HttpMitm.yaml`;
+- `tests/fixtures/Stash.HttpMitm.Malformed.yaml`.
+
 ## Current Claim
 
 Allowed statements:
 
 - Stash is a migration target.
+- Stash `http.mitm` has partial parser support for documented MITM host lists.
 - Shadowrocket app-level profile syntax remains a migration target outside the
   common-config contract.
 - Shadowrocket common config has partial parser support for documented URL
@@ -58,7 +72,9 @@ Allowed statements:
 
 Forbidden statements:
 
-- Stash parser support is implemented.
+- Full Stash parser support is implemented.
+- Stash `rules`, `proxies`, DNS, routing, UI, cron, script runtime, or
+  `force-http-engine` behavior is implemented.
 - Full Shadowrocket parser support is implemented.
 - Shadowrocket `[General]`, `[Rule]`, `[Proxy]`, DNS, routing, profile UI, or
   proxy-node behavior is implemented.
@@ -70,6 +86,8 @@ Forbidden statements:
 Current CI evidence:
 
 - `config/stash_migration_guard_fixture_stays_parser_unsupported`;
+- `config/stash_http_mitm_fixture_exposes_host_patterns`;
+- `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_common_config_fixture_is_supported`;
 - `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
@@ -85,6 +103,14 @@ Expected Stash guard behavior:
   registered;
 - parser diagnostics record ignored app-level profile lines;
 - no route, proxy-node, DNS, certificate, UI, or runtime behavior is claimed.
+
+Expected Stash HTTP MITM behavior:
+
+- config load succeeds for `tests/fixtures/Stash.HttpMitm.yaml`;
+- exact, wildcard, and deny host entries register as MITM host patterns;
+- no rewrite rules, script rules, task descriptors, route policies, proxy
+  nodes, DNS settings, or argument defaults are registered;
+- malformed `http.mitm` host entries reject with parse diagnostics.
 
 Expected Shadowrocket app-profile guard behavior:
 
@@ -126,7 +152,8 @@ These notes do not cover:
 
 ## Entry Criteria For Expanded Parser Support
 
-Before Stash can move beyond `planned`, or before Shadowrocket app-profile
+Before Stash app-profile support can move beyond migration notes, before Stash
+support can expand beyond `http.mitm`, or before Shadowrocket app-profile
 support can move beyond the common-config contract, a future change must add:
 
 1. A dedicated source contract for the target ecosystem surface.
@@ -137,6 +164,6 @@ support can move beyond the common-config contract, a future change must add:
 6. GitHub Actions governance checks proving the contract, fixture, tests, and
    matrix row stay linked.
 
-The current Stash and Shadowrocket app-profile migration guard fixtures do not
-satisfy those entry criteria. Keep those surfaces as migration notes only until
-dedicated parser evidence exists.
+The current Stash app-profile and Shadowrocket app-profile migration guard
+fixtures do not satisfy those entry criteria. Keep those surfaces as migration
+notes only until dedicated parser evidence exists.

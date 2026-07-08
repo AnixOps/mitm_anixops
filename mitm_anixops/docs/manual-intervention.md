@@ -129,11 +129,11 @@ task-scheduler-runtime-next-action=confirm-scheduler-runtime-bindings-permission
 ```
 
 ```text
-stash-parser-support-status=pending
-stash-parser-support-scope=dedicated-stash-profile-parser
-stash-parser-support-required-before=claiming-stash-parser-support
-stash-parser-support-current-policy-core-decision=migration-guard-fixture-only-no-first-class-parser-support
-stash-parser-support-next-action=confirm-redistributable-fixtures-source-contract-supported-and-malformed-parser-cases-and-github-actions-evidence
+stash-expanded-parser-support-status=pending
+stash-expanded-parser-support-scope=stash-profile-parser-beyond-http-mitm
+stash-expanded-parser-support-required-before=claiming-full-stash-parser-or-app-profile-support
+stash-expanded-parser-support-current-policy-core-decision=http-mitm-host-list-only-app-profile-guard-fixture-ignored
+stash-expanded-parser-support-next-action=confirm-redistributable-fixtures-source-contract-supported-and-malformed-parser-cases-and-github-actions-evidence-for-expanded-stash-surfaces
 ```
 
 ```text
