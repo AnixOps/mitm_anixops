@@ -319,6 +319,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   release dry-run workflows before stable release-readiness evaluation.
 - Added direct release checklist and metadata static gates to release and
   release dry-run workflows before stable release-readiness evaluation.
+- Hardened release metadata checks so compatibility summary count keys must be
+  present exactly once in release and release dry-run workflows.
 
 ### Changed
 

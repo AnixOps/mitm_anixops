@@ -51,12 +51,73 @@ require_absent() {
 	fi
 }
 
+compatibility_count_keys='
+compatibility_supported_count
+compatibility_partial_count
+compatibility_planned_count
+compatibility_unsupported_count
+compatibility_total_count
+'
+
+check_compatibility_summary_keys() {
+	file=$1
+	label=$2
+
+	keys="$(
+		awk '
+		/Summarize compatibility matrix status/ {
+			seen = 1
+		}
+		seen && /for key in \\/ {
+			capture = 1
+			next
+		}
+		capture && /^[[:space:]]*do[[:space:]]*$/ {
+			exit
+		}
+		capture {
+			line = $0
+			gsub(/\\/, "", line)
+			sub(/^[[:space:]]*/, "", line)
+			sub(/[[:space:]]*$/, "", line)
+			if (line != "") {
+				print line
+			}
+		}
+		' "$file"
+	)"
+
+	for key in $compatibility_count_keys; do
+		count="$(printf '%s\n' "$keys" | awk -v key="$key" '$0 == key {count++} END {print count + 0}')"
+		if [ "$count" -ne 1 ]; then
+			printf '%s compatibility summary key count mismatch: %s=%s\n' "$label" "$key" "$count" >&2
+			exit 1
+		fi
+	done
+
+	key_count="$(printf '%s\n' "$keys" | awk 'NF {count++} END {print count + 0}')"
+	if [ "$key_count" -ne 5 ]; then
+		printf '%s compatibility summary must contain exactly 5 keys, got %s\n' "$label" "$key_count" >&2
+		exit 1
+	fi
+
+	unexpected_key="$(
+		printf '%s\n' "$keys" |
+			awk '$0 !~ /^compatibility_(supported|partial|planned|unsupported|total)_count$/ {print; exit}'
+	)"
+	if [ -n "$unexpected_key" ]; then
+		printf '%s compatibility summary has unexpected key: %s\n' "$label" "$unexpected_key" >&2
+		exit 1
+	fi
+}
+
 check_common_workflow_metadata() {
 	file=$1
 	label=$2
 
 	require_pattern "$file" "Summarize compatibility matrix status" "$label missing compatibility summary step"
 	require_pattern "$file" "scripts/compatibility-status-summary.sh" "$label missing compatibility status helper"
+	check_compatibility_summary_keys "$file" "$label"
 	require_pattern "$file" "scripts/manual-intervention-check.sh" "$label missing manual-intervention evidence gate"
 	require_pattern "$file" "scripts/manual-intervention-transition-check.sh" "$label missing manual-intervention transition gate"
 	require_pattern "$file" "scripts/release-checklist-check.sh" "$label missing release checklist gate"
