@@ -37,6 +37,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for request/response dispatch fields.
 - Added a Loon task metadata source contract plus positive and negative parser
   fixtures for scheduled task descriptors.
+- Added a Loon unsupported script-type guard proving `type=dns`, `type=rule`,
+  and `type=policy` remain ignored until separately contracted.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Quantumult X MITM options source contract plus positive and negative

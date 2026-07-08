@@ -87,6 +87,21 @@ Expected behavior:
 - a rejected diagnostic is recorded with section `Script`, action `task`, and
   cron expression failure context.
 
+## Unsupported Case
+
+Parser case:
+
+```text
+tests/fixtures/Loon.TaskUnsupported.plugin
+```
+
+Expected behavior:
+
+- config load succeeds in the portable profile;
+- unsupported `[Script]` `type=dns`, `type=rule`, and `type=policy` lines
+  record ignored diagnostics;
+- no script rules or task descriptors are registered.
+
 ## Runtime And Security Boundary
 
 Loon task metadata must not:
@@ -110,6 +125,8 @@ Required CI evidence:
   `config/loon_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/loon_task_metadata_malformed_fixture_rejects_invalid_cron`;
+- `tests/test_config.c` registers
+  `config/loon_task_unsupported_fixture_keeps_non_task_types_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -120,6 +137,6 @@ Row:
 Loon task metadata
 ```
 
-The row remains `partial` because parser descriptors are covered while
-scheduler execution, task JavaScript bindings, concurrency, and permission
-policy remain adapter-owned.
+The row remains `partial` because parser descriptors and unsupported script-type
+guards are covered while scheduler execution, task JavaScript bindings,
+concurrency, and permission policy remain adapter-owned.

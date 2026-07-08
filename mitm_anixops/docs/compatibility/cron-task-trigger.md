@@ -94,6 +94,7 @@ Parser case:
 
 ```text
 tests/fixtures/CronTaskTrigger.Unsupported.conf
+tests/fixtures/Loon.TaskUnsupported.plugin
 tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet
 ```
 
@@ -101,6 +102,7 @@ Expected behavior:
 
 - config load succeeds in the portable profile;
 - unsupported scheduler-like lines are ignored with diagnostics;
+- unsupported Loon task-like script types are ignored with diagnostics;
 - unsupported Quantumult X event trigger lines are ignored with diagnostics;
 - no HTTP script rules are registered;
 - no task descriptors are registered.
@@ -153,6 +155,7 @@ Current diagnostics cover:
 - accepted Quantumult X event task descriptor;
 - accepted Surge event task descriptor;
 - ignored unsupported scheduler type;
+- ignored unsupported Loon task-like script type;
 - ignored unsupported Quantumult X event trigger;
 - rejected malformed cron expression;
 - rejected malformed event task missing a script path;
@@ -188,6 +191,8 @@ Current evidence:
   `config/loon_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/loon_task_metadata_malformed_fixture_rejects_invalid_cron`;
+- `tests/test_config.c` registers
+  `config/loon_task_unsupported_fixture_keeps_non_task_types_ignored`;
 - `tests/test_config.c` registers
   `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers

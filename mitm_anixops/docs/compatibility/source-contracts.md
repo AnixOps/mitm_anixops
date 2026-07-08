@@ -1307,6 +1307,8 @@ Input form:
   metadata;
 - positive parser fixture `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
 - unsupported parser fixture `tests/fixtures/CronTaskTrigger.Unsupported.conf`;
+- Loon unsupported parser fixture
+  `tests/fixtures/Loon.TaskUnsupported.plugin`;
 - malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`;
 - ecosystem-specific parser fixtures including
   `tests/fixtures/QuantumultX.TaskMetadata.snippet`,
@@ -1324,6 +1326,9 @@ Current CI evidence:
   task descriptors;
 - `config/cron_task_trigger_malformed_fixture_rejects_invalid_cron` proves
   malformed cron descriptors are rejected;
+- `config/loon_task_unsupported_fixture_keeps_non_task_types_ignored` proves
+  unsupported Loon `[Script]` task-like types do not register as HTTP scripts or
+  task descriptors;
 - `script/malformed_and_non_http_script_rules_are_ignored_or_rejected` proves a
   bare cron rule does not register as an HTTP script rule when using the HTTP
   script parser directly;

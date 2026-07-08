@@ -79,6 +79,7 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.ScriptMetadata.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.TaskMetadata.plugin
             mitm_anixops/tests/fixtures/Loon.TaskMetadata.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.TaskUnsupported.plugin
             mitm_anixops/tests/fixtures/Loon.MitmOptions.plugin
             mitm_anixops/tests/fixtures/Loon.MitmOptions.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.RuleDomainReject.plugin
@@ -265,9 +266,13 @@ jobs:
           grep -q "Loon Task Metadata Source Contract" mitm_anixops/docs/compatibility/loon-task-metadata.md
           grep -q "Loon.TaskMetadata.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon.TaskMetadata.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.TaskUnsupported.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/loon_task_metadata_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
           grep -q "config/loon_task_metadata_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_task_unsupported_fixture_keeps_non_task_types_ignored" mitm_anixops/tests/test_config.c
+          grep -q "type=dns" mitm_anixops/docs/compatibility/loon-task-metadata.md
           grep -q "^- \\[x\\] Add Loon task metadata parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Loon unsupported script-type guard" mitm_anixops/TODO.md
           grep -q "Loon MITM options" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon MITM Options Source Contract" mitm_anixops/docs/compatibility/loon-mitm-options.md
           grep -q "Loon.MitmOptions.plugin" mitm_anixops/docs/compatibility/matrix.md

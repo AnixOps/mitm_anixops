@@ -1,0 +1,4 @@
+[Script]
+Loon.DNS.Unsupported = type=dns, script-path=https://scripts.example/loon-dns.js, tag=loon.unsupported.dns
+Loon.Rule.Unsupported = type=rule, script-path=https://scripts.example/loon-rule.js, tag=loon.unsupported.rule
+Loon.Policy.Unsupported = type=policy, script-path=https://scripts.example/loon-policy.js, tag=loon.unsupported.policy
