@@ -6,10 +6,11 @@ automation is allowed to publish assets.
 Current mode:
 
 ```text
-release-dry-run-current-mode=contract-only
-release-dry-run-workflow=not-defined
+release-dry-run-current-mode=workflow-defined
+release-dry-run-workflow=.github/workflows/release-dry-run.yml
 release-dry-run-publication=blocked
-release-dry-run-next-action=add-workflow-dispatch-dry-run-before-tag-publication
+release-dry-run-ci-gate=equivalent-full-check-in-workflow
+release-dry-run-next-action=add-tag-publication-workflow-after-dry-run-evidence
 ```
 
 ## Purpose
@@ -20,9 +21,11 @@ must not consume local build output.
 
 ## Triggers
 
-The future dry-run workflow must support:
+The dry-run workflow supports:
 
 - `workflow_dispatch` from `main`;
+- `pull_request` targeting `main`;
+- `push` to `main`;
 - version input using `vMAJOR.MINOR.PATCH`, `vMAJOR.MINOR.PATCH-alpha.N`, or
   `vMAJOR.MINOR.PATCH-rc.N`;
 - optional artifact target selection only after each target has a source
@@ -33,14 +36,14 @@ the dry-run passes for the same release design.
 
 ## Required Jobs
 
-The future dry-run workflow must include these logical gates:
+The dry-run workflow includes these logical gates:
 
 1. `release-policy`: validate version format, branch, event, and source docs.
-2. `release-ci-gate`: read the same-commit `main` CI result with
-   `actions: read`, or run an equivalent full CI gate in the same workflow.
+2. `dry-run`: run an equivalent full CI gate in the same workflow before
+   packaging.
 3. `artifact-contract`: output artifact names, target platforms, staging paths,
    checksum algorithm, manifest path, and release-note path.
-4. `package-*`: build each dry-run artifact in GitHub Actions.
+4. `package-*`: build the dry-run artifact in GitHub Actions.
 5. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
 6. `manifest-*`: generate JSON manifest and manifest checksum.
 7. `release-notes-dry-run`: generate notes containing compatibility scope,
@@ -99,12 +102,12 @@ Dry-run mode must not:
 - sign, notarize, or publish store assets;
 - read platform signing secrets.
 
-When this contract is implemented, `workflow_dispatch` dry-runs may upload
-workflow artifacts for inspection, but public release assets remain blocked
-until the tag-triggered release workflow and publish eligibility gate are added.
+`workflow_dispatch`, `pull_request`, and `push` dry-runs may upload workflow
+artifacts for inspection, but public release assets remain blocked until the
+tag-triggered release workflow and publish eligibility gate are added.
 
 ## GitHub Actions Evidence
 
-P0 governance checks must prove this contract exists. A later P6 increment must
-add the workflow and use GitHub Actions logs, artifacts, checksums, manifests,
+GitHub Actions governance checks must prove this contract and workflow exist.
+The workflow uses Actions logs, artifacts, checksums, manifests, release notes,
 and step summaries as acceptance evidence.

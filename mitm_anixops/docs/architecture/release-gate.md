@@ -30,7 +30,9 @@ The CI workflow must eventually cover:
 
 Current workflow: `.github/workflows/build.yml`.
 
-Current gap: there is no separate release dry-run or matrix-specific job yet.
+Current dry-run workflow: `.github/workflows/release-dry-run.yml`.
+
+Current gap: there is no matrix-specific release job yet.
 
 ### Release Workflow
 
@@ -48,7 +50,8 @@ The release workflow must eventually support:
 - GitHub Release asset upload;
 - summary output with artifact, checksum, manifest, CI, and rollback fields.
 
-Current gap: no dedicated release workflow exists in this repository.
+Current gap: no tag-triggered release publication workflow exists in this
+repository.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).

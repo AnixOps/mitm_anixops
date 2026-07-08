@@ -13,6 +13,8 @@ subproject under `mitm_anixops/`.
 Important paths:
 
 - `.github/workflows/build.yml`: active GitHub Actions workflow.
+- `.github/workflows/release-dry-run.yml`: release dry-run workflow that blocks
+  publication and uploads workflow artifacts only.
 - `mitm_anixops/include/`: public C ABI.
 - `mitm_anixops/src/`: C implementation.
 - `mitm_anixops/tests/`: C unit and compatibility fixture tests.
@@ -55,9 +57,10 @@ Public and operational entry points:
 
 ## CI/CD Status
 
-Active workflow:
+Active workflows:
 
 - `.github/workflows/build.yml`
+- `.github/workflows/release-dry-run.yml`
 
 Current jobs:
 
@@ -66,17 +69,20 @@ Current jobs:
   uploads `anixops-mitm-alpha-linux`.
 - `windows-binary`: builds the Windows Bilibili demo binary with MSYS2 and
   uploads `anixops-mitm-windows-x64`.
+- `release-dry-run`: validates a dry-run version, runs an equivalent full check
+  in GitHub Actions, builds a dry-run artifact, and uploads checksum, manifest,
+  release notes, and summary evidence as workflow artifacts without public
+  release publication.
 
 Known CI/CD gaps for v1.0.0:
 
 - no dedicated lint job;
 - no dedicated format check;
 - no explicit compatibility matrix test job;
-- no release dry-run workflow;
 - no tag-triggered release workflow with same-commit CI gate;
-- no checksum file generation;
-- no artifact manifest generation;
-- no release-note generation gate;
+- no checksum file generation for public tag release publication;
+- no artifact manifest generation for public tag release publication;
+- no release-note generation gate for public tag release publication;
 - no GitHub Release upload workflow for future releases;
 - no macOS runner coverage yet.
 

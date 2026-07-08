@@ -1,0 +1,238 @@
+name: release-dry-run
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Dry-run release version.
+        required: true
+        default: v0.45.10-alpha.1
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  release-policy:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      kind: ${{ steps.policy.outputs.kind }}
+      commit: ${{ steps.policy.outputs.commit }}
+      publication: ${{ steps.policy.outputs.publication }}
+      ci_gate: ${{ steps.policy.outputs.ci_gate }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate dry-run policy
+        id: policy
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          version="${INPUT_VERSION}"
+          if [[ -z "${version}" ]]; then
+            version="v0.45.10-alpha.${GITHUB_RUN_NUMBER}"
+          fi
+
+          if [[ ! "${version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|rc)\.[0-9]+)?$ ]]; then
+            printf 'invalid dry-run version: %s\n' "${version}" >&2
+            exit 1
+          fi
+
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            if [[ "${BASE_REF}" != "main" ]]; then
+              printf 'release dry-run pull requests must target main\n' >&2
+              exit 1
+            fi
+          elif [[ "${GITHUB_REF}" != "refs/heads/main" ]]; then
+            printf 'release dry-run must run from main\n' >&2
+            exit 1
+          fi
+
+          kind="stable"
+          case "${version}" in
+            *-alpha.*) kind="alpha" ;;
+            *-rc.*) kind="rc" ;;
+          esac
+
+          {
+            printf 'version=%s\n' "${version}"
+            printf 'kind=%s\n' "${kind}"
+            printf 'commit=%s\n' "${GITHUB_SHA}"
+            printf 'publication=blocked\n'
+            printf 'ci_gate=equivalent-full-check-in-workflow\n'
+          } >> "${GITHUB_OUTPUT}"
+
+  dry-run:
+    runs-on: ubuntu-latest
+    needs:
+      - release-policy
+    defaults:
+      run:
+        working-directory: mitm_anixops
+    env:
+      RELEASE_VERSION: ${{ needs.release-policy.outputs.version }}
+      RELEASE_KIND: ${{ needs.release-policy.outputs.kind }}
+      RELEASE_COMMIT: ${{ needs.release-policy.outputs.commit }}
+      RELEASE_PUBLICATION: ${{ needs.release-policy.outputs.publication }}
+      RELEASE_CI_GATE: ${{ needs.release-policy.outputs.ci_gate }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.22.x"
+          cache: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+      - name: Run same-workflow CI gate
+        run: |
+          sh scripts/ensure-mihomo.sh
+          sh scripts/check.sh
+      - name: Build dry-run artifact and metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_no_v="${RELEASE_VERSION#v}"
+          package_name="anixops-mitm-release-dry-run-${version_no_v}"
+          make "ALPHA_NAME=${package_name}" alpha-dist
+
+          artifact_path="build/${package_name}.tar.gz"
+          artifact_name="$(basename "${artifact_path}")"
+          artifact_sha256="$(sha256sum "${artifact_path}" | awk '{print $1}')"
+          artifact_sha256_file="build/${artifact_name}.sha256"
+          printf '%s  %s\n' "${artifact_sha256}" "${artifact_name}" > "${artifact_sha256_file}"
+
+          manifest_name="anixops-mitm-release-dry-run-${version_no_v}-manifest.json"
+          manifest_path="build/${manifest_name}"
+          cat > "${manifest_path}" <<EOF
+          {
+            "release_version": "${RELEASE_VERSION}",
+            "release_kind": "${RELEASE_KIND}",
+            "release_commit": "${RELEASE_COMMIT}",
+            "ci_gate": "${RELEASE_CI_GATE}",
+            "publication": "${RELEASE_PUBLICATION}",
+            "compatibility_scope": "alpha policy-core dry-run",
+            "manual_intervention_status": "pending-items-block-publication",
+            "artifacts": [
+              {
+                "name": "${artifact_name}",
+                "path": "${artifact_path}",
+                "sha256": "${artifact_sha256}",
+                "sha256_file": "$(basename "${artifact_sha256_file}")"
+              }
+            ]
+          }
+EOF
+
+          manifest_sha256="$(sha256sum "${manifest_path}" | awk '{print $1}')"
+          manifest_sha256_file="build/${manifest_name}.sha256"
+          printf '%s  %s\n' "${manifest_sha256}" "${manifest_name}" > "${manifest_sha256_file}"
+
+          release_notes_path="build/release-notes-dry-run.md"
+          cat > "${release_notes_path}" <<EOF
+          # mitm_anixops ${RELEASE_VERSION} Dry Run
+
+          Commit: ${RELEASE_COMMIT}
+
+          Publication: blocked.
+
+          CI gate: ${RELEASE_CI_GATE}.
+
+          Compatibility scope: alpha policy core, runner, bindings, and docs.
+
+          Known gaps: no v1.0.0 stable release claim, no tag publication, no
+          signing/notarization, no platform certificate lifecycle, no production
+          JavaScript runtime, and no platform app-store release assets.
+
+          Manual intervention: pending markers in docs/manual-intervention.md
+          remain blocking for public release publication.
+
+          Rollback path: discard this workflow artifact; do not create or move a
+          public release tag from a dry-run artifact.
+EOF
+
+          {
+            printf 'release_version=%s\n' "${RELEASE_VERSION}"
+            printf 'release_kind=%s\n' "${RELEASE_KIND}"
+            printf 'release_commit=%s\n' "${RELEASE_COMMIT}"
+            printf 'ci_run_id=%s\n' "${GITHUB_RUN_ID}"
+            printf 'ci_run_url=%s/%s/actions/runs/%s\n' "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${GITHUB_RUN_ID}"
+            printf 'ci_run_conclusion=success\n'
+            printf 'artifact_name=%s\n' "${artifact_name}"
+            printf 'artifact_path=%s\n' "${artifact_path}"
+            printf 'artifact_sha256=%s\n' "${artifact_sha256}"
+            printf 'artifact_sha256_file=%s\n' "${artifact_sha256_file}"
+            printf 'manifest_name=%s\n' "${manifest_name}"
+            printf 'manifest_path=%s\n' "${manifest_path}"
+            printf 'manifest_sha256=%s\n' "${manifest_sha256}"
+            printf 'manifest_sha256_file=%s\n' "${manifest_sha256_file}"
+            printf 'release_notes_path=%s\n' "${release_notes_path}"
+            printf 'manual_intervention_status=pending-items-block-publication\n'
+            printf 'publish_eligibility_status=blocked\n'
+            printf 'publish_blocking_reason=dry-run-does-not-publish\n'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Validate dry-run metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "${{ steps.metadata.outputs.artifact_path }}"
+          test -s "${{ steps.metadata.outputs.artifact_sha256_file }}"
+          test -s "${{ steps.metadata.outputs.manifest_path }}"
+          test -s "${{ steps.metadata.outputs.manifest_sha256_file }}"
+          test -s "${{ steps.metadata.outputs.release_notes_path }}"
+          grep -Eq "^[0-9a-f]{64}  ${{ steps.metadata.outputs.artifact_name }}$" "${{ steps.metadata.outputs.artifact_sha256_file }}"
+          grep -Eq "^[0-9a-f]{64}  ${{ steps.metadata.outputs.manifest_name }}$" "${{ steps.metadata.outputs.manifest_sha256_file }}"
+          grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "\"publication\": \"blocked\"" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "Publication: blocked" "${{ steps.metadata.outputs.release_notes_path }}"
+          grep -q "Rollback path:" "${{ steps.metadata.outputs.release_notes_path }}"
+
+      - name: Write release dry-run summary
+        shell: bash
+        run: |
+          {
+            printf '## Release Dry Run\n\n'
+            printf '| Field | Value |\n'
+            printf '| --- | --- |\n'
+            printf '| release_version | `%s` |\n' "${{ steps.metadata.outputs.release_version }}"
+            printf '| release_kind | `%s` |\n' "${{ steps.metadata.outputs.release_kind }}"
+            printf '| release_commit | `%s` |\n' "${{ steps.metadata.outputs.release_commit }}"
+            printf '| ci_run_id | `%s` |\n' "${{ steps.metadata.outputs.ci_run_id }}"
+            printf '| ci_run_conclusion | `%s` |\n' "${{ steps.metadata.outputs.ci_run_conclusion }}"
+            printf '| artifact_name | `%s` |\n' "${{ steps.metadata.outputs.artifact_name }}"
+            printf '| artifact_sha256 | `%s` |\n' "${{ steps.metadata.outputs.artifact_sha256 }}"
+            printf '| manifest_name | `%s` |\n' "${{ steps.metadata.outputs.manifest_name }}"
+            printf '| manifest_sha256 | `%s` |\n' "${{ steps.metadata.outputs.manifest_sha256 }}"
+            printf '| manual_intervention_status | `%s` |\n' "${{ steps.metadata.outputs.manual_intervention_status }}"
+            printf '| publish_eligibility_status | `%s` |\n' "${{ steps.metadata.outputs.publish_eligibility_status }}"
+            printf '| publish_blocking_reason | `%s` |\n' "${{ steps.metadata.outputs.publish_blocking_reason }}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: anixops-mitm-release-dry-run
+          path: |
+            mitm_anixops/${{ steps.metadata.outputs.artifact_path }}
+            mitm_anixops/${{ steps.metadata.outputs.artifact_sha256_file }}
+            mitm_anixops/${{ steps.metadata.outputs.manifest_path }}
+            mitm_anixops/${{ steps.metadata.outputs.manifest_sha256_file }}
+            mitm_anixops/${{ steps.metadata.outputs.release_notes_path }}

@@ -50,6 +50,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   wrapper CI coverage.
 - Added Stash and Shadowrocket migration notes that keep both ecosystems
   planned until dedicated parser fixtures and tests exist.
+- Added a dedicated GitHub Actions release dry-run workflow that runs a
+  same-workflow CI gate, builds dry-run artifacts, and generates checksum,
+  manifest, release-note, and summary evidence without publishing a release.
 
 ### Changed
 
