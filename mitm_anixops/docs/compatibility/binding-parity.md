@@ -79,7 +79,8 @@ It does not implement:
 Required CI evidence:
 
 - `make runner-check` runs C runner `scan` and `trace` checks against
-  `BindingParity.Common.conf`;
+  `BindingParity.Common.conf` and compares request/response trace output with
+  `BindingParity.RequestTrace.json` and `BindingParity.ResponseTrace.json`;
 - `make go-binding-check` runs `TestGoBindingLoadsSharedParityFixture`,
   including named-header current-value rewrite checks;
 - `make rust-binding-check` runs `rust_binding_loads_shared_parity_fixture`,
@@ -94,5 +95,5 @@ Row:
 binding parity
 ```
 
-The row remains `partial` until parity expands to golden JSON trace fixtures
-and every release-package binding surface.
+The row remains `partial` until parity expands to every release-package binding
+surface.

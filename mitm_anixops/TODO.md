@@ -84,6 +84,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   baseline and future v1.0.0 adapter boundary.
 - [x] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper.
 - [x] Add named-header current-value parity checks for Go and Rust wrappers.
+- [x] Add runner golden JSON trace fixtures for binding parity.
 - [x] Define Stash and Shadowrocket app-profile compatibility as migration
   notes unless parser fixtures and tests are added.
 - [x] Add Stash and Shadowrocket migration guard fixtures and parser tests.

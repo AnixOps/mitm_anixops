@@ -70,6 +70,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   wrapper CI coverage.
 - Added named-header current-value parity checks for Go and Rust wrappers
   against the shared binding fixture.
+- Added runner golden JSON trace fixtures for binding parity request and
+  response traces.
 - Added Stash and Shadowrocket migration notes that keep Stash and
   Shadowrocket app-profile behavior planned outside dedicated parser fixtures
   and tests.

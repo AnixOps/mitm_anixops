@@ -147,6 +147,8 @@ Required CI evidence:
   `config/decision_trace_schema_fixture_covers_policy_fields`;
 - `tests/test_config.c` registers
   `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
+- `make runner-check` compares `BindingParity.RequestTrace.json` and
+  `BindingParity.ResponseTrace.json` against runner `trace` output;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -157,6 +159,5 @@ Row:
 decision trace schema
 ```
 
-The row remains `partial` until golden JSON trace fixtures, full runner MITM
-trace coverage, adapter redaction policy, and direct/proxy route-selection
-contracts exist.
+The row remains `partial` until full runner MITM trace coverage, adapter
+redaction policy, and direct/proxy route-selection contracts exist.

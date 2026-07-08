@@ -446,13 +446,14 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/DecisionTrace.Schema.conf`;
 - negative fixture `tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf`;
+- golden runner fixtures `tests/fixtures/BindingParity.RequestTrace.json` and
+  `tests/fixtures/BindingParity.ResponseTrace.json`;
 - `config/decision_trace_schema_fixture_covers_policy_fields`;
 - `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
 - runner `trace` smoke checks under `runner-check`.
 
 Unimplemented items:
 
-- golden JSON trace fixtures;
 - full runner MITM trace coverage;
 - adapter redaction policy;
 - direct/proxy route-selection contract;
@@ -497,6 +498,8 @@ policy outputs from a shared fixture.
 Input form:
 
 - `tests/fixtures/BindingParity.Common.conf`;
+- `tests/fixtures/BindingParity.RequestTrace.json`;
+- `tests/fixtures/BindingParity.ResponseTrace.json`;
 - request/response URL, header, body, and script policy rules;
 - request/response named-header current-value rewrite rules;
 - argument substitution shared across all binding surfaces.
@@ -504,6 +507,7 @@ Input form:
 Current CI evidence:
 
 - C runner `scan` and `trace` checks in `make runner-check`;
+- C runner request/response golden JSON trace comparisons;
 - Go wrapper `TestGoBindingLoadsSharedParityFixture`, including named-header
   current-value rewrite checks;
 - Rust wrapper `rust_binding_loads_shared_parity_fixture`, including
@@ -511,7 +515,6 @@ Current CI evidence:
 
 Unimplemented items:
 
-- golden JSON fixtures for runner traces;
 - release-package binding surface parity.
 
 ### Script Trigger Metadata
