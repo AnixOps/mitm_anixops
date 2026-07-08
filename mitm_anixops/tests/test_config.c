@@ -6017,6 +6017,97 @@ static void header_mutation_common_fixture_rejects_invalid_regex(void)
 	free(fixture);
 }
 
+static void header_response_mutation_common_fixture_maps_response_header_add_replace(void)
+{
+	static const char *urls[] = {
+		"https://response-header.mutation.test/add/fast",
+		"https://response-header.mutation.test/replace/slow"};
+	static const anixops_rewrite_action_t actions[] = {
+		ANIXOPS_REWRITE_RESPONSE_HEADER_ADD,
+		ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE};
+	static const char *expected_names[] = {"X-Trace", "X-Mode"};
+	static const char *expected_values[] = {"resp-fast", "resp-slow"};
+	char *fixture = read_fixture("tests/fixtures/HeaderResponseMutation.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_header_rewrite_result_t header;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	for (i = 0; i < 2; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "rewrite rule accepted");
+
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_evaluate_header(engine, urls[i], ANIXOPS_PHASE_REQUEST, 0, NULL, &header),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+		ANIXOPS_EXPECT_EQ_INT(header.rule_index, -1);
+
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_evaluate_header(engine, urls[i], ANIXOPS_PHASE_RESPONSE, 0, NULL, &header),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(header.action, actions[i]);
+		ANIXOPS_EXPECT_EQ_INT(header.phase, ANIXOPS_PHASE_RESPONSE);
+		ANIXOPS_EXPECT_EQ_INT(header.rule_index, (int)i);
+		ANIXOPS_EXPECT_STREQ(header.header_name, expected_names[i]);
+		ANIXOPS_EXPECT_STREQ(header.value, expected_values[i]);
+		ANIXOPS_EXPECT_STREQ(header.message, "header rewrite matched");
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void header_response_mutation_common_strict_fixture_rejects_missing_header_name(void)
+{
+	char *fixture = read_fixture("tests/fixtures/HeaderResponseMutation.Common.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void loon_header_mutation_fixture_maps_header_rewrites(void)
 {
 	static const char *urls[] = {
@@ -9366,6 +9457,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/header_mutation_common_fixture_rejects_invalid_regex",
 		header_mutation_common_fixture_rejects_invalid_regex);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/header_response_mutation_common_fixture_maps_response_header_add_replace",
+		header_response_mutation_common_fixture_maps_response_header_add_replace);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/header_response_mutation_common_strict_fixture_rejects_missing_header_name",
+		header_response_mutation_common_strict_fixture_rejects_missing_header_name);
 	add_test(
 		tests,
 		count,

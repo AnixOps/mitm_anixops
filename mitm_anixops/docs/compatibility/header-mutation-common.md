@@ -41,6 +41,7 @@ Parser case:
 
 ```text
 tests/fixtures/HeaderMutation.Common.conf
+tests/fixtures/HeaderResponseMutation.Common.conf
 tests/fixtures/Loon.HeaderMutation.plugin
 tests/fixtures/QuantumultX.HeaderAdd.snippet
 tests/fixtures/QuantumultX.HeaderReplace.snippet
@@ -60,6 +61,8 @@ Expected behavior:
 - request header add, replace, and delete behavior are observable through
   `anixops_rewrite_evaluate_header`;
 - response header regex replacement and delete behavior are observable through
+  `anixops_rewrite_evaluate_header`;
+- portable response header add and replace behavior are observable through
   `anixops_rewrite_evaluate_header`;
 - Loon `[Header Rewrite]` request and response header mutation actions are
   observable through `anixops_rewrite_evaluate_header`;
@@ -90,6 +93,7 @@ Parser case:
 
 ```text
 tests/fixtures/HeaderMutation.Common.Malformed.conf
+tests/fixtures/HeaderResponseMutation.Common.Malformed.conf
 tests/fixtures/Loon.HeaderMutation.Malformed.plugin
 tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderReplace.Malformed.snippet
@@ -105,6 +109,8 @@ tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
 Expected behavior:
 
 - the invalid header regex rejects config load;
+- the malformed portable response header add rule without a header name is
+  rejected under `ANIXOPS_COMPAT_LOON_STRICT`;
 - the invalid Loon `[Header Rewrite]` header regex rejects config load;
 - the malformed Quantumult X `url header-add` rule without a header name is
   rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
@@ -150,6 +156,10 @@ Required CI evidence:
   `config/header_mutation_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/header_mutation_common_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/header_response_mutation_common_fixture_maps_response_header_add_replace`;
+- `tests/test_config.c` registers
+  `config/header_response_mutation_common_strict_fixture_rejects_missing_header_name`;
 - `tests/test_config.c` registers
   `config/loon_header_mutation_fixture_maps_header_rewrites`;
 - `tests/test_config.c` registers
