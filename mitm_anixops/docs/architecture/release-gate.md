@@ -30,7 +30,7 @@ The CI workflow must eventually cover:
 
 Current workflow: `.github/workflows/build.yml`.
 
-Current dry-run workflow: `.github/workflows/release-dry-run.yml`.
+Current dry-run workflow: .github/workflows/release-dry-run.yml.
 
 Current gap: there is no matrix-specific release job yet.
 

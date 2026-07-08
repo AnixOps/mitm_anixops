@@ -33,7 +33,7 @@ jobs:
         id: policy
         shell: bash
         env:
-          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
           EVENT_NAME: ${{ github.event_name }}
           BASE_REF: ${{ github.base_ref }}
         run: |
@@ -121,52 +121,45 @@ jobs:
 
           manifest_name="anixops-mitm-release-dry-run-${version_no_v}-manifest.json"
           manifest_path="build/${manifest_name}"
-          cat > "${manifest_path}" <<EOF
           {
-            "release_version": "${RELEASE_VERSION}",
-            "release_kind": "${RELEASE_KIND}",
-            "release_commit": "${RELEASE_COMMIT}",
-            "ci_gate": "${RELEASE_CI_GATE}",
-            "publication": "${RELEASE_PUBLICATION}",
-            "compatibility_scope": "alpha policy-core dry-run",
-            "manual_intervention_status": "pending-items-block-publication",
-            "artifacts": [
-              {
-                "name": "${artifact_name}",
-                "path": "${artifact_path}",
-                "sha256": "${artifact_sha256}",
-                "sha256_file": "$(basename "${artifact_sha256_file}")"
-              }
-            ]
-          }
-EOF
+            printf '{\n'
+            printf '  "release_version": "%s",\n' "${RELEASE_VERSION}"
+            printf '  "release_kind": "%s",\n' "${RELEASE_KIND}"
+            printf '  "release_commit": "%s",\n' "${RELEASE_COMMIT}"
+            printf '  "ci_gate": "%s",\n' "${RELEASE_CI_GATE}"
+            printf '  "publication": "%s",\n' "${RELEASE_PUBLICATION}"
+            printf '  "compatibility_scope": "alpha policy-core dry-run",\n'
+            printf '  "manual_intervention_status": "pending-items-block-publication",\n'
+            printf '  "artifacts": [\n'
+            printf '    {\n'
+            printf '      "name": "%s",\n' "${artifact_name}"
+            printf '      "path": "%s",\n' "${artifact_path}"
+            printf '      "sha256": "%s",\n' "${artifact_sha256}"
+            printf '      "sha256_file": "%s"\n' "$(basename "${artifact_sha256_file}")"
+            printf '    }\n'
+            printf '  ]\n'
+            printf '}\n'
+          } > "${manifest_path}"
 
           manifest_sha256="$(sha256sum "${manifest_path}" | awk '{print $1}')"
           manifest_sha256_file="build/${manifest_name}.sha256"
           printf '%s  %s\n' "${manifest_sha256}" "${manifest_name}" > "${manifest_sha256_file}"
 
           release_notes_path="build/release-notes-dry-run.md"
-          cat > "${release_notes_path}" <<EOF
-          # mitm_anixops ${RELEASE_VERSION} Dry Run
-
-          Commit: ${RELEASE_COMMIT}
-
-          Publication: blocked.
-
-          CI gate: ${RELEASE_CI_GATE}.
-
-          Compatibility scope: alpha policy core, runner, bindings, and docs.
-
-          Known gaps: no v1.0.0 stable release claim, no tag publication, no
-          signing/notarization, no platform certificate lifecycle, no production
-          JavaScript runtime, and no platform app-store release assets.
-
-          Manual intervention: pending markers in docs/manual-intervention.md
-          remain blocking for public release publication.
-
-          Rollback path: discard this workflow artifact; do not create or move a
-          public release tag from a dry-run artifact.
-EOF
+          {
+            printf '# mitm_anixops %s Dry Run\n\n' "${RELEASE_VERSION}"
+            printf 'Commit: %s\n\n' "${RELEASE_COMMIT}"
+            printf 'Publication: blocked.\n\n'
+            printf 'CI gate: %s.\n\n' "${RELEASE_CI_GATE}"
+            printf 'Compatibility scope: alpha policy core, runner, bindings, and docs.\n\n'
+            printf 'Known gaps: no v1.0.0 stable release claim, no tag publication, no\n'
+            printf 'signing/notarization, no platform certificate lifecycle, no production\n'
+            printf 'JavaScript runtime, and no platform app-store release assets.\n\n'
+            printf 'Manual intervention: pending markers in docs/manual-intervention.md\n'
+            printf 'remain blocking for public release publication.\n\n'
+            printf 'Rollback path: discard this workflow artifact; do not create or move a\n'
+            printf 'public release tag from a dry-run artifact.\n'
+          } > "${release_notes_path}"
 
           {
             printf 'release_version=%s\n' "${RELEASE_VERSION}"
