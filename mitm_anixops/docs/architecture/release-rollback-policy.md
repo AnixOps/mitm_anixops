@@ -9,7 +9,8 @@ Current status:
 release-rollback-policy-status=accepted
 release-rollback-policy-file=docs/architecture/release-rollback-policy.md
 release-replacement-policy=immutable-public-tags-and-assets
-release-workflow-publication-status=blocked-until-explicit-publish-step
+release-workflow-publication-status=tag-publish-enabled-after-gates
+release-publication-environment=github-release-publication
 ```
 
 ## Scope
@@ -66,7 +67,13 @@ A replacement release must include:
 
 ## Current Publication Boundary
 
-The current release workflow builds and validates release artifacts, but public
-publication remains disabled. Until an explicit publish step is added, rollback
-for generated release workflow artifacts means discarding the workflow artifact
-and rerunning the release workflow from a corrected commit.
+The current release workflow builds and validates release artifacts. For `v*`
+tag runs, it publishes those workflow-generated artifacts to GitHub Releases
+only after same-commit `main` CI, checksum, manifest, release-note, existing
+release, and `github-release-publication` environment gates pass.
+
+Manual release workflow validation from `main` remains non-publishing. If a
+workflow artifact is wrong before tag publication, discard it and rerun the
+workflow from a corrected commit. If a public release asset is wrong after tag
+publication, keep the tag and assets immutable and publish a successor tag with
+replacement evidence.

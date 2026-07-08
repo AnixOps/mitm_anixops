@@ -55,11 +55,11 @@ The release workflow must eventually support:
 Current tag-triggered release workflow status:
 
 ```text
-release-workflow-current-mode=tag-triggered-artifact-build
+release-workflow-current-mode=tag-triggered-build-and-publish
 release-workflow-file=.github/workflows/release.yml
-release-workflow-publication=blocked
+release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
-release-workflow-publication-gate=pending-explicit-publish-step
+release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment
 release-workflow-metadata=checksums-manifest-notes-summary
 release-rollback-policy=accepted
 ```
@@ -68,9 +68,11 @@ The release workflow builds artifacts in GitHub Actions for `v*` tags and
 manual validation from `main`. It also generates checksum sidecars, a JSON
 manifest, manifest checksum, release notes, and a GitHub Step Summary. Before
 packaging, it verifies that the same commit has a successful `build.yml` run on
-`main` and that the release rollback/replacement policy exists. Public GitHub
-Release publication remains blocked until an explicit publish step and
-publication eligibility are completed.
+`main` and that the release rollback/replacement policy exists. For `v*` tag
+runs only, it publishes those workflow-generated assets to a GitHub Release
+after metadata validation and the `github-release-publication` environment gate.
+Manual `workflow_dispatch` runs from `main` remain validation-only and do not
+publish public release assets.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).

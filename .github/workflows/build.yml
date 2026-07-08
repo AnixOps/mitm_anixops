@@ -208,13 +208,16 @@ jobs:
           grep -q "^- \\[x\\] Define Stash and Shadowrocket compatibility as migration notes" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Stash and Shadowrocket migration guard fixtures" mitm_anixops/TODO.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
+          grep -q "GitHub Release upload exists only for gated" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "Current dry-run workflow: .github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-gate.md
           grep -q "Current release workflow: .github/workflows/release.yml" mitm_anixops/docs/architecture/release-gate.md
-          grep -q "release-workflow-publication=blocked" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-workflow-current-mode=tag-triggered-build-and-publish" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-workflow-publication=tag-publish-enabled" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-rollback-policy=accepted" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-rollback-policy-status=accepted" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "release-replacement-policy=immutable-public-tags-and-assets" mitm_anixops/docs/architecture/release-rollback-policy.md
-          grep -q "release-workflow-publication-status=blocked-until-explicit-publish-step" mitm_anixops/docs/architecture/release-rollback-policy.md
+          grep -q "release-workflow-publication-status=tag-publish-enabled-after-gates" mitm_anixops/docs/architecture/release-rollback-policy.md
+          grep -q "release-publication-environment=github-release-publication" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "release-dry-run-current-mode=workflow-defined" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-workflow=.github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-publication=blocked" mitm_anixops/docs/architecture/release-dry-run.md
@@ -233,13 +236,17 @@ jobs:
           grep -q "manifest_sha256" .github/workflows/release.yml
           grep -q "release-notes.md" .github/workflows/release.yml
           grep -q "Rollback path:" .github/workflows/release.yml
-          grep -q "publish_eligibility_status=blocked" .github/workflows/release.yml
+          grep -q 'publish_eligibility_status="eligible"' .github/workflows/release.yml
           grep -q "Validate rollback policy" .github/workflows/release.yml
-          grep -q "gh release create" .github/workflows/release.yml && exit 1 || true
+          grep -q "environment: github-release-publication" .github/workflows/release.yml
+          grep -q "contents: write" .github/workflows/release.yml
+          grep -q "gh release view" .github/workflows/release.yml
+          grep -q "gh release create" .github/workflows/release.yml
           grep -q "^- \\[x\\] Add tag-triggered release workflow that builds artifacts in GitHub" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Generate checksums, manifest, release notes, and release summary in" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add same-commit CI gate before release publication" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add release rollback and replacement policy" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add tag-only GitHub Release asset publication" mitm_anixops/TODO.md
           grep -q "Source contract:" .github/pull_request_template.md
           grep -q "Manual intervention required" .github/pull_request_template.md
 

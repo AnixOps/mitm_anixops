@@ -82,17 +82,17 @@ Current jobs:
   requires a successful same-commit `build.yml` run on `main`, runs the release
   build gate in GitHub Actions, validates rollback/replacement policy, builds
   the release package, and uploads it with checksum, manifest, release-note, and
-  summary evidence as workflow artifacts while public release publication
-  remains blocked.
+  summary evidence as workflow artifacts. For `v*` tag runs, it can publish
+  those workflow-generated assets to a GitHub Release after the release gates
+  and `github-release-publication` environment gate pass.
 
 Known CI/CD gaps for v1.0.0:
 
 - no dedicated lint job;
 - no dedicated format check;
 - no explicit compatibility matrix test job;
-- release checksum, manifest, and note evidence is generated as workflow
-  artifacts, not public GitHub Release assets yet;
-- no GitHub Release upload workflow for future releases;
+- GitHub Release upload exists only for gated `v*` tag runs; release
+  environment approval still needs repository configuration;
 - no macOS runner coverage yet.
 
 The old `mitm_anixops/ci/github-actions.yml` file is a legacy workflow snippet,

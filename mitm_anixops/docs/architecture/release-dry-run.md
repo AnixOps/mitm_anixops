@@ -10,7 +10,7 @@ release-dry-run-current-mode=workflow-defined
 release-dry-run-workflow=.github/workflows/release-dry-run.yml
 release-dry-run-publication=blocked
 release-dry-run-ci-gate=equivalent-full-check-in-workflow
-release-dry-run-next-action=extend-release-workflow-with-checksum-manifest-notes-ci-gate-and-publication-policy
+release-dry-run-next-action=keep-dry-run-non-publishing-while-tag-release-workflow-publishes-after-gates
 ```
 
 ## Purpose
@@ -31,10 +31,10 @@ The dry-run workflow supports:
 - optional artifact target selection only after each target has a source
   contract.
 
-Tag-triggered artifact builds are handled by `.github/workflows/release.yml`.
-Public release publication remains blocked until that workflow adds same-commit
-CI lookup, checksum/manifest/release-note gates, rollback policy, and
-publication eligibility.
+Tag-triggered artifact builds and GitHub Release asset publication are handled
+by `.github/workflows/release.yml`. Dry-run mode remains non-publishing and
+continues to prove the equivalent artifact, checksum, manifest, release-note,
+and rollback evidence without creating a GitHub Release.
 
 ## Required Jobs
 

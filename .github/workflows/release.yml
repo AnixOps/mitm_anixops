@@ -35,7 +35,7 @@ jobs:
           test -s "${policy}"
           grep -q "release-rollback-policy-status=accepted" "${policy}"
           grep -q "release-replacement-policy=immutable-public-tags-and-assets" "${policy}"
-          grep -q "release-workflow-publication-status=blocked-until-explicit-publish-step" "${policy}"
+          grep -q "release-workflow-publication-status=tag-publish-enabled-after-gates" "${policy}"
       - name: Validate release policy
         id: policy
         shell: bash
@@ -90,8 +90,13 @@ jobs:
             printf 'kind=%s\n' "${kind}"
             printf 'commit=%s\n' "${GITHUB_SHA}"
             printf 'source_mode=%s\n' "${source_mode}"
-            printf 'publication=blocked\n'
-            printf 'publication_gate=pending-explicit-publish-step\n'
+            if [[ "${source_mode}" == "tag" ]]; then
+              printf 'publication=github-release-assets\n'
+              printf 'publication_gate=same-commit-ci-release-metadata-and-github-release-publication-environment\n'
+            else
+              printf 'publication=blocked\n'
+              printf 'publication_gate=manual-validation-does-not-publish\n'
+            fi
           } >> "${GITHUB_OUTPUT}"
 
   same-commit-ci:
@@ -140,6 +145,15 @@ jobs:
     needs:
       - release-policy
       - same-commit-ci
+    outputs:
+      artifact_name: ${{ steps.build_package.outputs.artifact_name }}
+      artifact_path: ${{ steps.build_package.outputs.artifact_path }}
+      artifact_sha256_file: ${{ steps.build_package.outputs.artifact_sha256_file }}
+      manifest_name: ${{ steps.build_package.outputs.manifest_name }}
+      manifest_path: ${{ steps.build_package.outputs.manifest_path }}
+      manifest_sha256_file: ${{ steps.build_package.outputs.manifest_sha256_file }}
+      release_notes_path: ${{ steps.build_package.outputs.release_notes_path }}
+      publish_eligibility_status: ${{ steps.build_package.outputs.publish_eligibility_status }}
     defaults:
       run:
         working-directory: mitm_anixops
@@ -188,6 +202,12 @@ jobs:
           artifact_sha256="$(sha256sum "${artifact_path}" | awk '{print $1}')"
           artifact_sha256_file="build/${artifact_name}.sha256"
           printf '%s  %s\n' "${artifact_sha256}" "${artifact_name}" > "${artifact_sha256_file}"
+          publish_eligibility_status="blocked"
+          publish_blocking_reason="manual-release-validation-does-not-publish"
+          if [[ "${RELEASE_SOURCE_MODE}" == "tag" ]]; then
+            publish_eligibility_status="eligible"
+            publish_blocking_reason="same-commit-ci-and-release-metadata-gates-passed"
+          fi
 
           manifest_name="anixops-mitm-release-${version_no_v}-manifest.json"
           manifest_path="build/${manifest_name}"
@@ -203,6 +223,7 @@ jobs:
             printf '  "ci_run_conclusion": "%s",\n' "${RELEASE_CI_RUN_CONCLUSION}"
             printf '  "publication": "%s",\n' "${RELEASE_PUBLICATION}"
             printf '  "publication_gate": "%s",\n' "${RELEASE_PUBLICATION_GATE}"
+            printf '  "publish_eligibility_status": "%s",\n' "${publish_eligibility_status}"
             printf '  "compatibility_scope": "alpha policy-core release artifact",\n'
             printf '  "artifacts": [\n'
             printf '    {\n'
@@ -228,11 +249,13 @@ jobs:
             printf 'CI run: %s\n\n' "${RELEASE_CI_RUN_URL}"
             printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
             printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
-            printf 'Compatibility scope: alpha policy core, runner, bindings, and docs.\n\n'
-            printf 'Known gaps: no v1.0.0 stable release claim, no public GitHub\n'
-            printf 'Release upload yet, no signing/notarization, no platform certificate\n'
-            printf 'lifecycle, no production JavaScript runtime, and no platform app-store\n'
-            printf 'release assets.\n\n'
+            if [[ "${RELEASE_KIND}" == "stable" ]]; then
+              printf 'Compatibility scope: v1 policy core, runner, bindings, and docs as documented in the compatibility matrix.\n\n'
+              printf 'Known gaps: planned and partial matrix rows remain limited by their source contracts; no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
+            else
+              printf 'Compatibility scope: prerelease policy core, runner, bindings, and docs.\n\n'
+              printf 'Known gaps: no v1.0.0 stable release claim, no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
+            fi
             printf 'Rollback path: delete the untrusted workflow artifact and create a new\n'
             printf 'tag only after the release gate passes on the replacement commit. Public\n'
             printf 'tags and release assets are immutable by default; use a successor tag for\n'
@@ -259,8 +282,8 @@ jobs:
             printf 'release_notes_path=%s\n' "${release_notes_path}"
             printf 'publication=%s\n' "${RELEASE_PUBLICATION}"
             printf 'publication_gate=%s\n' "${RELEASE_PUBLICATION_GATE}"
-            printf 'publish_eligibility_status=blocked\n'
-            printf 'publish_blocking_reason=explicit-publish-step-not-yet-added\n'
+            printf 'publish_eligibility_status=%s\n' "${publish_eligibility_status}"
+            printf 'publish_blocking_reason=%s\n' "${publish_blocking_reason}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate release metadata
@@ -277,7 +300,8 @@ jobs:
           grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"ci_gate\": \"same-commit-main-build-success\"" "${{ steps.build_package.outputs.manifest_path }}"
-          grep -q "\"publication\": \"blocked\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"publication\": \"${RELEASE_PUBLICATION}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"publish_eligibility_status\": \"${{ steps.build_package.outputs.publish_eligibility_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -317,3 +341,99 @@ jobs:
             mitm_anixops/${{ steps.build_package.outputs.manifest_path }}
             mitm_anixops/${{ steps.build_package.outputs.manifest_sha256_file }}
             mitm_anixops/${{ steps.build_package.outputs.release_notes_path }}
+
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - release-policy
+      - same-commit-ci
+      - package
+    if: ${{ needs.release-policy.outputs.source_mode == 'tag' }}
+    permissions:
+      contents: write
+      actions: read
+    environment: github-release-publication
+    env:
+      RELEASE_VERSION: ${{ needs.release-policy.outputs.version }}
+      RELEASE_KIND: ${{ needs.release-policy.outputs.kind }}
+      RELEASE_COMMIT: ${{ needs.release-policy.outputs.commit }}
+      RELEASE_CI_GATE: ${{ needs.same-commit-ci.outputs.ci_gate }}
+      PUBLISH_ELIGIBILITY_STATUS: ${{ needs.package.outputs.publish_eligibility_status }}
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: anixops-mitm-release-package
+          path: release-assets
+      - name: Validate release assets before publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${PUBLISH_ELIGIBILITY_STATUS}" != "eligible" ]]; then
+            printf 'release assets are not eligible for publication: %s\n' "${PUBLISH_ELIGIBILITY_STATUS}" >&2
+            exit 1
+          fi
+          if [[ "${RELEASE_CI_GATE}" != "same-commit-main-build-success" ]]; then
+            printf 'release CI gate did not pass: %s\n' "${RELEASE_CI_GATE}" >&2
+            exit 1
+          fi
+          if gh release view "${RELEASE_VERSION}" >/dev/null 2>&1; then
+            printf 'release already exists and public assets are immutable: %s\n' "${RELEASE_VERSION}" >&2
+            exit 1
+          fi
+
+          artifact="release-assets/${{ needs.package.outputs.artifact_name }}"
+          artifact_sha256="release-assets/$(basename "${{ needs.package.outputs.artifact_sha256_file }}")"
+          manifest="release-assets/${{ needs.package.outputs.manifest_name }}"
+          manifest_sha256="release-assets/$(basename "${{ needs.package.outputs.manifest_sha256_file }}")"
+          notes="release-assets/$(basename "${{ needs.package.outputs.release_notes_path }}")"
+
+          test -s "${artifact}"
+          test -s "${artifact_sha256}"
+          test -s "${manifest}"
+          test -s "${manifest_sha256}"
+          test -s "${notes}"
+          grep -Eq "^[0-9a-f]{64}  $(basename "${artifact}")$" "${artifact_sha256}"
+          grep -Eq "^[0-9a-f]{64}  $(basename "${manifest}")$" "${manifest_sha256}"
+          grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${manifest}"
+          grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${manifest}"
+          grep -q "\"publication\": \"github-release-assets\"" "${manifest}"
+          grep -q "\"publish_eligibility_status\": \"eligible\"" "${manifest}"
+          grep -q "Rollback path:" "${notes}"
+
+      - name: Publish GitHub Release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          notes="release-assets/$(basename "${{ needs.package.outputs.release_notes_path }}")"
+          prerelease_args=()
+          if [[ "${RELEASE_KIND}" != "stable" ]]; then
+            prerelease_args=(--prerelease)
+          fi
+
+          gh release create "${RELEASE_VERSION}" \
+            release-assets/* \
+            --target "${RELEASE_COMMIT}" \
+            --title "mitm_anixops ${RELEASE_VERSION}" \
+            --notes-file "${notes}" \
+            "${prerelease_args[@]}"
+
+      - name: Write release publication summary
+        shell: bash
+        run: |
+          {
+            printf '## GitHub Release Publication\n\n'
+            printf '| Field | Value |\n'
+            printf '| --- | --- |\n'
+            printf '| release_version | `%s` |\n' "${RELEASE_VERSION}"
+            printf '| release_commit | `%s` |\n' "${RELEASE_COMMIT}"
+            printf '| release_kind | `%s` |\n' "${RELEASE_KIND}"
+            printf '| ci_gate | `%s` |\n' "${RELEASE_CI_GATE}"
+            printf '| publish_eligibility_status | `%s` |\n' "${PUBLISH_ELIGIBILITY_STATUS}"
+            printf '| release_url | `%s/%s/releases/tag/%s` |\n' "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${RELEASE_VERSION}"
+          } >> "${GITHUB_STEP_SUMMARY}"

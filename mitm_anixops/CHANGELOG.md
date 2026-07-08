@@ -63,13 +63,16 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   same-workflow CI gate, builds dry-run artifacts, and generates checksum,
   manifest, release-note, and summary evidence without publishing a release.
 - Added a tag-triggered GitHub Actions release workflow that builds release
-  package artifacts while public release publication remains blocked.
+  package artifacts.
 - Added checksum, manifest, release-note, and Step Summary generation to the
   release workflow artifacts.
 - Added a same-commit `build.yml` success gate before the release workflow can
   package release artifacts.
 - Added a release rollback and replacement policy with immutable public tag and
   asset rules, enforced by the release workflow policy stage.
+- Added tag-only GitHub Release publication for workflow-generated release
+  artifacts after same-commit CI, metadata, immutable-release, and environment
+  gates pass.
 
 ### Changed
 

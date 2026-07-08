@@ -88,3 +88,4 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   GitHub Actions.
 - [x] Add same-commit CI gate before release publication.
 - [x] Add release rollback and replacement policy.
+- [x] Add tag-only GitHub Release asset publication after release gates pass.
