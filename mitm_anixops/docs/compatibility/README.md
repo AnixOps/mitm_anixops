@@ -46,6 +46,8 @@ corresponding tests.
   MITM host/options parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
   module common-config parser contract.
+- [surge-requirement-metadata.md](surge-requirement-metadata.md): Surge
+  `#!requirement` metadata tolerance contract.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
   Shadowrocket common-config parser contract.
 - [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): Stash

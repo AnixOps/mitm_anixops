@@ -1,0 +1,6 @@
+#!requires = Surge >= 999.0
+#!requirement-min = Surge >= 5.0
+requirement = Surge >= 5.0
+
+[MITM]
+hostname = unsupported.requirement.surge.test

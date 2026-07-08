@@ -38,6 +38,7 @@ jobs:
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
+            mitm_anixops/docs/compatibility/surge-requirement-metadata.md
             mitm_anixops/docs/compatibility/shadowrocket-common-config.md
             mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
@@ -66,6 +67,8 @@ jobs:
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.Malformed.snippet
             mitm_anixops/tests/fixtures/Surge.CommonConfig.sgmodule
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
+            mitm_anixops/tests/fixtures/Surge.RequirementMetadata.sgmodule
+            mitm_anixops/tests/fixtures/Surge.RequirementMetadata.Unsupported.sgmodule
             mitm_anixops/tests/fixtures/Stash.MigrationGuard.yaml
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
@@ -179,6 +182,13 @@ jobs:
           grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/surge_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/surge_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "Surge requirement metadata" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge Requirement Metadata Source Contract" mitm_anixops/docs/compatibility/surge-requirement-metadata.md
+          grep -q "Surge.RequirementMetadata.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge.RequirementMetadata.Unsupported.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/surge_requirement_metadata_fixture_records_tolerated_keys" mitm_anixops/tests/test_config.c
+          grep -q "config/surge_requirement_metadata_unsupported_keys_are_not_claimed" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Surge requirement metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Shadowrocket common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket Common Config Source Contract" mitm_anixops/docs/compatibility/shadowrocket-common-config.md
           grep -q "Shadowrocket.CommonConfig.conf" mitm_anixops/docs/compatibility/matrix.md

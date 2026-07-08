@@ -253,7 +253,39 @@ Unimplemented items:
 
 - full Surge module grammar;
 - broader body rewrite and JQ corpus;
-- requirement metadata behavior.
+- requirement runtime gating behavior.
+
+### Surge Requirement Metadata
+
+Detailed contract:
+[Surge Requirement Metadata Source Contract](surge-requirement-metadata.md).
+
+Capability: tolerate Surge requirement metadata without claiming platform
+requirement gating.
+
+Input form:
+
+- `#!requirement`;
+- adjacent module metadata keys such as `#!name`, `#!desc`, `#!system`, and
+  `#!arguments-desc`;
+- unsupported requirement-like hashbang keys as comments;
+- bare requirement-like lines outside supported sections as ignored parser
+  input.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Surge.RequirementMetadata.sgmodule`;
+- negative fixture
+  `tests/fixtures/Surge.RequirementMetadata.Unsupported.sgmodule`;
+- `config/surge_requirement_metadata_fixture_records_tolerated_keys`;
+- `config/surge_requirement_metadata_unsupported_keys_are_not_claimed`.
+
+Unimplemented items:
+
+- requirement runtime gating;
+- dependency download;
+- platform UI or install behavior;
+- broader Surge metadata corpus.
 
 ### Shadowrocket Common Config Subset
 

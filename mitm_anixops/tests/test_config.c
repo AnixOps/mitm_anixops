@@ -636,6 +636,113 @@ static void surge_common_config_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void surge_requirement_metadata_fixture_records_tolerated_keys(void)
+{
+	static const char *expected_actions[] = {
+		"name",
+		"desc",
+		"requirement",
+		"system",
+		"arguments-desc",
+	};
+	char *fixture = read_fixture("tests/fixtures/Surge.RequirementMetadata.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_mitm_decision_t mitm;
+	size_t diagnostic_count;
+	size_t ignored = 0;
+	size_t accepted = 0;
+	size_t i;
+	size_t action_index;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+
+	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic_count, 6);
+	for (i = 0; i < diagnostic_count; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED) {
+			ignored++;
+			ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+			ANIXOPS_EXPECT_STREQ(diagnostic.message, "#! metadata ignored");
+		}
+		else if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
+			accepted++;
+		}
+	}
+	ANIXOPS_EXPECT_EQ_SIZE(ignored, 5);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted, 1);
+
+	for (action_index = 0; action_index < sizeof(expected_actions) / sizeof(expected_actions[0]); action_index++) {
+		int found = 0;
+		for (i = 0; i < diagnostic_count; i++) {
+			ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+			if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED &&
+				strcmp(diagnostic.action, expected_actions[action_index]) == 0) {
+				found = 1;
+			}
+		}
+		ANIXOPS_EXPECT_TRUE(found);
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 5, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 8);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "requirement.metadata.surge.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void surge_requirement_metadata_unsupported_keys_are_not_claimed(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.RequirementMetadata.Unsupported.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_SURGE_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "line ignored outside supported section");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 6);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void request_rewrite_common_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/RequestRewrite.Common.conf");
@@ -2745,6 +2852,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/surge_common_config_strict_fixture_rejects_malformed_rule",
 		surge_common_config_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_requirement_metadata_fixture_records_tolerated_keys",
+		surge_requirement_metadata_fixture_records_tolerated_keys);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_requirement_metadata_unsupported_keys_are_not_claimed",
+		surge_requirement_metadata_unsupported_keys_are_not_claimed);
 	add_test(
 		tests,
 		count,

@@ -26,6 +26,7 @@ unsupported unless a test or E2E fixture is added.
 | Quantumult X | `[rewrite_local]`, `[rewrite_remote]`, `[mitm]` | Supported subset | `quantumultx_rewrite_local_section_is_supported`, `config_accepts_quantumultx_rewrite_remote_section_aliases` |
 | Surge module | `[Script]` plus `name = type=http-response, pattern=...` | Supported subset | `surge_style_script_rule_template_is_supported`, representative Surge fixture |
 | Surge module arguments | `#!arguments = Name:value` | Supported subset | `sgmodule_inline_arguments_are_supported` |
+| Surge requirement metadata | `#!requirement` and adjacent module metadata | Tolerated metadata diagnostics | `Surge.RequirementMetadata.sgmodule`, `Surge.RequirementMetadata.Unsupported.sgmodule`, `config/surge_requirement_metadata_fixture_records_tolerated_keys`, `config/surge_requirement_metadata_unsupported_keys_are_not_claimed` |
 | Shadowrocket common config | `[URL Rewrite]`, `[Script]`, `[MITM]` | Supported subset | `Shadowrocket.CommonConfig.conf`, `Shadowrocket.CommonConfig.Malformed.conf`, `config/shadowrocket_common_config_fixture_is_supported`, `config/shadowrocket_common_config_fixture_rejects_invalid_regex` |
 
 Unknown sections are ignored so clients can load larger platform configs and let this library consume only the policy

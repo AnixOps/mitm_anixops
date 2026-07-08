@@ -1,0 +1,8 @@
+#!name = Surge Requirement Metadata Fixture
+#!desc = Requirement metadata is tolerated as parser diagnostics only.
+#!requirement = Surge >= 5.0
+#!system = iOS >= 15.0
+#!arguments-desc = Mode: fixture mode
+
+[MITM]
+hostname = requirement.metadata.surge.test

@@ -14,6 +14,7 @@ required_capabilities='
 Loon plugin common fields
 Quantumult X rewrite/task/mitm common config
 Surge module common config
+Surge requirement metadata
 hostname / MITM domain matching
 request rewrite
 response rewrite

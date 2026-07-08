@@ -16,7 +16,8 @@ subset. It does not claim full Surge module compatibility.
 The current common-config subset accepts:
 
 - `#!name`, `#!desc`, `#!arguments-desc`, and `#!requirement` metadata lines as
-  tolerated diagnostics;
+  tolerated diagnostics, with requirement metadata covered by
+  [Surge Requirement Metadata](surge-requirement-metadata.md);
 - `#!arguments = Feature:true,Mode:value` inline argument defaults;
 - `[URL Rewrite]` URL redirect and reject rules;
 - `[Script]` attr-list rules with `type`, `pattern`, `requires-body`,
@@ -82,7 +83,7 @@ It does not implement:
 - HTTP parser or body streaming;
 - JavaScript execution;
 - remote script download or cache refresh;
-- Surge requirement gating;
+- Surge requirement runtime gating;
 - cron/task execution.
 
 Those remain runner, runtime, scheduler, or adapter responsibilities.
@@ -105,5 +106,5 @@ Row:
 Surge module common config
 ```
 
-The row remains `partial` until broader module grammar, requirement behavior,
-body/JQ corpus coverage, and scheduler/runtime behavior exist.
+The row remains `partial` until broader module grammar, requirement runtime
+gating behavior, body/JQ corpus coverage, and scheduler/runtime behavior exist.

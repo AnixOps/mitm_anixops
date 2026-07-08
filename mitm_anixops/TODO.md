@@ -32,6 +32,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add Loon inline-arguments parser fixtures and positive/negative tests.
 - [x] Add Quantumult X MITM option parser fixtures and positive/negative
   tests.
+- [x] Add Surge requirement metadata parser fixtures and positive/negative
+  tests.
 - [x] Add Shadowrocket common-config parser fixture and positive/negative tests.
 - [x] Add reject/direct/proxy policy-intent parser fixtures and
   positive/negative tests.
