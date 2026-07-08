@@ -82,13 +82,55 @@ jobs:
             printf 'commit=%s\n' "${GITHUB_SHA}"
             printf 'source_mode=%s\n' "${source_mode}"
             printf 'publication=blocked\n'
-            printf 'publication_gate=pending-same-commit-ci-gate\n'
+            printf 'publication_gate=pending-rollback-and-publication-policy\n'
+          } >> "${GITHUB_OUTPUT}"
+
+  same-commit-ci:
+    runs-on: ubuntu-latest
+    needs:
+      - release-policy
+    outputs:
+      ci_gate: ${{ steps.lookup.outputs.ci_gate }}
+      ci_run_id: ${{ steps.lookup.outputs.ci_run_id }}
+      ci_run_url: ${{ steps.lookup.outputs.ci_run_url }}
+      ci_run_conclusion: ${{ steps.lookup.outputs.ci_run_conclusion }}
+    steps:
+      - name: Verify same-commit main CI
+        id: lookup
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ needs.release-policy.outputs.commit }}
+        run: |
+          set -euo pipefail
+
+          ci_record="$(
+            gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/build.yml/runs" \
+              -f "head_sha=${RELEASE_COMMIT}" \
+              -f status=success \
+              -f per_page=50 \
+              --jq '.workflow_runs | map(select(.head_branch == "main" and .conclusion == "success")) | first | if . == null then "" else [.id, .html_url, .conclusion] | @tsv end'
+          )"
+
+          if [[ -z "${ci_record}" ]]; then
+            printf 'missing successful same-commit main build workflow for %s\n' "${RELEASE_COMMIT}" >&2
+            exit 1
+          fi
+
+          IFS=$'\t' read -r ci_run_id ci_run_url ci_run_conclusion <<< "${ci_record}"
+
+          {
+            printf 'ci_gate=same-commit-main-build-success\n'
+            printf 'ci_run_id=%s\n' "${ci_run_id}"
+            printf 'ci_run_url=%s\n' "${ci_run_url}"
+            printf 'ci_run_conclusion=%s\n' "${ci_run_conclusion}"
           } >> "${GITHUB_OUTPUT}"
 
   package:
     runs-on: ubuntu-latest
     needs:
       - release-policy
+      - same-commit-ci
     defaults:
       run:
         working-directory: mitm_anixops
@@ -99,6 +141,10 @@ jobs:
       RELEASE_SOURCE_MODE: ${{ needs.release-policy.outputs.source_mode }}
       RELEASE_PUBLICATION: ${{ needs.release-policy.outputs.publication }}
       RELEASE_PUBLICATION_GATE: ${{ needs.release-policy.outputs.publication_gate }}
+      RELEASE_CI_GATE: ${{ needs.same-commit-ci.outputs.ci_gate }}
+      RELEASE_CI_RUN_ID: ${{ needs.same-commit-ci.outputs.ci_run_id }}
+      RELEASE_CI_RUN_URL: ${{ needs.same-commit-ci.outputs.ci_run_url }}
+      RELEASE_CI_RUN_CONCLUSION: ${{ needs.same-commit-ci.outputs.ci_run_conclusion }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
@@ -142,6 +188,10 @@ jobs:
             printf '  "release_kind": "%s",\n' "${RELEASE_KIND}"
             printf '  "release_commit": "%s",\n' "${RELEASE_COMMIT}"
             printf '  "source_mode": "%s",\n' "${RELEASE_SOURCE_MODE}"
+            printf '  "ci_gate": "%s",\n' "${RELEASE_CI_GATE}"
+            printf '  "ci_run_id": "%s",\n' "${RELEASE_CI_RUN_ID}"
+            printf '  "ci_run_url": "%s",\n' "${RELEASE_CI_RUN_URL}"
+            printf '  "ci_run_conclusion": "%s",\n' "${RELEASE_CI_RUN_CONCLUSION}"
             printf '  "publication": "%s",\n' "${RELEASE_PUBLICATION}"
             printf '  "publication_gate": "%s",\n' "${RELEASE_PUBLICATION_GATE}"
             printf '  "compatibility_scope": "alpha policy-core release artifact",\n'
@@ -165,6 +215,8 @@ jobs:
             printf '# mitm_anixops %s Release Artifact\n\n' "${RELEASE_VERSION}"
             printf 'Commit: %s\n\n' "${RELEASE_COMMIT}"
             printf 'Source mode: %s\n\n' "${RELEASE_SOURCE_MODE}"
+            printf 'CI gate: %s.\n\n' "${RELEASE_CI_GATE}"
+            printf 'CI run: %s\n\n' "${RELEASE_CI_RUN_URL}"
             printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
             printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'Compatibility scope: alpha policy core, runner, bindings, and docs.\n\n'
@@ -183,6 +235,10 @@ jobs:
             printf 'release_kind=%s\n' "${RELEASE_KIND}"
             printf 'release_commit=%s\n' "${RELEASE_COMMIT}"
             printf 'source_mode=%s\n' "${RELEASE_SOURCE_MODE}"
+            printf 'ci_gate=%s\n' "${RELEASE_CI_GATE}"
+            printf 'ci_run_id=%s\n' "${RELEASE_CI_RUN_ID}"
+            printf 'ci_run_url=%s\n' "${RELEASE_CI_RUN_URL}"
+            printf 'ci_run_conclusion=%s\n' "${RELEASE_CI_RUN_CONCLUSION}"
             printf 'artifact_name=%s\n' "${artifact_name}"
             printf 'artifact_path=%s\n' "${artifact_path}"
             printf 'artifact_sha256=%s\n' "${artifact_sha256}"
@@ -195,7 +251,7 @@ jobs:
             printf 'publication=%s\n' "${RELEASE_PUBLICATION}"
             printf 'publication_gate=%s\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'publish_eligibility_status=blocked\n'
-            printf 'publish_blocking_reason=same-commit-ci-gate-not-yet-added\n'
+            printf 'publish_blocking_reason=rollback-and-publication-policy-not-yet-added\n'
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate release metadata
@@ -211,7 +267,9 @@ jobs:
           grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.manifest_name }}$" "${{ steps.build_package.outputs.manifest_sha256_file }}"
           grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"ci_gate\": \"same-commit-main-build-success\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"publication\": \"blocked\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Rollback path:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -227,6 +285,9 @@ jobs:
             printf '| release_kind | `%s` |\n' "${{ steps.build_package.outputs.release_kind }}"
             printf '| release_commit | `%s` |\n' "${{ steps.build_package.outputs.release_commit }}"
             printf '| source_mode | `%s` |\n' "${{ steps.build_package.outputs.source_mode }}"
+            printf '| ci_gate | `%s` |\n' "${{ steps.build_package.outputs.ci_gate }}"
+            printf '| ci_run_id | `%s` |\n' "${{ steps.build_package.outputs.ci_run_id }}"
+            printf '| ci_run_conclusion | `%s` |\n' "${{ steps.build_package.outputs.ci_run_conclusion }}"
             printf '| artifact_name | `%s` |\n' "${{ steps.build_package.outputs.artifact_name }}"
             printf '| artifact_sha256 | `%s` |\n' "${{ steps.build_package.outputs.artifact_sha256 }}"
             printf '| manifest_name | `%s` |\n' "${{ steps.build_package.outputs.manifest_name }}"

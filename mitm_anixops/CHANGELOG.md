@@ -57,6 +57,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   package artifacts while public release publication remains blocked.
 - Added checksum, manifest, release-note, and Step Summary generation to the
   release workflow artifacts.
+- Added a same-commit `build.yml` success gate before the release workflow can
+  package release artifacts.
 
 ### Changed
 

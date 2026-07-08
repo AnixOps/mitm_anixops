@@ -77,18 +77,19 @@ Current jobs:
   release notes, and summary evidence as workflow artifacts without public
   release publication.
 - `release`: validates `v*` tags or manual release workflow checks from `main`,
-  runs the release build gate in GitHub Actions, builds the release package, and
-  uploads it with checksum, manifest, release-note, and summary evidence as
-  workflow artifacts while public release publication remains blocked.
+  requires a successful same-commit `build.yml` run on `main`, runs the release
+  build gate in GitHub Actions, builds the release package, and uploads it with
+  checksum, manifest, release-note, and summary evidence as workflow artifacts
+  while public release publication remains blocked.
 
 Known CI/CD gaps for v1.0.0:
 
 - no dedicated lint job;
 - no dedicated format check;
 - no explicit compatibility matrix test job;
-- no same-commit CI lookup gate for public tag release publication;
 - release checksum, manifest, and note evidence is generated as workflow
   artifacts, not public GitHub Release assets yet;
+- no rollback or replacement policy gate for public release publication;
 - no GitHub Release upload workflow for future releases;
 - no macOS runner coverage yet.
 

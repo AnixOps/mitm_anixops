@@ -58,15 +58,17 @@ Current tag-triggered release workflow status:
 release-workflow-current-mode=tag-triggered-artifact-build
 release-workflow-file=.github/workflows/release.yml
 release-workflow-publication=blocked
-release-workflow-publication-gate=pending-same-commit-ci-gate
+release-workflow-ci-gate=same-commit-main-build-success
+release-workflow-publication-gate=pending-rollback-and-publication-policy
 release-workflow-metadata=checksums-manifest-notes-summary
 ```
 
 The release workflow builds artifacts in GitHub Actions for `v*` tags and
 manual validation from `main`. It also generates checksum sidecars, a JSON
-manifest, manifest checksum, release notes, and a GitHub Step Summary. Public
-GitHub Release publication remains blocked until same-commit CI lookup,
-rollback policy, and publication eligibility are completed.
+manifest, manifest checksum, release notes, and a GitHub Step Summary. Before
+packaging, it verifies that the same commit has a successful `build.yml` run on
+`main`. Public GitHub Release publication remains blocked until rollback policy
+and publication eligibility are completed.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).

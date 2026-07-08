@@ -77,5 +77,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   Actions.
 - [x] Generate checksums, manifest, release notes, and release summary in
   GitHub Actions.
-- [ ] Add same-commit CI gate before release publication.
+- [x] Add same-commit CI gate before release publication.
 - [ ] Add release rollback and replacement policy.
