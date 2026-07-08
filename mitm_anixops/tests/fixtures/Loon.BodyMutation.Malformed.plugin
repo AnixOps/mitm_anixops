@@ -1,0 +1,2 @@
+[Body Rewrite]
+^https:\/\/body\.loon\.test\/bad response-body-replace-regex [ clean

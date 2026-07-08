@@ -1,0 +1,3 @@
+[Body Rewrite]
+^https:\/\/body\.loon\.test\/request\/(.*) request-body-replace-regex token=([A-Za-z]+) token=$1-loon
+^https:\/\/body\.loon\.test\/response\/(.*) response-body-replace-regex ad clean

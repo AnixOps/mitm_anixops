@@ -137,6 +137,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   CI-covered positive/negative tests.
 - [x] Define body mutation source contract with parser fixtures and CI-covered
   positive/negative tests.
+- [x] Add Loon `[Body Rewrite]` body mutation parser fixtures and
+  positive/negative tests for the body-mutation contract.
 - [x] Define trace schema for URL, host, header, body, script trigger, and
   policy intent decisions.
 - [x] Add runner MITM decision golden JSON trace fixtures for TCP allow and

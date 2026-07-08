@@ -1261,15 +1261,19 @@ Input form:
 Current CI evidence:
 
 - positive fixture `tests/fixtures/BodyMutation.Common.conf`;
+- positive fixture `tests/fixtures/Loon.BodyMutation.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.BodyMutation.snippet`;
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
 - negative fixture `tests/fixtures/BodyMutation.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/Loon.BodyMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
 - `config/body_mutation_common_fixture_is_supported`;
 - `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
+- `config/loon_body_mutation_fixture_maps_body_rewrites`;
+- `config/loon_body_mutation_malformed_fixture_rejects_invalid_body_regex`;
 - `config/quantumultx_body_mutation_fixture_maps_response_body_regex`;
 - `config/quantumultx_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/surge_body_mutation_fixture_maps_response_body_regex`;

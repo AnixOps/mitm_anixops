@@ -43,6 +43,7 @@ Parser case:
 
 ```text
 tests/fixtures/BodyMutation.Common.conf
+tests/fixtures/Loon.BodyMutation.plugin
 tests/fixtures/QuantumultX.BodyMutation.snippet
 tests/fixtures/Surge.BodyMutation.sgmodule
 tests/fixtures/Surge.BodyJsonMutation.sgmodule
@@ -56,6 +57,8 @@ Expected behavior:
 - response body regex mutation is observable through
   `anixops_rewrite_apply_body`;
 - request JSON body mutation is observable through `anixops_rewrite_apply_body`;
+- Loon `[Body Rewrite]` request and response body regex mutations are
+  observable through `anixops_rewrite_apply_body`;
 - Quantumult X `url response-body-replace-regex` response body mutation is
   observable through `anixops_rewrite_apply_body`;
 - Surge `[URL Rewrite]` `response-body-replace-regex` response body mutation
@@ -71,6 +74,7 @@ Parser case:
 
 ```text
 tests/fixtures/BodyMutation.Common.Malformed.conf
+tests/fixtures/Loon.BodyMutation.Malformed.plugin
 tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet
 tests/fixtures/Surge.BodyMutation.Malformed.sgmodule
 tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
@@ -79,6 +83,7 @@ tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
 Expected behavior:
 
 - the invalid body regex rejects config load;
+- the invalid Loon `[Body Rewrite]` body regex rejects config load;
 - the invalid Quantumult X `url response-body-replace-regex` body regex rejects
   config load;
 - the invalid Surge `[URL Rewrite]` response body regex rejects config load;
@@ -112,6 +117,10 @@ Required CI evidence:
   `config/body_mutation_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/loon_body_mutation_fixture_maps_body_rewrites`;
+- `tests/test_config.c` registers
+  `config/loon_body_mutation_malformed_fixture_rejects_invalid_body_regex`;
 - `tests/test_config.c` registers
   `config/quantumultx_body_mutation_fixture_maps_response_body_regex`;
 - `tests/test_config.c` registers
