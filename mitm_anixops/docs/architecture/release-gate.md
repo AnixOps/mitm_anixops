@@ -50,6 +50,7 @@ ci-workflow-current-jobs=governance,lint,format-check,compatibility-matrix,macos
 ci-workflow-lint-status=shellcheck-error-severity
 ci-workflow-format-status=static-format-check
 ci-workflow-compatibility-matrix-status=dedicated-job
+ci-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh
 ci-workflow-manual-intervention-status=static-schema-check
 ci-workflow-manual-intervention-transition-status=scripts/manual-intervention-transition-check.sh
 ci-workflow-v1-acceptance-status=static-evidence-check
@@ -93,6 +94,7 @@ release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-plan
 release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh
 release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
 release-workflow-release-checklist-static-check=scripts/release-checklist-check.sh
+release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh
 release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
@@ -128,6 +130,9 @@ The release manifest, release notes, and GitHub Step Summary include
 compatibility matrix counts for `supported`, `partial`, `planned`,
 `unsupported`, and total rows. These counts make the release artifact state
 auditable without expanding any compatibility claim beyond the source contracts.
+The compatibility summary static check requires each count key to appear
+exactly once, use a non-negative integer value, and sum to the total row count
+before those values are written into release metadata.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).
@@ -156,6 +161,8 @@ Publication must be blocked when:
 - same-commit main CI is missing or failed;
 - required tests are missing for a claimed capability;
 - compatibility matrix has unsupported rows described as supported;
+- compatibility status summary output has missing, duplicate, non-numeric, or
+  inconsistent count fields;
 - manual-intervention marker is pending for a required release gate;
 - checksum or manifest generation fails;
 - release metadata omits compatibility status counts;

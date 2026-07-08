@@ -117,6 +117,7 @@ check_common_workflow_metadata() {
 
 	require_pattern "$file" "Summarize compatibility matrix status" "$label missing compatibility summary step"
 	require_pattern "$file" "scripts/compatibility-status-summary.sh" "$label missing compatibility status helper"
+	require_pattern "$file" "scripts/compatibility-status-summary-check.sh" "$label missing compatibility status summary check"
 	check_compatibility_summary_keys "$file" "$label"
 	require_pattern "$file" "scripts/manual-intervention-check.sh" "$label missing manual-intervention evidence gate"
 	require_pattern "$file" "scripts/manual-intervention-transition-check.sh" "$label missing manual-intervention transition gate"
@@ -194,6 +195,7 @@ require_pattern "$RELEASE_WORKFLOW" "Release artifacts:" "release notes missing 
 require_pattern "$RELEASE_WORKFLOW" "source_mode" "release workflow missing source mode metadata"
 
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary" "dry-run contract missing compatibility summary marker"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "dry-run contract missing compatibility summary static check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh" "dry-run contract missing manual intervention static check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh" "dry-run contract missing manual intervention transition check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-release-checklist-static-check=scripts/release-checklist-check.sh" "dry-run contract missing release checklist static check marker"
@@ -202,6 +204,7 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "publish_eligibility_status" "dry-run con
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit compatibility status counts" "dry-run contract missing metadata failure rule"
 
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "release gate missing compatibility summary marker"
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "release gate missing compatibility summary static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh" "release gate missing manual intervention static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh" "release gate missing manual intervention transition check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-release-checklist-static-check=scripts/release-checklist-check.sh" "release gate missing release checklist static check marker"

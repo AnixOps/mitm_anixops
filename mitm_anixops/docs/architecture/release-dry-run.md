@@ -13,6 +13,7 @@ release-dry-run-trigger-static-check=scripts/ci-trigger-check.sh
 release-dry-run-publication=blocked
 release-dry-run-ci-gate=equivalent-full-check-in-workflow
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
+release-dry-run-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh
 release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh
 release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
 release-dry-run-release-checklist-static-check=scripts/release-checklist-check.sh
@@ -121,6 +122,8 @@ The dry-run must fail when:
 - checksum sidecar format is invalid;
 - manifest omits commit, version, artifact names, checksum values, or supported
   compatibility scope;
+- compatibility status summary output has missing, duplicate, non-numeric, or
+  inconsistent count fields;
 - manifest, notes, or summary omit compatibility status counts;
 - release notes omit known gaps, rollback path, or manual-intervention status;
 - a pending manual-intervention marker is required for the requested target;

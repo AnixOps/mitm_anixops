@@ -321,6 +321,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   release dry-run workflows before stable release-readiness evaluation.
 - Hardened release metadata checks so compatibility summary count keys must be
   present exactly once in release and release dry-run workflows.
+- Added a compatibility status summary static check requiring release count
+  outputs to be unique, non-negative integers, and consistent with the total
+  compatibility matrix row count.
 
 ### Changed
 

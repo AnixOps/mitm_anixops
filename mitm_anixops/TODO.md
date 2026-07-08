@@ -271,3 +271,6 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   release dry-run workflows before release-readiness checks.
 - [x] Enforce unique release compatibility summary count keys in release and
   release dry-run workflow metadata checks.
+- [x] Add a compatibility status summary static check so release count outputs
+  must be unique, numeric, and total-consistent before publication metadata is
+  generated.

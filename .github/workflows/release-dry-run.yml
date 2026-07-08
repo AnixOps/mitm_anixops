@@ -110,6 +110,7 @@ jobs:
           sh scripts/manual-intervention-transition-check.sh
           sh scripts/release-checklist-check.sh
           sh scripts/release-metadata-check.sh
+          sh scripts/compatibility-status-summary-check.sh
 
           readiness_output="${RUNNER_TEMP}/release-readiness.env"
           sh scripts/release-readiness-check.sh "${RELEASE_VERSION}" | tee "${readiness_output}"
@@ -129,6 +130,7 @@ jobs:
           set -euo pipefail
 
           compatibility_output="${RUNNER_TEMP}/compatibility-status.env"
+          sh scripts/compatibility-status-summary-check.sh
           sh scripts/compatibility-status-summary.sh | tee "${compatibility_output}"
           for key in \
             compatibility_supported_count \

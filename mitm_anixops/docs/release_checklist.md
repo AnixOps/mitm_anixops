@@ -71,6 +71,7 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    scripts/manual-intervention-transition-check.sh
    scripts/release-checklist-check.sh
    scripts/release-metadata-check.sh
+   scripts/compatibility-status-summary-check.sh
    ```
 
 5. Confirm the stable release-readiness gate has passed for `v1.0.0`. The gate
