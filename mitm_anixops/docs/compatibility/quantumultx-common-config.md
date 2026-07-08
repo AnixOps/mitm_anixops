@@ -52,6 +52,7 @@ tests/fixtures/QuantumultX.CommonConfig.snippet
 tests/fixtures/QuantumultX.EchoResponse.snippet
 tests/fixtures/QuantumultX.BodyMutation.snippet
 tests/fixtures/QuantumultX.HeaderMutation.snippet
+tests/fixtures/QuantumultX.RequestHeaderMutation.snippet
 tests/fixtures/QuantumultX.HeaderDelete.snippet
 ```
 
@@ -65,14 +66,17 @@ Expected behavior:
   body-mutation fixture;
 - one `url response-header-replace-regex` rule is registered in the dedicated
   header-mutation fixture;
+- one `url header-replace-regex` rule is registered in the dedicated request
+  header-mutation fixture;
 - one `url header-del` rule is registered in the dedicated header-delete
   fixture;
 - two script rules are registered;
 - four MITM host patterns are registered;
 - host-list `skip-server-cert-verify` is exposed to adapters;
 - redirect, reject, `echo-response`, response body regex mutation, request
-  header delete, response header regex mutation, request script, response
-  script, and MITM decisions are observable through public ABI calls.
+  header regex mutation, request header delete, response header regex mutation,
+  request script, response script, and MITM decisions are observable through
+  public ABI calls.
 
 ## Negative Case
 
@@ -83,6 +87,7 @@ tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
 tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet
 tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
+tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet
 ```
 
@@ -93,6 +98,7 @@ Expected behavior:
   line without body content;
 - an invalid `response-body-replace-regex` pattern rejects config load;
 - an invalid `response-header-replace-regex` pattern rejects config load;
+- an invalid `header-replace-regex` pattern rejects config load;
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed `header-del` line
   without a header name;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
@@ -146,6 +152,10 @@ Required CI evidence:
   `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `tests/test_config.c` registers
   `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_request_header_mutation_fixture_maps_request_header_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_request_header_mutation_malformed_fixture_rejects_invalid_regex`;
 - `tests/test_config.c` registers
   `config/quantumultx_header_delete_fixture_maps_request_header_delete`;
 - `tests/test_config.c` registers

@@ -1,0 +1,2 @@
+#[rewrite_local]
+^https:\/\/header\.request\.qx\.test\/token url header-replace-regex X-Token "old=([A-Za-z]+)" "new=$1"

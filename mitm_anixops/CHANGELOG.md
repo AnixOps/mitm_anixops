@@ -52,6 +52,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Quantumult X `url response-header-replace-regex` parser fixtures and
   CI-covered tests while keeping platform header map behavior and HTTP
   serialization adapter-owned.
+- Added Quantumult X `url header-replace-regex` parser fixtures and CI-covered
+  tests while keeping platform header map behavior and HTTP serialization
+  adapter-owned.
 - Added Quantumult X `url header-del` parser fixtures and CI-covered tests
   while keeping platform header map behavior and HTTP serialization
   adapter-owned.
