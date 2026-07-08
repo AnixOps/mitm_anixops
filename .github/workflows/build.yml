@@ -82,6 +82,9 @@ jobs:
             mitm_anixops/tests/fixtures/BindingParity.ResponseTrace.json
             mitm_anixops/tests/fixtures/BindingParity.MitmTrace.json
             mitm_anixops/tests/fixtures/BindingParity.MitmQuicTrace.json
+            mitm_anixops/tests/fixtures/LoonCommonFields.MitmCertUntrustedTrace.json
+            mitm_anixops/tests/fixtures/LoonCommonFields.MitmDenyTrace.json
+            mitm_anixops/tests/fixtures/LoonCommonFields.MitmNoHostTrace.json
             mitm_anixops/tests/fixtures/MITM.Hostname.Malformed.conf
             mitm_anixops/tests/fixtures/runner_double_done_script.js
             mitm_anixops/scripts/compatibility-matrix-check.sh
@@ -183,13 +186,20 @@ jobs:
           grep -q "decision trace schema" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Decision Trace Schema Source Contract" mitm_anixops/docs/compatibility/decision-trace-schema.md
           grep -q "DecisionTrace.Schema.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "LoonCommonFields.MitmCertUntrustedTrace.json" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "LoonCommonFields.MitmDenyTrace.json" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "LoonCommonFields.MitmNoHostTrace.json" mitm_anixops/docs/compatibility/matrix.md
           grep -q "BindingParity.RequestTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
           grep -q "BindingParity.ResponseTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
           grep -q "BindingParity.MitmTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
           grep -q "BindingParity.MitmQuicTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
+          grep -q "LoonCommonFields.MitmCertUntrustedTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
+          grep -q "LoonCommonFields.MitmDenyTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
+          grep -q "LoonCommonFields.MitmNoHostTrace.json" mitm_anixops/docs/compatibility/decision-trace-schema.md
           grep -q "config/decision_trace_schema_fixture_covers_policy_fields" mitm_anixops/tests/test_config.c
           grep -q "config/decision_trace_schema_fixture_ignores_unsupported_policy_intent" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add runner MITM decision golden JSON trace fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add runner negative MITM decision golden JSON trace fixtures" mitm_anixops/TODO.md
           grep -q "plan API parity" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Plan API Parity Source Contract" mitm_anixops/docs/compatibility/plan-api-parity.md
           grep -q "PlanApiParity.Golden.conf" mitm_anixops/docs/compatibility/matrix.md
@@ -213,7 +223,13 @@ jobs:
           grep -q "diff -u tests/fixtures/BindingParity.ResponseTrace.json" mitm_anixops/Makefile
           grep -q "diff -u tests/fixtures/BindingParity.MitmTrace.json" mitm_anixops/Makefile
           grep -q "diff -u tests/fixtures/BindingParity.MitmQuicTrace.json" mitm_anixops/Makefile
+          grep -q "diff -u tests/fixtures/LoonCommonFields.MitmCertUntrustedTrace.json" mitm_anixops/Makefile
+          grep -q "diff -u tests/fixtures/LoonCommonFields.MitmDenyTrace.json" mitm_anixops/Makefile
+          grep -q "diff -u tests/fixtures/LoonCommonFields.MitmNoHostTrace.json" mitm_anixops/Makefile
           grep -q -- "--host api.binding.test --mitm-enabled --cert-state trusted" mitm_anixops/Makefile
+          grep -q -- "--host api.common.loon.test --mitm-enabled --cert-state installed-untrusted" mitm_anixops/Makefile
+          grep -q -- "--host blocked.common.loon.test --mitm-enabled --cert-state trusted" mitm_anixops/Makefile
+          grep -q -- "--host missing.common.loon.test --mitm-enabled --cert-state trusted" mitm_anixops/Makefile
           grep -q "runner-binding-parity-response-trace.out" mitm_anixops/Makefile
           grep -q "TestGoBindingLoadsSharedParityFixture" mitm_anixops/bindings/go/anixops/anixops_test.go
           grep -q "requestHeader, err := engine.EvaluateNamedHeader" mitm_anixops/bindings/go/anixops/anixops_test.go

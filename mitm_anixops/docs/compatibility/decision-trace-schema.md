@@ -110,6 +110,8 @@ Expected behavior:
   argument, and body requirement fields.
 - runner MITM traces expose TCP allow and QUIC fallback decisions without
   logging request or response payloads.
+- runner negative MITM traces expose certificate-not-trusted, deny-host, and
+  no-host-match bypass decisions without enabling interception.
 
 ## Negative Case
 
@@ -124,6 +126,8 @@ Expected behavior:
 - unsupported `direct` and `proxy` policy-intent lines are ignored, not routed;
 - ignored diagnostics are recorded for both lines;
 - no rewrite rules are registered for unsupported route selection.
+- certificate-not-trusted, deny-host, and no-host-match MITM decisions remain
+  conservative bypasses in runner JSON traces.
 
 ## Runtime And Security Boundary
 
@@ -154,6 +158,10 @@ Required CI evidence:
   `BindingParity.ResponseTrace.json` against runner `trace` output;
 - `make runner-check` compares `BindingParity.MitmTrace.json` and
   `BindingParity.MitmQuicTrace.json` against runner `trace --host` output;
+- `make runner-check` compares `LoonCommonFields.MitmCertUntrustedTrace.json`,
+  `LoonCommonFields.MitmDenyTrace.json`, and
+  `LoonCommonFields.MitmNoHostTrace.json` against negative runner
+  `trace --host` output;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -165,5 +173,5 @@ decision trace schema
 ```
 
 The row remains `partial` until adapter redaction policy, direct/proxy
-route-selection contracts, and broader MITM negative trace corpus coverage
-exist.
+route-selection contracts, and broader malformed/disabled-state MITM trace
+coverage exist.

@@ -450,13 +450,17 @@ Current CI evidence:
   `tests/fixtures/BindingParity.ResponseTrace.json`;
 - MITM golden runner fixtures `tests/fixtures/BindingParity.MitmTrace.json`
   and `tests/fixtures/BindingParity.MitmQuicTrace.json`;
+- negative MITM golden runner fixtures
+  `tests/fixtures/LoonCommonFields.MitmCertUntrustedTrace.json`,
+  `tests/fixtures/LoonCommonFields.MitmDenyTrace.json`, and
+  `tests/fixtures/LoonCommonFields.MitmNoHostTrace.json`;
 - `config/decision_trace_schema_fixture_covers_policy_fields`;
 - `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
 - runner `trace` smoke checks under `runner-check`.
 
 Unimplemented items:
 
-- broader MITM negative trace corpus;
+- malformed and disabled-state MITM trace corpus;
 - adapter redaction policy;
 - direct/proxy route-selection contract;
 - serialized trace object for every ABI decision.
