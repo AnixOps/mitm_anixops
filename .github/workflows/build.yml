@@ -102,6 +102,8 @@ jobs:
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleReject.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleReject.Malformed.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.RuleDomainReject.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.RuleDomainReject.Malformed.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
@@ -305,9 +307,14 @@ jobs:
           grep -q "Shadowrocket Rule Reject Source Contract" mitm_anixops/docs/compatibility/shadowrocket-rule-reject.md
           grep -q "Shadowrocket.RuleReject.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.RuleReject.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.RuleDomainReject.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.RuleDomainReject.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_rule_domain_reject_fixture_maps_domain_suffix_rejects" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_rule_domain_reject_malformed_fixture_rejects_invalid_domain" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*URL-regex reject parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*DOMAIN-SUFFIX reject parser fixtures" mitm_anixops/TODO.md
           grep -q "MITM.Hostname.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/mitm_hostname_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard" mitm_anixops/tests/test_mitm.c
