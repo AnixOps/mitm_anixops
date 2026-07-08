@@ -2,7 +2,7 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-MANUAL="$ROOT/docs/manual-intervention.md"
+MANUAL=${MANUAL_INTERVENTION_FILE:-"$ROOT/docs/manual-intervention.md"}
 
 test -f "$MANUAL"
 
@@ -10,7 +10,7 @@ grep -F "## Current Pending Items" "$MANUAL" >/dev/null
 grep -F "## Completed Items" "$MANUAL" >/dev/null
 grep -F "## Rules" "$MANUAL" >/dev/null
 
-required_pending='
+required_markers='
 branch-protection
 protected-tags
 release-environment-approval
@@ -32,12 +32,29 @@ stash-expanded-parser-support
 shadowrocket-expanded-parser-support
 '
 
-printf '%s\n' "$required_pending" | while IFS= read -r item; do
+printf '%s\n' "$required_markers" | while IFS= read -r item; do
 	[ -n "$item" ] || continue
-	grep -F "$item-status=pending" "$MANUAL" >/dev/null
+	status="$(awk -F= -v key="$item-status" '$1 == key {print $2}' "$MANUAL")"
+	test -n "$status"
+	case "$status" in
+		pending | confirmed)
+			;;
+		*)
+			printf 'manual intervention marker has unsupported status: %s=%s\n' "$item" "$status" >&2
+			exit 1
+			;;
+	esac
 	grep -F "$item-scope=" "$MANUAL" >/dev/null
 	grep -F "$item-required-before=" "$MANUAL" >/dev/null
-	grep -F "$item-next-action=" "$MANUAL" >/dev/null
+	if [ "$status" = "pending" ]; then
+		grep -F "$item-next-action=" "$MANUAL" >/dev/null
+	else
+		evidence="$(awk -F= -v key="$item-confirmation-evidence" '$1 == key {print $2}' "$MANUAL")"
+		if [ -z "$evidence" ] || [ "$evidence" = "not-yet-confirmed" ]; then
+			printf 'confirmed manual intervention marker lacks confirmation evidence: %s\n' "$item" >&2
+			exit 1
+		fi
+	fi
 done
 
 grep -F "github-remote-status=confirmed" "$MANUAL" >/dev/null
@@ -58,10 +75,12 @@ END {
 }
 ' "$MANUAL"
 
-pending_count=$(grep -c -- '-status=pending' "$MANUAL")
-if [ "$pending_count" -lt 10 ]; then
-	printf '%s\n' "manual intervention check failed: too few pending markers" >&2
+pending_count=$(awk -F= '$1 ~ /-status$/ && $2 == "pending" {count++} END {print count + 0}' "$MANUAL")
+confirmed_count=$(awk -F= '$1 ~ /-status$/ && $2 == "confirmed" {count++} END {print count + 0}' "$MANUAL")
+marker_count=$((pending_count + confirmed_count))
+if [ "$marker_count" -lt 10 ]; then
+	printf '%s\n' "manual intervention check failed: too few manual markers" >&2
 	exit 1
 fi
 
-printf 'manual intervention check passed (%s pending markers)\n' "$pending_count"
+printf 'manual intervention check passed (%s pending markers, %s confirmed markers)\n' "$pending_count" "$confirmed_count"

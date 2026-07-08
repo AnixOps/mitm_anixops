@@ -311,6 +311,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   tag-release workflow coverage.
 - Added a release checklist static check covering v1 stable release workflow,
   artifact, manifest, checksum, release-note, and manual gate evidence.
+- Hardened manual-intervention checks so required markers can transition from
+  pending to confirmed only with non-placeholder confirmation evidence.
+- Added a manual-intervention transition fixture check covering confirmed
+  marker evidence validation.
 
 ### Changed
 

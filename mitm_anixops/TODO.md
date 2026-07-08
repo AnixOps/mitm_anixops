@@ -261,3 +261,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   tag-release workflow coverage.
 - [x] Add a release checklist static check covering v1 stable release workflow,
   artifact, manifest, checksum, release-note, and manual gate evidence.
+- [x] Allow required manual-intervention markers to transition from pending to
+  confirmed only when confirmation evidence is recorded.
+- [x] Add a manual-intervention transition fixture check for confirmed marker
+  evidence validation.

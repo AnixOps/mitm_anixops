@@ -172,6 +172,9 @@ script-runtime-policy-core-dependency-decision-doc=docs/architecture/script-runt
 
 - Pending items must stay pending until a human or external platform completes
   the action.
+- Confirmed items must include non-placeholder confirmation evidence. Use a
+  redacted URL, audit note, or settings summary; never commit credentials,
+  signing material, reviewer identity details, or private policy.
 - A pending marker may block a release gate, but it must not be used to skip
   CI, tests, checksum, manifest, or release-note generation.
 - Any future credential, certificate, signing key, provisioning profile,

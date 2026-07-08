@@ -27,10 +27,10 @@ for marker in branch-protection protected-tags release-environment-approval; do
 	test -n "$evidence"
 	grep -F "${marker}-scope=" "$MANUAL" >/dev/null
 	grep -F "${marker}-required-before=" "$MANUAL" >/dev/null
-	grep -F "${marker}-next-action=" "$MANUAL" >/dev/null
 
 	case "$status" in
 		pending)
+			grep -F "${marker}-next-action=" "$MANUAL" >/dev/null
 			if [ -n "$blocking_markers" ]; then
 				blocking_markers="${blocking_markers},${marker}"
 			else

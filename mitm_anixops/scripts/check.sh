@@ -5,6 +5,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 
 sh scripts/manual-intervention-check.sh
+sh scripts/manual-intervention-transition-check.sh
 sh scripts/security-claim-check.sh
 sh scripts/compatibility-evidence-check.sh
 sh scripts/ci-trigger-check.sh

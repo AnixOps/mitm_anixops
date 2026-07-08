@@ -73,11 +73,21 @@ printf '%s\n' "$compatibility_status" | grep -q "compatibility_total_count="
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_planned_count=0"
 
 sh "$ROOT/scripts/manual-intervention-check.sh" >/dev/null
+sh "$ROOT/scripts/manual-intervention-transition-check.sh" >/dev/null
 repository_governance_status="$(sh "$ROOT/scripts/repository-governance-check.sh")"
 printf '%s\n' "$repository_governance_status" | grep -Eq "repository_governance_status=(blocked|passed)"
-grep -q "branch-protection-status=pending" "$MANUAL"
-grep -q "protected-tags-status=pending" "$MANUAL"
-grep -q "release-environment-approval-status=pending" "$MANUAL"
+for marker in branch-protection protected-tags release-environment-approval; do
+	status="$(awk -F= -v key="${marker}-status" '$1 == key {print $2}' "$MANUAL")"
+	case "$status" in
+		pending | confirmed)
+			;;
+		*)
+			printf 'unsupported v1 governance marker status: %s=%s\n' "$marker" "$status" >&2
+			exit 1
+			;;
+	esac
+	grep -q "${marker}-confirmation-evidence=" "$MANUAL"
+done
 
 grep -q "pull_request:" "$BUILD_WORKFLOW"
 grep -q "push:" "$BUILD_WORKFLOW"
@@ -119,6 +129,7 @@ grep -q "release-workflow-v1-readiness-gate=required-before-v1-manual-markers-an
 grep -q "release-workflow-windows-artifact=windows-x64-zip-with-checksum" "$RELEASE_GATE"
 grep -q "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "$RELEASE_GATE"
 grep -q "ci-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RELEASE_GATE"
+grep -q "ci-workflow-manual-intervention-transition-status=scripts/manual-intervention-transition-check.sh" "$RELEASE_GATE"
 grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RELEASE_GATE"
 grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RELEASE_GATE"
 
