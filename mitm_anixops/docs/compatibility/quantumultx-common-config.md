@@ -9,9 +9,9 @@ Status: `partial`.
 ## Purpose
 
 This contract fixes the P1 parser milestone for the high-frequency Quantumult X
-rewrite and MITM subset. Local cron task parser metadata is covered separately
-by [Quantumult X Task Metadata](quantumultx-task-metadata.md); scheduler and
-runtime behavior remain adapter-owned.
+rewrite and MITM subset. Local cron and event task parser metadata is covered
+separately by [Quantumult X Task Metadata](quantumultx-task-metadata.md);
+scheduler, event dispatch, and runtime behavior remain adapter-owned.
 
 ## Input Forms
 
@@ -27,7 +27,7 @@ The current common-config subset accepts:
 - `hostname`, `force-http-engine-hosts`, `skip-server-cert-verify`, `h2`,
   and QUIC fallback options covered by
   [Quantumult X MITM Options](quantumultx-mitm-options.md);
-- `#[task_local]` cron descriptor lines covered by
+- `#[task_local]` cron and event descriptor lines covered by
   [Quantumult X Task Metadata](quantumultx-task-metadata.md).
 
 ## Parser Output
@@ -76,13 +76,14 @@ Expected behavior:
 
 ## Task And Cron Boundary
 
-`#[task_local]` cron lines are parser metadata only. They are documented and
-tested in [Quantumult X Task Metadata](quantumultx-task-metadata.md), but the
-following remain unimplemented:
+`#[task_local]` cron and event lines are parser metadata only. They are
+documented and tested in
+[Quantumult X Task Metadata](quantumultx-task-metadata.md), but the following
+remain unimplemented:
 
 - task scheduler/runtime dispatch semantics;
+- event dispatch runtime behavior;
 - JavaScript task bindings;
-- event-triggered task forms such as `event-network` and `event-interaction`;
 - permission, concurrency, and cancellation policy.
 
 ## Runtime And Security Boundary

@@ -2038,6 +2038,34 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 		attrs = cursor;
 		anixops_copy_text(origin, sizeof(origin), "script-section-cron");
 	}
+	else if (strcasecmp(first, "event-network") == 0 ||
+		strcasecmp(first, "event_interaction") == 0 ||
+		strcasecmp(first, "event-interaction") == 0 ||
+		strcasecmp(first, "event_network") == 0) {
+		char *path_comma;
+		if (!anixops_next_token(&cursor, script_path, sizeof(script_path))) {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "task event script path missing");
+			return ANIXOPS_ERR_PARSE;
+		}
+		path_comma = strchr(script_path, ',');
+		attrs = cursor;
+		if (path_comma != NULL) {
+			*path_comma = '\0';
+			if (path_comma[1] != '\0') {
+				attrs = path_comma + 1;
+			}
+		}
+		while (*attrs != '\0' && (isspace((unsigned char)*attrs) || *attrs == ',')) {
+			attrs++;
+		}
+		kind = (strcasecmp(first, "event-network") == 0 ||
+			strcasecmp(first, "event_network") == 0) ?
+			ANIXOPS_TASK_EVENT_NETWORK :
+			ANIXOPS_TASK_EVENT_INTERACTION;
+		anixops_copy_text(schedule, sizeof(schedule), first);
+		anixops_copy_text(origin, sizeof(origin), "quantumultx-task-local-event");
+	}
 	else if (anixops_task_cron_field_token_is_plausible(first)) {
 		const char *task_cursor;
 		const char *task_attrs;
@@ -2175,6 +2203,10 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 	}
 	else if (kind == ANIXOPS_TASK_MANUAL && interval[0] != '\0') {
 		kind = ANIXOPS_TASK_INTERVAL;
+	}
+	if ((kind == ANIXOPS_TASK_EVENT_NETWORK || kind == ANIXOPS_TASK_EVENT_INTERACTION) &&
+		schedule[0] == '\0') {
+		anixops_copy_text(schedule, sizeof(schedule), type);
 	}
 	if (kind == ANIXOPS_TASK_CRON && !anixops_cron_expression_is_valid(schedule)) {
 		free(copy);
@@ -5584,6 +5616,14 @@ static int anixops_parse_task_kind_token(const char *token, anixops_task_kind_t 
 	}
 	if (strcasecmp(token, "interval") == 0) {
 		*kind = ANIXOPS_TASK_INTERVAL;
+		return 1;
+	}
+	if (strcasecmp(token, "event-network") == 0 || strcasecmp(token, "event_network") == 0) {
+		*kind = ANIXOPS_TASK_EVENT_NETWORK;
+		return 1;
+	}
+	if (strcasecmp(token, "event-interaction") == 0 || strcasecmp(token, "event_interaction") == 0) {
+		*kind = ANIXOPS_TASK_EVENT_INTERACTION;
 		return 1;
 	}
 	if (strcasecmp(token, "task") == 0 || strcasecmp(token, "manual") == 0) {

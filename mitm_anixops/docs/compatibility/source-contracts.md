@@ -437,7 +437,7 @@ Input form:
 - `#[rewrite_remote]`
 - `#[mitm]`
 - `url`-prefixed rewrite/script/header/body forms;
-- `#[task_local]` cron descriptor lines covered by
+- `#[task_local]` cron and event descriptor lines covered by
   [Quantumult X Task Metadata](quantumultx-task-metadata.md);
 - `force-http-engine-hosts`;
 - host-list `skip-server-cert-verify`.
@@ -456,7 +456,7 @@ Current CI evidence:
 Unimplemented items:
 
 - task scheduler/runtime behavior;
-- event-triggered task forms;
+- event dispatch behavior;
 - full rewrite/task grammar;
 - broader corpus and migration notes.
 
@@ -465,17 +465,17 @@ Unimplemented items:
 Detailed contract:
 [Quantumult X Task Metadata Source Contract](quantumultx-task-metadata.md).
 
-Capability: parse Quantumult X `[task_local]` cron task descriptors without
-claiming scheduler or runtime execution.
+Capability: parse Quantumult X `[task_local]` cron and event task descriptors
+without claiming scheduler, event dispatch, or runtime execution.
 
 Input form:
 
 - `#[task_local]` or `[task_local]` sections;
 - five-field or six-field cron expressions followed by a script path token;
+- `event-network` and `event-interaction` trigger tokens followed by a script
+  path token;
 - comma-separated `tag`, `argument`, `timeout`, `timeout-ms`, `max-size`,
-  `enable`, and `enabled` metadata;
-- unsupported event-triggered task forms remain ignored in the portable
-  profile.
+  `enable`, and `enabled` metadata.
 
 Parser output:
 
@@ -491,13 +491,16 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/QuantumultX.TaskMetadata.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet`;
+- negative fixture
+  `tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet`;
 - `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
+- `config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path`;
 - `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`.
 
 Unimplemented items:
 
-- event-triggered task forms such as `event-network` and `event-interaction`;
 - scheduler/runtime execution;
+- event dispatch execution;
 - task JavaScript bindings;
 - concurrency and permission policy;
 - broader Quantumult X task corpus.
@@ -1275,20 +1278,22 @@ Unimplemented items:
 
 Detailed contract: [Cron And Task Trigger Source Contract](cron-task-trigger.md).
 
-Capability: parse cron and interval task trigger metadata without claiming
-scheduler/runtime support.
+Capability: parse cron, interval, and Quantumult X event task trigger metadata
+without claiming scheduler/runtime support.
 
 Input form:
 
 - direct `[Script]` cron task declarations;
 - `[Script]` attr-list rules with `type=cron`, `type=interval`, or
   `type=task` plus a concrete cron expression or interval;
+- Quantumult X `event-network` and `event-interaction` descriptor lines;
 - `script-path`, `tag`, `argument`, `timeout`, `max-size`, and `enabled`
   metadata;
 - positive parser fixture `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
 - unsupported parser fixture `tests/fixtures/CronTaskTrigger.Unsupported.conf`;
 - malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`.
 - ecosystem-specific parser fixtures including
+  `tests/fixtures/QuantumultX.TaskMetadata.snippet` and
   `tests/fixtures/Surge.TaskMetadata.sgmodule`.
 
 Current CI evidence:
@@ -1313,4 +1318,5 @@ Current CI evidence:
 Unimplemented items:
 
 - scheduler/runtime replay or E2E evidence;
+- Quantumult X event dispatch runtime evidence;
 - task JavaScript bindings and concurrency policy.

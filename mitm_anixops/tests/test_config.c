@@ -1519,9 +1519,9 @@ static void quantumultx_task_metadata_fixture_emits_task_descriptors(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 4);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 4);
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
@@ -1536,11 +1536,17 @@ static void quantumultx_task_metadata_fixture_emits_task_descriptors(void)
 	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
 	ANIXOPS_EXPECT_STREQ(diagnostic.message, "task descriptor accepted");
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 2, &diagnostic), ANIXOPS_OK);
-	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
 	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 4);
 	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
-	ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
-	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule ignored") != NULL);
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "task descriptor accepted");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 3, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 5);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "task descriptor accepted");
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_script_evaluate_url(engine, "https://scripts.example/qx-task-cron.js", ANIXOPS_PHASE_REQUEST, &script),
@@ -1570,6 +1576,63 @@ static void quantumultx_task_metadata_fixture_emits_task_descriptors(void)
 	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/qx-task-six-field.js");
 	ANIXOPS_EXPECT_STREQ(task.tag, "qx.task.six");
 	ANIXOPS_EXPECT_STREQ(task.origin, "quantumultx-task-local-cron");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 2, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_EVENT_NETWORK);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 0);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "event-network");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/qx-task-network.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "qx.task.network");
+	ANIXOPS_EXPECT_STREQ(task.origin, "quantumultx-task-local-event");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 3, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_EVENT_INTERACTION);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 2500);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 5120);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 0);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "event-interaction");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/qx-task-interaction.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "qx.task.interaction");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=event");
+	ANIXOPS_EXPECT_STREQ(task.origin, "quantumultx-task-local-event");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path(void)
+{
+	char *fixture = read_fixture("tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_QUANTUMULTX_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_QUANTUMULTX_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "event script path") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "event script path") != NULL);
 
 	anixops_engine_free(engine);
 	free(fixture);
@@ -5232,6 +5295,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/quantumultx_task_metadata_fixture_emits_task_descriptors",
 		quantumultx_task_metadata_fixture_emits_task_descriptors);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path",
+		quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path);
 	add_test(
 		tests,
 		count,
