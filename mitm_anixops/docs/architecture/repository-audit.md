@@ -15,6 +15,8 @@ Important paths:
 - `.github/workflows/build.yml`: active GitHub Actions workflow.
 - `.github/workflows/release-dry-run.yml`: release dry-run workflow that blocks
   publication and uploads workflow artifacts only.
+- `.github/workflows/release.yml`: tag-triggered release workflow that builds
+  artifacts in GitHub Actions and blocks public publication.
 - `mitm_anixops/include/`: public C ABI.
 - `mitm_anixops/src/`: C implementation.
 - `mitm_anixops/tests/`: C unit and compatibility fixture tests.
@@ -61,6 +63,7 @@ Active workflows:
 
 - `.github/workflows/build.yml`
 - `.github/workflows/release-dry-run.yml`
+- `.github/workflows/release.yml`
 
 Current jobs:
 
@@ -73,13 +76,17 @@ Current jobs:
   in GitHub Actions, builds a dry-run artifact, and uploads checksum, manifest,
   release notes, and summary evidence as workflow artifacts without public
   release publication.
+- `release`: validates `v*` tags or manual release workflow checks from `main`,
+  runs the release build gate in GitHub Actions, builds the release package, and
+  uploads it as a workflow artifact while public release publication remains
+  blocked.
 
 Known CI/CD gaps for v1.0.0:
 
 - no dedicated lint job;
 - no dedicated format check;
 - no explicit compatibility matrix test job;
-- no tag-triggered release workflow with same-commit CI gate;
+- no same-commit CI lookup gate for public tag release publication;
 - no checksum file generation for public tag release publication;
 - no artifact manifest generation for public tag release publication;
 - no release-note generation gate for public tag release publication;

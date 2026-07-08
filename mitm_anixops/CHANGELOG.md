@@ -53,6 +53,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added a dedicated GitHub Actions release dry-run workflow that runs a
   same-workflow CI gate, builds dry-run artifacts, and generates checksum,
   manifest, release-note, and summary evidence without publishing a release.
+- Added a tag-triggered GitHub Actions release workflow that builds release
+  package artifacts while public release publication remains blocked.
 
 ### Changed
 

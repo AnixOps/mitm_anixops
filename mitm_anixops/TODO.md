@@ -73,7 +73,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 ## P6 Release Hardening
 
 - [x] Add release dry-run workflow.
-- [ ] Add tag-triggered release workflow that builds artifacts in GitHub
+- [x] Add tag-triggered release workflow that builds artifacts in GitHub
   Actions.
 - [ ] Generate checksums, manifest, release notes, and release summary in
   GitHub Actions.

@@ -1,0 +1,167 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release workflow validation version.
+        required: true
+        default: v0.45.10-alpha.1
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  release-policy:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      kind: ${{ steps.policy.outputs.kind }}
+      commit: ${{ steps.policy.outputs.commit }}
+      source_mode: ${{ steps.policy.outputs.source_mode }}
+      publication: ${{ steps.policy.outputs.publication }}
+      publication_gate: ${{ steps.policy.outputs.publication_gate }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate release policy
+        id: policy
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+
+          version="${INPUT_VERSION}"
+          source_mode="manual-main"
+
+          if [[ "${EVENT_NAME}" == "push" ]]; then
+            if [[ "${REF_TYPE}" != "tag" || "${REF_NAME}" != v* ]]; then
+              printf 'release push must be a v* tag\n' >&2
+              exit 1
+            fi
+            version="${REF_NAME}"
+            source_mode="tag"
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            if [[ "${REF}" != "refs/heads/main" ]]; then
+              printf 'manual release workflow validation must run from main\n' >&2
+              exit 1
+            fi
+          else
+            printf 'unsupported release event: %s\n' "${EVENT_NAME}" >&2
+            exit 1
+          fi
+
+          if [[ -z "${version}" ]]; then
+            printf 'release version is required\n' >&2
+            exit 1
+          fi
+
+          if [[ ! "${version}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)(\.[0-9]+)?)?$ ]]; then
+            printf 'invalid release version: %s\n' "${version}" >&2
+            exit 1
+          fi
+
+          kind="stable"
+          case "${version}" in
+            *-alpha*) kind="alpha" ;;
+            *-beta*) kind="beta" ;;
+            *-rc*) kind="rc" ;;
+          esac
+
+          {
+            printf 'version=%s\n' "${version}"
+            printf 'kind=%s\n' "${kind}"
+            printf 'commit=%s\n' "${GITHUB_SHA}"
+            printf 'source_mode=%s\n' "${source_mode}"
+            printf 'publication=blocked\n'
+            printf 'publication_gate=pending-same-commit-ci-gate\n'
+          } >> "${GITHUB_OUTPUT}"
+
+  package:
+    runs-on: ubuntu-latest
+    needs:
+      - release-policy
+    defaults:
+      run:
+        working-directory: mitm_anixops
+    env:
+      RELEASE_VERSION: ${{ needs.release-policy.outputs.version }}
+      RELEASE_KIND: ${{ needs.release-policy.outputs.kind }}
+      RELEASE_COMMIT: ${{ needs.release-policy.outputs.commit }}
+      RELEASE_SOURCE_MODE: ${{ needs.release-policy.outputs.source_mode }}
+      RELEASE_PUBLICATION: ${{ needs.release-policy.outputs.publication }}
+      RELEASE_PUBLICATION_GATE: ${{ needs.release-policy.outputs.publication_gate }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.22.x"
+          cache: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+      - name: Run release build gate
+        run: |
+          sh scripts/ensure-mihomo.sh
+          sh scripts/check.sh
+      - name: Build release artifact
+        id: build_package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_no_v="${RELEASE_VERSION#v}"
+          package_name="anixops-mitm-release-${version_no_v}"
+          make "ALPHA_NAME=${package_name}" alpha-dist
+
+          artifact_path="build/${package_name}.tar.gz"
+          artifact_name="$(basename "${artifact_path}")"
+          test -s "${artifact_path}"
+
+          {
+            printf 'release_version=%s\n' "${RELEASE_VERSION}"
+            printf 'release_kind=%s\n' "${RELEASE_KIND}"
+            printf 'release_commit=%s\n' "${RELEASE_COMMIT}"
+            printf 'source_mode=%s\n' "${RELEASE_SOURCE_MODE}"
+            printf 'artifact_name=%s\n' "${artifact_name}"
+            printf 'artifact_path=%s\n' "${artifact_path}"
+            printf 'publication=%s\n' "${RELEASE_PUBLICATION}"
+            printf 'publication_gate=%s\n' "${RELEASE_PUBLICATION_GATE}"
+            printf 'publish_eligibility_status=blocked\n'
+            printf 'publish_blocking_reason=same-commit-ci-gate-not-yet-added\n'
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Write release build summary
+        shell: bash
+        run: |
+          {
+            printf '## Release Workflow Build\n\n'
+            printf '| Field | Value |\n'
+            printf '| --- | --- |\n'
+            printf '| release_version | `%s` |\n' "${{ steps.build_package.outputs.release_version }}"
+            printf '| release_kind | `%s` |\n' "${{ steps.build_package.outputs.release_kind }}"
+            printf '| release_commit | `%s` |\n' "${{ steps.build_package.outputs.release_commit }}"
+            printf '| source_mode | `%s` |\n' "${{ steps.build_package.outputs.source_mode }}"
+            printf '| artifact_name | `%s` |\n' "${{ steps.build_package.outputs.artifact_name }}"
+            printf '| publication | `%s` |\n' "${{ steps.build_package.outputs.publication }}"
+            printf '| publication_gate | `%s` |\n' "${{ steps.build_package.outputs.publication_gate }}"
+            printf '| publish_eligibility_status | `%s` |\n' "${{ steps.build_package.outputs.publish_eligibility_status }}"
+            printf '| publish_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.publish_blocking_reason }}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: anixops-mitm-release-package
+          path: mitm_anixops/${{ steps.build_package.outputs.artifact_path }}

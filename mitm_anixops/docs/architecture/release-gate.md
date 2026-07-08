@@ -32,6 +32,8 @@ Current workflow: `.github/workflows/build.yml`.
 
 Current dry-run workflow: .github/workflows/release-dry-run.yml.
 
+Current release workflow: .github/workflows/release.yml.
+
 Current gap: there is no matrix-specific release job yet.
 
 ### Release Workflow
@@ -50,8 +52,19 @@ The release workflow must eventually support:
 - GitHub Release asset upload;
 - summary output with artifact, checksum, manifest, CI, and rollback fields.
 
-Current gap: no tag-triggered release publication workflow exists in this
-repository.
+Current tag-triggered release workflow status:
+
+```text
+release-workflow-current-mode=tag-triggered-artifact-build
+release-workflow-file=.github/workflows/release.yml
+release-workflow-publication=blocked
+release-workflow-publication-gate=pending-same-commit-ci-gate
+```
+
+The release workflow builds artifacts in GitHub Actions for `v*` tags and
+manual validation from `main`. Public GitHub Release publication remains
+blocked until same-commit CI lookup, checksum/manifest/release-note gates,
+rollback policy, and publication eligibility are completed.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).

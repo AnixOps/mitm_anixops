@@ -67,6 +67,7 @@ jobs:
             mitm_anixops/tests/fixtures/runner_double_done_script.js
             mitm_anixops/scripts/security-claim-check.sh
             .github/workflows/release-dry-run.yml
+            .github/workflows/release.yml
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -172,7 +173,8 @@ jobs:
           grep -q "^- \\[x\\] Define Stash and Shadowrocket compatibility as migration notes" mitm_anixops/TODO.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "Current dry-run workflow: .github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-gate.md
-          grep -q "Current gap: no tag-triggered release publication workflow exists" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "Current release workflow: .github/workflows/release.yml" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-workflow-publication=blocked" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-dry-run-current-mode=workflow-defined" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-workflow=.github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-publication=blocked" mitm_anixops/docs/architecture/release-dry-run.md
@@ -181,6 +183,12 @@ jobs:
           grep -q "publish_eligibility_status=blocked" .github/workflows/release-dry-run.yml
           grep -q "gh release create" .github/workflows/release-dry-run.yml && exit 1 || true
           grep -q "^- \\[x\\] Add release dry-run workflow" mitm_anixops/TODO.md
+          grep -q "tags:" .github/workflows/release.yml
+          grep -q "v\\*" .github/workflows/release.yml
+          grep -q "anixops-mitm-release-package" .github/workflows/release.yml
+          grep -q "publish_eligibility_status=blocked" .github/workflows/release.yml
+          grep -q "gh release create" .github/workflows/release.yml && exit 1 || true
+          grep -q "^- \\[x\\] Add tag-triggered release workflow that builds artifacts in GitHub" mitm_anixops/TODO.md
           grep -q "Source contract:" .github/pull_request_template.md
           grep -q "Manual intervention required" .github/pull_request_template.md
 
