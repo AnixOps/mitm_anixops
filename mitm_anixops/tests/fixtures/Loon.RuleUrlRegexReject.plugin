@@ -1,0 +1,5 @@
+# Loon rule URL-regex reject fixture.
+[Rule]
+URL-REGEX,^https:\/\/rule\.loon\.test\/ads,REJECT
+URL-REGEX,^https:\/\/rule\.loon\.test\/gone,REJECT-410
+DOMAIN-SUFFIX,rule.loon.test,PROXY

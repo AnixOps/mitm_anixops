@@ -87,6 +87,8 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.RuleDomainKeywordReject.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.RuleFinalReject.plugin
             mitm_anixops/tests/fixtures/Loon.RuleFinalReject.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.RuleUrlRegexReject.plugin
+            mitm_anixops/tests/fixtures/Loon.RuleUrlRegexReject.Malformed.plugin
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.snippet
@@ -261,6 +263,8 @@ jobs:
           grep -q "Loon.RuleDomainKeywordReject.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon.RuleFinalReject.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon.RuleFinalReject.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.RuleUrlRegexReject.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.RuleUrlRegexReject.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects" mitm_anixops/tests/test_config.c
           grep -q "config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain" mitm_anixops/tests/test_config.c
           grep -q "config/loon_rule_domain_exact_reject_fixture_maps_exact_domain_rejects" mitm_anixops/tests/test_config.c
@@ -269,10 +273,13 @@ jobs:
           grep -q "config/loon_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword" mitm_anixops/tests/test_config.c
           grep -q "config/loon_rule_final_reject_fixture_maps_final_reject" mitm_anixops/tests/test_config.c
           grep -q "config/loon_rule_final_reject_malformed_fixture_rejects_missing_action" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_rule_url_regex_reject_fixture_maps_url_regex_rejects" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_rule_url_regex_reject_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Loon .*Rule.*DOMAIN-SUFFIX reject parser fixtures" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Loon .*Rule.*DOMAIN reject parser fixtures" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Loon .*Rule.*DOMAIN-KEYWORD reject parser fixtures" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Loon .*Rule.*FINAL reject parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Loon .*Rule.*URL-REGEX reject parser fixtures" mitm_anixops/TODO.md
           grep -q "Quantumult X rewrite/task/mitm common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Quantumult X Common Config Source Contract" mitm_anixops/docs/compatibility/quantumultx-common-config.md
           grep -q "QuantumultX.CommonConfig.snippet" mitm_anixops/docs/compatibility/matrix.md

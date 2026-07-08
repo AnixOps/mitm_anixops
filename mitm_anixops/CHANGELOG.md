@@ -154,6 +154,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   tests while keeping direct/proxy route selection adapter-owned.
 - Added Loon `[Rule]` FINAL reject parser fixtures and CI-covered tests while
   keeping direct/proxy route selection adapter-owned.
+- Added Loon `[Rule]` URL-REGEX reject parser fixtures and CI-covered tests
+  while keeping direct/proxy route selection adapter-owned.
 
 ### Changed
 
