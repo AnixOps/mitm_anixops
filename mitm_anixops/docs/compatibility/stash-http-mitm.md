@@ -32,7 +32,7 @@ http:
     - stash.example.test
     - "*.stash.example.test"
     - -blocked.stash.example.test
-    - weather-data.stash.example.test:*
+    - weather-data.port-stash.test:*
 ```
 
 Supported forms:

@@ -252,7 +252,7 @@ jobs:
           grep -q "config/stash_http_mitm_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "config/stash_http_mitm_port_specific_fixture_stays_unsupported" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Stash HTTP MITM host parser fixtures" mitm_anixops/TODO.md
-          grep -Fq "weather-data.stash.example.test:*" mitm_anixops/tests/fixtures/Stash.HttpMitm.yaml
+          grep -Fq "weather-data.port-stash.test:*" mitm_anixops/tests/fixtures/Stash.HttpMitm.yaml
           grep -Fq 'host:*` port-wildcard' mitm_anixops/docs/compatibility/stash-http-mitm.md
           grep -q "^- \\[x\\] Normalize Stash HTTP MITM .*port-wildcard entries" mitm_anixops/TODO.md
           grep -q "Shadowrocket common config" mitm_anixops/docs/compatibility/matrix.md

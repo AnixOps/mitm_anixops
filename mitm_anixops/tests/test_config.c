@@ -1720,9 +1720,9 @@ static void stash_http_mitm_fixture_exposes_host_patterns(void)
 	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_DENY_HOST);
 	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "blocked.stash.example.test");
 
-	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "weather-data.stash.example.test:443", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "weather-data.port-stash.test:443", 0, &mitm), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
-	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "weather-data.stash.example.test");
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "weather-data.port-stash.test");
 
 	anixops_engine_free(engine);
 	free(fixture);
