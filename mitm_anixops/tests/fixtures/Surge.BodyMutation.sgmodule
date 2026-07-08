@@ -1,0 +1,2 @@
+[URL Rewrite]
+^https:\/\/body\.common\.surge\.test\/clean response-body-replace-regex ad clean

@@ -68,6 +68,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   forms stay ignored and do not register task descriptors.
 - Added a Surge module common-config source contract plus positive and negative
   parser fixtures for the third P1 parser milestone.
+- Added Surge `[URL Rewrite]` `response-body-replace-regex` parser fixtures
+  and CI-covered tests while keeping HTTP serialization, compression, and
+  streaming adapter-owned.
 - Added a Surge requirement metadata source contract plus positive and negative
   parser fixtures for `#!requirement` diagnostics.
 - Added a Surge task metadata source contract plus positive and negative parser
