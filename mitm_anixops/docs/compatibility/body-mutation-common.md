@@ -26,7 +26,9 @@ The current common subset accepts:
 - request and response JSON replacement actions such as
   `request-body-json-replace $.enabled true`;
 - request and response JQ action tokens such as
-  `request-body-jq '.enabled = true'` and `response-body-jq '.enabled = false'`.
+  `request-body-jq '.enabled = true'` and `response-body-jq '.enabled = false'`;
+- HTTP-flavored JQ aliases such as `http-request-jq '.enabled = true'` and
+  `http-response-jq '.enabled = false'`.
 
 ## Parser Output
 
@@ -46,6 +48,7 @@ tests/fixtures/BodyMutation.Common.conf
 tests/fixtures/BodyRequestJsonMutation.Common.conf
 tests/fixtures/BodyJsonMutation.Common.conf
 tests/fixtures/BodyJqMutation.Common.conf
+tests/fixtures/BodyJqAliasMutation.Common.conf
 tests/fixtures/Loon.BodyMutation.plugin
 tests/fixtures/Loon.BodyJsonMutation.plugin
 tests/fixtures/Loon.ResponseBodyJsonMutation.plugin
@@ -69,6 +72,8 @@ Expected behavior:
 - common request and response JQ body mutation action-token matching is
   observable through `anixops_rewrite_apply_body`, with `JQ=1` rewriting and
   default builds failing open with the original body;
+- common `http-request-jq` and `http-response-jq` aliases follow the same
+  request/response phase separation and fail-open behavior;
 - Loon `[Body Rewrite]` request and response body regex mutations are
   observable through `anixops_rewrite_apply_body`;
 - Loon `[Body Rewrite]` request body JSON mutation is observable through
@@ -93,6 +98,7 @@ tests/fixtures/BodyMutation.Common.Malformed.conf
 tests/fixtures/BodyRequestJsonMutation.Common.Malformed.conf
 tests/fixtures/BodyJsonMutation.Common.Malformed.conf
 tests/fixtures/BodyJqMutation.Common.Malformed.conf
+tests/fixtures/BodyJqAliasMutation.Common.Malformed.conf
 tests/fixtures/Loon.BodyMutation.Malformed.plugin
 tests/fixtures/Loon.BodyJsonMutation.Malformed.plugin
 tests/fixtures/Loon.ResponseBodyJsonMutation.Malformed.plugin
@@ -110,6 +116,8 @@ Expected behavior:
   replacement rejects config load under `ANIXOPS_COMPAT_LOON_STRICT`;
 - malformed common `request-body-jq` without a filter rejects config load under
   `ANIXOPS_COMPAT_LOON_STRICT`;
+- malformed common `http-response-jq` without a filter rejects config load
+  under `ANIXOPS_COMPAT_LOON_STRICT`;
 - the invalid Loon `[Body Rewrite]` body regex rejects config load;
 - malformed Loon `[Body Rewrite]` `request-body-json-replace` without a JSON
   path and replacement rejects config load under `ANIXOPS_COMPAT_LOON_STRICT`;
@@ -160,6 +168,10 @@ Required CI evidence:
   `config/body_jq_mutation_common_fixture_maps_request_and_response_body_jq`;
 - `tests/test_config.c` registers
   `config/body_jq_mutation_common_strict_fixture_rejects_missing_filter`;
+- `tests/test_config.c` registers
+  `config/body_jq_alias_mutation_common_fixture_maps_http_request_and_response_jq`;
+- `tests/test_config.c` registers
+  `config/body_jq_alias_mutation_common_strict_fixture_rejects_missing_filter`;
 - `tests/test_config.c` registers
   `config/loon_body_mutation_fixture_maps_body_rewrites`;
 - `tests/test_config.c` registers
