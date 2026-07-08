@@ -236,6 +236,46 @@ Unimplemented items:
 - runtime permission model;
 - broader Loon script option corpus.
 
+### Loon Task Metadata
+
+Detailed contract:
+[Loon Task Metadata Source Contract](loon-task-metadata.md).
+
+Capability: parse Loon `[Script]` scheduled task descriptors without claiming
+scheduler or runtime execution.
+
+Input form:
+
+- direct `[Script]` `cron "..." script-path=...` rules;
+- `[Script]` attr-list rules with `type=cron`, `type=scheduled`,
+  `type=scheduled-script`, `type=interval`, or `type=task`;
+- `cronexp`, `cron`, `schedule`, `interval`, `script-path`, `tag`, `argument`,
+  `timeout`, `timeout-ms`, `max-size`, `enable`, and `enabled` metadata.
+
+Parser output:
+
+- accepted diagnostics with section `Script` and action `task`;
+- task kind, schedule or interval seconds, script path, tag, resolved argument,
+  timeout, max-size, enabled state, and parser origin visible through
+  `anixops_engine_copy_task_descriptor`;
+- task descriptors remain separate from HTTP script URL dispatch;
+- no scheduler, background execution, JavaScript task runtime, certificate,
+  routing, or platform UI behavior from task metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.TaskMetadata.plugin`;
+- negative fixture `tests/fixtures/Loon.TaskMetadata.Malformed.plugin`;
+- `config/loon_task_metadata_fixture_emits_task_descriptors`;
+- `config/loon_task_metadata_malformed_fixture_rejects_invalid_cron`.
+
+Unimplemented items:
+
+- scheduler/runtime execution;
+- task JavaScript bindings;
+- concurrency and permission policy;
+- broader Loon task option corpus.
+
 ### Quantumult X Common Subset
 
 Detailed contract:

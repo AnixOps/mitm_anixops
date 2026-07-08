@@ -25,6 +25,8 @@ The current common-field subset accepts:
 - `[Header Rewrite]` request/response header mutation rules;
 - `[Script]` `http-request` and `http-response` rules with dispatch metadata
   covered by [Loon Script Metadata](loon-script-metadata.md);
+- `[Script]` scheduled task descriptors covered by
+  [Loon Task Metadata](loon-task-metadata.md);
 - `[MITM] hostname = ...` with exact and deny host entries.
 
 ## Parser Output
@@ -101,5 +103,5 @@ Row:
 Loon plugin common fields
 ```
 
-The row remains `partial` until broader grammar, cron/task behavior, and larger
-real-plugin corpus coverage exist.
+The row remains `partial` until broader grammar, scheduled-task runtime
+behavior, and larger real-plugin corpus coverage exist.

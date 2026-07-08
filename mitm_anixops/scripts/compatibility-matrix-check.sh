@@ -14,6 +14,7 @@ required_capabilities='
 Loon plugin common fields
 Loon argument section
 Loon script metadata
+Loon task metadata
 Quantumult X rewrite/task/mitm common config
 Surge module common config
 Surge requirement metadata

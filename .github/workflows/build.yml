@@ -37,6 +37,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-argument-section.md
             mitm_anixops/docs/compatibility/loon-inline-arguments.md
             mitm_anixops/docs/compatibility/loon-script-metadata.md
+            mitm_anixops/docs/compatibility/loon-task-metadata.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
@@ -67,6 +68,8 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.InlineArguments.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.ScriptMetadata.plugin
             mitm_anixops/tests/fixtures/Loon.ScriptMetadata.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.TaskMetadata.plugin
+            mitm_anixops/tests/fixtures/Loon.TaskMetadata.Malformed.plugin
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.snippet
@@ -185,6 +188,13 @@ jobs:
           grep -q "config/loon_script_metadata_fixture_exposes_dispatch_fields" mitm_anixops/tests/test_config.c
           grep -q "config/loon_script_metadata_malformed_fixture_rejects_missing_path" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Loon script metadata parser fixtures" mitm_anixops/TODO.md
+          grep -q "Loon task metadata" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon Task Metadata Source Contract" mitm_anixops/docs/compatibility/loon-task-metadata.md
+          grep -q "Loon.TaskMetadata.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.TaskMetadata.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/loon_task_metadata_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_task_metadata_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Loon task metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Quantumult X rewrite/task/mitm common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Quantumult X Common Config Source Contract" mitm_anixops/docs/compatibility/quantumultx-common-config.md
           grep -q "QuantumultX.CommonConfig.snippet" mitm_anixops/docs/compatibility/matrix.md

@@ -44,6 +44,8 @@ corresponding tests.
   inline default parser contract.
 - [loon-script-metadata.md](loon-script-metadata.md): Loon `[Script]`
   request/response dispatch metadata parser contract.
+- [loon-task-metadata.md](loon-task-metadata.md): Loon `[Script]` scheduled
+  task descriptor parser contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
 - [quantumultx-mitm-options.md](quantumultx-mitm-options.md): Quantumult X

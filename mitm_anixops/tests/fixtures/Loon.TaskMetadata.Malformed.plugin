@@ -1,0 +1,2 @@
+[Script]
+cron "15 8 *" script-path=https://scripts.example/loon-broken-cron.js, tag=loon.task.broken

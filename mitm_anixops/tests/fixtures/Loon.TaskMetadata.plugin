@@ -1,0 +1,11 @@
+[Argument]
+Mode = select,cron
+IntervalMode = select,interval
+
+[Script]
+cron "15 8 * * *" script-path=https://scripts.example/loon-cron.js, tag=loon.task.cron, argument=Mode={Mode}, timeout=5, max-size=8192
+LoonInterval = type=interval, interval=1800, script-path=https://scripts.example/loon-interval.js, tag=loon.task.interval, argument=Mode={IntervalMode}, timeout-ms=1250, max_size=4096, enabled=false
+http-request ^https:\/\/task\.metadata\.loon\.test\/http script-path=https://scripts.example/loon-http.js, tag=loon.task.http
+
+[MITM]
+hostname = task.metadata.loon.test

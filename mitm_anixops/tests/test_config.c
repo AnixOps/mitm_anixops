@@ -484,6 +484,142 @@ static void loon_script_metadata_malformed_fixture_rejects_missing_path(void)
 	free(fixture);
 }
 
+static void loon_task_metadata_fixture_emits_task_descriptors(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.TaskMetadata.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_script_result_t script;
+	anixops_task_descriptor_t task;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 6);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Argument");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "argument");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Argument");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "argument");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 2, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 6);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "task descriptor accepted");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 3, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 7);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "task descriptor accepted");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 4, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 8);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "script rule accepted");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 5, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 11);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://task.metadata.loon.test/http", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example/loon-http.js");
+	ANIXOPS_EXPECT_STREQ(script.tag, "loon.task.http");
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://task.metadata.loon.test/http", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 0, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 5000);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 8192);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "15 8 * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/loon-cron.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "loon.task.cron");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=cron");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-cron");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 1, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_INTERVAL);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 1800);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 1250);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 4096);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 0);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "1800");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/loon-interval.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "loon.task.interval");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=interval");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "task.metadata.loon.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void loon_task_metadata_malformed_fixture_rejects_invalid_cron(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.TaskMetadata.Malformed.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "cron expression") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "cron expression") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void loon_inline_arguments_fixture_resolves_script_defaults(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Loon.InlineArguments.plugin");
@@ -3040,6 +3176,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/loon_script_metadata_malformed_fixture_rejects_missing_path",
 		loon_script_metadata_malformed_fixture_rejects_missing_path);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_task_metadata_fixture_emits_task_descriptors",
+		loon_task_metadata_fixture_emits_task_descriptors);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_task_metadata_malformed_fixture_rejects_invalid_cron",
+		loon_task_metadata_malformed_fixture_rejects_invalid_cron);
 	add_test(
 		tests,
 		count,

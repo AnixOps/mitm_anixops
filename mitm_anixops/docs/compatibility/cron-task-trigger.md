@@ -59,6 +59,7 @@ Parser case:
 
 ```text
 tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
+tests/fixtures/Loon.TaskMetadata.plugin
 ```
 
 Expected behavior:
@@ -69,6 +70,8 @@ Expected behavior:
 - the HTTP request script trigger remains matchable by
   `anixops_script_evaluate_url`;
 - cron and interval task descriptors are observable through the public ABI;
+- the Loon parser fixture exposes the same descriptor ABI while preserving HTTP
+  script URL dispatch separation;
 - response-phase URL script evaluation does not return a task descriptor.
 
 ## Unsupported Case
@@ -92,6 +95,7 @@ Parser case:
 
 ```text
 tests/fixtures/CronTaskTrigger.Malformed.conf
+tests/fixtures/Loon.TaskMetadata.Malformed.plugin
 ```
 
 Expected behavior:
@@ -153,6 +157,10 @@ Current evidence:
   `config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors`;
 - `tests/test_config.c` registers
   `config/cron_task_trigger_malformed_fixture_rejects_invalid_cron`;
+- `tests/test_config.c` registers
+  `config/loon_task_metadata_fixture_emits_task_descriptors`;
+- `tests/test_config.c` registers
+  `config/loon_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
   guards against treating bare cron rules as supported HTTP scripts when using
@@ -162,7 +170,7 @@ Missing evidence:
 
 - scheduler/runtime replay or E2E test;
 - task JavaScript runtime bindings;
-- adapter compatibility note for each ecosystem;
+- adapter compatibility notes beyond the current Loon parser boundary;
 - permission, concurrency, and cancellation policy.
 
 ## Compatibility Matrix Row
