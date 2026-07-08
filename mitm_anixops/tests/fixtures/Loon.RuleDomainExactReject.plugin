@@ -1,0 +1,5 @@
+# Loon rule exact-domain reject fixture.
+[Rule]
+DOMAIN,exact.rule.loon.test,REJECT
+DOMAIN,media-exact.rule.loon.test,REJECT-IMG
+DOMAIN,route-exact.rule.loon.test,DIRECT

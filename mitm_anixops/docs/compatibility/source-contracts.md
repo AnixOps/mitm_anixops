@@ -326,13 +326,16 @@ Unimplemented items:
 Detailed contract:
 [Loon Rule Reject Source Contract](loon-rule-reject.md).
 
-Capability: parse Loon `[Rule]` `DOMAIN-SUFFIX` reject policy intent.
+Capability: parse Loon `[Rule]` `DOMAIN` and `DOMAIN-SUFFIX` reject policy intent.
 
 Input form:
 
 - `[Rule]` `DOMAIN-SUFFIX,<host>,REJECT`;
 - `[Rule]` `DOMAIN-SUFFIX,<host>,REJECT-NNN` and other common reject variants
   already supported by the policy-core rewrite parser.
+- `[Rule]` `DOMAIN,<host>,REJECT`;
+- `[Rule]` `DOMAIN,<host>,REJECT-NNN` and other common reject variants already
+  supported by the policy-core rewrite parser.
 
 Parser output:
 
@@ -341,7 +344,8 @@ Parser output:
 - accepted diagnostics with section `Rule` and action `rule`;
 - ignored diagnostics for direct/proxy route-selection lines in the documented
   fixture;
-- rejected diagnostics and parse failure for malformed host suffixes;
+- rejected diagnostics and parse failure for malformed exact hosts or host
+  suffixes;
 - no direct/proxy route selection, DNS, rule-provider refresh, certificate
   lifecycle, scheduler, runtime, or platform UI behavior.
 
@@ -349,13 +353,18 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/Loon.RuleDomainReject.plugin`;
 - negative fixture `tests/fixtures/Loon.RuleDomainReject.Malformed.plugin`;
+- positive fixture `tests/fixtures/Loon.RuleDomainExactReject.plugin`;
+- negative fixture `tests/fixtures/Loon.RuleDomainExactReject.Malformed.plugin`;
 - `config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
-- `config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain`.
+- `config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
+- `config/loon_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;
+- `config/loon_rule_domain_exact_reject_malformed_fixture_rejects_invalid_domain`.
 
 Unimplemented items:
 
 - direct/proxy route selection;
-- `IP-CIDR`, `GEOIP`, and broader Loon rule matchers;
+- `URL-REGEX`, `DOMAIN-KEYWORD`, `FINAL`, `IP-CIDR`, `GEOIP`, and broader Loon
+  rule matchers;
 - proxy groups, DNS/no-resolve, and rule providers;
 - platform networking behavior.
 

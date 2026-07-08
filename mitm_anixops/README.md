@@ -33,7 +33,7 @@ Implemented:
 - AnixOps-style `[Rewrite]` URL rules for standard redirects `301`, `302`, `303`, `307`, `308`, plus `reject`,
   `reject-200`, `reject-401`, `reject-img`, `reject-tinygif`, `reject-video`, `reject-dict`, `reject-array`, and
   numeric `reject-NNN` statuses.
-- Loon-style `[Rule]` `DOMAIN-SUFFIX` reject policy intent mapped to request-phase reject decisions.
+- Loon-style `[Rule]` `DOMAIN` and `DOMAIN-SUFFIX` reject policy intent mapped to request-phase reject decisions.
 - Rewrite section aliases including `[URL Rewrite]`, `[Remote Rewrite]`, `[Header Rewrite]`, and
   `[Remote Header Rewrite]`.
 - Mock and regex request/response body rewrite application for already-buffered plain-text bodies.

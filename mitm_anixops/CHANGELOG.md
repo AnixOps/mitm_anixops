@@ -148,6 +148,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   `disable-quic` signals without claiming certificate lifecycle or TLS support.
 - Added Loon `[Rule]` DOMAIN-SUFFIX reject parser fixtures and CI-covered tests
   while keeping direct/proxy route selection adapter-owned.
+- Added Loon `[Rule]` DOMAIN reject parser fixtures and CI-covered tests while
+  keeping direct/proxy route selection adapter-owned.
 
 ### Changed
 

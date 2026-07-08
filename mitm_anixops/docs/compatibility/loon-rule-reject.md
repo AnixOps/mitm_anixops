@@ -1,6 +1,6 @@
 # Loon Rule Reject Source Contract
 
-Capability: Loon `[Rule]` domain-suffix reject policy intent.
+Capability: Loon `[Rule]` exact-domain and domain-suffix reject policy intent.
 
 Ecosystem: `loon`.
 
@@ -8,9 +8,9 @@ Status: `partial`.
 
 ## Purpose
 
-This contract fixes the first Loon `[Rule]` parser evidence for high-frequency
-domain-suffix reject policy intent. It maps only documented reject rules to the
-existing request-phase policy-core rewrite reject decision.
+This contract fixes Loon `[Rule]` parser evidence for high-frequency exact-domain
+and domain-suffix reject policy intent. It maps only documented reject rules to
+the existing request-phase policy-core rewrite reject decision.
 
 It does not implement Loon routing, proxy selection, DNS, rule provider,
 packet-level behavior, or profile UI behavior.
@@ -22,12 +22,15 @@ The parser accepts this narrow form inside `[Rule]`:
 ```text
 DOMAIN-SUFFIX,ads.example.test,REJECT-200
 DOMAIN-SUFFIX,media.example.test,REJECT-IMG
+DOMAIN,exact.example.test,REJECT
+DOMAIN,media.example.test,REJECT-IMG
 ```
 
 Supported fields:
 
+- `DOMAIN` exact-host rule type;
 - `DOMAIN-SUFFIX` rule type;
-- a valid hostname suffix;
+- a valid exact hostname or hostname suffix;
 - `REJECT`, `REJECT-200`, `REJECT-NNN`, `REJECT-IMG`, `REJECT-VIDEO`,
   `REJECT-DICT`, and `REJECT-ARRAY` actions already supported by the common
   rewrite parser.
@@ -35,12 +38,13 @@ Supported fields:
 Unsupported or unclaimed Loon `[Rule]` forms remain route or adapter owned:
 
 - `DIRECT`, `PROXY`, proxy group names, route policy names, and `no-resolve`;
-- `IP-CIDR`, `GEOIP`, and DNS/network routing matchers;
+- `URL-REGEX`, `DOMAIN-KEYWORD`, `FINAL`, `IP-CIDR`, `GEOIP`, and DNS/network
+  routing matchers;
 - Loon rule-provider refresh, subscription, UI, or packet-routing behavior.
 
 ## Parser Output
 
-For supported `DOMAIN-SUFFIX` reject rules, the parser must:
+For supported `DOMAIN` and `DOMAIN-SUFFIX` reject rules, the parser must:
 
 - register request-phase rewrite reject rules through the existing policy-core
   rewrite store;
@@ -50,8 +54,8 @@ For supported `DOMAIN-SUFFIX` reject rules, the parser must:
 - keep unsupported route-selection rules ignored without registering rewrite,
   script, MITM, task, argument, DNS, proxy-node, or route behavior.
 
-Malformed supported `DOMAIN-SUFFIX` reject rules are rejected when the hostname
-suffix is invalid.
+Malformed supported `DOMAIN` and `DOMAIN-SUFFIX` reject rules are rejected when
+the hostname is invalid.
 
 ## Positive Case
 
@@ -59,6 +63,7 @@ Parser case:
 
 ```text
 tests/fixtures/Loon.RuleDomainReject.plugin
+tests/fixtures/Loon.RuleDomainExactReject.plugin
 ```
 
 Expected behavior:
@@ -68,6 +73,11 @@ Expected behavior:
 - one `DOMAIN-SUFFIX` direct route remains ignored;
 - exact suffix and subdomain request-phase URL evaluation returns the expected
   reject actions;
+- two `DOMAIN` exact-host reject rules are registered in the exact-domain
+  fixture;
+- one `DOMAIN` direct route remains ignored;
+- exact-host request-phase URL evaluation returns the expected reject actions;
+- subdomains do not match exact-host rules;
 - unrelated hostnames do not match;
 - response-phase URL evaluation does not trigger the request-phase rule.
 
@@ -77,6 +87,7 @@ Parser case:
 
 ```text
 tests/fixtures/Loon.RuleDomainReject.Malformed.plugin
+tests/fixtures/Loon.RuleDomainExactReject.Malformed.plugin
 ```
 
 Expected behavior:
@@ -112,6 +123,10 @@ Required CI evidence:
   `config/loon_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
 - `tests/test_config.c` registers
   `config/loon_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
+- `tests/test_config.c` registers
+  `config/loon_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;
+- `tests/test_config.c` registers
+  `config/loon_rule_domain_exact_reject_malformed_fixture_rejects_invalid_domain`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -122,6 +137,7 @@ Row:
 Loon rule reject policy intent
 ```
 
-The row remains `partial` because only `DOMAIN-SUFFIX` reject policy intent is
-covered. Direct/proxy route selection, proxy groups, DNS, rule providers,
-app-level profile UI, and platform networking behavior remain unimplemented.
+The row remains `partial` because only `DOMAIN` and `DOMAIN-SUFFIX` reject
+policy intent is covered. Direct/proxy route selection, proxy groups, DNS, rule
+providers, app-level profile UI, and platform networking behavior remain
+unimplemented.
