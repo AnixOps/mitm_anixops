@@ -177,7 +177,7 @@ cmake-package-check: all $(CMAKE_CONFIG_FILES)
 
 alpha-dist: all runner proxy-shim
 	rm -rf $(BUILD_DIR)/$(ALPHA_NAME)
-	mkdir -p $(BUILD_DIR)/$(ALPHA_NAME)/include $(BUILD_DIR)/$(ALPHA_NAME)/lib/pkgconfig $(BUILD_DIR)/$(ALPHA_NAME)/lib/cmake/mitm_anixops $(BUILD_DIR)/$(ALPHA_NAME)/bin $(BUILD_DIR)/$(ALPHA_NAME)/docs $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src
+	mkdir -p $(BUILD_DIR)/$(ALPHA_NAME)/include $(BUILD_DIR)/$(ALPHA_NAME)/lib/pkgconfig $(BUILD_DIR)/$(ALPHA_NAME)/lib/cmake/mitm_anixops $(BUILD_DIR)/$(ALPHA_NAME)/bin $(BUILD_DIR)/$(ALPHA_NAME)/docs/architecture $(BUILD_DIR)/$(ALPHA_NAME)/docs/compatibility $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src
 	cp include/mitm_anixops.h $(BUILD_DIR)/$(ALPHA_NAME)/include/
 	cp $(STATIC_LIB) $(SHARED_LIB) $(BUILD_DIR)/$(ALPHA_NAME)/lib/
 	cp $(PKG_CONFIG_FILE) $(BUILD_DIR)/$(ALPHA_NAME)/lib/pkgconfig/
@@ -190,7 +190,11 @@ alpha-dist: all runner proxy-shim
 	cp bindings/rust/mitm-anixops/src/*.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src/
 	cp tests/fixtures/BiliBili.Enhanced.plugin tests/fixtures/Representative.Loon.plugin tests/fixtures/Representative.Surge.sgmodule tests/fixtures/Representative.QuantumultX.snippet tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js tests/fixtures/runner_throw_script.js tests/fixtures/ScriptBundle.json tests/fixtures/ScriptBundleBadDigest.json tests/fixtures/ScriptBundlePartial.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
 	cp tests/fixtures/corpus/manifest.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus/
+	cp README.md ROADMAP.md TODO.md CHANGELOG.md CONTRIBUTING.md $(BUILD_DIR)/$(ALPHA_NAME)/
 	cp README.md docs/TODO.md docs/compatibility_matrix.md docs/alpha_release_notes.md docs/loon_mitm_full_compat_plan.md docs/loon_mitm_full_compat_brief_zh.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
+	cp docs/manual-intervention.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
+	cp docs/architecture/*.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/architecture/
+	cp docs/compatibility/*.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/compatibility/
 	tar -C $(BUILD_DIR) -czf $(BUILD_DIR)/$(ALPHA_NAME).tar.gz $(ALPHA_NAME)
 	@printf '%s\n' "$(BUILD_DIR)/$(ALPHA_NAME).tar.gz"
 

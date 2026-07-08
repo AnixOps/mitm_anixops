@@ -1,0 +1,189 @@
+# mitm_anixops v1.0.0 Roadmap
+
+This roadmap moves `mitm_anixops` from the current Alpha policy core into a
+mature, testable, releasable MITM plugin compatibility layer.
+
+The project follows the same release-engineering posture as
+`networkcore_anixops`: local machines are for editing source and documentation;
+build, test, package, release dry-run, and release publication must be proven by
+GitHub Actions.
+
+## Current Phase
+
+Current phase: P0 Repository Baseline.
+
+The latest published artifact is `v0.45.10-alpha`. It proves an embeddable C ABI
+policy core, representative fixtures, an Alpha runner, an Alpha proxy shim, and
+Linux/Windows Alpha artifacts. It does not prove v1.0.0 readiness.
+
+## Operating Rules
+
+- Work in small increments.
+- One feature unit gets one contract or test before implementation.
+- Do not remove meaningful tests to make CI pass.
+- Do not claim planned, placeholder, or unverified capabilities as supported.
+- Every user-visible behavior change updates `CHANGELOG.md`.
+- Every compatibility change updates `docs/compatibility/`.
+- Every security-sensitive or platform-dependent item that cannot be automated
+  is recorded in `docs/manual-intervention.md`.
+- GitHub Actions is the acceptance source of truth.
+
+## P0 Repository Baseline
+
+Goal: make the repository maintainable before adding more compatibility surface.
+
+Deliverables:
+
+- Repository audit and current-state inventory.
+- v1.0.0 roadmap and TODO baseline.
+- CONTRIBUTING and CHANGELOG.
+- Architecture documentation skeleton.
+- Compatibility documentation skeleton.
+- Manual intervention register.
+- CI governance check proving the baseline files exist.
+
+Exit criteria:
+
+- GitHub Actions verifies the governance baseline.
+- `README.md`, `ROADMAP.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
+  `docs/architecture/`, `docs/compatibility/`, and
+  `docs/manual-intervention.md` are present and internally linked.
+- The audit states current tags, releases, CI, tests, entry points, and gaps.
+
+## P1 Plugin Parser
+
+Goal: stabilize parser behavior for the high-frequency plugin subset.
+
+Scope:
+
+- Loon plugin sections and common fields.
+- Quantumult X rewrite/task/mitm subset.
+- Surge module subset.
+- Stash and Shadowrocket migration notes where syntax overlaps.
+- Malformed-line behavior by compatibility profile.
+
+Required evidence:
+
+- Source contract for each accepted grammar family.
+- Parser fixture for every new grammar unit.
+- Positive and negative tests in CI.
+- Compatibility matrix row updated for every changed capability.
+- Diagnostics for ignored, partial, rejected, and unsupported rules.
+
+## P2 Rule Matching Engine
+
+Goal: make URL, host, header, body, script-trigger, and policy-intent matching
+deterministic and traceable.
+
+Scope:
+
+- hostname and MITM domain matching.
+- request rewrite.
+- response rewrite.
+- header mutation.
+- body mutation.
+- reject/direct/proxy policy intent as structured intent, not packet routing.
+- stable trace schema for runner and adapter parity.
+
+Required evidence:
+
+- Contract-first matching semantics.
+- Golden positive and negative fixtures.
+- Plan API parity checks against legacy evaluate APIs.
+- Compatibility matrix updated with supported, partial, planned, unsupported.
+
+## P3 Script And Runtime Compatibility
+
+Goal: define and verify script dispatch/runtime behavior without hiding adapter
+responsibilities inside the C policy core.
+
+Scope:
+
+- script trigger selection and metadata.
+- `$request`, `$response`, `$argument`, `$persistentStore`, `$done` contract.
+- async, timeout, exception, double-done, max-size, and fail-open behavior.
+- offline script bundle, digest, cache miss, and future remote-cache policy.
+- cron/task trigger source contracts before implementation.
+
+Required evidence:
+
+- Node runner contract remains as Alpha/demo backend until a production runtime
+  is introduced.
+- Any QuickJS, JavaScriptCore, or other runtime backend gets independent
+  contracts, tests, license review, and release notes.
+- No remote script execution is enabled by default.
+
+## P4 MITM Policy And Certificate Lifecycle
+
+Goal: keep MITM security boundaries conservative and explicit.
+
+Scope:
+
+- MITM host policy and QUIC fallback intent.
+- certificate state model.
+- certificate lifecycle source contracts for adapters.
+- no automatic root trust.
+- no decryption outside target hostnames.
+- no sensitive header/body logging by default.
+
+Required evidence:
+
+- Certificate states are explicit inputs to the C ABI or adapter contract.
+- Platform certificate installation and trust UX remain adapter-owned.
+- Any CA, leaf certificate, key storage, trust, revocation, or platform
+  permission behavior has manual-intervention entries where automation cannot
+  prove it.
+
+## P5 Integration Adapter
+
+Goal: make `mitm_anixops` embeddable by NetworkCore and other host adapters
+without turning it into a GUI or platform network stack.
+
+Scope:
+
+- C ABI stability and ABI allowlist.
+- Go, Rust, CMake, and pkg-config integration.
+- no-UI runner integration.
+- NetworkCore adapter contract alignment.
+- platform adapter samples only after source contracts and CI gates exist.
+
+Required evidence:
+
+- Wrapper tests in GitHub Actions.
+- Same fixture produces comparable traces through C runner and bindings.
+- Adapter docs state what remains owned by the host: network IO, TLS, HTTP/2,
+  compression/framing, script runtime, certificate store, and platform policy.
+
+## P6 Release Hardening
+
+Goal: make v1.0.0 release publication reproducible and blocked on evidence.
+
+Scope:
+
+- GitHub Actions lint, format check, unit tests, parser fixtures,
+  compatibility matrix tests, integration smoke tests, and release dry-run.
+- Tag-triggered release workflow.
+- Artifacts, checksums, manifest, release notes, and upload gates.
+- Same-commit CI gate before publication.
+- Rollback and replacement policy.
+
+Required evidence:
+
+- Release workflow builds artifacts in GitHub Actions, never from local output.
+- Release assets include checksums and a manifest.
+- Release notes state supported, partial, planned, unsupported, and known-risk
+  areas without overclaiming.
+- v1.0.0 is published only after all v1.0.0 minimum acceptance criteria pass.
+
+## v1.0.0 Minimum Acceptance Criteria
+
+- README explains purpose, installation, compatibility scope, and limitations.
+- ROADMAP, TODO, CHANGELOG, and compatibility docs match the actual state.
+- Compatibility matrix clearly marks supported, partial, planned, unsupported.
+- Parser, rule engine, MITM policy, and script trigger have stable CI coverage.
+- GitHub Actions passes on PR, main push, and tag push.
+- Release workflow creates artifacts, checksum files, manifest, and release
+  notes, and blocks publication on failure.
+- Manual intervention items are recorded and do not silently block or bypass
+  automation.
+- No planned or placeholder capability is described as complete.

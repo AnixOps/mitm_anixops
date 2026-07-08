@@ -1,5 +1,9 @@
 # Compatibility Matrix
 
+This is the Alpha implementation matrix. The v1.0.0 compatibility source of truth starts in
+`docs/compatibility/README.md` and `docs/compatibility/matrix.md`; keep both views aligned while the v1.0.0 track is
+being built.
+
 `mitm_anixops` is a policy-chain library. It parses supported rule shapes and returns structured C ABI decisions.
 Network transport, TLS, body framing, decompression, and JavaScript execution stay in the embedding adapter.
 

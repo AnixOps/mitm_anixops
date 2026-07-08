@@ -6,8 +6,52 @@ on:
   workflow_dispatch:
 
 jobs:
+  governance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Verify v1 governance baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            mitm_anixops/README.md
+            mitm_anixops/ROADMAP.md
+            mitm_anixops/TODO.md
+            mitm_anixops/CHANGELOG.md
+            mitm_anixops/CONTRIBUTING.md
+            mitm_anixops/docs/architecture/repository-audit.md
+            mitm_anixops/docs/architecture/overview.md
+            mitm_anixops/docs/architecture/release-gate.md
+            mitm_anixops/docs/compatibility/README.md
+            mitm_anixops/docs/compatibility/source-contracts.md
+            mitm_anixops/docs/compatibility/matrix.md
+            mitm_anixops/docs/manual-intervention.md
+          )
+          for file in "${required_files[@]}"; do
+            test -f "${file}"
+          done
+          grep -q "P0 Repository Baseline" mitm_anixops/ROADMAP.md
+          grep -q "P1 Plugin Parser" mitm_anixops/ROADMAP.md
+          grep -q "P2 Rule Matching Engine" mitm_anixops/ROADMAP.md
+          grep -q "P3 Script And Runtime Compatibility" mitm_anixops/ROADMAP.md
+          grep -q "P4 MITM Policy And Certificate Lifecycle" mitm_anixops/ROADMAP.md
+          grep -q "P5 Integration Adapter" mitm_anixops/ROADMAP.md
+          grep -q "P6 Release Hardening" mitm_anixops/ROADMAP.md
+          grep -q "GitHub Actions" mitm_anixops/CONTRIBUTING.md
+          grep -q "branch-protection-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "Loon plugin common fields" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Quantumult X rewrite/task/mitm common config" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge module common config" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
+          grep -q "Current gap: no dedicated release workflow exists" mitm_anixops/docs/architecture/release-gate.md
+
   linux-test:
     runs-on: ubuntu-latest
+    needs:
+      - governance
     defaults:
       run:
         working-directory: mitm_anixops
@@ -38,6 +82,8 @@ jobs:
 
   windows-binary:
     runs-on: windows-latest
+    needs:
+      - governance
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
