@@ -33,6 +33,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   fixtures for the fourth P2 rule-matching milestone.
 - Added a decision trace schema source contract plus CI-covered fixtures for
   structured MITM, rewrite, mutation, script, and policy-intent evidence.
+- Added a reject/direct/proxy policy-intent source contract plus CI-covered
+  fixtures proving the reject subset and unsupported direct/proxy route
+  boundary.
 - Added plan API parity fixtures and tests proving plan aggregation matches
   legacy URL/body/header/script evaluation for matched and mismatched phases.
 - Added malformed MITM hostname parser and runtime negative tests so invalid

@@ -104,6 +104,14 @@ networkcore-v1-adapter-boundary-required-before=claiming-networkcore-v1-producti
 networkcore-v1-adapter-boundary-next-action=confirm-networkcore-domain-mutation-model-http-tls-data-plane-certificate-lifecycle-script-runtime-and-platform-adapters-in-github-actions
 ```
 
+```text
+route-selection-adapter-status=pending
+route-selection-adapter-scope=direct-proxy-policy-intent-and-upstream-route-selection
+route-selection-adapter-required-before=claiming-direct-or-proxy-routing-support
+route-selection-adapter-current-policy-core-decision=reject-only-url-decision-direct-proxy-ignored
+route-selection-adapter-next-action=confirm-adapter-route-contract-proxy-group-resolution-dns-fallback-platform-network-extension-behavior-and-github-actions-evidence
+```
+
 ## Completed Items
 
 ```text

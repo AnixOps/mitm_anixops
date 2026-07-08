@@ -44,6 +44,8 @@ corresponding tests.
   Stash and Shadowrocket migration notes without parser support claims.
 - [request-rewrite-common.md](request-rewrite-common.md): request URL rewrite
   parser and policy-core contract.
+- [policy-intent-common.md](policy-intent-common.md): reject/direct/proxy
+  policy-intent parser and routing-boundary contract.
 - [response-rewrite-common.md](response-rewrite-common.md): response-phase
   rewrite parser and policy-core contract.
 - [header-mutation-common.md](header-mutation-common.md): bounded request and

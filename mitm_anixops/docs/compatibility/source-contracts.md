@@ -269,6 +269,35 @@ Unimplemented items:
 - full ecosystem rewrite grammar;
 - adapter HTTP request serialization.
 
+### Policy Intent Common Subset
+
+Detailed contract:
+[Policy Intent Common Source Contract](policy-intent-common.md).
+
+Capability: parse reject policy intent while keeping direct/proxy route
+selection unsupported.
+
+Input form:
+
+- `[Rewrite]`, `[URL Rewrite]`, and `[Remote Rewrite]`;
+- reject, reject-current-session, numeric reject, and reject body-shape tokens;
+- unsupported direct/proxy route-intent lines.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/PolicyIntent.Common.conf`;
+- negative fixture `tests/fixtures/PolicyIntent.Unsupported.conf`;
+- `config/policy_intent_common_fixture_covers_reject_subset`;
+- `config/policy_intent_unsupported_routes_are_ignored`;
+- C rewrite reject tests under `tests/test_rewrite.c`.
+
+Unimplemented items:
+
+- direct/proxy route selection;
+- proxy group resolution;
+- adapter route priority, fallback, DNS, socket, and platform network-extension
+  behavior.
+
 ### Header Mutation Common Subset
 
 Detailed contract: [Header Mutation Common Source Contract](header-mutation-common.md).

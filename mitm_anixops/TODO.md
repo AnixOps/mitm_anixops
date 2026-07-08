@@ -24,6 +24,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define Surge module source contract for module metadata, scripts, MITM,
   and rewrite subsets.
 - [x] Add Loon hashbang metadata parser fixture and positive/negative tests.
+- [x] Add reject/direct/proxy policy-intent parser fixtures and
+  positive/negative tests.
 - [ ] Add one parser fixture and one positive/negative parser test per new
   grammar unit.
 - [ ] Extend compatibility matrix rows only after the corresponding CI test
@@ -43,6 +45,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   policy intent decisions.
 - [x] Add negative fixture proving unsupported direct/proxy policy intent stays
   ignored until routing semantics are contracted.
+- [x] Define reject/direct/proxy policy-intent contract with CI-covered reject
+  subset and unsupported route tests.
 - [x] Add golden tests proving plan API and legacy evaluate API parity.
 - [x] Add negative tests for phase mismatches.
 - [x] Add negative tests for malformed hosts.

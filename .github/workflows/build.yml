@@ -36,6 +36,7 @@ jobs:
             mitm_anixops/docs/compatibility/surge-module-common-config.md
             mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
+            mitm_anixops/docs/compatibility/policy-intent-common.md
             mitm_anixops/docs/compatibility/response-rewrite-common.md
             mitm_anixops/docs/compatibility/header-mutation-common.md
             mitm_anixops/docs/compatibility/body-mutation-common.md
@@ -56,6 +57,8 @@ jobs:
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
+            mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
+            mitm_anixops/tests/fixtures/PolicyIntent.Unsupported.conf
             mitm_anixops/tests/fixtures/HeaderMutation.Common.conf
             mitm_anixops/tests/fixtures/HeaderMutation.Common.Malformed.conf
             mitm_anixops/tests/fixtures/ResponseRewrite.Common.conf
@@ -117,6 +120,14 @@ jobs:
           grep -q "RequestRewrite.Common.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/request_rewrite_common_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/request_rewrite_common_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "reject/direct/proxy policy intent" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Policy Intent Common Source Contract" mitm_anixops/docs/compatibility/policy-intent-common.md
+          grep -q "PolicyIntent.Common.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "PolicyIntent.Unsupported.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/policy_intent_common_fixture_covers_reject_subset" mitm_anixops/tests/test_config.c
+          grep -q "config/policy_intent_unsupported_routes_are_ignored" mitm_anixops/tests/test_config.c
+          grep -q "route-selection-adapter-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "^- \\[x\\] Add reject/direct/proxy policy-intent parser fixtures" mitm_anixops/TODO.md
           grep -q "header mutation" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Header Mutation Common Source Contract" mitm_anixops/docs/compatibility/header-mutation-common.md
           grep -q "HeaderMutation.Common.conf" mitm_anixops/docs/compatibility/matrix.md
