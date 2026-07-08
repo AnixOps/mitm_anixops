@@ -143,6 +143,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   CI-covered tests while keeping direct/proxy route selection adapter-owned.
 - Added Shadowrocket `[Rule]` FINAL reject parser fixtures and CI-covered tests
   while keeping direct/proxy route selection adapter-owned.
+- Added Loon `[MITM]` option parser fixtures and CI-covered tests for
+  adapter-visible `enable`, `hostname`, `skip-server-cert-verify`, `h2`, and
+  `disable-quic` signals without claiming certificate lifecycle or TLS support.
 
 ### Changed
 

@@ -25,7 +25,8 @@ The full LOON MITM plugin compatibility and no-UI runtime plan is tracked in
 
 Implemented:
 
-- AnixOps-style `[MITM] hostname = ...` parsing plus Quantumult X `force-http-engine-hosts` host-list parsing.
+- AnixOps/Loon-style `[MITM] hostname = ...` and adapter-visible MITM option parsing plus Quantumult X
+  `force-http-engine-hosts` host-list parsing.
 - Explicit MITM gate: enabled flag, trusted certificate state, allow/deny host patterns, and adapter-readable
   `skip-server-cert-verify` boolean or host-list config.
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.

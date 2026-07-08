@@ -183,6 +183,98 @@ static void loon_common_fields_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void loon_mitm_options_fixture_exposes_adapter_flags(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.MitmOptions.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 5);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "enable");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "mitm option accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "mitm hostname accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 2, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 4);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "skip-server-cert-verify");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "mitm option accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.options.loon.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "api.options.loon.test");
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "sub.wild.options.loon.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "*.wild.options.loon.test");
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.options.loon.test", 1, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "blocked.options.loon.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_DENY_HOST);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void loon_mitm_options_malformed_fixture_rejects_invalid_host(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.MitmOptions.Malformed.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "enable");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "invalid mitm hostname pattern") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 3);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "invalid mitm hostname pattern") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void loon_hashbang_metadata_fixture_records_tolerated_keys(void)
 {
 	static const char *expected_actions[] = {
@@ -4372,6 +4464,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/loon_common_fields_strict_fixture_rejects_malformed_rule",
 		loon_common_fields_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_mitm_options_fixture_exposes_adapter_flags",
+		loon_mitm_options_fixture_exposes_adapter_flags);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_mitm_options_malformed_fixture_rejects_invalid_host",
+		loon_mitm_options_malformed_fixture_rejects_invalid_host);
 	add_test(
 		tests,
 		count,

@@ -1,0 +1,3 @@
+[MITM]
+enable = true
+hostname = bad host

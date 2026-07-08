@@ -91,6 +91,7 @@ Current CI evidence for the policy-core trust gate:
 
 - `mitm/certificate_state_matrix_blocks_untrusted_states`;
 - `mitm/wildcard_matches_subdomain_and_base_domain`;
+- `config/loon_mitm_options_fixture_exposes_adapter_flags`;
 - `config/config_accepts_quantumultx_mitm_host_options`;
 - `config/config_exposes_skip_server_cert_verify`.
 

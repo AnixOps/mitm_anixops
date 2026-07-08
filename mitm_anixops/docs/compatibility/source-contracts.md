@@ -33,7 +33,8 @@ Capability: parse and evaluate the currently implemented Loon/AnixOps subset.
 
 Input form:
 
-- `[MITM] hostname = ...`
+- `[MITM] hostname = ...` plus adapter-visible options covered by
+  [Loon MITM Options Source Contract](loon-mitm-options.md);
 - `[Rewrite]`, `[URL Rewrite]`, `[Header Rewrite]`, `[Body Rewrite]`
 - `[Script]`
 - `[Argument]`
@@ -275,6 +276,48 @@ Unimplemented items:
 - task JavaScript bindings;
 - concurrency and permission policy;
 - broader Loon task option corpus.
+
+### Loon MITM Options
+
+Detailed contract:
+[Loon MITM Options Source Contract](loon-mitm-options.md).
+
+Capability: parse Loon `[MITM]` host/options lines as policy-core and
+adapter-visible signals.
+
+Input form:
+
+- `enable` and `enabled`;
+- `hostname` with exact, wildcard, deny-prefixed, comma-separated, and
+  `%APPEND%` / `%INSERT%` host-list entries;
+- `skip-server-cert-verify` and `skip_server_cert_verify`;
+- `h2`, `h2-enable`, and `h2_enable`;
+- `disable-quic`, `disable_quic`, `disable-mitm-quic`, and
+  `disable_mitm_quic`.
+
+Parser output:
+
+- MITM host patterns visible through `anixops_engine_mitm_pattern_count`;
+- adapter-visible `skip-server-cert-verify` and HTTP/2 option signals;
+- existing MITM enable and QUIC fallback decision signals;
+- accepted diagnostics for valid option lines;
+- rejected diagnostics and parse failure for malformed host patterns;
+- no certificate lifecycle, trust-store mutation, TLS, HTTP/2 transport,
+  routing, or platform UI behavior.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.MitmOptions.plugin`;
+- negative fixture `tests/fixtures/Loon.MitmOptions.Malformed.plugin`;
+- `config/loon_mitm_options_fixture_exposes_adapter_flags`;
+- `config/loon_mitm_options_malformed_fixture_rejects_invalid_host`.
+
+Unimplemented items:
+
+- root CA installation or trust-store mutation;
+- TLS interception and HTTP/2 transport behavior;
+- adapter certificate verification bypass behavior;
+- QUIC network fallback outside the policy-core decision signal.
 
 ### Quantumult X Common Subset
 

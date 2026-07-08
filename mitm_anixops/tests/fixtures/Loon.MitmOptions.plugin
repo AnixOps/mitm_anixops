@@ -1,0 +1,6 @@
+[MITM]
+enable = true
+hostname = %APPEND% api.options.loon.test, *.wild.options.loon.test, -blocked.options.loon.test
+skip-server-cert-verify = cert.options.loon.test
+h2 = false
+disable-quic = false
