@@ -50,6 +50,9 @@ The release workflow must eventually support:
 
 Current gap: no dedicated release workflow exists in this repository.
 
+The dry-run boundary that must precede release automation is defined in
+[Release Dry-Run Source Contract](release-dry-run.md).
+
 ## Minimum Artifact Set
 
 Future v1.0.0 releases should publish at least:

@@ -23,10 +23,12 @@ jobs:
             mitm_anixops/docs/architecture/repository-audit.md
             mitm_anixops/docs/architecture/overview.md
             mitm_anixops/docs/architecture/release-gate.md
+            mitm_anixops/docs/architecture/release-dry-run.md
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
+            .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
             test -f "${file}"
@@ -47,6 +49,9 @@ jobs:
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "Current gap: no dedicated release workflow exists" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-dry-run-current-mode=contract-only" mitm_anixops/docs/architecture/release-dry-run.md
+          grep -q "Source contract:" .github/pull_request_template.md
+          grep -q "Manual intervention required" .github/pull_request_template.md
 
   linux-test:
     runs-on: ubuntu-latest

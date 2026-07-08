@@ -12,10 +12,10 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a repository audit and architecture baseline.
 - [x] Add v1.0.0 roadmap, TODO, CHANGELOG, CONTRIBUTING, compatibility docs,
   and manual intervention register.
-- [ ] Add CI governance checks for the new baseline files.
-- [ ] Add PR template fields for source contract, test, compatibility matrix,
+- [x] Add CI governance checks for the new baseline files.
+- [x] Add PR template fields for source contract, test, compatibility matrix,
   changelog, and manual-intervention impact.
-- [ ] Add a release dry-run design before changing release automation.
+- [x] Add a release dry-run design before changing release automation.
 
 ## P1 Plugin Parser
 

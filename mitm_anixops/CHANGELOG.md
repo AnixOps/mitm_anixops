@@ -12,6 +12,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Started the v1.0.0 governance track with repository audit, roadmap,
   compatibility documentation skeleton, contribution rules, and manual
   intervention register.
+- Added a pull request template that requires source contract, test,
+  compatibility matrix, changelog, security, and manual-intervention evidence.
+- Added a release dry-run source contract before introducing release automation.
 
 ### Changed
 
