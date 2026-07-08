@@ -1290,6 +1290,37 @@ static void plan_api_parity_fixture_keeps_phase_mismatches_empty(void)
 	free(fixture);
 }
 
+static void mitm_hostname_malformed_fixture_rejects_invalid_host(void)
+{
+	char *fixture = read_fixture("tests/fixtures/MITM.Hostname.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "invalid mitm hostname") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "invalid mitm hostname") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -1929,6 +1960,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/plan_api_parity_fixture_keeps_phase_mismatches_empty",
 		plan_api_parity_fixture_keeps_phase_mismatches_empty);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/mitm_hostname_malformed_fixture_rejects_invalid_host",
+		mitm_hostname_malformed_fixture_rejects_invalid_host);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

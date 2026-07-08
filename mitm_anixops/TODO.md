@@ -44,7 +44,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   ignored until routing semantics are contracted.
 - [x] Add golden tests proving plan API and legacy evaluate API parity.
 - [x] Add negative tests for phase mismatches.
-- [ ] Add negative tests for malformed hosts.
+- [x] Add negative tests for malformed hosts.
 
 ## P3 Script And Runtime Compatibility
 

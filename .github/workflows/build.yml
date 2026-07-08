@@ -55,6 +55,7 @@ jobs:
             mitm_anixops/tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf
             mitm_anixops/tests/fixtures/PlanApiParity.Golden.conf
             mitm_anixops/tests/fixtures/PlanApiParity.PhaseMismatch.conf
+            mitm_anixops/tests/fixtures/MITM.Hostname.Malformed.conf
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -84,6 +85,9 @@ jobs:
           grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/surge_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/surge_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "MITM.Hostname.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/mitm_hostname_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
+          grep -q "mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard" mitm_anixops/tests/test_mitm.c
           grep -q "request rewrite" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Request Rewrite Common Source Contract" mitm_anixops/docs/compatibility/request-rewrite-common.md
           grep -q "RequestRewrite.Common.conf" mitm_anixops/docs/compatibility/matrix.md

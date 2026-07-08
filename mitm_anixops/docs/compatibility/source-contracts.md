@@ -135,11 +135,14 @@ Input form:
 - deny host entries;
 - host with port;
 - IPv6 literal;
+- malformed host parser fixture `tests/fixtures/MITM.Hostname.Malformed.conf`;
 - certificate state supplied by adapter.
 
 Current CI evidence:
 
 - `tests/test_mitm.c`;
+- `config/mitm_hostname_malformed_fixture_rejects_invalid_host`;
+- `mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard`;
 - strategy-chain demo;
 - runner and proxy E2E paths.
 

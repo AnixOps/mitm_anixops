@@ -410,6 +410,8 @@ static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const ch
 static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char value);
 static int anixops_wildcard_match(const char *pattern, const char *text);
 static void anixops_normalize_host(const char *input, char *out, size_t out_cap);
+static int anixops_normalized_host_is_valid(const char *host, int allow_wildcard);
+static int anixops_host_label_range_is_valid(const char *start, size_t len);
 static int anixops_host_pattern_matches(const char *pattern, const char *host);
 static void anixops_set_mitm_result(
 	anixops_mitm_decision_t *out,
@@ -1834,8 +1836,9 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 ANIXOPS_API int anixops_engine_add_mitm_hostname(anixops_engine_t *engine, const char *pattern)
 {
 	char *copy;
-	char *saveptr;
+	char *saveptr = NULL;
 	char *item;
+	size_t valid_count = 0;
 
 	if (engine == NULL || pattern == NULL) {
 		if (engine != NULL) {
@@ -1852,8 +1855,54 @@ ANIXOPS_API int anixops_engine_add_mitm_hostname(anixops_engine_t *engine, const
 	}
 
 	for (item = strtok_r(copy, ",", &saveptr); item != NULL; item = strtok_r(NULL, ",", &saveptr)) {
+		char normalized[512];
+		anixops_trim_inplace(item);
+		if (item[0] == '\0') {
+			continue;
+		}
+		if (anixops_starts_with_ci(item, "%APPEND%")) {
+			item += strlen("%APPEND%");
+			anixops_trim_inplace(item);
+		}
+		else if (anixops_starts_with_ci(item, "%INSERT%")) {
+			item += strlen("%INSERT%");
+			anixops_trim_inplace(item);
+		}
+		if (item[0] == '-' || item[0] == '!') {
+			item++;
+			anixops_trim_inplace(item);
+		}
+		else if (item[0] == '+') {
+			item++;
+			anixops_trim_inplace(item);
+		}
+		if (item[0] == '\0') {
+			continue;
+		}
+		anixops_normalize_host(item, normalized, sizeof(normalized));
+		if (!anixops_normalized_host_is_valid(normalized, 1)) {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "invalid mitm hostname pattern");
+			return ANIXOPS_ERR_PARSE;
+		}
+		valid_count++;
+	}
+
+	free(copy);
+	if (valid_count == 0) {
+		return ANIXOPS_OK;
+	}
+
+	copy = anixops_strdup(pattern);
+	if (copy == NULL) {
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying mitm hostname pattern");
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	saveptr = NULL;
+	for (item = strtok_r(copy, ",", &saveptr); item != NULL; item = strtok_r(NULL, ",", &saveptr)) {
 		anixops_host_pattern_t *slot;
 		int deny = 0;
+		char normalized[512];
 		anixops_trim_inplace(item);
 		if (item[0] == '\0') {
 			continue;
@@ -1878,17 +1927,14 @@ ANIXOPS_API int anixops_engine_add_mitm_hostname(anixops_engine_t *engine, const
 		if (item[0] == '\0') {
 			continue;
 		}
+		anixops_normalize_host(item, normalized, sizeof(normalized));
 		if (anixops_reserve_hosts(engine, engine->host_len + 1) != ANIXOPS_OK) {
 			free(copy);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory reserving mitm hostname");
 			return ANIXOPS_ERR_OUT_OF_MEMORY;
 		}
 		slot = &engine->hosts[engine->host_len];
-		{
-			char normalized[512];
-			anixops_normalize_host(item, normalized, sizeof(normalized));
-			slot->pattern = anixops_strdup(normalized);
-		}
+		slot->pattern = anixops_strdup(normalized);
 		if (slot->pattern == NULL) {
 			free(copy);
 			anixops_set_diagnostic(engine, ANIXOPS_ERR_OUT_OF_MEMORY, 0, "out of memory copying mitm hostname");
@@ -1951,6 +1997,10 @@ ANIXOPS_API int anixops_mitm_evaluate(
 	}
 	if (host[0] == '\0') {
 		anixops_set_mitm_result(out_decision, ANIXOPS_MITM_BYPASS, ANIXOPS_MITM_REASON_EMPTY_HOST, NULL, "empty host");
+		return ANIXOPS_OK;
+	}
+	if (!anixops_normalized_host_is_valid(host, 0)) {
+		anixops_set_mitm_result(out_decision, ANIXOPS_MITM_BYPASS, ANIXOPS_MITM_REASON_NO_HOST_MATCH, NULL, "invalid host");
 		return ANIXOPS_OK;
 	}
 	if (engine->cert_state != ANIXOPS_CERT_TRUSTED) {
@@ -6060,6 +6110,78 @@ static void anixops_normalize_host(const char *input, char *out, size_t out_cap)
 	memcpy(out, start, len);
 	out[len] = '\0';
 	anixops_lower_inplace(out);
+}
+
+static int anixops_normalized_host_is_valid(const char *host, int allow_wildcard)
+{
+	const char *cursor;
+	const char *label_start;
+	size_t label_len = 0;
+	int saw_colon = 0;
+	int saw_ipv6_digit = 0;
+
+	if (host == NULL || host[0] == '\0') {
+		return 0;
+	}
+	if (allow_wildcard && strcmp(host, "*") == 0) {
+		return 1;
+	}
+	cursor = host;
+	if (allow_wildcard && cursor[0] == '*' && cursor[1] == '.') {
+		cursor += 2;
+	}
+	if (*cursor == '\0') {
+		return 0;
+	}
+	if (strchr(cursor, ':') != NULL) {
+		const char *p;
+		for (p = cursor; *p != '\0'; p++) {
+			if (*p == ':') {
+				saw_colon = 1;
+				continue;
+			}
+			if (isxdigit((unsigned char)*p)) {
+				saw_ipv6_digit = 1;
+				continue;
+			}
+			return 0;
+		}
+		return saw_colon && saw_ipv6_digit;
+	}
+
+	label_start = cursor;
+	for (; *cursor != '\0'; cursor++) {
+		unsigned char ch = (unsigned char)*cursor;
+		if (*cursor == '.') {
+			if (!anixops_host_label_range_is_valid(label_start, label_len)) {
+				return 0;
+			}
+			cursor++;
+			label_start = cursor;
+			label_len = 0;
+			if (*cursor == '\0') {
+				return 0;
+			}
+			cursor--;
+			continue;
+		}
+		if (!(isalnum(ch) || ch == '-')) {
+			return 0;
+		}
+		label_len++;
+	}
+	return anixops_host_label_range_is_valid(label_start, label_len);
+}
+
+static int anixops_host_label_range_is_valid(const char *start, size_t len)
+{
+	if (start == NULL || len == 0 || len > 63) {
+		return 0;
+	}
+	if (!isalnum((unsigned char)start[0]) || !isalnum((unsigned char)start[len - 1])) {
+		return 0;
+	}
+	return 1;
 }
 
 static int anixops_host_pattern_matches(const char *pattern, const char *host)

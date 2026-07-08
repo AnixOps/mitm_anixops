@@ -33,6 +33,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   structured MITM, rewrite, mutation, script, and policy-intent evidence.
 - Added plan API parity fixtures and tests proving plan aggregation matches
   legacy URL/body/header/script evaluation for matched and mismatched phases.
+- Added malformed MITM hostname parser and runtime negative tests so invalid
+  hosts do not register or intercept through wildcard policy.
 
 ### Changed
 
