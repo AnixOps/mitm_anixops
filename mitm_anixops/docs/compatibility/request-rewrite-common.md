@@ -18,6 +18,8 @@ behavior.
 The current common subset accepts:
 
 - `[Rewrite]`, `[URL Rewrite]`, and `[Remote Rewrite]` section aliases;
+- Quantumult X `[rewrite_local]`, `#[rewrite_local]`, `[rewrite_remote]`, and
+  `#[rewrite_remote]` section aliases;
 - direct redirect lines such as `pattern replacement 302`;
 - URL-prefixed redirect lines such as `pattern url 303 replacement`;
 - reject lines such as `pattern reject-200`;
@@ -41,15 +43,20 @@ Parser case:
 ```text
 tests/fixtures/RequestRewrite.Common.conf
 tests/fixtures/Loon.RequestRewrite.plugin
+tests/fixtures/QuantumultX.RequestRewrite.snippet
 ```
 
 Expected behavior:
 
 - config load succeeds;
-- three rewrite rules are registered;
+- the common fixture registers three rewrite rules;
+- the Loon fixture registers two rewrite rules;
+- the Quantumult X fixture registers two rewrite rules;
 - direct redirect, URL-prefixed redirect, and reject behavior are observable
   through `anixops_rewrite_evaluate_url`;
 - Loon `[URL Rewrite]` redirect and reject behavior is observable through
+  `anixops_rewrite_evaluate_url`;
+- Quantumult X `url` redirect and reject behavior is observable through
   `anixops_rewrite_evaluate_url`;
 - redirect capture expansion is applied to the output value;
 - response phase does not trigger request rewrite rules.
@@ -61,12 +68,14 @@ Parser case:
 ```text
 tests/fixtures/RequestRewrite.Common.Malformed.conf
 tests/fixtures/Loon.RequestRewrite.Malformed.plugin
+tests/fixtures/QuantumultX.RequestRewrite.Malformed.snippet
 ```
 
 Expected behavior:
 
 - a strict compatibility profile rejects the malformed rewrite line;
 - an invalid Loon `[URL Rewrite]` URL regex rejects config load;
+- an invalid Quantumult X `url` rewrite URL regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -99,6 +108,10 @@ Required CI evidence:
   `config/loon_request_rewrite_fixture_maps_redirect_and_reject`;
 - `tests/test_config.c` registers
   `config/loon_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_request_rewrite_fixture_maps_redirect_and_reject`;
+- `tests/test_config.c` registers
+  `config/quantumultx_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

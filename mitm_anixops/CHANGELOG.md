@@ -130,6 +130,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   fixtures for the first P2 rule-matching milestone.
 - Added Loon `[URL Rewrite]` request redirect/reject parser fixtures and
   CI-covered tests while keeping direct/proxy route selection adapter-owned.
+- Added Quantumult X `url` request redirect/reject parser fixtures and
+  CI-covered tests while keeping direct/proxy route selection adapter-owned.
 - Added a header mutation source contract plus positive and negative parser
   fixtures for the second P2 rule-matching milestone.
 - Added a response rewrite source contract plus positive and negative parser

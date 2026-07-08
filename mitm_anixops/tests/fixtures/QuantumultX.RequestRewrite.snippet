@@ -1,0 +1,3 @@
+#[rewrite_local]
+^http:\/\/request\.qx\.test\/old\/(.*) url 302 https://request.qx.test/new/$1
+^https:\/\/request\.qx\.test\/ads url reject-200
