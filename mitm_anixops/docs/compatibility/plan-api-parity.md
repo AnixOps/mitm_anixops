@@ -20,6 +20,7 @@ The current parity subset accepts:
 
 - request URL redirect rules;
 - request and response header mutation rules;
+- request and response current-header regex mutation rules;
 - request and response body regex replacement rules;
 - request and response script trigger metadata;
 - request and response phase inputs.
@@ -39,6 +40,10 @@ Expected behavior:
 - body-aware request plans match `anixops_rewrite_apply_body`,
   `anixops_rewrite_evaluate_header`, and `anixops_script_evaluate_url`;
 - body-aware response plans match the same legacy APIs for response phase;
+- current-header request and response plans match
+  `anixops_rewrite_evaluate_header` with the same current header value;
+- Go and Rust wrappers expose explicit current-header plan helpers while
+  preserving the default `BuildPlan` behavior;
 - plan `requires_body`, `body_available`, header count, truncation flag,
   rule indexes, matched patterns, values, tags, timeout, max-size, and messages
   are stable.
@@ -80,6 +85,10 @@ Required CI evidence:
   `config/plan_api_parity_fixture_matches_legacy_evaluation`;
 - `tests/test_config.c` registers
   `config/plan_api_parity_fixture_keeps_phase_mismatches_empty`;
+- Go wrapper `BuildPlanWithCurrentHeader` is covered by
+  `TestGoBindingLoadsSharedParityFixture`;
+- Rust wrapper `build_plan_with_current_header` is covered by
+  `rust_binding_loads_shared_parity_fixture`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -90,5 +99,5 @@ Row:
 plan API parity
 ```
 
-The row remains `partial` until runner golden JSON traces, named-header
-current-value parity, and adapter ordering coverage exist.
+The row remains `partial` until runner golden JSON traces and adapter ordering
+coverage exist.

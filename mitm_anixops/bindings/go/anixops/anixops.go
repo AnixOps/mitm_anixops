@@ -299,6 +299,24 @@ func (e *Engine) ApplyHeaders(url string, phase Phase, headers HeaderList) (Head
 }
 
 func (e *Engine) BuildPlan(url string, phase Phase, body string) (RewritePlan, string, error) {
+	return e.buildPlan(url, phase, body, nil)
+}
+
+func (e *Engine) BuildPlanWithCurrentHeader(
+	url string,
+	phase Phase,
+	body string,
+	currentHeaderValue string,
+) (RewritePlan, string, error) {
+	return e.buildPlan(url, phase, body, &currentHeaderValue)
+}
+
+func (e *Engine) buildPlan(
+	url string,
+	phase Phase,
+	body string,
+	currentHeaderValue *string,
+) (RewritePlan, string, error) {
 	var plan C.anixops_rewrite_plan_t
 	outCap := len(body) + C.ANIXOPS_VALUE_CAP
 	out := make([]byte, outCap)
@@ -307,8 +325,13 @@ func (e *Engine) BuildPlan(url string, phase Phase, body string) (RewritePlan, s
 	}
 	curl := C.CString(url)
 	cbody := C.CString(body)
+	var ccurrentHeaderValue *C.char
 	defer C.free(unsafe.Pointer(curl))
 	defer C.free(unsafe.Pointer(cbody))
+	if currentHeaderValue != nil {
+		ccurrentHeaderValue = C.CString(*currentHeaderValue)
+		defer C.free(unsafe.Pointer(ccurrentHeaderValue))
+	}
 	if err := statusError(
 		"build plan",
 		C.anixops_rewrite_build_plan(
@@ -318,7 +341,7 @@ func (e *Engine) BuildPlan(url string, phase Phase, body string) (RewritePlan, s
 			cbody,
 			(*C.char)(unsafe.Pointer(&out[0])),
 			C.size_t(len(out)),
-			nil,
+			ccurrentHeaderValue,
 			&plan)); err != nil {
 		return RewritePlan{}, "", err
 	}

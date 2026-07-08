@@ -501,8 +501,34 @@ impl Engine {
         phase: Phase,
         body: &str,
     ) -> Result<(RewritePlan, String), Error> {
+        self.build_plan_inner(url, phase, body, None)
+    }
+
+    pub fn build_plan_with_current_header(
+        &self,
+        url: &str,
+        phase: Phase,
+        body: &str,
+        current_header_value: &str,
+    ) -> Result<(RewritePlan, String), Error> {
+        self.build_plan_inner(url, phase, body, Some(current_header_value))
+    }
+
+    fn build_plan_inner(
+        &self,
+        url: &str,
+        phase: Phase,
+        body: &str,
+        current_header_value: Option<&str>,
+    ) -> Result<(RewritePlan, String), Error> {
         let url = CString::new(url).expect("url must not contain nul bytes");
         let body_c = CString::new(body).expect("body must not contain nul bytes");
+        let current_header_value = current_header_value.map(|value| {
+            CString::new(value).expect("current_header_value must not contain nul bytes")
+        });
+        let current_header_value_ptr = current_header_value
+            .as_ref()
+            .map_or(std::ptr::null(), |value| value.as_ptr());
         let mut plan = empty_rewrite_plan();
         let mut out = vec![0 as c_char; body.len() + ANIXOPS_VALUE_CAP];
         check_status(
@@ -515,7 +541,7 @@ impl Engine {
                     body_c.as_ptr(),
                     out.as_mut_ptr(),
                     out.len(),
-                    std::ptr::null(),
+                    current_header_value_ptr,
                     &mut plan,
                 )
             },
@@ -904,6 +930,27 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert_eq!(request_header.action, RewriteAction::HeaderReplaceRegex);
         assert_eq!(request_header.header_name, "X-Binding-Current");
         assert_eq!(request_header.value, "req-item");
+        let (request_header_plan, _) = engine
+            .build_plan_with_current_header(
+                "https://api.binding.test/request-current/item",
+                Phase::Request,
+                "",
+                "old-item",
+            )
+            .unwrap();
+        assert_eq!(request_header_plan.header_rewrites.len(), 1);
+        assert_eq!(
+            request_header_plan.header_rewrites[0].action,
+            request_header.action
+        );
+        assert_eq!(
+            request_header_plan.header_rewrites[0].header_name,
+            request_header.header_name
+        );
+        assert_eq!(
+            request_header_plan.header_rewrites[0].value,
+            request_header.value
+        );
 
         let (response_plan, response_body) = engine
             .build_plan(
@@ -948,6 +995,27 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         );
         assert_eq!(response_header.header_name, "X-Binding-Current");
         assert_eq!(response_header.value, "resp-item");
+        let (response_header_plan, _) = engine
+            .build_plan_with_current_header(
+                "https://api.binding.test/response-current/item",
+                Phase::Response,
+                "",
+                "old-item",
+            )
+            .unwrap();
+        assert_eq!(response_header_plan.header_rewrites.len(), 1);
+        assert_eq!(
+            response_header_plan.header_rewrites[0].action,
+            response_header.action
+        );
+        assert_eq!(
+            response_header_plan.header_rewrites[0].header_name,
+            response_header.header_name
+        );
+        assert_eq!(
+            response_header_plan.header_rewrites[0].value,
+            response_header.value
+        );
     }
 
     #[test]

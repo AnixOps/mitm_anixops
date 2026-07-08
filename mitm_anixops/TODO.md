@@ -54,6 +54,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define reject/direct/proxy policy-intent contract with CI-covered reject
   subset and unsupported route tests.
 - [x] Add golden tests proving plan API and legacy evaluate API parity.
+- [x] Add current-header plan parity checks for C, Go, and Rust surfaces.
 - [x] Add negative tests for phase mismatches.
 - [x] Add negative tests for malformed hosts.
 

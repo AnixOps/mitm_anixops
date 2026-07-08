@@ -184,8 +184,15 @@ jobs:
           grep -q "plan API parity" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Plan API Parity Source Contract" mitm_anixops/docs/compatibility/plan-api-parity.md
           grep -q "PlanApiParity.Golden.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "request-current" mitm_anixops/tests/fixtures/PlanApiParity.Golden.conf
+          grep -q "response-current" mitm_anixops/tests/fixtures/PlanApiParity.Golden.conf
           grep -q "config/plan_api_parity_fixture_matches_legacy_evaluation" mitm_anixops/tests/test_config.c
           grep -q "config/plan_api_parity_fixture_keeps_phase_mismatches_empty" mitm_anixops/tests/test_config.c
+          grep -q "BuildPlanWithCurrentHeader" mitm_anixops/bindings/go/anixops/anixops.go
+          grep -q "requestHeaderPlan, _, err := engine.BuildPlanWithCurrentHeader" mitm_anixops/bindings/go/anixops/anixops_test.go
+          grep -q "build_plan_with_current_header" mitm_anixops/bindings/rust/mitm-anixops/src/lib.rs
+          grep -q "request_header_plan, _" mitm_anixops/bindings/rust/mitm-anixops/src/lib.rs
+          grep -q "^- \\[x\\] Add current-header plan parity checks for C, Go, and Rust surfaces" mitm_anixops/TODO.md
           grep -q "binding parity" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Binding Parity Source Contract" mitm_anixops/docs/compatibility/binding-parity.md
           grep -q "BindingParity.Common.conf" mitm_anixops/docs/compatibility/matrix.md

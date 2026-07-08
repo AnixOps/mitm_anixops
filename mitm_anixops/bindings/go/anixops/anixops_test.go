@@ -206,6 +206,21 @@ func TestGoBindingLoadsSharedParityFixture(t *testing.T) {
 		requestHeader.Value != "req-item" {
 		t.Fatalf("unexpected request named header: %+v", requestHeader)
 	}
+	requestHeaderPlan, _, err := engine.BuildPlanWithCurrentHeader(
+		"https://api.binding.test/request-current/item",
+		PhaseRequest,
+		"",
+		"old-item",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(requestHeaderPlan.HeaderRewrites) != 1 ||
+		requestHeaderPlan.HeaderRewrites[0].Action != requestHeader.Action ||
+		requestHeaderPlan.HeaderRewrites[0].HeaderName != requestHeader.HeaderName ||
+		requestHeaderPlan.HeaderRewrites[0].Value != requestHeader.Value {
+		t.Fatalf("unexpected request current-header plan: %+v", requestHeaderPlan.HeaderRewrites)
+	}
 
 	responsePlan, responseBody, err := engine.BuildPlan("https://api.binding.test/response/item", PhaseResponse, "ad=1&ok=1")
 	if err != nil {
@@ -245,6 +260,21 @@ func TestGoBindingLoadsSharedParityFixture(t *testing.T) {
 		responseHeader.HeaderName != "X-Binding-Current" ||
 		responseHeader.Value != "resp-item" {
 		t.Fatalf("unexpected response named header: %+v", responseHeader)
+	}
+	responseHeaderPlan, _, err := engine.BuildPlanWithCurrentHeader(
+		"https://api.binding.test/response-current/item",
+		PhaseResponse,
+		"",
+		"old-item",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(responseHeaderPlan.HeaderRewrites) != 1 ||
+		responseHeaderPlan.HeaderRewrites[0].Action != responseHeader.Action ||
+		responseHeaderPlan.HeaderRewrites[0].HeaderName != responseHeader.HeaderName ||
+		responseHeaderPlan.HeaderRewrites[0].Value != responseHeader.Value {
+		t.Fatalf("unexpected response current-header plan: %+v", responseHeaderPlan.HeaderRewrites)
 	}
 }
 

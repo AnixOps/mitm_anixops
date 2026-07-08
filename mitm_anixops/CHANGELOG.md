@@ -48,6 +48,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   boundary.
 - Added plan API parity fixtures and tests proving plan aggregation matches
   legacy URL/body/header/script evaluation for matched and mismatched phases.
+- Added current-header plan parity checks and Go/Rust wrapper helpers for
+  header regex rewrite planning.
 - Added malformed MITM hostname parser and runtime negative tests so invalid
   hosts do not register or intercept through wildcard policy.
 - Added a script runtime common source contract plus no-network replay evidence

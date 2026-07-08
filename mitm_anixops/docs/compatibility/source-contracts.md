@@ -469,7 +469,8 @@ Input form:
 
 - `tests/fixtures/PlanApiParity.Golden.conf`;
 - `tests/fixtures/PlanApiParity.PhaseMismatch.conf`;
-- request and response URL/header/body/script rules.
+- request and response URL/header/body/script rules;
+- request and response current-header regex mutation rules.
 
 Current CI evidence:
 
@@ -477,12 +478,13 @@ Current CI evidence:
 - negative fixture `tests/fixtures/PlanApiParity.PhaseMismatch.conf`;
 - `config/plan_api_parity_fixture_matches_legacy_evaluation`;
 - `config/plan_api_parity_fixture_keeps_phase_mismatches_empty`;
+- Go wrapper `BuildPlanWithCurrentHeader`;
+- Rust wrapper `build_plan_with_current_header`;
 - `rewrite/rewrite_plan_matches_individual_evaluation_order`.
 
 Unimplemented items:
 
 - runner golden JSON trace fixtures;
-- named-header current-value parity matrix;
 - adapter ordering coverage.
 
 ### Binding Parity
