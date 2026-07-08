@@ -1,0 +1,8 @@
+# Stash migration guard fixture: migration notes only.
+mixed-port: 7890
+proxies:
+  - name: StashProxy
+rules:
+  - DOMAIN-SUFFIX,stash.example.test,StashProxy
+script:
+  shortcuts:

@@ -745,6 +745,70 @@ static void cron_task_trigger_unsupported_fixture_does_not_register_http_scripts
 	free(fixture);
 }
 
+static void stash_migration_guard_fixture_stays_parser_unsupported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Stash.MigrationGuard.yaml");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 7);
+
+	for (i = 0; i < 7; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "line ignored outside supported section") != NULL);
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void shadowrocket_migration_guard_fixture_stays_parser_unsupported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Shadowrocket.MigrationGuard.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 6);
+
+	for (i = 0; i < 6; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 1);
+		if (i % 2 == 0) {
+			ANIXOPS_EXPECT_STREQ(diagnostic.action, "section");
+			ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "unsupported section ignored") != NULL);
+		}
+		else {
+			ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
+			ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "line ignored outside supported section") != NULL);
+		}
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "");
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void header_mutation_common_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/HeaderMutation.Common.conf");
@@ -2212,6 +2276,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts",
 		cron_task_trigger_unsupported_fixture_does_not_register_http_scripts);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/stash_migration_guard_fixture_stays_parser_unsupported",
+		stash_migration_guard_fixture_stays_parser_unsupported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/shadowrocket_migration_guard_fixture_stays_parser_unsupported",
+		shadowrocket_migration_guard_fixture_stays_parser_unsupported);
 	add_test(
 		tests,
 		count,

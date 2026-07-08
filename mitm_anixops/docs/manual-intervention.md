@@ -120,6 +120,14 @@ task-scheduler-runtime-current-policy-core-decision=no-task-descriptor-api-and-t
 task-scheduler-runtime-next-action=confirm-task-descriptor-api-scheduler-runtime-bindings-permission-model-concurrency-policy-and-github-actions-evidence
 ```
 
+```text
+stash-shadowrocket-parser-support-status=pending
+stash-shadowrocket-parser-support-scope=dedicated-stash-and-shadowrocket-profile-parsers
+stash-shadowrocket-parser-support-required-before=claiming-stash-or-shadowrocket-parser-support
+stash-shadowrocket-parser-support-current-policy-core-decision=migration-guard-fixtures-only-no-first-class-parser-support
+stash-shadowrocket-parser-support-next-action=confirm-redistributable-fixtures-source-contract-supported-and-malformed-parser-cases-and-github-actions-evidence
+```
+
 ## Completed Items
 
 ```text

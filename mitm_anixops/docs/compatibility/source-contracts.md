@@ -166,13 +166,17 @@ Capability: record migration guidance without claiming parser support.
 
 Input form:
 
-- none accepted as first-class Stash or Shadowrocket fixtures yet;
-- future fixtures must be added before either ecosystem moves beyond `planned`.
+- `tests/fixtures/Stash.MigrationGuard.yaml` as a non-support guard;
+- `tests/fixtures/Shadowrocket.MigrationGuard.conf` as a non-support guard;
+- no first-class Stash or Shadowrocket parser fixture is accepted as supported
+  syntax yet.
 
 Current CI evidence:
 
 - compatibility matrix rows remain `planned`;
-- governance checks require migration-only markers.
+- `config/stash_migration_guard_fixture_stays_parser_unsupported`;
+- `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
+- governance checks require migration-only markers and guard fixture/test links.
 
 Unimplemented items:
 

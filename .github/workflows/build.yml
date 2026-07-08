@@ -55,6 +55,8 @@ jobs:
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/Surge.CommonConfig.sgmodule
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
+            mitm_anixops/tests/fixtures/Stash.MigrationGuard.yaml
+            mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
@@ -196,11 +198,15 @@ jobs:
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "stash-compatibility-mode=migration-notes-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "shadowrocket-compatibility-mode=migration-notes-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "stash-shadowrocket-parser-fixtures=absent" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "stash-shadowrocket-support-claim=forbidden-until-fixtures-and-tests" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "Migration notes only; no Stash parser fixture" mitm_anixops/docs/compatibility/matrix.md
-          grep -q "Migration notes only; no Shadowrocket parser fixture" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "stash-shadowrocket-parser-fixtures=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "stash-shadowrocket-support-claim=forbidden-until-dedicated-contract-fixtures-and-tests" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "Stash.MigrationGuard.yaml" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.MigrationGuard.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/stash_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c
+          grep -q "stash-shadowrocket-parser-support-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Define Stash and Shadowrocket compatibility as migration notes" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Stash and Shadowrocket migration guard fixtures" mitm_anixops/TODO.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "Current dry-run workflow: .github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-gate.md
           grep -q "Current release workflow: .github/workflows/release.yml" mitm_anixops/docs/architecture/release-gate.md

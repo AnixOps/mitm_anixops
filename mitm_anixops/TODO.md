@@ -77,6 +77,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper.
 - [x] Define Stash and Shadowrocket compatibility as migration notes unless
   parser fixtures and tests are added.
+- [x] Add Stash and Shadowrocket migration guard fixtures and parser tests.
 
 ## P6 Release Hardening
 
