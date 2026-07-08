@@ -76,6 +76,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   fallback decisions.
 - Added runner negative MITM decision golden JSON trace fixtures for
   certificate-not-trusted, deny-host, and no-host-match bypass decisions.
+- Added runner disabled and malformed MITM decision golden JSON trace fixtures
+  for disabled, empty-host, and invalid-host bypass decisions.
 - Added Stash and Shadowrocket migration notes that keep Stash and
   Shadowrocket app-profile behavior planned outside dedicated parser fixtures
   and tests.

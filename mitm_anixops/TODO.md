@@ -53,6 +53,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   QUIC fallback.
 - [x] Add runner negative MITM decision golden JSON trace fixtures for
   certificate, deny-host, and no-host-match bypasses.
+- [x] Add runner disabled and malformed MITM decision golden JSON trace
+  fixtures.
 - [x] Add negative fixture proving unsupported direct/proxy policy intent stays
   ignored until routing semantics are contracted.
 - [x] Define reject/direct/proxy policy-intent contract with CI-covered reject

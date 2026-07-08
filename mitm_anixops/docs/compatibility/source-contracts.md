@@ -454,13 +454,16 @@ Current CI evidence:
   `tests/fixtures/LoonCommonFields.MitmCertUntrustedTrace.json`,
   `tests/fixtures/LoonCommonFields.MitmDenyTrace.json`, and
   `tests/fixtures/LoonCommonFields.MitmNoHostTrace.json`;
+- disabled and malformed MITM golden runner fixtures
+  `tests/fixtures/LoonCommonFields.MitmDisabledTrace.json`,
+  `tests/fixtures/LoonCommonFields.MitmEmptyHostTrace.json`, and
+  `tests/fixtures/LoonCommonFields.MitmMalformedHostTrace.json`;
 - `config/decision_trace_schema_fixture_covers_policy_fields`;
 - `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
 - runner `trace` smoke checks under `runner-check`.
 
 Unimplemented items:
 
-- malformed and disabled-state MITM trace corpus;
 - adapter redaction policy;
 - direct/proxy route-selection contract;
 - serialized trace object for every ABI decision.

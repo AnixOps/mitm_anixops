@@ -112,6 +112,8 @@ Expected behavior:
   logging request or response payloads.
 - runner negative MITM traces expose certificate-not-trusted, deny-host, and
   no-host-match bypass decisions without enabling interception.
+- runner malformed-state MITM traces expose disabled, empty-host, and invalid
+  runtime host bypass decisions without enabling interception.
 
 ## Negative Case
 
@@ -127,6 +129,8 @@ Expected behavior:
 - ignored diagnostics are recorded for both lines;
 - no rewrite rules are registered for unsupported route selection.
 - certificate-not-trusted, deny-host, and no-host-match MITM decisions remain
+  conservative bypasses in runner JSON traces.
+- disabled MITM, empty host, and malformed runtime host inputs remain
   conservative bypasses in runner JSON traces.
 
 ## Runtime And Security Boundary
@@ -162,6 +166,10 @@ Required CI evidence:
   `LoonCommonFields.MitmDenyTrace.json`, and
   `LoonCommonFields.MitmNoHostTrace.json` against negative runner
   `trace --host` output;
+- `make runner-check` compares `LoonCommonFields.MitmDisabledTrace.json`,
+  `LoonCommonFields.MitmEmptyHostTrace.json`, and
+  `LoonCommonFields.MitmMalformedHostTrace.json` against disabled and malformed
+  runner `trace --host` output;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -173,5 +181,5 @@ decision trace schema
 ```
 
 The row remains `partial` until adapter redaction policy, direct/proxy
-route-selection contracts, and broader malformed/disabled-state MITM trace
-coverage exist.
+route-selection contracts, and a serialized trace object for every ABI decision
+exist.
