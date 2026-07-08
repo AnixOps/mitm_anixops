@@ -140,15 +140,74 @@ jobs:
             printf 'ci_run_conclusion=%s\n' "${ci_run_conclusion}"
           } >> "${GITHUB_OUTPUT}"
 
+  package-windows:
+    runs-on: windows-latest
+    needs:
+      - release-policy
+    env:
+      RELEASE_VERSION: ${{ needs.release-policy.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.22.x"
+          cache: false
+      - uses: msys2/setup-msys2@v2
+        id: msys2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-libsystre
+            zip
+      - name: Build Windows release binary
+        shell: pwsh
+        env:
+          MSYS2_LOCATION: ${{ steps.msys2.outputs.msys2-location }}
+        run: |
+          $MsysRoot = $env:MSYS2_LOCATION
+          $env:PATH = "$(Join-Path $MsysRoot 'ucrt64\bin');$(Join-Path $MsysRoot 'usr\bin');$env:PATH"
+          cd mitm_anixops
+          .\examples\windows-bilibili\build-windows.ps1
+      - name: Package Windows release artifact
+        shell: pwsh
+        run: |
+          $VersionNoV = $env:RELEASE_VERSION
+          if ($VersionNoV.StartsWith("v")) {
+            $VersionNoV = $VersionNoV.Substring(1)
+          }
+          $PackageName = "anixops-mitm-release-windows-x64-$VersionNoV"
+          $PackageRoot = Join-Path "dist" $PackageName
+          New-Item -ItemType Directory -Force (Join-Path $PackageRoot "build") | Out-Null
+          Copy-Item mitm_anixops\build\anixops-mitm.exe (Join-Path $PackageRoot "build\")
+          Copy-Item -Recurse mitm_anixops\examples $PackageRoot
+          Copy-Item mitm_anixops\README.md $PackageRoot
+          $ZipPath = Join-Path "dist" "$PackageName.zip"
+          Compress-Archive -Path $PackageRoot -DestinationPath $ZipPath -Force
+          $Hash = (Get-FileHash -Algorithm SHA256 $ZipPath).Hash.ToLowerInvariant()
+          $ZipName = Split-Path -Leaf $ZipPath
+          "$Hash  $ZipName" | Set-Content -Encoding ascii "$ZipPath.sha256"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: anixops-mitm-release-windows
+          path: |
+            dist/anixops-mitm-release-windows-x64-*.zip
+            dist/anixops-mitm-release-windows-x64-*.zip.sha256
+
   package:
     runs-on: ubuntu-latest
     needs:
       - release-policy
       - same-commit-ci
+      - package-windows
     outputs:
       artifact_name: ${{ steps.build_package.outputs.artifact_name }}
       artifact_path: ${{ steps.build_package.outputs.artifact_path }}
       artifact_sha256_file: ${{ steps.build_package.outputs.artifact_sha256_file }}
+      windows_artifact_name: ${{ steps.build_package.outputs.windows_artifact_name }}
+      windows_artifact_path: ${{ steps.build_package.outputs.windows_artifact_path }}
+      windows_artifact_sha256_file: ${{ steps.build_package.outputs.windows_artifact_sha256_file }}
       manifest_name: ${{ steps.build_package.outputs.manifest_name }}
       manifest_path: ${{ steps.build_package.outputs.manifest_path }}
       manifest_sha256_file: ${{ steps.build_package.outputs.manifest_sha256_file }}
@@ -177,6 +236,10 @@ jobs:
       RELEASE_CI_RUN_CONCLUSION: ${{ needs.same-commit-ci.outputs.ci_run_conclusion }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: anixops-mitm-release-windows
+          path: mitm_anixops/build/release-windows
       - uses: actions/setup-go@v6
         with:
           go-version: "1.22.x"
@@ -256,6 +319,19 @@ jobs:
           artifact_sha256="$(sha256sum "${artifact_path}" | awk '{print $1}')"
           artifact_sha256_file="build/${artifact_name}.sha256"
           printf '%s  %s\n' "${artifact_sha256}" "${artifact_name}" > "${artifact_sha256_file}"
+
+          windows_artifact_path="$(find build/release-windows -maxdepth 1 -type f -name 'anixops-mitm-release-windows-x64-*.zip' | sort | head -n 1)"
+          windows_artifact_name="$(basename "${windows_artifact_path}")"
+          windows_artifact_sha256_file="${windows_artifact_path}.sha256"
+          test -s "${windows_artifact_path}"
+          test -s "${windows_artifact_sha256_file}"
+          cp "${windows_artifact_path}" "build/${windows_artifact_name}"
+          cp "${windows_artifact_sha256_file}" "build/${windows_artifact_name}.sha256"
+          windows_artifact_path="build/${windows_artifact_name}"
+          windows_artifact_sha256_file="build/${windows_artifact_name}.sha256"
+          windows_artifact_sha256="$(awk '{print $1}' "${windows_artifact_sha256_file}")"
+          test -n "${windows_artifact_sha256}"
+
           publish_eligibility_status="blocked"
           publish_blocking_reason="manual-release-validation-does-not-publish"
           if [[ "${RELEASE_SOURCE_MODE}" == "tag" ]]; then
@@ -288,10 +364,18 @@ jobs:
             printf '  "compatibility_total_count": %s,\n' "${compatibility_total_count}"
             printf '  "artifacts": [\n'
             printf '    {\n'
+            printf '      "platform": "linux-x64",\n'
             printf '      "name": "%s",\n' "${artifact_name}"
             printf '      "path": "%s",\n' "${artifact_path}"
             printf '      "sha256": "%s",\n' "${artifact_sha256}"
             printf '      "sha256_file": "%s"\n' "$(basename "${artifact_sha256_file}")"
+            printf '    },\n'
+            printf '    {\n'
+            printf '      "platform": "windows-x64",\n'
+            printf '      "name": "%s",\n' "${windows_artifact_name}"
+            printf '      "path": "%s",\n' "${windows_artifact_path}"
+            printf '      "sha256": "%s",\n' "${windows_artifact_sha256}"
+            printf '      "sha256_file": "%s"\n' "$(basename "${windows_artifact_sha256_file}")"
             printf '    }\n'
             printf '  ]\n'
             printf '}\n'
@@ -311,6 +395,7 @@ jobs:
             printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
             printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
+            printf 'Release artifacts: Linux x64 policy-core tarball and Windows x64 shim zip.\n\n'
             printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
               "${compatibility_supported_count}" \
               "${compatibility_partial_count}" \
@@ -343,6 +428,10 @@ jobs:
             printf 'artifact_path=%s\n' "${artifact_path}"
             printf 'artifact_sha256=%s\n' "${artifact_sha256}"
             printf 'artifact_sha256_file=%s\n' "${artifact_sha256_file}"
+            printf 'windows_artifact_name=%s\n' "${windows_artifact_name}"
+            printf 'windows_artifact_path=%s\n' "${windows_artifact_path}"
+            printf 'windows_artifact_sha256=%s\n' "${windows_artifact_sha256}"
+            printf 'windows_artifact_sha256_file=%s\n' "${windows_artifact_sha256_file}"
             printf 'manifest_name=%s\n' "${manifest_name}"
             printf 'manifest_path=%s\n' "${manifest_path}"
             printf 'manifest_sha256=%s\n' "${manifest_sha256}"
@@ -367,10 +456,13 @@ jobs:
           set -euo pipefail
           test -s "${{ steps.build_package.outputs.artifact_path }}"
           test -s "${{ steps.build_package.outputs.artifact_sha256_file }}"
+          test -s "${{ steps.build_package.outputs.windows_artifact_path }}"
+          test -s "${{ steps.build_package.outputs.windows_artifact_sha256_file }}"
           test -s "${{ steps.build_package.outputs.manifest_path }}"
           test -s "${{ steps.build_package.outputs.manifest_sha256_file }}"
           test -s "${{ steps.build_package.outputs.release_notes_path }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.artifact_name }}$" "${{ steps.build_package.outputs.artifact_sha256_file }}"
+          grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.windows_artifact_name }}$" "${{ steps.build_package.outputs.windows_artifact_sha256_file }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.manifest_name }}$" "${{ steps.build_package.outputs.manifest_sha256_file }}"
           grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.build_package.outputs.manifest_path }}"
@@ -379,8 +471,11 @@ jobs:
           grep -q "\"publish_eligibility_status\": \"${{ steps.build_package.outputs.publish_eligibility_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"release_readiness_status\": \"${{ steps.readiness.outputs.release_readiness_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"compatibility_total_count\": ${{ steps.compatibility.outputs.compatibility_total_count }}" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"platform\": \"linux-x64\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"platform\": \"windows-x64\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Release readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Release artifacts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility matrix status counts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -402,6 +497,8 @@ jobs:
             printf '| ci_run_conclusion | `%s` |\n' "${{ steps.build_package.outputs.ci_run_conclusion }}"
             printf '| artifact_name | `%s` |\n' "${{ steps.build_package.outputs.artifact_name }}"
             printf '| artifact_sha256 | `%s` |\n' "${{ steps.build_package.outputs.artifact_sha256 }}"
+            printf '| windows_artifact_name | `%s` |\n' "${{ steps.build_package.outputs.windows_artifact_name }}"
+            printf '| windows_artifact_sha256 | `%s` |\n' "${{ steps.build_package.outputs.windows_artifact_sha256 }}"
             printf '| manifest_name | `%s` |\n' "${{ steps.build_package.outputs.manifest_name }}"
             printf '| manifest_sha256 | `%s` |\n' "${{ steps.build_package.outputs.manifest_sha256 }}"
             printf '| release_notes_path | `%s` |\n' "${{ steps.build_package.outputs.release_notes_path }}"
@@ -424,6 +521,8 @@ jobs:
           path: |
             mitm_anixops/${{ steps.build_package.outputs.artifact_path }}
             mitm_anixops/${{ steps.build_package.outputs.artifact_sha256_file }}
+            mitm_anixops/${{ steps.build_package.outputs.windows_artifact_path }}
+            mitm_anixops/${{ steps.build_package.outputs.windows_artifact_sha256_file }}
             mitm_anixops/${{ steps.build_package.outputs.manifest_path }}
             mitm_anixops/${{ steps.build_package.outputs.manifest_sha256_file }}
             mitm_anixops/${{ steps.build_package.outputs.release_notes_path }}
@@ -477,16 +576,21 @@ jobs:
 
           artifact="release-assets/${{ needs.package.outputs.artifact_name }}"
           artifact_sha256="release-assets/$(basename "${{ needs.package.outputs.artifact_sha256_file }}")"
+          windows_artifact="release-assets/${{ needs.package.outputs.windows_artifact_name }}"
+          windows_artifact_sha256="release-assets/$(basename "${{ needs.package.outputs.windows_artifact_sha256_file }}")"
           manifest="release-assets/${{ needs.package.outputs.manifest_name }}"
           manifest_sha256="release-assets/$(basename "${{ needs.package.outputs.manifest_sha256_file }}")"
           notes="release-assets/$(basename "${{ needs.package.outputs.release_notes_path }}")"
 
           test -s "${artifact}"
           test -s "${artifact_sha256}"
+          test -s "${windows_artifact}"
+          test -s "${windows_artifact_sha256}"
           test -s "${manifest}"
           test -s "${manifest_sha256}"
           test -s "${notes}"
           grep -Eq "^[0-9a-f]{64}  $(basename "${artifact}")$" "${artifact_sha256}"
+          grep -Eq "^[0-9a-f]{64}  $(basename "${windows_artifact}")$" "${windows_artifact_sha256}"
           grep -Eq "^[0-9a-f]{64}  $(basename "${manifest}")$" "${manifest_sha256}"
           grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${manifest}"
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${manifest}"
@@ -494,7 +598,9 @@ jobs:
           grep -q "\"publish_eligibility_status\": \"eligible\"" "${manifest}"
           grep -q "\"release_readiness_status\": \"${RELEASE_READINESS_STATUS}\"" "${manifest}"
           grep -q "\"compatibility_total_count\":" "${manifest}"
+          grep -q "\"platform\": \"windows-x64\"" "${manifest}"
           grep -q "Compatibility matrix status counts:" "${notes}"
+          grep -q "Release artifacts:" "${notes}"
           grep -q "Rollback path:" "${notes}"
 
       - name: Publish GitHub Release assets
@@ -529,6 +635,7 @@ jobs:
             printf '| release_kind | `%s` |\n' "${RELEASE_KIND}"
             printf '| ci_gate | `%s` |\n' "${RELEASE_CI_GATE}"
             printf '| publish_eligibility_status | `%s` |\n' "${PUBLISH_ELIGIBILITY_STATUS}"
+            printf '| windows_artifact_name | `%s` |\n' "${{ needs.package.outputs.windows_artifact_name }}"
             printf '| compatibility_supported_count | `%s` |\n' "${{ needs.package.outputs.compatibility_supported_count }}"
             printf '| compatibility_partial_count | `%s` |\n' "${{ needs.package.outputs.compatibility_partial_count }}"
             printf '| compatibility_planned_count | `%s` |\n' "${{ needs.package.outputs.compatibility_planned_count }}"

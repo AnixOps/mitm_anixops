@@ -58,7 +58,7 @@ A replacement release must include:
 
 - same-commit `build.yml` success;
 - release workflow run URL;
-- artifact names;
+- Linux and Windows artifact names;
 - SHA-256 sidecars;
 - manifest JSON and manifest checksum;
 - release notes with compatibility scope, compatibility status counts, known

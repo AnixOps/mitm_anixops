@@ -165,6 +165,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   required manual-intervention markers remain pending.
 - Added compatibility matrix status counts to release and dry-run manifests,
   notes, and GitHub Step Summaries.
+- Added Windows x64 release artifact generation, checksum validation, and
+  manifest coverage to the tag-triggered release workflow.
 
 ### Changed
 

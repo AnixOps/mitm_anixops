@@ -74,6 +74,8 @@ release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
 release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment
 release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows
+release-workflow-linux-artifact=linux-x64-tarball-with-checksum
+release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-metadata=checksums-manifest-notes-summary
 release-rollback-policy=accepted
@@ -87,10 +89,10 @@ packaging, it verifies that the same commit has a successful `build.yml` run on
 release readiness has passed. The stable readiness gate blocks `v1.0.0` while
 manual-intervention markers required before `v1.0.0` or `v1.0.0-release` remain
 pending, or while the compatibility matrix contains `planned` rows. For `v*`
-tag runs only, it publishes those workflow-generated assets to a GitHub Release
-after metadata validation and the `github-release-publication` environment gate.
-Manual `workflow_dispatch` runs from `main` remain validation-only and do not
-publish public release assets.
+tag runs only, it publishes workflow-generated Linux x64 tarball and Windows
+x64 zip assets to a GitHub Release after metadata validation and the
+`github-release-publication` environment gate. Manual `workflow_dispatch` runs
+from `main` remain validation-only and do not publish public release assets.
 
 The release manifest, release notes, and GitHub Step Summary include
 compatibility matrix counts for `supported`, `partial`, `planned`,
