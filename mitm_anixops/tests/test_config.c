@@ -593,6 +593,109 @@ static void header_mutation_common_fixture_rejects_invalid_regex(void)
 	free(fixture);
 }
 
+static void response_rewrite_common_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/ResponseRewrite.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.response.rewrite.test/mock/item",
+			ANIXOPS_PHASE_REQUEST,
+			"original",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_STREQ(body, "original");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.response.rewrite.test/mock/item",
+			ANIXOPS_PHASE_RESPONSE,
+			"original",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_MOCK_RESPONSE_BODY);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_STREQ(body, "{\"mock\":\"item\"}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.response.rewrite.test/echo/path",
+			ANIXOPS_PHASE_RESPONSE,
+			"original",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_MOCK_RESPONSE_BODY);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_STREQ(body, "echo-path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.response.rewrite.test/clean",
+			ANIXOPS_PHASE_RESPONSE,
+			"ad=1&ok=1",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_STREQ(body, "clean=1&ok=1");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void response_rewrite_common_fixture_rejects_invalid_body_regex(void)
+{
+	char *fixture = read_fixture("tests/fixtures/ResponseRewrite.Common.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "rewrite body regex") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "rewrite body regex") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -1184,6 +1287,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/header_mutation_common_fixture_rejects_invalid_regex",
 		header_mutation_common_fixture_rejects_invalid_regex);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/response_rewrite_common_fixture_is_supported",
+		response_rewrite_common_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/response_rewrite_common_fixture_rejects_invalid_body_regex",
+		response_rewrite_common_fixture_rejects_invalid_body_regex);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

@@ -206,6 +206,35 @@ Unimplemented items:
 - broader cookie/header corpus;
 - adapter HTTP request/response serialization.
 
+### Response Rewrite Common Subset
+
+Detailed contract: [Response Rewrite Common Source Contract](response-rewrite-common.md).
+
+Capability: parse and evaluate response-phase rewrite rules.
+
+Input form:
+
+- `[Rewrite]`, `[URL Rewrite]`, `[Remote Rewrite]`, and `[rewrite_local]`;
+- `mock-response-body`;
+- `echo-response`;
+- `response-body-replace-regex`.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/ResponseRewrite.Common.conf`;
+- negative fixture `tests/fixtures/ResponseRewrite.Common.Malformed.conf`;
+- `config/response_rewrite_common_fixture_is_supported`;
+- `config/response_rewrite_common_fixture_rejects_invalid_body_regex`;
+- response phase rewrite tests under `tests/test_rewrite.c`;
+- script contract E2E coverage for Alpha response ordering.
+
+Unimplemented items:
+
+- streaming response rewrite;
+- compression/framing behavior;
+- charset matrix;
+- production adapter HTTP response serialization.
+
 ### Script Trigger Metadata
 
 Capability: select request/response script rules and expose script metadata.
