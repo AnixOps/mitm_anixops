@@ -90,6 +90,8 @@ release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
 release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment
 release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows
+release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh
+release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
 release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
@@ -104,8 +106,9 @@ The release workflow builds artifacts in GitHub Actions for `v*` tags and
 manual validation from `main`. It also generates checksum sidecars, a JSON
 manifest, manifest checksum, release notes, and a GitHub Step Summary. Before
 packaging, it verifies that the same commit has a successful `build.yml` run on
-`main`, that the release rollback/replacement policy exists, and that stable
-release readiness has passed. The stable readiness gate blocks `v1.0.0` while
+`main`, that the release rollback/replacement policy exists, that manual
+intervention markers have valid schema and confirmation evidence, and that
+stable release readiness has passed. The stable readiness gate blocks `v1.0.0` while
 manual-intervention markers required before `v1.0.0` or `v1.0.0-release` remain
 pending, or while the compatibility matrix contains `planned` rows. For `v*`
 tag runs only, it publishes workflow-generated Linux x64 tarball and Windows

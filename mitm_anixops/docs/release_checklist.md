@@ -63,7 +63,15 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
 3. Confirm the dry-run artifact contains `.sha256` sidecars, `manifest.json`
    metadata, and `release-notes.md` content with compatibility counts, known
    gaps, manual-intervention status, and rollback path.
-4. Confirm the stable release-readiness gate has passed for `v1.0.0`. The gate
+4. Confirm the GitHub Actions `release-dry-run` and `release` workflow logs run
+   both manual-intervention evidence gates before release readiness:
+
+   ```sh
+   scripts/manual-intervention-check.sh
+   scripts/manual-intervention-transition-check.sh
+   ```
+
+5. Confirm the stable release-readiness gate has passed for `v1.0.0`. The gate
    is represented by:
 
    ```sh
@@ -78,18 +86,18 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    release_readiness_planned_row_count=0
    ```
 
-5. Do not publish `v1.0.0` while any of these markers remain pending in
+6. Do not publish `v1.0.0` while any of these markers remain pending in
    `docs/manual-intervention.md`: `branch-protection`, `protected-tags`, or
    `release-environment-approval`.
-6. Confirm `docs/compatibility/matrix.md` has no `planned` rows and does not
+7. Confirm `docs/compatibility/matrix.md` has no `planned` rows and does not
    describe partial or unsupported behavior as supported.
-7. Create the public release only through the GitHub Actions `release` workflow
+8. Create the public release only through the GitHub Actions `release` workflow
    from a `v*` tag after same-commit main CI, release metadata, and
    the `github-release-publication` environment gate pass.
-8. Confirm the `release` workflow uploads the `anixops-mitm-release-package`
+9. Confirm the `release` workflow uploads the `anixops-mitm-release-package`
    artifact and publishes only workflow-generated GitHub Release assets:
    Linux x64 tarball, Windows x64 zip, checksum sidecars, manifest, manifest
    checksum, and release notes.
-9. If publication fails after a public tag exists, follow
+10. If publication fails after a public tag exists, follow
    `docs/architecture/release-rollback-policy.md`; do not overwrite public
    tags or mutate published assets in place.

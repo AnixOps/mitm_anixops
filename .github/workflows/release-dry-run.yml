@@ -106,6 +106,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          sh scripts/manual-intervention-check.sh
+          sh scripts/manual-intervention-transition-check.sh
+
           readiness_output="${RUNNER_TEMP}/release-readiness.env"
           sh scripts/release-readiness-check.sh "${RELEASE_VERSION}" | tee "${readiness_output}"
           status="$(awk -F= '$1 == "release_readiness_status" {print $2}' "${readiness_output}")"

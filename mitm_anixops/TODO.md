@@ -265,3 +265,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   confirmed only when confirmation evidence is recorded.
 - [x] Add a manual-intervention transition fixture check for confirmed marker
   evidence validation.
+- [x] Run manual-intervention evidence and transition gates directly in release
+  and release dry-run workflows before release-readiness checks.

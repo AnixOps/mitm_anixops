@@ -315,6 +315,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   pending to confirmed only with non-placeholder confirmation evidence.
 - Added a manual-intervention transition fixture check covering confirmed
   marker evidence validation.
+- Added direct manual-intervention evidence and transition gates to release and
+  release dry-run workflows before stable release-readiness evaluation.
 
 ### Changed
 

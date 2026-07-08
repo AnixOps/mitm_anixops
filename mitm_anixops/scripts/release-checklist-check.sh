@@ -41,6 +41,8 @@ require_pattern "$CHECKLIST" "GitHub Actions \`build\` workflow" "release checkl
 require_pattern "$CHECKLIST" "GitHub Actions \`release-dry-run\` workflow" "release checklist must use release dry-run evidence"
 require_pattern "$CHECKLIST" "GitHub Actions \`release\` workflow" "release checklist must use tag release workflow evidence"
 require_pattern "$CHECKLIST" "scripts/release-readiness-check.sh v1.0.0" "release checklist missing v1 readiness command"
+require_pattern "$CHECKLIST" "scripts/manual-intervention-check.sh" "release checklist missing manual intervention check command"
+require_pattern "$CHECKLIST" "scripts/manual-intervention-transition-check.sh" "release checklist missing manual intervention transition check command"
 require_pattern "$CHECKLIST" "release_readiness_status=passed" "release checklist missing readiness pass evidence"
 require_pattern "$CHECKLIST" "branch-protection" "release checklist missing branch protection blocker"
 require_pattern "$CHECKLIST" "protected-tags" "release checklist missing protected tags blocker"
