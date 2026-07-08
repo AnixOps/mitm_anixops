@@ -98,6 +98,7 @@ jobs:
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.Malformed.snippet
+            mitm_anixops/tests/fixtures/QuantumultX.MitmCertificateUnsupported.snippet
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.snippet
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet
@@ -326,9 +327,14 @@ jobs:
           grep -q "Quantumult X MITM Options Source Contract" mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
           grep -q "QuantumultX.MitmOptions.snippet" mitm_anixops/docs/compatibility/matrix.md
           grep -q "QuantumultX.MitmOptions.Malformed.snippet" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "QuantumultX.MitmCertificateUnsupported.snippet" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/quantumultx_mitm_options_fixture_exposes_adapter_flags" mitm_anixops/tests/test_config.c
           grep -q "config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
+          grep -q "config/quantumultx_mitm_certificate_unsupported_fixture_keeps_options_ignored" mitm_anixops/tests/test_config.c
+          grep -q "passphrase" mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
+          grep -q "skip_validating_cert" mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
           grep -q "^- \\[x\\] Add Quantumult X MITM option parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Quantumult X MITM certificate-material" mitm_anixops/TODO.md
           grep -q "Quantumult X task metadata" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Quantumult X Task Metadata Source Contract" mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
           grep -q "QuantumultX.TaskMetadata.snippet" mitm_anixops/docs/compatibility/matrix.md

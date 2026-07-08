@@ -1869,6 +1869,54 @@ static void quantumultx_mitm_options_malformed_fixture_rejects_invalid_host(void
 	free(fixture);
 }
 
+static void quantumultx_mitm_certificate_unsupported_fixture_keeps_options_ignored(void)
+{
+	static const char *expected_actions[] = {"passphrase", "p12", "skip_validating_cert"};
+	char *fixture = read_fixture("tests/fixtures/QuantumultX.MitmCertificateUnsupported.snippet");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_mitm_decision_t mitm;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 5);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "enable");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "hostname");
+
+	for (i = 0; i < sizeof(expected_actions) / sizeof(expected_actions[0]); i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i + 2, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 4);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "MITM");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, expected_actions[i]);
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "unsupported mitm option ignored");
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "cert-material.qx.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_CERT_NOT_TRUSTED);
+	ANIXOPS_EXPECT_STREQ(mitm.message, "mitm certificate not trusted");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void surge_common_config_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Surge.CommonConfig.sgmodule");
@@ -5603,6 +5651,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host",
 		quantumultx_mitm_options_malformed_fixture_rejects_invalid_host);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/quantumultx_mitm_certificate_unsupported_fixture_keeps_options_ignored",
+		quantumultx_mitm_certificate_unsupported_fixture_keeps_options_ignored);
 	add_test(
 		tests,
 		count,

@@ -528,18 +528,24 @@ Input form:
 - `skip-server-cert-verify` and `skip_server_cert_verify`;
 - `h2`, `h2-enable`, and `h2_enable`;
 - `disable-quic`, `disable_quic`, `disable-mitm-quic`, and
-  `disable_mitm_quic`.
+  `disable_mitm_quic`;
+- unsupported certificate-material and validation-bypass keys `passphrase`,
+  `p12`, and `skip_validating_cert`.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/QuantumultX.MitmOptions.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.MitmOptions.Malformed.snippet`;
+- unsupported fixture
+  `tests/fixtures/QuantumultX.MitmCertificateUnsupported.snippet`;
 - `config/quantumultx_mitm_options_fixture_exposes_adapter_flags`;
-- `config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host`.
+- `config/quantumultx_mitm_options_malformed_fixture_rejects_invalid_host`;
+- `config/quantumultx_mitm_certificate_unsupported_fixture_keeps_options_ignored`.
 
 Unimplemented items:
 
 - root CA installation or trust-store mutation;
+- p12 material loading or passphrase handling;
 - TLS interception and HTTP/2 transport behavior;
 - adapter certificate verification bypass behavior;
 - QUIC network fallback outside the policy-core decision signal.

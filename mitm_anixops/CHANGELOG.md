@@ -45,6 +45,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Quantumult X MITM options source contract plus positive and negative
   parser fixtures for host/options adapter signals.
+- Added a Quantumult X MITM certificate-material and validation-bypass guard
+  proving `passphrase`, `p12`, and `skip_validating_cert` remain ignored and do
+  not establish trust.
 - Added a Quantumult X task metadata source contract plus positive and negative
   parser fixtures for `[task_local]` cron descriptors.
 - Added Quantumult X `[task_local]` `event-network` and `event-interaction`

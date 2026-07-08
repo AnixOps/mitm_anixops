@@ -53,6 +53,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add Loon `[Rule]` route-selection non-support guard fixture and test.
 - [x] Add Quantumult X MITM option parser fixtures and positive/negative
   tests.
+- [x] Add Quantumult X MITM certificate-material and validation-bypass
+  non-support guard and negative test.
 - [x] Add Quantumult X task metadata parser fixtures and positive/negative
   tests.
 - [x] Add Quantumult X event task metadata parser fixture and
