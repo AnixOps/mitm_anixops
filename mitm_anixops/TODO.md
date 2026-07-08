@@ -36,6 +36,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   positive/negative tests.
 - [x] Define response rewrite source contract with parser fixtures and
   CI-covered positive/negative tests.
+- [x] Define body mutation source contract with parser fixtures and CI-covered
+  positive/negative tests.
 - [ ] Define trace schema for URL, host, header, body, script trigger, and
   policy intent decisions.
 - [ ] Add golden tests proving plan API and legacy evaluate API parity.

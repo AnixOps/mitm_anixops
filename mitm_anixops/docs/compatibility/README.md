@@ -44,4 +44,6 @@ corresponding tests.
   rewrite parser and policy-core contract.
 - [header-mutation-common.md](header-mutation-common.md): bounded request and
   response header mutation parser and policy-core contract.
+- [body-mutation-common.md](body-mutation-common.md): bounded request and
+  response body mutation parser and policy-core contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

@@ -27,6 +27,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   fixtures for the second P2 rule-matching milestone.
 - Added a response rewrite source contract plus positive and negative parser
   fixtures for the third P2 rule-matching milestone.
+- Added a body mutation source contract plus positive and negative parser
+  fixtures for the fourth P2 rule-matching milestone.
 
 ### Changed
 

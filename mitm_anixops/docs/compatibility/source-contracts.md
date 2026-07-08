@@ -235,6 +235,36 @@ Unimplemented items:
 - charset matrix;
 - production adapter HTTP response serialization.
 
+### Body Mutation Common Subset
+
+Detailed contract: [Body Mutation Common Source Contract](body-mutation-common.md).
+
+Capability: parse and evaluate request/response body mutation rules.
+
+Input form:
+
+- `[Body Rewrite]`, `[Remote Body Rewrite]`, `[Rewrite]`, and
+  `[URL Rewrite]`;
+- request and response body regex replacement rules;
+- request and response body JSON replacement rules.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/BodyMutation.Common.conf`;
+- negative fixture `tests/fixtures/BodyMutation.Common.Malformed.conf`;
+- `config/body_mutation_common_fixture_is_supported`;
+- `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
+- regex, JSON path, body-chain, and optional JQ tests under
+  `tests/test_rewrite.c`.
+
+Unimplemented items:
+
+- streaming body mutation;
+- compression/framing behavior;
+- charset matrix;
+- broader JSON/JQ corpus and production runtime limits;
+- production adapter HTTP body serialization.
+
 ### Script Trigger Metadata
 
 Capability: select request/response script rules and expose script metadata.
