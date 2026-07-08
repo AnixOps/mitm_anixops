@@ -327,6 +327,7 @@ static int anixops_shadowrocket_domain_rule_regex(
 	int include_subdomains,
 	char *out,
 	size_t out_cap);
+static int anixops_shadowrocket_domain_keyword_regex(const char *keyword, char *out, size_t out_cap);
 static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line);
 static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name);
 static int anixops_resolve_script_argument(
@@ -2330,6 +2331,51 @@ static int anixops_shadowrocket_domain_rule_regex(
 	return 1;
 }
 
+static int anixops_shadowrocket_domain_keyword_regex(const char *keyword, char *out, size_t out_cap)
+{
+	char normalized[ANIXOPS_PATTERN_CAP];
+	char escaped[ANIXOPS_PATTERN_CAP * 2];
+	size_t len;
+	size_t pos = 0;
+	size_t i;
+	int written;
+
+	if (keyword == NULL || out == NULL || out_cap == 0) {
+		return 0;
+	}
+	if (anixops_copy_text_checked(normalized, sizeof(normalized), keyword) != ANIXOPS_OK) {
+		return 0;
+	}
+	anixops_trim_inplace(normalized);
+	anixops_lower_inplace(normalized);
+	len = strlen(normalized);
+	if (len == 0) {
+		return 0;
+	}
+	for (i = 0; i < len; i++) {
+		unsigned char ch = (unsigned char)normalized[i];
+		if (!(isalnum(ch) || ch == '-' || ch == '.')) {
+			return 0;
+		}
+		if (pos + 2 >= sizeof(escaped)) {
+			return 0;
+		}
+		if (normalized[i] == '.') {
+			escaped[pos++] = '\\';
+			escaped[pos++] = '.';
+		}
+		else {
+			escaped[pos++] = normalized[i];
+		}
+	}
+	escaped[pos] = '\0';
+	written = snprintf(out, out_cap, "^https?://[^/?#@:]*%s[^/?#@:]*(:[0-9]+)?([/?#]|$)", escaped);
+	if (written < 0 || (size_t)written >= out_cap) {
+		return 0;
+	}
+	return 1;
+}
+
 static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line)
 {
 	char *copy;
@@ -2341,6 +2387,7 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 	int status_code = 0;
 	int is_url_regex = 0;
 	int is_domain = 0;
+	int is_domain_keyword = 0;
 	int is_domain_suffix = 0;
 	char rewrite_line[ANIXOPS_VALUE_CAP];
 	int written;
@@ -2366,8 +2413,9 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 	}
 	is_url_regex = strcasecmp(kind, "URL-REGEX") == 0;
 	is_domain = strcasecmp(kind, "DOMAIN") == 0;
+	is_domain_keyword = strcasecmp(kind, "DOMAIN-KEYWORD") == 0;
 	is_domain_suffix = strcasecmp(kind, "DOMAIN-SUFFIX") == 0;
-	if (!is_url_regex && !is_domain && !is_domain_suffix) {
+	if (!is_url_regex && !is_domain && !is_domain_keyword && !is_domain_suffix) {
 		free(copy);
 		return ANIXOPS_OK;
 	}
@@ -2401,6 +2449,15 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 			return ANIXOPS_ERR_PARSE;
 		}
 		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", domain_pattern, action_token);
+	}
+	else if (is_domain_keyword) {
+		char keyword_pattern[512];
+		if (!anixops_shadowrocket_domain_keyword_regex(pattern, keyword_pattern, sizeof(keyword_pattern))) {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket DOMAIN-KEYWORD rule keyword invalid");
+			return ANIXOPS_ERR_PARSE;
+		}
+		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", keyword_pattern, action_token);
 	}
 	else {
 		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", pattern, action_token);
