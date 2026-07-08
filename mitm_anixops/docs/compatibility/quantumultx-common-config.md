@@ -51,6 +51,7 @@ Parser case:
 tests/fixtures/QuantumultX.CommonConfig.snippet
 tests/fixtures/QuantumultX.EchoResponse.snippet
 tests/fixtures/QuantumultX.BodyMutation.snippet
+tests/fixtures/QuantumultX.HeaderMutation.snippet
 ```
 
 Expected behavior:
@@ -61,12 +62,14 @@ Expected behavior:
   fixture;
 - one `url response-body-replace-regex` rule is registered in the dedicated
   body-mutation fixture;
+- one `url response-header-replace-regex` rule is registered in the dedicated
+  header-mutation fixture;
 - two script rules are registered;
 - four MITM host patterns are registered;
 - host-list `skip-server-cert-verify` is exposed to adapters;
-- redirect, reject, `echo-response`, response body regex mutation, header
-  mutation, request script, response script, and MITM decisions are observable
-  through public ABI calls.
+- redirect, reject, `echo-response`, response body regex mutation, response
+  header regex mutation, request script, response script, and MITM decisions
+  are observable through public ABI calls.
 
 ## Negative Case
 
@@ -76,6 +79,7 @@ Parser case:
 tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
 tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet
 tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet
+tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
 ```
 
 Expected behavior:
@@ -84,6 +88,7 @@ Expected behavior:
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed `echo-response`
   line without body content;
 - an invalid `response-body-replace-regex` pattern rejects config load;
+- an invalid `response-header-replace-regex` pattern rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -131,6 +136,10 @@ Required CI evidence:
   `config/quantumultx_body_mutation_fixture_maps_response_body_regex`;
 - `tests/test_config.c` registers
   `config/quantumultx_body_mutation_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_header_mutation_malformed_fixture_rejects_invalid_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
