@@ -21,6 +21,7 @@ The current common-config subset accepts:
 - `[rewrite_local]`, `#[rewrite_local]`, `[rewrite_remote]`, and
   `#[rewrite_remote]` section aliases;
 - URL rewrite lines using the `url` prefix for redirects and reject variants;
+- URL-prefixed `echo-response` response body rules;
 - URL-prefixed request/response header mutation rules;
 - URL-prefixed request/response script trigger rules;
 - `[mitm]` and `#[mitm]` section aliases;
@@ -47,17 +48,20 @@ Parser case:
 
 ```text
 tests/fixtures/QuantumultX.CommonConfig.snippet
+tests/fixtures/QuantumultX.EchoResponse.snippet
 ```
 
 Expected behavior:
 
 - config load succeeds;
 - three rewrite rules are registered;
+- one `url echo-response` rule is registered in the dedicated echo-response
+  fixture;
 - two script rules are registered;
 - four MITM host patterns are registered;
 - host-list `skip-server-cert-verify` is exposed to adapters;
-- redirect, reject, header mutation, request script, response script, and MITM
-  decisions are observable through public ABI calls.
+- redirect, reject, `echo-response`, header mutation, request script, response
+  script, and MITM decisions are observable through public ABI calls.
 
 ## Negative Case
 
@@ -65,11 +69,14 @@ Parser case:
 
 ```text
 tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
+tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet
 ```
 
 Expected behavior:
 
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects the malformed rewrite line;
+- `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed `echo-response`
+  line without body content;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -109,6 +116,10 @@ Required CI evidence:
   `config/quantumultx_common_config_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/quantumultx_common_config_strict_fixture_rejects_malformed_rule`;
+- `tests/test_config.c` registers
+  `config/quantumultx_echo_response_fixture_maps_response_body`;
+- `tests/test_config.c` registers
+  `config/quantumultx_echo_response_malformed_fixture_rejects_missing_body`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -119,5 +130,6 @@ Row:
 Quantumult X rewrite/task/mitm common config
 ```
 
-The row remains `partial` because rewrite and MITM are covered by this
-contract, while task scheduling/runtime behavior remains adapter-owned.
+The row remains `partial` because rewrite and MITM parser/policy-core behavior
+are covered for the documented subset, while task scheduling/runtime behavior,
+HTTP serialization, content-type writeback, and streaming remain adapter-owned.

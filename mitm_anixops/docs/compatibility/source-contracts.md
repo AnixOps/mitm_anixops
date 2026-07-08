@@ -442,6 +442,7 @@ Input form:
 - `#[rewrite_remote]`
 - `#[mitm]`
 - `url`-prefixed rewrite/script/header/body forms;
+- Quantumult X `url echo-response content-type body` response-body forms;
 - `#[task_local]` cron and event descriptor lines covered by
   [Quantumult X Task Metadata](quantumultx-task-metadata.md);
 - `force-http-engine-hosts`;
@@ -450,9 +451,13 @@ Input form:
 Current CI evidence:
 
 - positive fixture `tests/fixtures/QuantumultX.CommonConfig.snippet`;
+- positive fixture `tests/fixtures/QuantumultX.EchoResponse.snippet`;
 - negative fixture `tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet`;
+- negative fixture `tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet`;
 - `config/quantumultx_common_config_fixture_is_supported`;
 - `config/quantumultx_common_config_strict_fixture_rejects_malformed_rule`;
+- `config/quantumultx_echo_response_fixture_maps_response_body`;
+- `config/quantumultx_echo_response_malformed_fixture_rejects_missing_body`;
 - C parser/script/rewrite tests;
 - runner corpus entry `Representative.QuantumultX.snippet`;
 - dedicated task parser evidence in
@@ -462,6 +467,7 @@ Unimplemented items:
 
 - task scheduler/runtime behavior;
 - event dispatch behavior;
+- HTTP response serialization, content-type writeback, and body streaming;
 - full rewrite/task grammar;
 - broader corpus and migration notes.
 
