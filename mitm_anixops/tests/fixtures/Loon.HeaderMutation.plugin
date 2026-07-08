@@ -1,0 +1,5 @@
+[Header Rewrite]
+^https:\/\/header\.loon\.test\/request-add\/(.*) header-add X-Loon-Trace trace-$1
+^https:\/\/header\.loon\.test\/request-regex header-replace-regex X-Loon-Token "old=([A-Za-z]+)" "new=$1"
+^https:\/\/header\.loon\.test\/response-add\/(.*) response-header-add X-Loon-Trace resp-$1
+^https:\/\/header\.loon\.test\/response-drop response-header-del Set-Cookie

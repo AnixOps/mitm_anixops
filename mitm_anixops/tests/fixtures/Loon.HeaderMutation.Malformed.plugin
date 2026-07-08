@@ -1,0 +1,2 @@
+[Header Rewrite]
+^https:\/\/header\.loon\.test\/bad response-header-replace-regex X-Bad [ value
