@@ -54,6 +54,7 @@ tests/fixtures/QuantumultX.BodyMutation.snippet
 tests/fixtures/QuantumultX.HeaderAdd.snippet
 tests/fixtures/QuantumultX.HeaderReplace.snippet
 tests/fixtures/QuantumultX.ResponseHeaderAdd.snippet
+tests/fixtures/QuantumultX.ResponseHeaderReplace.snippet
 tests/fixtures/QuantumultX.ResponseHeaderDelete.snippet
 tests/fixtures/QuantumultX.HeaderMutation.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.snippet
@@ -73,6 +74,8 @@ Expected behavior:
   fixture;
 - one `url response-header-add` rule is registered in the dedicated response
   header-add fixture;
+- one `url response-header-replace` rule is registered in the dedicated
+  response header-replace fixture;
 - one `url response-header-del` rule is registered in the dedicated response
   header-delete fixture;
 - one `url response-header-replace-regex` rule is registered in the dedicated
@@ -86,9 +89,9 @@ Expected behavior:
 - host-list `skip-server-cert-verify` is exposed to adapters;
 - redirect, reject, `echo-response`, response body regex mutation, request
   header add, request header replace, request header regex mutation, request
-  header delete, response header add, response header delete, response header
-  regex mutation, request script, response script, and MITM decisions are
-  observable through public ABI calls.
+  header delete, response header add, response header replace, response header
+  delete, response header regex mutation, request script, response script, and
+  MITM decisions are observable through public ABI calls.
 
 ## Negative Case
 
@@ -101,6 +104,7 @@ tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderReplace.Malformed.snippet
 tests/fixtures/QuantumultX.ResponseHeaderAdd.Malformed.snippet
+tests/fixtures/QuantumultX.ResponseHeaderReplace.Malformed.snippet
 tests/fixtures/QuantumultX.ResponseHeaderDelete.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet
@@ -119,6 +123,8 @@ Expected behavior:
   without a header name;
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed
   `response-header-add` line without a header name;
+- `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed
+  `response-header-replace` line without a header name;
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed
   `response-header-del` line without a header name;
 - an invalid `response-header-replace-regex` pattern rejects config load;
@@ -184,6 +190,10 @@ Required CI evidence:
   `config/quantumultx_response_header_add_fixture_maps_response_header_add`;
 - `tests/test_config.c` registers
   `config/quantumultx_response_header_add_malformed_fixture_rejects_missing_header_name`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_header_replace_fixture_maps_response_header_replace`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_header_replace_malformed_fixture_rejects_missing_header_name`;
 - `tests/test_config.c` registers
   `config/quantumultx_response_header_delete_fixture_maps_response_header_delete`;
 - `tests/test_config.c` registers

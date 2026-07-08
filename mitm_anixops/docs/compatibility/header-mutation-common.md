@@ -44,6 +44,7 @@ tests/fixtures/HeaderMutation.Common.conf
 tests/fixtures/QuantumultX.HeaderAdd.snippet
 tests/fixtures/QuantumultX.HeaderReplace.snippet
 tests/fixtures/QuantumultX.ResponseHeaderAdd.snippet
+tests/fixtures/QuantumultX.ResponseHeaderReplace.snippet
 tests/fixtures/QuantumultX.ResponseHeaderDelete.snippet
 tests/fixtures/QuantumultX.HeaderMutation.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.snippet
@@ -64,6 +65,8 @@ Expected behavior:
   through `anixops_rewrite_evaluate_header`;
 - Quantumult X `url response-header-add` response header mutation is observable
   through `anixops_rewrite_evaluate_header`;
+- Quantumult X `url response-header-replace` response header mutation is
+  observable through `anixops_rewrite_evaluate_header`;
 - Quantumult X `url response-header-del` response header deletion is
   observable through `anixops_rewrite_evaluate_header`;
 - Quantumult X `url response-header-replace-regex` response header mutation is
@@ -84,6 +87,7 @@ tests/fixtures/HeaderMutation.Common.Malformed.conf
 tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderReplace.Malformed.snippet
 tests/fixtures/QuantumultX.ResponseHeaderAdd.Malformed.snippet
+tests/fixtures/QuantumultX.ResponseHeaderReplace.Malformed.snippet
 tests/fixtures/QuantumultX.ResponseHeaderDelete.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet
@@ -99,6 +103,8 @@ Expected behavior:
   rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - the malformed Quantumult X `url response-header-add` rule without a header
   name is rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
+- the malformed Quantumult X `url response-header-replace` rule without a
+  header name is rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - the malformed Quantumult X `url response-header-del` rule without a header
   name is rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - the invalid Quantumult X `url response-header-replace-regex` pattern rejects
@@ -146,6 +152,10 @@ Required CI evidence:
   `config/quantumultx_response_header_add_fixture_maps_response_header_add`;
 - `tests/test_config.c` registers
   `config/quantumultx_response_header_add_malformed_fixture_rejects_missing_header_name`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_header_replace_fixture_maps_response_header_replace`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_header_replace_malformed_fixture_rejects_missing_header_name`;
 - `tests/test_config.c` registers
   `config/quantumultx_response_header_delete_fixture_maps_response_header_delete`;
 - `tests/test_config.c` registers
