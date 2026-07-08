@@ -116,6 +116,9 @@ $0 == expected_header {
 	if (!(status in allowed)) {
 		fail("matrix row has invalid status for " capability ": " status)
 	}
+	if (positive ~ /^none; .*non-support evidence$/ && status != "unsupported") {
+		fail("non-support guard row must use unsupported status: " capability)
+	}
 	check_contract_paths(source, capability)
 	if (status == "partial" && (positive ~ /^none(;|$)/ || negative ~ /^none(;|$)/ ||
 	    parser ~ /^none(;|$)/)) {

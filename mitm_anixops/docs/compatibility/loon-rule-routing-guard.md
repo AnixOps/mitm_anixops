@@ -4,7 +4,7 @@ Capability: Loon `[Rule]` route-selection and DNS non-support guard.
 
 Ecosystem: `loon`.
 
-Status: `planned`.
+Status: `unsupported`.
 
 ## Purpose
 
@@ -70,6 +70,6 @@ Row:
 Loon rule route-selection guard
 ```
 
-The row remains `planned` until route selection has an adapter-owned source
+The row remains `unsupported` until route selection has an adapter-owned source
 contract, implementation, positive and negative tests, and GitHub Actions
 evidence.

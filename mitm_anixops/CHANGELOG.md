@@ -159,6 +159,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added a Loon `[Rule]` route-selection guard fixture and CI-covered test
   proving direct/proxy, `IP-CIDR`, `GEOIP`, and `no-resolve` remain
   adapter-owned.
+- Added compatibility-matrix validation requiring non-support guard rows to use
+  `unsupported` status rather than `planned`.
 
 ### Changed
 

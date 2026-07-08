@@ -18,6 +18,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a dedicated static lint CI job.
 - [x] Add a macOS policy-core smoke CI job.
 - [x] Add manual-intervention register schema checks to CI.
+- [x] Enforce compatibility-matrix status semantics for non-support guard rows.
 - [x] Add PR template fields for source contract, test, compatibility matrix,
   changelog, and manual-intervention impact.
 - [x] Add a release dry-run design before changing release automation.

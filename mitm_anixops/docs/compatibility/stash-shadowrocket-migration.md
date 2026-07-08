@@ -6,9 +6,9 @@ compatibility.
 Ecosystem: `stash`, `shadowrocket`.
 
 Status: Stash `http.mitm` `partial`; Stash URL rewrite request `partial`;
-remaining Stash app-profile syntax `planned`; Shadowrocket common config
+remaining Stash app-profile syntax `unsupported`; Shadowrocket common config
 `partial`; Shadowrocket rule reject `partial`; remaining Shadowrocket app
-profile syntax `planned`.
+profile syntax `unsupported`.
 
 ```text
 stash-http-mitm-mode=partial-parser-support
