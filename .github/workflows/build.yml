@@ -26,6 +26,7 @@ jobs:
             mitm_anixops/docs/architecture/release-dry-run.md
             mitm_anixops/docs/architecture/script-runtime-dependency.md
             mitm_anixops/docs/architecture/certificate-lifecycle.md
+            mitm_anixops/docs/networkcore_integration.md
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
@@ -143,6 +144,12 @@ jobs:
           grep -q "protected-runtime-environment-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "mitm-signing-materials-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Add CI checks preventing accidental claims of automatic root trust" mitm_anixops/TODO.md
+          grep -q "networkcore-integration-alpha-baseline=v0.45.10-alpha" mitm_anixops/docs/networkcore_integration.md
+          grep -q "networkcore-integration-current-mode=vendored-policy-core-adapter" mitm_anixops/docs/networkcore_integration.md
+          grep -q "networkcore-integration-v1-boundary=adapter-owned-data-plane" mitm_anixops/docs/networkcore_integration.md
+          grep -q "networkcore-integration-live-mutation-status=deferred" mitm_anixops/docs/networkcore_integration.md
+          grep -q "networkcore-v1-adapter-boundary-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "^- \\[x\\] Update NetworkCore integration notes for the latest" mitm_anixops/TODO.md
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md

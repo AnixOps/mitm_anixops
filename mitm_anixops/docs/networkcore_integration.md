@@ -1,107 +1,132 @@
 # NetworkCore Integration Notes
 
-This note records the expected integration shape for
-`https://github.com/AnixOps/networkcore_anixops` as inspected on 2026-07-07 at
-commit `3e6579c`.
+This note records the integration shape for
+`https://github.com/AnixOps/networkcore_anixops`.
+
+Inspection date: 2026-07-08.
+
+Inspected upstream `main`:
+`6e2f0a6080e00cf4a089367f34bb83729790e0a9`.
+
+Current `mitm_anixops` alpha baseline:
+`v0.45.10-alpha`
+(`a3ee0fca6376ddccc333bdfe06ac5b5e75ed23e0`).
+
+```text
+networkcore-integration-alpha-baseline=v0.45.10-alpha
+networkcore-integration-upstream-main=6e2f0a6080e00cf4a089367f34bb83729790e0a9
+networkcore-integration-current-mode=vendored-policy-core-adapter
+networkcore-integration-v1-boundary=adapter-owned-data-plane
+networkcore-integration-live-mutation-status=deferred
+networkcore-integration-ci-source-of-truth=github-actions
+```
 
 ## Compatibility Conclusion
 
 `mitm_anixops` is compatible with `networkcore_anixops` as a portable MITM
 policy/plugin C ABI core. It is not a complete cross-platform network engine.
 
-The current `networkcore_anixops` repository is a Rust workspace with these
-active members:
+The inspected NetworkCore repository has moved past the original design-only
+state. It now includes:
+
+- `third_party/mitm_anixops`, pinned to the `v0.45.10-alpha` source baseline;
+- `crates/mitm-anixops-sys`, the unsafe Rust FFI crate that compiles the C core;
+- `crates/mitm-policy`, the safe Rust wrapper and NetworkCore policy adapter;
+- `docs/architecture/mitm-anixops-adapter.md`, the upstream adapter design;
+- `MitmPluginService` integration that returns audit/diagnostics while live
+  request/response mutation remains deferred.
+
+The accurate current statement is:
+
+- NetworkCore can embed the `v0.45.10-alpha` policy core through a vendored C
+  ABI and Rust safe wrapper.
+- NetworkCore can use the wrapper for config diagnostics, MITM decisions, URL
+  rewrite plans, header/body/script policy outputs, and deferred mutation
+  diagnostics.
+- NetworkCore still owns the production data plane: socket IO, TLS, certificate
+  lifecycle, HTTP parsing/framing, compression, JavaScript runtime, storage,
+  platform permissions, and release gates.
+
+## Current Upstream Boundary
+
+The current NetworkCore workspace includes these integration-relevant members:
 
 - `apps/linux-cli`
+- `apps/ios`
 - `crates/config-core`
 - `crates/control-domain`
 - `crates/control-runtime`
 - `crates/engine-native`
+- `crates/engine-singbox`
+- `crates/mitm-anixops-sys`
+- `crates/mitm-policy`
+- `crates/platform-ios`
 - `crates/platform-linux`
 
-The best current insertion point is the domain MITM plugin boundary:
+The active policy insertion point remains:
 
 - `control_domain::MitmPluginService`
 - `control_runtime::MitmGateOrchestrator`
+- `mitm_policy::AnixOpsMitmPluginService`
 
-That boundary can load plugin/config text, validate supported rule shapes, and
-produce diagnostics or audit decisions. It is not yet enough for full traffic
-rewrites because `control_domain::PluginResult` currently contains only audits
-and diagnostics, not request/response mutation output.
+That boundary can load plugin/config text, validate supported rule shapes, map
+C diagnostics into NetworkCore diagnostics, and expose safe wrapper outputs for
+contract tests. It is still not the production traffic rewrite path.
+
+## Adapter-Owned Responsibilities
+
+For v1.0.0, `mitm_anixops` owns policy-core behavior only:
+
+- parse and normalize supported config/plugin syntax;
+- evaluate MITM hostname policy;
+- evaluate URL, header, body, and script-trigger rules;
+- produce structured rewrite plans, script dispatch metadata, and diagnostics;
+- keep the C ABI and wrapper-facing behavior stable.
+
+NetworkCore or another host adapter owns:
+
+- socket IO and upstream routing;
+- SNI handling and TLS handshakes;
+- root CA generation, storage, install, trust detection, revoke, and rollback;
+- dynamic leaf certificate generation and signing material protection;
+- HTTP/1.1 parsing and serialization;
+- HTTP/2 framing and stream handling;
+- QUIC behavior;
+- body buffering, decompression, recompression, chunking, and size limits;
+- production JavaScript runtime execution and scheduling;
+- `$persistentStore` storage, quotas, locking, and persistence;
+- platform prompts, permissions, app-store policy, and enterprise policy;
+- user-facing CLI/app surfaces for enabling or disabling MITM.
+
+This is the future v1 boundary:
+
+```text
+mitm_anixops = policy-core + C ABI + diagnostics + mutation plans
+NetworkCore = adapter + data plane + platform trust + runtime execution
+```
 
 ## Current NetworkCore Gaps
 
-The current `engine-native` data plane is still SOCKS-focused:
+The upstream `crates/mitm-policy` README and adapter design currently state that
+user-facing MITM is not available yet. The current Linux release does not expose
+a `networkcore-linux mitm` command, does not generate or install a CA, does not
+decrypt HTTPS traffic, and does not apply rewrite plans to live traffic.
 
-- runtime listeners support `LocalTcp` and `Socks`
-- outbound runtime nodes support `Protocol::Socks`
-- the accept loop reads SOCKS5 greeting, CONNECT target, outbound CONNECT
-  response, and then relays TCP streams
+The remaining gates are:
 
-It does not yet own:
+- `MITM_CLI_COMMAND_GATE`: add a user-visible command surface with stable
+  status/diagnostic output.
+- `MITM_CERTIFICATE_LIFECYCLE_GATE`: implement CA generation, install, trust
+  detection, revocation, and rollback boundaries.
+- `MITM_HTTP_TLS_DATA_PLANE_GATE`: wire HTTP/TLS interception to
+  `mitm-policy` rewrite plans.
 
-- TLS MITM handshakes
-- dynamic leaf certificate generation
-- HTTP/1.1 parser
-- HTTP/2 frame parser
-- compression or chunked body handling
-- request/response body buffering policy
-- JavaScript execution
-
-The current `platform-linux` crate is also a read-only capability adapter. It
-reports MITM certificate status but does not install or trust certificates.
-The iOS architecture document explicitly treats Network Extension, CA trust,
-MITM scope, and remote script execution as high-risk platform work. macOS and
-Windows platform crates are not present in the inspected workspace.
-
-Therefore the accurate statement is:
-
-- the `mitm_anixops` C ABI can be made available to NetworkCore on platforms
-  with a C toolchain and Rust FFI support
-- the complete product behavior still depends on NetworkCore platform adapters
-  for proxy capture, TLS, certificates, HTTP framing, and script execution
-
-## Recommended Repository Shape
-
-Vendor or pin this repository into `networkcore_anixops` as one of:
-
-- `third_party/mitm_anixops` git submodule
-- `third_party/mitm_anixops` subtree
-- a pinned source archive or release artifact downloaded by CI
-
-For early development, a submodule is the simplest because it keeps ABI changes
-reviewable.
-
-Add two Rust crates to `networkcore_anixops`:
-
-- `crates/mitm-anixops-sys`: unsafe C bindings and build/link logic
-- `crates/mitm-policy`: safe Rust wrapper and domain adapter
-
-Minimal `build.rs` shape for `crates/mitm-anixops-sys`:
-
-```rust
-fn main() {
-    let root = "../../third_party/mitm_anixops";
-
-    cc::Build::new()
-        .file(format!("{root}/src/mitm_anixops.c"))
-        .include(format!("{root}/include"))
-        .define("ANIXOPS_STATIC", None)
-        .warnings(true)
-        .compile("mitm_anixops");
-
-    println!("cargo:rerun-if-changed={root}/include/mitm_anixops.h");
-    println!("cargo:rerun-if-changed={root}/src/mitm_anixops.c");
-}
-```
-
-Use either `bindgen` or a small handwritten `extern "C"` module matching
-`include/mitm_anixops.h`. Handwritten bindings are reasonable while the ABI is
-small and guarded by `ci/abi_exports.txt`.
+These gates must pass in GitHub Actions before either repository claims
+production NetworkCore MITM support.
 
 ## Safe Wrapper Contract
 
-The safe Rust wrapper should own the opaque C engine handle:
+The NetworkCore safe wrapper should continue to own the opaque C engine handle:
 
 - `Engine::new() -> Result<Engine, Error>`
 - `Engine::load_config(&mut self, text: &str) -> Result<(), Error>`
@@ -111,24 +136,27 @@ The safe Rust wrapper should own the opaque C engine handle:
 - `Engine::apply_body_chain(&self, url: &str, phase: Phase, body: &[u8]) -> BodyRewriteChain`
 - `Engine::evaluate_header_rewrite(...) -> HeaderRewriteResult`
 - `Engine::evaluate_script(&self, url: &str, phase: Phase) -> ScriptDispatch`
+- `Engine::build_plan(...) -> RewritePlan`
 - `Engine::last_error() -> Option<LastError>`
 
 Do not mark `Engine` as `Sync`. The C engine is not internally locked. If
-NetworkCore wants shared runtime use, put the wrapper behind a `Mutex` or use
-immutable per-worker snapshots.
+NetworkCore wants shared runtime use, put the wrapper behind a `Mutex`, use
+per-worker engines, or publish immutable per-worker snapshots.
 
 Map C status codes and `anixops_engine_copy_last_error` into
 `control_domain::DomainError` and `control_domain::Diagnostic`.
 
-## NetworkCore Integration Phases
+## Integration Phases
 
-Phase 1: adapter tests only.
+Phase 1: vendored policy adapter.
 
-- Implement a `MitmPluginService` adapter backed by `mitm-policy`.
-- Load `PluginPackage.source` through `anixops_engine_load_config`.
-- Validate supported plugin/rule syntax.
-- Return diagnostics and audit events only.
-- Add unit tests for allowed, denied, parse-error, and missing-permission paths.
+- Keep `third_party/mitm_anixops` pinned to an audited tag or commit.
+- Build the C core through `crates/mitm-anixops-sys`.
+- Expose safe policy helpers through `crates/mitm-policy`.
+- Return audit/diagnostics from `MitmPluginService`.
+- Cover config diagnostics, MITM decisions, URL rewrite, header rewrite, body
+  rewrite, script dispatch, JQ max-input guard, and aggregated rewrite plan in
+  upstream GitHub Actions.
 
 Phase 2: domain mutation model.
 
@@ -141,7 +169,8 @@ Phase 2: domain mutation model.
 
 Phase 3: native HTTP/TLS path.
 
-- Add an HTTP/TLS MITM boundary to `engine-native`.
+- Add an HTTP/TLS MITM boundary to `engine-native` or a selected public engine
+  adapter.
 - On SNI or request host, call `evaluate_mitm`.
 - Treat `ANIXOPS_MITM_REJECT_QUIC` as a signal to reject/drop QUIC for matched
   MITM hosts so clients can retry over TCP/TLS.
@@ -158,19 +187,37 @@ Phase 4: platform adapters.
 - iOS: Network Extension, embedded runtime, explicit CA trust detection, and a
   conservative script policy that follows App Review constraints.
 
+## Upgrade Procedure
+
+When `mitm_anixops` publishes a new alpha, beta, release candidate, or stable
+tag, NetworkCore should update in this order:
+
+1. Read the release notes, `include/mitm_anixops.h`, and `ci/abi_exports.txt`.
+2. Move `third_party/mitm_anixops` to the new tag or commit.
+3. Update `crates/mitm-anixops-sys` first so unsafe bindings match the C ABI.
+4. Update `crates/mitm-policy` so safe Rust types cover new policy outputs.
+5. Keep live HTTP/TLS mutation deferred unless the NetworkCore mutation model,
+   data plane, and certificate gates have passed.
+6. Update NetworkCore adapter docs, release notes, CI summaries, and this
+   repository's integration notes.
+7. Use GitHub Actions as the acceptance source of truth; local machines remain
+   for editing, static inspection, and documentation work only.
+
 ## CI Requirements
 
 NetworkCore should prove integration in GitHub Actions before claiming platform
 support:
 
-- Linux Rust build/test with the C static library compiled by `cc`
-- macOS Rust build/test with the C static library compiled by `cc`
-- Windows Rust build/test with the C static library compiled by `cc`
-- ABI allowlist comparison against `mitm_anixops/ci/abi_exports.txt`
+- Linux Rust build/test with the C static library compiled by `cc`;
+- macOS Rust build/test with the C static library compiled by `cc`;
+- Windows Rust build/test with the C static library compiled by `cc`;
+- ABI allowlist comparison against `mitm_anixops/ci/abi_exports.txt`;
 - wrapper tests for config diagnostics, MITM decisions, URL rewrites, header
-  rewrites, body rewrites, and script dispatch
-- optional iOS `cargo check` or Xcode validation on a macOS runner after an iOS
-  platform crate exists
+  rewrites, body rewrites, script dispatch, JQ max-input guard, and rewrite
+  plans;
+- optional iOS `cargo check`, SwiftPM, or Xcode validation on a macOS runner
+  after the iOS platform source tree exists.
 
-Until those jobs pass, call the integration "planned" or "adapter-compatible",
-not "fully cross-platform available".
+Until those jobs and the runtime gates pass, call the integration
+"policy-core adapter", "adapter-compatible", or "deferred live mutation", not
+"complete production MITM".

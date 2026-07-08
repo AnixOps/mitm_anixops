@@ -363,7 +363,7 @@ For Rust:
   dispatch, and the aggregated rewrite plan. Generate additional bindings from `include/mitm_anixops.h` for APIs that
   wrapper does not expose yet.
 - Keep this directory as a submodule, vendored dependency, or prebuilt artifact.
-- For the inspected `networkcore_anixops` Rust workspace integration path, see
+- For the current `networkcore_anixops` Rust workspace integration path, see
   `docs/networkcore_integration.md`.
 
 ## Evidence

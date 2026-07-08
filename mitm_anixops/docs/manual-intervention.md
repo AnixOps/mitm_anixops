@@ -97,6 +97,13 @@ certificate-trust-ux-required-before=claiming-production-certificate-lifecycle-s
 certificate-trust-ux-next-action=document-user-consent-trust-install-revocation-and-rollback-flow-per-platform
 ```
 
+```text
+networkcore-v1-adapter-boundary-status=pending
+networkcore-v1-adapter-boundary-scope=host-adapter-domain-mutation-http-tls-data-plane
+networkcore-v1-adapter-boundary-required-before=claiming-networkcore-v1-production-mitm-adapter-support
+networkcore-v1-adapter-boundary-next-action=confirm-networkcore-domain-mutation-model-http-tls-data-plane-certificate-lifecycle-script-runtime-and-platform-adapters-in-github-actions
+```
+
 ## Completed Items
 
 ```text
