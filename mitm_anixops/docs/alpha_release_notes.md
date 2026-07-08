@@ -39,8 +39,9 @@ Included:
   legacy single-rule `anixops_rewrite_apply_body` API.
 - P4 script foundation: script dispatch metadata, the Node-based contract runner, file-backed `$persistentStore`,
   request/response script E2E, rule-level `enable` dispatch gating, `timeout`/`max-size` scheduling metadata, script
-  timeout/max-size fail-open in the runner/proxy shim, and runner `replay --script-runner` writeback are supported. Embedded
-  QuickJS/JavaScriptCore is still future work.
+  timeout/max-size fail-open in the runner/proxy shim, runner `replay --script-runner` writeback, and offline script
+  bundle replay with sha256 match/mismatch/cache-miss diagnostics are supported. Embedded QuickJS/JavaScriptCore is
+  still future work.
 - P5 runner foundation: `scan`, `scan --corpus`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics,
   corpus count, sha256, and diagnostic-status checks, and comparable URL, rewrite, header, body, and script traces;
   `anixops_rewrite_build_plan`
@@ -58,8 +59,9 @@ Included:
 - No embedded QuickJS or JavaScriptCore runtime yet.
 - `$persistentStore` has an Alpha file-backed Node runner implementation; production namespacing, locking, transactions,
   and platform storage backends remain future work.
-- Script timeout/max-size/error fail-open is covered in the Alpha runner/proxy shim; production script scheduling,
-  cancellation, memory limits, and cache policy remain future work.
+- Script timeout/max-size/error fail-open and offline bundle digest checks are covered in the Alpha runner/proxy shim;
+  production script scheduling, cancellation, memory limits, network download, and cache refresh policy remain future
+  work.
 - Optional libjq execution exists, but resource limits, cache/reuse policy, and broad jq corpus coverage are not complete.
 - No NSRegularExpression Darwin backend yet.
 - The Rust and Go bindings are Alpha wrappers, not versioned registry/module releases yet. The CMake package config is

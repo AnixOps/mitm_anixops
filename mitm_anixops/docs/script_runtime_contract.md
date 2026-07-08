@@ -7,9 +7,11 @@ mutation.
 The Alpha package includes `anixops-script-runner.js`, the Node-based contract runner used by demos and E2E replay. It
 is a reference adapter for the bindings below, not the final embedded QuickJS/JavaScriptCore runtime.
 
-`anixops-mitm-runner replay` can execute the same contract without network IO when `--script-runner` and one or more
-`--script-map <script-url=local-file>` entries are provided. In that mode, the runner feeds the matched script metadata
-and replay body into the Node contract runner, captures `$done`, and applies a returned `body` field to the replay trace.
+`anixops-mitm-runner replay` can execute the same contract without network IO when `--script-runner` is paired with
+one or more `--script-map <script-url=local-file>` entries or with `--script-bundle <manifest.json>`. Bundle manifests
+map remote script URLs to local files and optional sha256 digests; replay reports cache misses, digest mismatches, and
+matched digests without downloading network assets. In execution mode, the runner feeds the matched script metadata and
+replay body into the Node contract runner, captures `$done`, and applies a returned `body` field to the replay trace.
 Pass `--script-store <file>` to share a JSON-backed `$persistentStore` across replayed script invocations. The packaged
 Node contract runner exposes the same backend directly as `--store <file>`.
 
@@ -21,7 +23,8 @@ For each intercepted HTTP request or response, the adapter should:
    `https://google.com:<port>/path` matches plugin rules written for `https://google.com/path`.
 2. Call `anixops_script_evaluate_url(engine, url, phase, &result)` with `ANIXOPS_PHASE_REQUEST` or `ANIXOPS_PHASE_RESPONSE`.
 3. If `result.kind == ANIXOPS_SCRIPT_NONE`, continue without running script code.
-4. Resolve `result.script_path` to a local script asset. Network download and cache policy are outside this library.
+4. Resolve `result.script_path` to a local script asset, validating any pinned digest before execution. Production
+   network download and cache refresh policy are outside this library.
 5. Run the script with the globals below and apply the object passed to `$done`.
 
 `result.argument` is an `&`-separated string generated from `[Argument]` defaults and runtime overrides, for example:
@@ -164,5 +167,6 @@ It proves this contract through the proxy path:
 
 - script dispatch through `ANIXOPS_PHASE_REQUEST` and `ANIXOPS_PHASE_RESPONSE`
 - local script-path mapping for remote script URLs
+- offline script bundle replay with sha256 match, digest mismatch, and cache miss diagnostics
 - `$argument` propagation
 - `$done.body` writeback into the replay JSON body field

@@ -88,8 +88,9 @@ features it understands.
 | Surge template arguments `{Name}`, `{{{Name}}}` | Supported subset | `surge_style_script_rule_template_is_supported` |
 | Malformed Surge attr-list script rules | Ignored, except invalid regex reports an error | `malformed_and_non_http_script_rules_are_ignored_or_rejected` |
 | Quantumult X `url script-request-body` / `script-request-header` / `script-response-body` / `script-response-header` | Supported subset | snippet and `[rewrite_local]` tests |
-| JavaScript runtime | Adapter contract supported | C library returns dispatch metadata; Alpha runner can execute mapped scripts through the Node contract runner during `replay --script-runner`; embedded QuickJS/JSC remains future work |
+| JavaScript runtime | Adapter contract supported | C library returns dispatch metadata; Alpha runner can execute mapped scripts or offline script bundles through the Node contract runner during `replay --script-runner`; embedded QuickJS/JSC remains future work |
 | `$persistentStore` | Alpha runner backend | Node contract runner supports `--store <file>` with read/write/remove; runner replay and proxy script-contract E2E verify state shared across invocations |
+| Script asset bundle/digest | Alpha runner backend | `replay --script-bundle` resolves local offline assets, verifies sha256 pins, and reports digest mismatch/cache miss without network IO |
 | Script timeout/error policy | Alpha runner/proxy shim subset | Rule-level `timeout` metadata overrides the global runner timeout; max-size overflow fails open; `make script-contract-e2e` verifies a timed-out response script fails open after static rewrites instead of returning 502 |
 | Response compression for scripts | Alpha proxy shim subset | gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
 

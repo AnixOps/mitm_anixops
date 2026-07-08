@@ -15,7 +15,7 @@ PROXY_SHIM_BIN := $(BUILD_DIR)/anixops-mitm-proxy-shim
 SCRIPT_RUNNER_JS := e2e/script_runtime/anixops_runner.js
 PKG_CONFIG_FILE := pkgconfig/mitm_anixops.pc
 CMAKE_CONFIG_FILES := cmake/mitm_anixops-config.cmake cmake/mitm_anixops-config-version.cmake
-ALPHA_NAME ?= anixops-mitm-alpha-0.45.5
+ALPHA_NAME ?= anixops-mitm-alpha-0.45.6
 
 CFLAGS ?= -std=c99 -O2 -Wall -Wextra -Werror -fPIC
 CPPFLAGS ?= -I$(INCLUDE_DIR)
@@ -113,6 +113,15 @@ runner-check: $(RUNNER_BIN)
 	grep -F 'storeAfter' $(BUILD_DIR)/runner-replay-runtime.out >/dev/null
 	grep -F 'storeCount' $(BUILD_DIR)/runner-replay-runtime.out >/dev/null
 	grep -F '"runner.count": "1"' $(BUILD_DIR)/runner-script-store.json >/dev/null
+	rm -f $(BUILD_DIR)/runner-script-bundle-store.json
+	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-store $(BUILD_DIR)/runner-script-bundle-store.json --script-bundle tests/fixtures/ScriptBundle.json > $(BUILD_DIR)/runner-replay-script-bundle.out
+	grep -F '"message":"script executed"' $(BUILD_DIR)/runner-replay-script-bundle.out >/dev/null
+	grep -F '"sha256Matched":true' $(BUILD_DIR)/runner-replay-script-bundle.out >/dev/null
+	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-bundle tests/fixtures/ScriptBundleBadDigest.json > $(BUILD_DIR)/runner-replay-script-bad-digest.out
+	grep -F '"message":"script digest mismatch"' $(BUILD_DIR)/runner-replay-script-bad-digest.out >/dev/null
+	grep -F '"sha256Matched":false' $(BUILD_DIR)/runner-replay-script-bad-digest.out >/dev/null
+	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-bundle tests/fixtures/ScriptBundlePartial.json > $(BUILD_DIR)/runner-replay-script-cache-miss.out
+	grep -F '"message":"script cache miss"' $(BUILD_DIR)/runner-replay-script-cache-miss.out >/dev/null
 
 $(PROXY_SHIM_BIN): $(STATIC_LIB) e2e/shim/main.go | $(BUILD_DIR)
 	cd e2e/shim && GO111MODULE=off go build -o ../../$(PROXY_SHIM_BIN) .
@@ -154,7 +163,7 @@ cmake-package-check: all $(CMAKE_CONFIG_FILES)
 	cp $(STATIC_LIB) $(SHARED_LIB) $(BUILD_DIR)/cmake-package-check/lib/
 	cp $(CMAKE_CONFIG_FILES) $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/
 	grep -F 'mitm_anixops::mitm_anixops' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config.cmake >/dev/null
-	grep -F 'PACKAGE_VERSION "0.45.5"' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config-version.cmake >/dev/null
+	grep -F 'PACKAGE_VERSION "0.45.6"' $(BUILD_DIR)/cmake-package-check/lib/cmake/mitm_anixops/mitm_anixops-config-version.cmake >/dev/null
 	if command -v cmake >/dev/null 2>&1; then \
 		cmake -S tests/cmake_smoke -B $(BUILD_DIR)/cmake-smoke -DCMAKE_PREFIX_PATH="$(abspath $(BUILD_DIR)/cmake-package-check)" >/dev/null; \
 		cmake --build $(BUILD_DIR)/cmake-smoke >/dev/null; \
@@ -176,7 +185,7 @@ alpha-dist: all runner proxy-shim
 	cp bindings/go/anixops/*.go $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops/
 	cp bindings/rust/mitm-anixops/Cargo.toml bindings/rust/mitm-anixops/Cargo.lock bindings/rust/mitm-anixops/build.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/
 	cp bindings/rust/mitm-anixops/src/*.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src/
-	cp tests/fixtures/BiliBili.Enhanced.plugin tests/fixtures/Representative.Loon.plugin tests/fixtures/Representative.Surge.sgmodule tests/fixtures/Representative.QuantumultX.snippet tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
+	cp tests/fixtures/BiliBili.Enhanced.plugin tests/fixtures/Representative.Loon.plugin tests/fixtures/Representative.Surge.sgmodule tests/fixtures/Representative.QuantumultX.snippet tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js tests/fixtures/ScriptBundle.json tests/fixtures/ScriptBundleBadDigest.json tests/fixtures/ScriptBundlePartial.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
 	cp tests/fixtures/corpus/manifest.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus/
 	cp README.md docs/TODO.md docs/compatibility_matrix.md docs/alpha_release_notes.md docs/loon_mitm_full_compat_plan.md docs/loon_mitm_full_compat_brief_zh.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
 	tar -C $(BUILD_DIR) -czf $(BUILD_DIR)/$(ALPHA_NAME).tar.gz $(ALPHA_NAME)

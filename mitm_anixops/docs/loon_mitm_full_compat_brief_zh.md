@@ -58,7 +58,7 @@
 - 执行 JavaScript 插件，提供 `$request`、`$response`、`$argument`、`$persistentStore`、`$done`。
 - 执行 JQ body rewrite，支持 Surge/LOON 常见 JSON 改写语义。
 - 管理 body pipeline：charset、gzip/deflate/brotli/zstd 解压重压、Content-Length、Transfer-Encoding。
-- 管理脚本资源：下载、缓存、digest 校验、离线包、超时和异常处理。
+- 管理脚本资源：Alpha runner 已支持离线包和 digest 校验；后续补下载、缓存刷新、超时和异常处理。
 
 建议 runtime 后端可选：桌面优先 QuickJS，Darwin 平台可选 JavaScriptCore，JQ 使用 libjq 或兼容实现。
 

@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #define SCRIPT_MAP_CAP 8
+#define SCRIPT_ASSET_CAP 16
 #define CORPUS_FIXTURE_CAP 32
 
 typedef struct corpus_fixture {
@@ -26,6 +27,12 @@ typedef struct corpus_fixture {
 	size_t expected_diagnostic_ignored;
 	size_t expected_diagnostic_rejected;
 } corpus_fixture_t;
+
+typedef struct script_asset {
+	char url[1024];
+	char path[1024];
+	char sha256[65];
+} script_asset_t;
 
 typedef struct sha256_ctx {
 	uint32_t state[8];
@@ -546,6 +553,84 @@ static int resolve_manifest_path(const char *manifest_path, const char *fixture_
 	if (snprintf(out, out_cap, "%s/%s", dir, fixture_path) >= (int)out_cap) {
 		return 0;
 	}
+	return 1;
+}
+
+static int parse_script_bundle_manifest(const char *bundle_path, script_asset_t *assets, size_t *out_count)
+{
+	char *text;
+	const char *scripts_key;
+	const char *cursor;
+	const char *end;
+	size_t count = 0;
+	if (bundle_path == NULL || assets == NULL || out_count == NULL) {
+		return 0;
+	}
+	text = read_file(bundle_path);
+	if (text == NULL) {
+		return 0;
+	}
+	end = text + strlen(text);
+	scripts_key = strstr(text, "\"scripts\"");
+	if (scripts_key == NULL) {
+		free(text);
+		return 0;
+	}
+	cursor = strchr(scripts_key, '[');
+	if (cursor == NULL) {
+		free(text);
+		return 0;
+	}
+	cursor++;
+	for (;;) {
+		const char *object_start;
+		const char *object_end;
+		char relative_path[1024];
+		script_asset_t asset;
+		if (!json_skip_ws(&cursor, end)) {
+			free(text);
+			return 0;
+		}
+		if (*cursor == ']') {
+			break;
+		}
+		if (*cursor != '{' || count >= SCRIPT_ASSET_CAP) {
+			free(text);
+			return 0;
+		}
+		object_start = cursor;
+		object_end = json_object_end(object_start);
+		if (object_end == NULL) {
+			free(text);
+			return 0;
+		}
+		memset(&asset, 0, sizeof(asset));
+		if (!json_object_string_field(object_start, object_end, "url", asset.url, sizeof(asset.url)) ||
+			!json_object_string_field(object_start, object_end, "path", relative_path, sizeof(relative_path)) ||
+			!resolve_manifest_path(bundle_path, relative_path, asset.path, sizeof(asset.path))) {
+			free(text);
+			return 0;
+		}
+		(void)json_object_string_field(object_start, object_end, "sha256", asset.sha256, sizeof(asset.sha256));
+		assets[count++] = asset;
+		cursor = object_end + 1;
+		if (!json_skip_ws(&cursor, end)) {
+			free(text);
+			return 0;
+		}
+		if (*cursor == ',') {
+			cursor++;
+		}
+		else if (*cursor == ']') {
+			break;
+		}
+		else {
+			free(text);
+			return 0;
+		}
+	}
+	free(text);
+	*out_count = count;
 	return 1;
 }
 
@@ -1172,20 +1257,98 @@ static int json_extract_string_field(const char *json, const char *field, char *
 	return 1;
 }
 
-static const char *find_script_map(const char *script_path, const char **maps, size_t map_count)
+static int resolve_script_asset_from_map(
+	const char *script_path,
+	const char **maps,
+	size_t map_count,
+	script_asset_t *out_asset)
 {
 	size_t i;
 	size_t path_len;
-	if (script_path == NULL) {
-		return NULL;
+	if (script_path == NULL || out_asset == NULL) {
+		return 0;
 	}
 	path_len = strlen(script_path);
 	for (i = 0; i < map_count; i++) {
 		if (strncmp(maps[i], script_path, path_len) == 0 && maps[i][path_len] == '=') {
-			return maps[i] + path_len + 1;
+			memset(out_asset, 0, sizeof(*out_asset));
+			if (!copy_text(out_asset->url, sizeof(out_asset->url), script_path) ||
+				!copy_text(out_asset->path, sizeof(out_asset->path), maps[i] + path_len + 1)) {
+				return 0;
+			}
+			return 1;
 		}
 	}
-	return NULL;
+	return 0;
+}
+
+static int resolve_script_asset_from_bundle(
+	const char *script_path,
+	const script_asset_t *assets,
+	size_t asset_count,
+	script_asset_t *out_asset)
+{
+	size_t i;
+	if (script_path == NULL || assets == NULL || out_asset == NULL) {
+		return 0;
+	}
+	for (i = 0; i < asset_count; i++) {
+		if (strcmp(assets[i].url, script_path) == 0) {
+			*out_asset = assets[i];
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int resolve_script_asset(
+	const char *script_path,
+	const char **maps,
+	size_t map_count,
+	const script_asset_t *assets,
+	size_t asset_count,
+	script_asset_t *out_asset)
+{
+	if (resolve_script_asset_from_map(script_path, maps, map_count, out_asset)) {
+		return 1;
+	}
+	return resolve_script_asset_from_bundle(script_path, assets, asset_count, out_asset);
+}
+
+static void print_script_asset(
+	const script_asset_t *asset,
+	const char *actual_sha256,
+	int sha256_checked,
+	int sha256_matched)
+{
+	if (asset == NULL || asset->path[0] == '\0') {
+		fputs("null", stdout);
+		return;
+	}
+	printf("{\"path\":");
+	json_string(asset->path);
+	printf(",\"sha256\":");
+	if (asset->sha256[0] != '\0') {
+		json_string(asset->sha256);
+	}
+	else {
+		fputs("null", stdout);
+	}
+	printf(",\"actualSha256\":");
+	if (sha256_checked && actual_sha256 != NULL && actual_sha256[0] != '\0') {
+		json_string(actual_sha256);
+	}
+	else {
+		fputs("null", stdout);
+	}
+	printf(",\"sha256Matched\":");
+	if (asset->sha256[0] == '\0') {
+		fputs("null", stdout);
+	}
+	else {
+		fputs(sha256_checked && sha256_matched ? "true" : "false", stdout);
+	}
+	putchar('}');
 }
 
 static int cmd_replay(int argc, char **argv)
@@ -1195,8 +1358,11 @@ static int cmd_replay(int argc, char **argv)
 	const char *script_runner = NULL;
 	const char *timeout_ms = "5000";
 	const char *script_store = NULL;
+	const char *script_bundle = NULL;
 	const char *script_maps[SCRIPT_MAP_CAP];
 	size_t script_map_count = 0;
+	script_asset_t script_assets[SCRIPT_ASSET_CAP];
+	size_t script_asset_count = 0;
 	anixops_engine_t *engine = NULL;
 	FILE *fp;
 	char line[8192];
@@ -1228,6 +1394,9 @@ static int cmd_replay(int argc, char **argv)
 		else if (strcmp(argv[i], "--script-store") == 0 && i + 1 < argc) {
 			script_store = argv[++i];
 		}
+		else if (strcmp(argv[i], "--script-bundle") == 0 && i + 1 < argc) {
+			script_bundle = argv[++i];
+		}
 		else {
 			fprintf(stderr, "unknown replay argument: %s\n", argv[i]);
 			return 1;
@@ -1235,6 +1404,10 @@ static int cmd_replay(int argc, char **argv)
 	}
 	if (plugin == NULL || fixture == NULL) {
 		fprintf(stderr, "usage: anixops-mitm-runner replay --plugin <file> --fixture <cases.tsv>\n");
+		return 1;
+	}
+	if (script_bundle != NULL && !parse_script_bundle_manifest(script_bundle, script_assets, &script_asset_count)) {
+		fprintf(stderr, "failed to load script bundle: %s\n", script_bundle);
 		return 1;
 	}
 	if (!load_engine(plugin, &engine, &status)) {
@@ -1260,12 +1433,17 @@ static int cmd_replay(int argc, char **argv)
 		char final_body[8192];
 		char runtime_done[8192];
 		char runtime_message[ANIXOPS_MESSAGE_CAP];
+		char runtime_actual_sha256[65];
+		script_asset_t runtime_asset;
 		anixops_phase_t phase;
 		anixops_rewrite_result_t rewrite;
 		anixops_script_result_t script;
 		int has_body;
 		int runtime_status = -1;
 		int runtime_present = 0;
+		int runtime_asset_present = 0;
+		int runtime_sha256_checked = 0;
+		int runtime_sha256_matched = 0;
 		int field_count;
 		size_t len;
 
@@ -1303,15 +1481,33 @@ static int cmd_replay(int argc, char **argv)
 		}
 		runtime_done[0] = '\0';
 		runtime_message[0] = '\0';
+		runtime_actual_sha256[0] = '\0';
+		memset(&runtime_asset, 0, sizeof(runtime_asset));
 		if (script.kind != ANIXOPS_SCRIPT_NONE) {
-			const char *script_file = find_script_map(script.script_path, script_maps, script_map_count);
 			char effective_timeout_ms[64];
 			runtime_present = 1;
+			runtime_asset_present = resolve_script_asset(
+				script.script_path,
+				script_maps,
+				script_map_count,
+				script_assets,
+				script_asset_count,
+				&runtime_asset);
 			if (script_runner == NULL) {
 				snprintf(runtime_message, sizeof(runtime_message), "%s", "script runner not configured");
 			}
-			else if (script_file == NULL || script_file[0] == '\0') {
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "script map not found");
+			else if (!runtime_asset_present || runtime_asset.path[0] == '\0') {
+				snprintf(runtime_message, sizeof(runtime_message), "%s", "script cache miss");
+			}
+			else if (runtime_asset.sha256[0] != '\0' &&
+				!sha256_file_hex(runtime_asset.path, runtime_actual_sha256)) {
+				runtime_sha256_checked = 1;
+				snprintf(runtime_message, sizeof(runtime_message), "%s", "script digest unavailable");
+			}
+			else if (runtime_asset.sha256[0] != '\0' &&
+				strcmp(runtime_actual_sha256, runtime_asset.sha256) != 0) {
+				runtime_sha256_checked = 1;
+				snprintf(runtime_message, sizeof(runtime_message), "%s", "script digest mismatch");
 			}
 			else if (!has_body) {
 				snprintf(runtime_message, sizeof(runtime_message), "%s", "body unavailable");
@@ -1320,6 +1516,10 @@ static int cmd_replay(int argc, char **argv)
 				snprintf(runtime_message, sizeof(runtime_message), "%s", "body exceeds script max-size");
 			}
 			else {
+				if (runtime_asset.sha256[0] != '\0') {
+					runtime_sha256_checked = 1;
+					runtime_sha256_matched = 1;
+				}
 				if (script.timeout_ms > 0) {
 					snprintf(effective_timeout_ms, sizeof(effective_timeout_ms), "%zu", script.timeout_ms);
 				}
@@ -1328,15 +1528,15 @@ static int cmd_replay(int argc, char **argv)
 				}
 				runtime_status = run_script_runner(
 					script_runner,
-					script_file,
+					runtime_asset.path,
 					phase == ANIXOPS_PHASE_RESPONSE ? "response" : "request",
 					fields[3],
-						script.argument,
-						out_body,
-						effective_timeout_ms,
-						script_store,
-						runtime_done,
-						sizeof(runtime_done));
+					script.argument,
+					out_body,
+					effective_timeout_ms,
+					script_store,
+					runtime_done,
+					sizeof(runtime_done));
 				if (runtime_status == 0) {
 					char script_body[8192];
 					snprintf(runtime_message, sizeof(runtime_message), "%s", "script executed");
@@ -1366,6 +1566,12 @@ static int cmd_replay(int argc, char **argv)
 		if (runtime_present) {
 			printf("{\"status\":%d,\"message\":", runtime_status);
 			json_string(runtime_message);
+			printf(",\"asset\":");
+			print_script_asset(
+				runtime_asset_present ? &runtime_asset : NULL,
+				runtime_actual_sha256,
+				runtime_sha256_checked,
+				runtime_sha256_matched);
 			printf(",\"doneText\":");
 			json_string(runtime_done);
 			putchar('}');
@@ -1403,7 +1609,8 @@ static void usage(void)
 		"  anixops-mitm-runner scan --corpus <manifest.json>\n"
 		"  anixops-mitm-runner trace --plugin <file> --url <url> [--phase request|response]\n"
 		"  anixops-mitm-runner replay --plugin <file> --fixture <cases.tsv> "
-		"[--script-runner <node-runner.js> --script-map <url=file> --script-store <file>]\n",
+		"[--script-runner <node-runner.js> --script-map <url=file> --script-bundle <manifest.json> "
+		"--script-store <file>]\n",
 		stderr);
 }
 

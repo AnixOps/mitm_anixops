@@ -100,12 +100,16 @@ build/anixops-mitm-runner replay --plugin tests/fixtures/Representative.Loon.plu
   --script-store build/runner-script-store.json \
   --script-map https://scripts.example/loon-request.js=tests/fixtures/runner_replay_script.js \
   --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_replay_script.js
+build/anixops-mitm-runner replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv \
+  --script-runner e2e/script_runtime/anixops_runner.js \
+  --script-bundle tests/fixtures/ScriptBundle.json
 ```
 
 `scan --corpus` reads `tests/fixtures/corpus/manifest.json`, resolves fixture paths relative to that manifest, verifies
 fixture sha256 digests, and emits a stable JSON report with source metadata, expected parser status, expected rule
-counts, observed counts, accepted/ignored/rejected diagnostic counts, and an overall `passed` flag. `replay` uses a
-stable TSV fixture format for no-network trace checks:
+counts, observed counts, accepted/ignored/rejected diagnostic counts, and an overall `passed` flag. `replay` supports
+explicit `--script-map` assets or an offline `--script-bundle` manifest with per-script sha256 checks, and uses a stable
+TSV fixture format for no-network trace checks:
 
 ```text
 case<TAB>name<TAB>request|response<TAB>url<TAB>body-or-
@@ -131,17 +135,18 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.45.5.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.45.6.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
-tree; it also includes `fixtures/runner_replay_script.js` for script runtime replay, `lib/pkgconfig/mitm_anixops.pc`
-for C consumers, and `lib/cmake/mitm_anixops/mitm_anixops-config.cmake` for CMake consumers.
+tree; it also includes `fixtures/runner_replay_script.js` and script bundle fixtures for runtime replay,
+`lib/pkgconfig/mitm_anixops.pc` for C consumers, and `lib/cmake/mitm_anixops/mitm_anixops-config.cmake` for CMake
+consumers.
 
 For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.5/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.6/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:

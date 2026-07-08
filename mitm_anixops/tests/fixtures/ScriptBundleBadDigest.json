@@ -1,0 +1,14 @@
+{
+  "scripts": [
+    {
+      "url": "https://scripts.example/loon-request.js",
+      "path": "runner_replay_script.js",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "url": "https://scripts.example/loon-response.js",
+      "path": "runner_replay_script.js",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
