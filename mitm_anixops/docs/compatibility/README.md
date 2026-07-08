@@ -29,7 +29,8 @@ New rows must not be marked `supported` until GitHub Actions proves the
 corresponding tests.
 
 `scripts/compatibility-evidence-check.sh` enforces that compatibility docs
-reference existing fixture files and registered parser-test IDs.
+reference existing fixture files, document every top-level fixture file, and
+reference registered parser-test IDs.
 
 ## Files
 

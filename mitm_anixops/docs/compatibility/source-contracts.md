@@ -1529,7 +1529,10 @@ Current CI evidence:
 - double `$done` first-wins fixture
   `tests/fixtures/runner_double_done_script.js`;
 - timeout and exception fail-open coverage in `script-contract-e2e`;
-- script bundle sha256 match, digest mismatch, and cache miss diagnostics.
+- script bundle sha256 match fixture `tests/fixtures/ScriptBundle.json`;
+- script bundle digest mismatch fixture
+  `tests/fixtures/ScriptBundleBadDigest.json`;
+- script bundle cache miss fixture `tests/fixtures/ScriptBundlePartial.json`.
 
 Unimplemented items:
 

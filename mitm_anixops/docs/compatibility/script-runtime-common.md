@@ -78,6 +78,11 @@ execution, body decoding, header map mutation, and HTTP writeback.
 - `$persistentStore` state is shared across request and response script
   invocations when a store file is configured.
 - Offline script bundles validate sha256 digests before execution.
+- `tests/fixtures/ScriptBundle.json` validates a matching offline script bundle.
+- `tests/fixtures/ScriptBundleBadDigest.json` validates digest-mismatch
+  fail-open behavior.
+- `tests/fixtures/ScriptBundlePartial.json` validates cache-miss fail-open
+  behavior for a partial offline script bundle.
 
 ## Negative Cases
 

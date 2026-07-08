@@ -16,6 +16,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a dedicated compatibility matrix CI job.
 - [x] Add a compatibility evidence check for documented fixture paths and
   parser-test IDs.
+- [x] Extend compatibility evidence checks to cover fenced/plain fixture paths
+  and script bundle manifest fixtures, plus orphan top-level fixture detection.
 - [x] Add a dedicated static format check CI job.
 - [x] Add a dedicated static lint CI job.
 - [x] Add a macOS policy-core smoke CI job.
