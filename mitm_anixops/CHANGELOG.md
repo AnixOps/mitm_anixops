@@ -127,6 +127,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Stash `http.force-http-engine` parser fixtures and CI-covered tests as
   an adapter-visible QUIC fallback signal without claiming HTTP engine runtime
   behavior.
+- Added Stash `http.url-rewrite` reject parser fixtures and CI-covered tests
+  while keeping redirect and direct/proxy route selection adapter-owned.
 - Added Shadowrocket `[Rule]` URL-regex reject parser fixtures and CI-covered
   tests while keeping direct/proxy route selection adapter-owned.
 

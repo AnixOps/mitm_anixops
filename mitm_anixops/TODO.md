@@ -48,6 +48,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   policy patterns.
 - [x] Add Stash HTTP `force-http-engine` parser fixtures and
   positive/negative tests.
+- [x] Add Stash `http.url-rewrite` reject parser fixtures and
+  positive/negative tests.
 - [x] Add Shadowrocket common-config parser fixture and positive/negative tests.
 - [x] Add Shadowrocket `[Rule]` URL-regex reject parser fixtures and
   positive/negative tests.

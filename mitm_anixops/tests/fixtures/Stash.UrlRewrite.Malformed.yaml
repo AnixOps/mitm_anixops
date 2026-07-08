@@ -1,0 +1,4 @@
+# Stash malformed url-rewrite fixture.
+http:
+  url-rewrite:
+    - ^(https:\/\/broken\.stash-rewrite\.example\.test - reject

@@ -203,6 +203,7 @@ static int anixops_starts_with_ci(const char *value, const char *prefix);
 static int anixops_yaml_mapping_key_is_empty(const char *line, const char *key);
 static int anixops_yaml_extract_mapping_scalar(const char *line, const char *key, char *out, size_t out_cap);
 static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap);
+static int anixops_yaml_extract_list_text(const char *line, char *out, size_t out_cap);
 static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap);
 static int anixops_is_rewrite_section(const char *key);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
@@ -320,6 +321,7 @@ static int anixops_argument_index(const anixops_engine_t *engine, const char *na
 static int anixops_engine_set_argument_default(anixops_engine_t *engine, const char *name, const char *value);
 static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const char *line);
 static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *line);
+static int anixops_engine_add_stash_url_rewrite(anixops_engine_t *engine, const char *line);
 static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line);
 static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name);
 static int anixops_resolve_script_argument(
@@ -758,6 +760,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 	anixops_config_section_t section = ANIXOPS_SECTION_NONE;
 	int stash_http_section = 0;
 	int stash_http_mitm_list = 0;
+	int stash_http_url_rewrite_list = 0;
 
 	if (engine == NULL || config_text == NULL) {
 		if (engine != NULL) {
@@ -798,6 +801,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 				if (raw_indent == 0) {
 					stash_http_section = anixops_yaml_mapping_key_is_empty(raw, "http");
 					stash_http_mitm_list = 0;
+					stash_http_url_rewrite_list = 0;
 					if (stash_http_section) {
 						section = ANIXOPS_SECTION_NONE;
 						free(line);
@@ -812,6 +816,18 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 				else if (stash_http_section && raw_indent == 2) {
 					if (anixops_yaml_mapping_key_is_empty(raw, "mitm")) {
 						stash_http_mitm_list = 1;
+						stash_http_url_rewrite_list = 0;
+						free(line);
+						if (line_end == NULL) {
+							break;
+						}
+						cursor = line_end + 1;
+						line_no++;
+						continue;
+					}
+					if (anixops_yaml_mapping_key_is_empty(raw, "url-rewrite")) {
+						stash_http_mitm_list = 0;
+						stash_http_url_rewrite_list = 1;
 						free(line);
 						if (line_end == NULL) {
 							break;
@@ -855,6 +871,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 								return ANIXOPS_ERR_OUT_OF_MEMORY;
 							}
 							stash_http_mitm_list = 0;
+							stash_http_url_rewrite_list = 0;
 							free(line);
 							if (line_end == NULL) {
 								break;
@@ -866,6 +883,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					}
 					if (strchr(raw, ':') != NULL) {
 						stash_http_mitm_list = 0;
+						stash_http_url_rewrite_list = 0;
 					}
 				}
 				if (stash_http_section && stash_http_mitm_list && raw_indent >= 4) {
@@ -891,6 +909,53 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 								"stash mitm hostname accepted") != ANIXOPS_OK) {
 							free(line);
 							return ANIXOPS_ERR_OUT_OF_MEMORY;
+						}
+						free(line);
+						if (line_end == NULL) {
+							break;
+						}
+						cursor = line_end + 1;
+						line_no++;
+						continue;
+					}
+				}
+				if (stash_http_section && stash_http_url_rewrite_list && raw_indent >= 4) {
+					char rewrite_line[ANIXOPS_VALUE_CAP];
+					if (anixops_yaml_extract_list_text(raw, rewrite_line, sizeof(rewrite_line))) {
+						size_t rewrite_count = engine->rule_len;
+						int rc = anixops_engine_add_stash_url_rewrite(engine, rewrite_line);
+						if (rc != ANIXOPS_OK) {
+							(void)anixops_add_rule_diagnostic(
+								engine,
+								ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
+								line_no,
+								ANIXOPS_SECTION_REWRITE,
+								"url-rewrite",
+								engine->last_error_message);
+							return anixops_config_line_error(engine, rc, line_no, line);
+						}
+						if (engine->rule_len != rewrite_count) {
+							if (anixops_add_rule_diagnostic(
+									engine,
+									ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
+									line_no,
+									ANIXOPS_SECTION_REWRITE,
+									"url-rewrite",
+									"stash url-rewrite accepted") != ANIXOPS_OK) {
+								free(line);
+								return ANIXOPS_ERR_OUT_OF_MEMORY;
+							}
+						}
+						else {
+							int diag_rc = anixops_add_ignored_or_strict_rejected_rule_diagnostic(
+								engine,
+								line_no,
+								ANIXOPS_SECTION_REWRITE,
+								"url-rewrite",
+								"stash url-rewrite ignored");
+							if (diag_rc != ANIXOPS_OK) {
+								return anixops_config_line_error(engine, diag_rc, line_no, line);
+							}
 						}
 						free(line);
 						if (line_end == NULL) {
@@ -2164,6 +2229,51 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 	engine->task_len++;
 	free(copy);
 	return ANIXOPS_OK;
+}
+
+static int anixops_engine_add_stash_url_rewrite(anixops_engine_t *engine, const char *line)
+{
+	const char *cursor;
+	char pattern[ANIXOPS_PATTERN_CAP];
+	char replacement[ANIXOPS_VALUE_CAP];
+	char action_token[128];
+	anixops_rewrite_action_t action = ANIXOPS_REWRITE_NONE;
+	int status_code = 0;
+	char rewrite_line[ANIXOPS_VALUE_CAP];
+	int written;
+
+	if (engine == NULL || line == NULL) {
+		if (engine != NULL) {
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_INVALID_ARGUMENT, 0, "stash url-rewrite line is null");
+		}
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	anixops_clear_diagnostic(engine);
+
+	cursor = line;
+	if (!anixops_next_token(&cursor, pattern, sizeof(pattern))) {
+		return ANIXOPS_OK;
+	}
+	if (!anixops_next_token(&cursor, replacement, sizeof(replacement))) {
+		return ANIXOPS_OK;
+	}
+	if (strcmp(replacement, "-") != 0) {
+		return ANIXOPS_OK;
+	}
+	if (!anixops_next_token(&cursor, action_token, sizeof(action_token)) || action_token[0] == '\0') {
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "stash url-rewrite reject action missing");
+		return ANIXOPS_ERR_PARSE;
+	}
+	if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
+		!anixops_rewrite_action_is_reject(action)) {
+		return ANIXOPS_OK;
+	}
+	written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", pattern, action_token);
+	if (written < 0 || (size_t)written >= sizeof(rewrite_line)) {
+		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "stash url-rewrite rule is too long");
+		return ANIXOPS_ERR_PARSE;
+	}
+	return anixops_engine_add_rewrite_rule(engine, rewrite_line);
 }
 
 static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line)
@@ -4033,6 +4143,43 @@ static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t 
 		*port_wildcard = '\0';
 		anixops_trim_inplace(out);
 	}
+	return out[0] != '\0';
+}
+
+static int anixops_yaml_extract_list_text(const char *line, char *out, size_t out_cap)
+{
+	char quote = '\0';
+	size_t i;
+	if (line == NULL || out == NULL || out_cap == 0 || line[0] != '-') {
+		return 0;
+	}
+	if (line[1] != '\0' && !isspace((unsigned char)line[1])) {
+		return 0;
+	}
+	anixops_copy_text(out, out_cap, line + 1);
+	anixops_trim_inplace(out);
+	for (i = 0; out[i] != '\0'; i++) {
+		if (quote != '\0') {
+			if (out[i] == '\\' && out[i + 1] != '\0') {
+				i++;
+			}
+			else if (out[i] == quote) {
+				quote = '\0';
+			}
+			continue;
+		}
+		if (out[i] == '"' || out[i] == '\'') {
+			quote = out[i];
+			continue;
+		}
+		if (out[i] == '#' && (i == 0 || isspace((unsigned char)out[i - 1]))) {
+			out[i] = '\0';
+			break;
+		}
+	}
+	anixops_trim_inplace(out);
+	anixops_unquote_inplace(out);
+	anixops_trim_inplace(out);
 	return out[0] != '\0';
 }
 

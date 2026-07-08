@@ -1,0 +1,6 @@
+# Stash url-rewrite fixture: parser-owned reject subset only.
+http:
+  url-rewrite:
+    - ^https:\/\/stash-rewrite\.example\.test\/ads - reject
+    - ^https:\/\/stash-rewrite\.example\.test\/gone - reject-410
+    - ^https:\/\/stash-rewrite\.example\.test\/old https://stash-rewrite.example.test/new 302

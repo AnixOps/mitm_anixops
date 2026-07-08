@@ -68,8 +68,9 @@ Scope:
 - Loon plugin sections and common fields.
 - Quantumult X rewrite/task/mitm subset.
 - Surge module subset.
-- Shadowrocket common-config subset, plus Stash and Shadowrocket app-profile
-  migration notes where syntax overlaps.
+- Stash `http.mitm` and `http.url-rewrite` reject subsets, Shadowrocket
+  common-config subset, plus Stash and Shadowrocket app-profile migration notes
+  where syntax overlaps.
 - Malformed-line behavior by compatibility profile.
 
 Required evidence:

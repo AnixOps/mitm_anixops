@@ -60,6 +60,8 @@ corresponding tests.
   cron and interval task descriptor parser contract.
 - [stash-http-mitm.md](stash-http-mitm.md): Stash `http.mitm` host policy and
   `http.force-http-engine` option parser contract.
+- [stash-url-rewrite.md](stash-url-rewrite.md): Stash `http.url-rewrite`
+  reject parser contract.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
   Shadowrocket common-config parser contract.
 - [shadowrocket-rule-reject.md](shadowrocket-rule-reject.md): Shadowrocket

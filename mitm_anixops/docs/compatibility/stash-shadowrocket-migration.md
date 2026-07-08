@@ -5,23 +5,26 @@ compatibility.
 
 Ecosystem: `stash`, `shadowrocket`.
 
-Status: Stash `http.mitm` `partial`; Stash app profile `planned`;
-Shadowrocket common config `partial`; Shadowrocket rule reject `partial`;
-remaining Shadowrocket app profile `planned`.
+Status: Stash `http.mitm` `partial`; Stash URL rewrite reject `partial`;
+remaining Stash app-profile syntax `planned`; Shadowrocket common config
+`partial`; Shadowrocket rule reject `partial`; remaining Shadowrocket app
+profile syntax `planned`.
 
 ```text
 stash-http-mitm-mode=partial-parser-support
-stash-app-profile-mode=migration-guard-only
+stash-url-rewrite-mode=partial-parser-support
+stash-app-profile-mode=url-rewrite-plus-migration-guard
 shadowrocket-common-config-mode=partial-parser-support
 shadowrocket-rule-reject-mode=partial-parser-support
 shadowrocket-app-profile-mode=rule-reject-plus-migration-guard
 stash-http-mitm-fixtures=positive-and-negative-parser-fixtures
 stash-http-force-http-engine-fixtures=positive-and-negative-parser-fixtures
-stash-app-profile-fixtures=migration-guard-only
+stash-url-rewrite-fixtures=positive-and-negative-parser-fixtures
+stash-app-profile-fixtures=url-rewrite-plus-migration-guard
 shadowrocket-rule-reject-fixtures=positive-and-negative-parser-fixtures
 shadowrocket-app-profile-fixtures=rule-reject-plus-migration-guard
 shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures
-stash-expanded-support-claim=forbidden-outside-http-mitm-contract
+stash-expanded-support-claim=forbidden-outside-http-mitm-and-url-rewrite-contracts
 shadowrocket-expanded-support-claim=forbidden-outside-common-config-and-rule-reject-contracts
 ```
 
@@ -31,14 +34,16 @@ This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
 
 - Stash has a dedicated HTTP MITM source contract for a narrow `http.mitm`
   host-policy subset.
+- Stash has a dedicated URL rewrite source contract for a narrow
+  `http.url-rewrite` reject subset.
 - Shadowrocket has a dedicated common-config source contract for a narrow
   `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
 - Shadowrocket has a dedicated rule-reject source contract for a narrow
   `[Rule]` `URL-REGEX` reject subset.
-- Stash app-level routing, proxy, DNS, UI, script, and cron syntax remains a
-  migration guard unless a future source contract, fixture pair, positive test,
-  negative test, compatibility matrix row, and GitHub Actions evidence
-  explicitly cover it.
+- Stash app-level routing, proxy, DNS, UI, script, cron, and redirect rewrite
+  syntax remains a migration guard unless a future source contract, fixture
+  pair, positive test, negative test, compatibility matrix row, and GitHub
+  Actions evidence explicitly cover it.
 - Shadowrocket app-level profile syntax outside common config and `[Rule]`
   URL-regex reject remains a migration guard unless a future source contract,
   fixture pair, positive test, negative test, compatibility matrix row, and
@@ -69,6 +74,12 @@ described in [`stash-http-mitm.md`](stash-http-mitm.md):
 - `tests/fixtures/Stash.HttpMitm.yaml`;
 - `tests/fixtures/Stash.HttpMitm.Malformed.yaml`.
 
+The dedicated Stash URL rewrite fixtures are support evidence only for the
+subset described in [`stash-url-rewrite.md`](stash-url-rewrite.md):
+
+- `tests/fixtures/Stash.UrlRewrite.yaml`;
+- `tests/fixtures/Stash.UrlRewrite.Malformed.yaml`.
+
 ## Current Claim
 
 Allowed statements:
@@ -78,6 +89,8 @@ Allowed statements:
   including host-only normalization for `host:*` port-wildcard entries.
 - Stash `http.force-http-engine` has parser support as an adapter-visible QUIC
   fallback decision signal.
+- Stash `http.url-rewrite` has partial parser support for documented reject
+  policy intent only.
 - Shadowrocket app-level profile syntax remains a migration target outside the
   common-config and rule-reject contracts.
 - Shadowrocket common config has partial parser support for documented URL
@@ -94,6 +107,7 @@ Forbidden statements:
 - Full Stash parser support is implemented.
 - Stash `rules`, `proxies`, DNS, routing, UI, cron, script runtime, or
   transport-level HTTP engine behavior is implemented.
+- Stash redirect rewrite behavior is implemented.
 - Full Shadowrocket parser support is implemented.
 - Shadowrocket `[General]`, `[Proxy]`, DNS, routing, profile UI, proxy-node
   behavior, or `[Rule]` direct/proxy route selection is implemented.
@@ -110,6 +124,8 @@ Current CI evidence:
 - `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
 - `config/stash_http_force_http_engine_fixture_exposes_quic_signal`;
 - `config/stash_http_force_http_engine_malformed_fixture_rejects_invalid_bool`;
+- `config/stash_url_rewrite_fixture_maps_reject_subset`;
+- `config/stash_url_rewrite_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
 - `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
@@ -141,6 +157,17 @@ Expected Stash HTTP MITM behavior:
   nodes, DNS settings, or argument defaults are registered;
 - malformed `http.mitm` host entries reject with parse diagnostics.
 
+Expected Stash URL rewrite behavior:
+
+- config load succeeds for `tests/fixtures/Stash.UrlRewrite.yaml`;
+- `http.url-rewrite` entries shaped as `pattern - reject*` register
+  request-phase rewrite reject decisions;
+- unsupported redirect-shaped `url-rewrite` entries remain ignored;
+- malformed supported reject entries fail with regex diagnostics;
+- no script rules, task descriptors, MITM host patterns, route policies, proxy
+  nodes, DNS settings, or argument defaults are registered from URL rewrite
+  input.
+
 Expected Shadowrocket app-profile guard behavior:
 
 - config load succeeds in the portable profile;
@@ -166,6 +193,7 @@ concepts:
 
 - MITM host allow/deny lists;
 - request URL redirect or reject;
+- Stash `http.url-rewrite` reject intent;
 - Shadowrocket `[Rule]` `URL-REGEX` reject intent;
 - response rewrite where it maps to the documented response rewrite subset;
 - request and response header add, replace, replace-regex, or delete;
@@ -192,10 +220,10 @@ These notes do not cover:
 
 ## Entry Criteria For Expanded Parser Support
 
-Before Stash app-profile support can move beyond migration notes, before Stash
-support can expand beyond `http.mitm`, or before Shadowrocket app-profile
-support can move beyond the common-config and rule-reject contracts, a future
-change must add:
+Before Stash app-profile support can move beyond the `http.mitm` and
+`http.url-rewrite` contracts, or before Shadowrocket app-profile support can
+move beyond the common-config and rule-reject contracts, a future change must
+add:
 
 1. A dedicated source contract for the target ecosystem surface.
 2. At least one redistributable positive fixture for supported syntax.
@@ -207,5 +235,5 @@ change must add:
 
 The current Stash app-profile guard and remaining Shadowrocket app-profile guard
 fixtures do not satisfy those entry criteria for route selection, proxy nodes,
-DNS, UI, or platform networking. Keep those surfaces as migration notes only
-until dedicated parser evidence exists.
+DNS, UI, redirect rewrite, or platform networking. Keep those surfaces as
+migration notes only until dedicated parser evidence exists.

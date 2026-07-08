@@ -164,8 +164,9 @@ execution or source text scans.
   protection still requires manual configuration.
 - No macOS release artifact, signing, notarization, entitlement, or platform
   adapter coverage yet.
-- Stash has a narrow `http.mitm` host/options parser contract and Shadowrocket
-  has narrow common-config and rule-reject parser contracts; remaining
+- Stash has narrow `http.mitm` host/options and `http.url-rewrite` reject
+  parser contracts, and Shadowrocket has narrow common-config and rule-reject
+  parser contracts; remaining
   app-level profile syntax remains migration-guarded.
 - Cron/task trigger behavior has a parser descriptor contract, but scheduler
   dispatch and runtime execution remain unimplemented.

@@ -54,7 +54,8 @@ Supported forms:
 Unsupported forms remain ignored or outside this contract:
 
 - port-specific matching such as `host:443`;
-- `url-rewrite`, `script`, `cron`, `rules`, `proxies`, DNS, and routing keys;
+- `url-rewrite` beyond the dedicated reject subset contract, `script`, `cron`,
+  `rules`, `proxies`, DNS, and routing keys;
 - anchors, aliases, folded scalars, inline arrays, maps, or arbitrary YAML
   expressions.
 
@@ -165,5 +166,7 @@ Stash HTTP MITM hosts
 The row remains `partial` because only the `http.mitm` host-policy subset and
 `force-http-engine` option metadata are covered. Full Stash YAML profiles,
 port-specific matching, `rules`, `proxies`, DNS, routing, transport-level HTTP
-engine behavior, `url-rewrite`, scripts, cron, UI, and certificate lifecycle
-behavior remain unimplemented.
+engine behavior, redirect or expanded rewrite behavior, scripts, cron, UI, and
+certificate lifecycle behavior remain unimplemented. The separate
+[`stash-url-rewrite.md`](stash-url-rewrite.md) contract covers only
+`http.url-rewrite` reject policy intent.
