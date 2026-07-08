@@ -12,6 +12,7 @@ grep -F "Every compatibility capability must have:" "$README" >/dev/null
 
 required_capabilities='
 Loon plugin common fields
+Loon argument section
 Quantumult X rewrite/task/mitm common config
 Surge module common config
 Surge requirement metadata

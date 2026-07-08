@@ -1,0 +1,10 @@
+[Argument]
+Mode = select,prod,dev
+Token = input,"quoted token"
+Flag = switch,true
+
+[Script]
+http-request ^https:\/\/argument\.section\.loon\.test\/v1 script-path=https://scripts.example/loon-argument-section.js, tag=loon.argument.section, argument=Mode={Mode}&Token={Token}&Flag={Flag}&Missing={Missing}
+
+[MITM]
+hostname = argument.section.loon.test

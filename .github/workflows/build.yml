@@ -34,6 +34,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
             mitm_anixops/docs/compatibility/loon-plugin-metadata.md
             mitm_anixops/docs/compatibility/loon-hashbang-metadata.md
+            mitm_anixops/docs/compatibility/loon-argument-section.md
             mitm_anixops/docs/compatibility/loon-inline-arguments.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
@@ -59,6 +60,8 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.PluginMetadata.Unsupported.plugin
             mitm_anixops/tests/fixtures/Loon.HashbangMetadata.plugin
             mitm_anixops/tests/fixtures/Loon.HashbangMetadata.Unsupported.plugin
+            mitm_anixops/tests/fixtures/Loon.ArgumentSection.plugin
+            mitm_anixops/tests/fixtures/Loon.ArgumentSection.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.InlineArguments.plugin
             mitm_anixops/tests/fixtures/Loon.InlineArguments.Malformed.plugin
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
@@ -158,6 +161,13 @@ jobs:
           grep -q "config/loon_hashbang_metadata_fixture_records_tolerated_keys" mitm_anixops/tests/test_config.c
           grep -q "config/loon_hashbang_metadata_unsupported_keys_are_not_claimed" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Loon hashbang metadata parser fixture and positive/negative tests" mitm_anixops/TODO.md
+          grep -q "Loon argument section" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon Argument Section Source Contract" mitm_anixops/docs/compatibility/loon-argument-section.md
+          grep -q "Loon.ArgumentSection.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.ArgumentSection.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/loon_argument_section_fixture_resolves_script_defaults" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_argument_section_malformed_fixture_rejects_missing_equals" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Loon argument section parser fixtures" mitm_anixops/TODO.md
           grep -q "Loon inline arguments" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Inline Arguments Source Contract" mitm_anixops/docs/compatibility/loon-inline-arguments.md
           grep -q "Loon.InlineArguments.plugin" mitm_anixops/docs/compatibility/matrix.md

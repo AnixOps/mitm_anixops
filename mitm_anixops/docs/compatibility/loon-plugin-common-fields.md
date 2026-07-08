@@ -19,7 +19,8 @@ The current common-field subset accepts:
   [Loon Hashbang Metadata Source Contract](loon-hashbang-metadata.md);
 - `[Plugin]` metadata lines covered by
   [Loon Plugin Metadata Source Contract](loon-plugin-metadata.md);
-- `[Argument]` key/value defaults;
+- `[Argument]` key/value defaults covered by
+  [Loon Argument Section](loon-argument-section.md);
 - `[URL Rewrite]` URL redirect and reject rules;
 - `[Header Rewrite]` request/response header mutation rules;
 - `[Script]` `http-request` and `http-response` rules with `requires-body`,

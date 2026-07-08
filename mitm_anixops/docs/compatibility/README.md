@@ -38,6 +38,8 @@ corresponding tests.
   metadata tolerance contract.
 - [loon-hashbang-metadata.md](loon-hashbang-metadata.md): Loon `#!`
   metadata tolerance contract.
+- [loon-argument-section.md](loon-argument-section.md): Loon `[Argument]`
+  section default parser contract.
 - [loon-inline-arguments.md](loon-inline-arguments.md): Loon `#!arguments`
   inline default parser contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1

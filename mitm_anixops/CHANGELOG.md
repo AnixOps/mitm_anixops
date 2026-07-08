@@ -29,6 +29,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for `[Plugin]` metadata diagnostics.
 - Added a Loon hashbang metadata source contract plus positive and negative
   parser fixtures for tolerated `#!` metadata diagnostics.
+- Added a Loon argument section source contract plus positive and negative
+  parser fixtures for `[Argument]` defaults.
 - Added a Loon inline-arguments source contract plus positive and negative
   parser fixtures for `#!arguments` script argument defaults.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive

@@ -129,6 +129,42 @@ Unimplemented items:
 - validation or typed extraction of individual plugin metadata keys;
 - broader Loon plugin metadata corpus.
 
+### Loon Argument Section
+
+Detailed contract:
+[Loon Argument Section Source Contract](loon-argument-section.md).
+
+Capability: parse Loon `[Argument]` section defaults and resolve them through
+script argument templates without claiming platform UI behavior.
+
+Input form:
+
+- `[Argument]` lines such as `Name = select,default` or
+  `Token = input,"quoted value"`;
+- script argument templates using `{Name}`, `{{{Name}}}`, or list-style
+  `[{Name}]` placeholders.
+
+Parser output:
+
+- accepted diagnostics with section `Argument` and action `argument`;
+- argument defaults visible through script argument template resolution;
+- runtime overrides through `anixops_engine_set_argument_value` take precedence;
+- no MITM, rewrite, certificate, routing, task, or platform UI behavior from
+  argument defaults.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.ArgumentSection.plugin`;
+- negative fixture `tests/fixtures/Loon.ArgumentSection.Malformed.plugin`;
+- `config/loon_argument_section_fixture_resolves_script_defaults`;
+- `config/loon_argument_section_malformed_fixture_rejects_missing_equals`.
+
+Unimplemented items:
+
+- host-platform UI controls for selecting argument values;
+- kind-specific validation beyond default extraction;
+- persistence or remote argument sources.
+
 ### Loon Inline Arguments
 
 Detailed contract: [Loon Inline Arguments Source Contract](loon-inline-arguments.md).
@@ -159,7 +195,7 @@ Current CI evidence:
 Unimplemented items:
 
 - host-platform UI controls for selecting argument values;
-- broader Loon argument metadata forms;
+- broader Loon inline argument metadata forms;
 - persistence or remote argument sources.
 
 ### Quantumult X Common Subset
