@@ -70,6 +70,11 @@ The adapter telemetry and trace privacy boundary is recorded in
 core provide metadata-oriented traces and do not claim default raw payload or
 full header-map logging.
 
+The repository-level publication boundary is recorded in
+[Repository Governance Contract](repository-governance.md): branch protection,
+release tag protection, and release publication environment approval remain
+manual GitHub settings until maintainers record confirmation evidence.
+
 ## NetworkCore Alignment
 
 `networkcore_anixops` currently integrates `mitm_anixops` as a MITM policy

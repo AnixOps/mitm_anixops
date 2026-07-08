@@ -9,6 +9,7 @@ not silently skip these items, and do not use them to bypass GitHub Actions.
 branch-protection-status=pending
 branch-protection-scope=main
 branch-protection-required-before=v1.0.0
+branch-protection-confirmation-evidence=not-yet-confirmed
 branch-protection-next-action=configure-required-github-actions-checks-and-protected-main-in-github
 ```
 
@@ -16,6 +17,7 @@ branch-protection-next-action=configure-required-github-actions-checks-and-prote
 protected-tags-status=pending
 protected-tags-scope=v*
 protected-tags-required-before=v1.0.0-release
+protected-tags-confirmation-evidence=not-yet-confirmed
 protected-tags-next-action=configure-tag-protection-or-repository-ruleset-in-github
 ```
 
@@ -23,6 +25,7 @@ protected-tags-next-action=configure-tag-protection-or-repository-ruleset-in-git
 release-environment-approval-status=pending
 release-environment-approval-scope=github-release-publication
 release-environment-approval-required-before=v1.0.0-release
+release-environment-approval-confirmation-evidence=not-yet-confirmed
 release-environment-approval-next-action=decide-whether-release-publication-needs-protected-environment-approval
 ```
 

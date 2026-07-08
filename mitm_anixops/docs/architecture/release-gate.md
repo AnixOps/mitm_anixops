@@ -52,6 +52,7 @@ ci-workflow-format-status=static-format-check
 ci-workflow-compatibility-matrix-status=dedicated-job
 ci-workflow-manual-intervention-status=static-schema-check
 ci-workflow-v1-acceptance-status=static-evidence-check
+ci-workflow-repository-governance-status=static-contract-check
 ci-workflow-macos-status=policy-core-smoke
 ```
 
@@ -88,6 +89,7 @@ release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-metadata=checksums-manifest-notes-summary
+repository-governance-status=blocked-until-branch-tag-and-environment-confirmation
 release-rollback-policy=accepted
 ```
 
@@ -103,6 +105,12 @@ tag runs only, it publishes workflow-generated Linux x64 tarball and Windows
 x64 zip assets to a GitHub Release after metadata validation and the
 `github-release-publication` environment gate. Manual `workflow_dispatch` runs
 from `main` remain validation-only and do not publish public release assets.
+
+Repository-level branch protection, `v*` tag protection or rulesets, and
+release environment approval are defined in
+[Repository Governance Contract](repository-governance.md). These settings are
+external to the source tree and remain manual-intervention blockers until
+confirmed in `docs/manual-intervention.md`.
 
 The release manifest, release notes, and GitHub Step Summary include
 compatibility matrix counts for `supported`, `partial`, `planned`,

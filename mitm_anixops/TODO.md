@@ -164,3 +164,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   tag-triggered release artifact set.
 - [x] Add a v1.0.0 acceptance evidence check to keep release readiness,
   compatibility, manual-intervention, CI, and release-gate evidence auditable.
+- [x] Add a repository governance contract for branch protection, protected
+  release tags, and release environment approval evidence.

@@ -13,6 +13,7 @@ MATRIX="$ROOT/docs/compatibility/matrix.md"
 MANUAL="$ROOT/docs/manual-intervention.md"
 RELEASE_GATE="$ROOT/docs/architecture/release-gate.md"
 RELEASE_DRY_RUN="$ROOT/docs/architecture/release-dry-run.md"
+REPOSITORY_GOVERNANCE="$ROOT/docs/architecture/repository-governance.md"
 BUILD_WORKFLOW="$REPO/.github/workflows/build.yml"
 DRY_RUN_WORKFLOW="$REPO/.github/workflows/release-dry-run.yml"
 RELEASE_WORKFLOW="$REPO/.github/workflows/release.yml"
@@ -27,6 +28,7 @@ for file in \
 	"$MANUAL" \
 	"$RELEASE_GATE" \
 	"$RELEASE_DRY_RUN" \
+	"$REPOSITORY_GOVERNANCE" \
 	"$BUILD_WORKFLOW" \
 	"$DRY_RUN_WORKFLOW" \
 	"$RELEASE_WORKFLOW"
@@ -63,6 +65,8 @@ printf '%s\n' "$compatibility_status" | grep -q "compatibility_total_count="
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_planned_count=0"
 
 sh "$ROOT/scripts/manual-intervention-check.sh" >/dev/null
+repository_governance_status="$(sh "$ROOT/scripts/repository-governance-check.sh")"
+printf '%s\n' "$repository_governance_status" | grep -Eq "repository_governance_status=(blocked|passed)"
 grep -q "branch-protection-status=pending" "$MANUAL"
 grep -q "protected-tags-status=pending" "$MANUAL"
 grep -q "release-environment-approval-status=pending" "$MANUAL"

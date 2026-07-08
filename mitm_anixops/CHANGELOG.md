@@ -173,6 +173,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added a v1.0.0 acceptance evidence check that ties release readiness,
   compatibility status, manual-intervention markers, CI jobs, and release-gate
   metadata into the GitHub Actions governance baseline.
+- Added a repository governance contract and static check for branch
+  protection, protected `v*` release tags, and `github-release-publication`
+  environment approval evidence.
 
 ### Changed
 

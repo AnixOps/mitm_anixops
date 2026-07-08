@@ -101,6 +101,9 @@ Known CI/CD gaps for v1.0.0:
 
 - GitHub Release upload exists only for gated `v*` tag runs; release
   environment approval still needs repository configuration.
+- Main branch protection and protected `v*` release tags remain external
+  repository governance settings until maintainers record confirmation evidence
+  in `docs/manual-intervention.md`.
 
 The old `mitm_anixops/ci/github-actions.yml` file is a legacy workflow snippet,
 not the active GitHub workflow path.

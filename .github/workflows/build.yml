@@ -25,6 +25,7 @@ jobs:
             mitm_anixops/docs/architecture/release-gate.md
             mitm_anixops/docs/architecture/release-dry-run.md
             mitm_anixops/docs/architecture/release-rollback-policy.md
+            mitm_anixops/docs/architecture/repository-governance.md
             mitm_anixops/docs/architecture/script-runtime-dependency.md
             mitm_anixops/docs/architecture/certificate-lifecycle.md
             mitm_anixops/docs/architecture/adapter-redaction-policy.md
@@ -161,6 +162,7 @@ jobs:
             mitm_anixops/scripts/compatibility-status-summary.sh
             mitm_anixops/scripts/security-claim-check.sh
             mitm_anixops/scripts/release-readiness-check.sh
+            mitm_anixops/scripts/repository-governance-check.sh
             mitm_anixops/scripts/static-format-check.sh
             mitm_anixops/scripts/static-lint-check.sh
             mitm_anixops/scripts/v1-acceptance-check.sh
@@ -173,12 +175,15 @@ jobs:
           done
           sh mitm_anixops/scripts/manual-intervention-check.sh
           sh mitm_anixops/scripts/security-claim-check.sh
+          sh mitm_anixops/scripts/repository-governance-check.sh > /tmp/repository-governance.env
           sh mitm_anixops/scripts/v1-acceptance-check.sh > /tmp/v1-acceptance.env
           sh mitm_anixops/scripts/compatibility-status-summary.sh > /tmp/compatibility-status-summary.env
           grep -q "compatibility_total_count=" /tmp/compatibility-status-summary.env
           grep -q "compatibility_planned_count=0" /tmp/compatibility-status-summary.env
           grep -Eq "v1_acceptance_evidence_status=(blocked|passed)" /tmp/v1-acceptance.env
           grep -q "v1_acceptance_compatibility_planned=0" /tmp/v1-acceptance.env
+          grep -Eq "repository_governance_status=(blocked|passed)" /tmp/repository-governance.env
+          grep -q "repository_governance_blocking_markers=branch-protection,protected-tags,release-environment-approval" /tmp/repository-governance.env
           grep -q "manual intervention check passed" mitm_anixops/scripts/manual-intervention-check.sh
           grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
           grep -q "compatibility-matrix:" .github/workflows/build.yml
@@ -538,6 +543,7 @@ jobs:
           grep -q "adapter-redaction-policy.md" mitm_anixops/docs/compatibility/README.md
           grep -q "adapter-redaction-policy.md" mitm_anixops/docs/compatibility/decision-trace-schema.md
           grep -q "production adapter redaction implementation" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Repository Governance Contract" mitm_anixops/docs/architecture/overview.md
           grep -q "ca-root-generation-policy-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "platform-certificate-store-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "protected-runtime-environment-status=pending" mitm_anixops/docs/manual-intervention.md
@@ -593,6 +599,8 @@ jobs:
           grep -q "ci-workflow-compatibility-matrix-status=dedicated-job" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-manual-intervention-status=static-schema-check" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-v1-acceptance-status=static-evidence-check" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "ci-workflow-repository-governance-status=static-contract-check" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "repository-governance-status=blocked-until-branch-tag-and-environment-confirmation" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-macos-status=policy-core-smoke" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-current-mode=tag-triggered-build-and-publish" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-publication=tag-publish-enabled" mitm_anixops/docs/architecture/release-gate.md
@@ -607,6 +615,11 @@ jobs:
           grep -q "release-replacement-policy=immutable-public-tags-and-assets" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "release-workflow-publication-status=tag-publish-enabled-after-gates" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "release-publication-environment=github-release-publication" mitm_anixops/docs/architecture/release-rollback-policy.md
+          grep -q "repository-governance-contract-status=accepted" mitm_anixops/docs/architecture/repository-governance.md
+          grep -q "repository-governance-v1-publication-status=blocked-until-manual-confirmation" mitm_anixops/docs/architecture/repository-governance.md
+          grep -q "branch-protection-confirmation-evidence=not-yet-confirmed" mitm_anixops/docs/manual-intervention.md
+          grep -q "protected-tags-confirmation-evidence=not-yet-confirmed" mitm_anixops/docs/manual-intervention.md
+          grep -q "release-environment-approval-confirmation-evidence=not-yet-confirmed" mitm_anixops/docs/manual-intervention.md
           grep -q "release-dry-run-current-mode=workflow-defined" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-workflow=.github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-publication=blocked" mitm_anixops/docs/architecture/release-dry-run.md
@@ -669,7 +682,9 @@ jobs:
           grep -q "^- \\[x\\] Add release artifact compatibility status counts" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Windows x64 release artifact generation" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a v1.0.0 acceptance evidence check" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add a repository governance contract" mitm_anixops/TODO.md
           grep -q "v1_acceptance_evidence_status" mitm_anixops/scripts/v1-acceptance-check.sh
+          grep -q "repository_governance_status" mitm_anixops/scripts/repository-governance-check.sh
           grep -q "v1-acceptance-check.sh" mitm_anixops/scripts/check.sh
           grep -q "Source contract:" .github/pull_request_template.md
           grep -q "Manual intervention required" .github/pull_request_template.md
