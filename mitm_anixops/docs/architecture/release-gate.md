@@ -62,7 +62,8 @@ The release workflow must eventually support:
 - release notes generation;
 - publish eligibility gate;
 - GitHub Release asset upload;
-- summary output with artifact, checksum, manifest, CI, and rollback fields.
+- summary output with artifact, checksum, manifest, compatibility status counts,
+  CI, and rollback fields.
 
 Current tag-triggered release workflow status:
 
@@ -73,6 +74,7 @@ release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
 release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment
 release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows
+release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-metadata=checksums-manifest-notes-summary
 release-rollback-policy=accepted
 ```
@@ -89,6 +91,11 @@ tag runs only, it publishes those workflow-generated assets to a GitHub Release
 after metadata validation and the `github-release-publication` environment gate.
 Manual `workflow_dispatch` runs from `main` remain validation-only and do not
 publish public release assets.
+
+The release manifest, release notes, and GitHub Step Summary include
+compatibility matrix counts for `supported`, `partial`, `planned`,
+`unsupported`, and total rows. These counts make the release artifact state
+auditable without expanding any compatibility claim beyond the source contracts.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).
@@ -119,6 +126,7 @@ Publication must be blocked when:
 - compatibility matrix has unsupported rows described as supported;
 - manual-intervention marker is pending for a required release gate;
 - checksum or manifest generation fails;
+- release metadata omits compatibility status counts;
 - release notes omit compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;
 - artifact was not created by the release workflow.

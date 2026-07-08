@@ -10,6 +10,7 @@ release-dry-run-current-mode=workflow-defined
 release-dry-run-workflow=.github/workflows/release-dry-run.yml
 release-dry-run-publication=blocked
 release-dry-run-ci-gate=equivalent-full-check-in-workflow
+release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
 release-dry-run-next-action=keep-dry-run-non-publishing-while-tag-release-workflow-publishes-after-gates
 ```
 
@@ -45,16 +46,19 @@ The dry-run workflow includes these logical gates:
    packaging.
 3. `release-readiness-dry-run`: run the same stable release-readiness check
    used by the tag release workflow.
-4. `artifact-contract`: output artifact names, target platforms, staging paths,
+4. `compatibility-summary`: summarize compatibility matrix status counts for
+   `supported`, `partial`, `planned`, and `unsupported` rows.
+5. `artifact-contract`: output artifact names, target platforms, staging paths,
    checksum algorithm, manifest path, and release-note path.
-5. `package-*`: build the dry-run artifact in GitHub Actions.
-6. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
-7. `manifest-*`: generate JSON manifest and manifest checksum.
-8. `release-notes-dry-run`: generate notes containing compatibility scope,
-   known gaps, manual-intervention status, and rollback path.
-9. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
+6. `package-*`: build the dry-run artifact in GitHub Actions.
+7. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
+8. `manifest-*`: generate JSON manifest and manifest checksum.
+9. `release-notes-dry-run`: generate notes containing compatibility scope,
+   compatibility status counts, known gaps, manual-intervention status, and
+   rollback path.
+10. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
    publication would be eligible.
-10. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
+11. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
    CI, compatibility, and manual-intervention fields.
 
 ## Required Outputs
@@ -80,6 +84,11 @@ release_notes_path
 manual_intervention_status
 release_readiness_status
 release_readiness_blocking_reason
+compatibility_supported_count
+compatibility_partial_count
+compatibility_planned_count
+compatibility_unsupported_count
+compatibility_total_count
 publish_eligibility_status
 publish_blocking_reason
 ```
@@ -95,8 +104,9 @@ The dry-run must fail when:
 - checksum sidecar format is invalid;
 - manifest omits commit, version, artifact names, checksum values, or supported
   compatibility scope;
+- manifest, notes, or summary omit compatibility status counts;
 - release notes omit known gaps, rollback path, or manual-intervention status;
-- a pending manual-intervention marker is required for the requested target.
+- a pending manual-intervention marker is required for the requested target;
 - stable release readiness is blocked for the requested version.
 
 ## Publication Boundary

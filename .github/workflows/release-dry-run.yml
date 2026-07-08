@@ -116,6 +116,25 @@ jobs:
             printf 'release_readiness_status=%s\n' "${status}"
             printf 'release_readiness_blocking_reason=%s\n' "${reason}"
           } >> "${GITHUB_OUTPUT}"
+      - name: Summarize compatibility matrix status
+        id: compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          compatibility_output="${RUNNER_TEMP}/compatibility-status.env"
+          sh scripts/compatibility-status-summary.sh | tee "${compatibility_output}"
+          for key in \
+            compatibility_supported_count \
+            compatibility_partial_count \
+            compatibility_planned_count \
+            compatibility_unsupported_count \
+            compatibility_total_count
+          do
+            value="$(awk -F= -v key="${key}" '$1 == key {print $2}' "${compatibility_output}")"
+            test -n "${value}"
+            printf '%s=%s\n' "${key}" "${value}" >> "${GITHUB_OUTPUT}"
+          done
       - name: Run same-workflow CI gate
         run: |
           sh scripts/ensure-mihomo.sh
@@ -129,6 +148,11 @@ jobs:
           version_no_v="${RELEASE_VERSION#v}"
           release_readiness_status="${{ steps.readiness.outputs.release_readiness_status }}"
           release_readiness_blocking_reason="${{ steps.readiness.outputs.release_readiness_blocking_reason }}"
+          compatibility_supported_count="${{ steps.compatibility.outputs.compatibility_supported_count }}"
+          compatibility_partial_count="${{ steps.compatibility.outputs.compatibility_partial_count }}"
+          compatibility_planned_count="${{ steps.compatibility.outputs.compatibility_planned_count }}"
+          compatibility_unsupported_count="${{ steps.compatibility.outputs.compatibility_unsupported_count }}"
+          compatibility_total_count="${{ steps.compatibility.outputs.compatibility_total_count }}"
           package_name="anixops-mitm-release-dry-run-${version_no_v}"
           make "ALPHA_NAME=${package_name}" alpha-dist
 
@@ -151,6 +175,11 @@ jobs:
             printf '  "manual_intervention_status": "pending-items-block-publication",\n'
             printf '  "release_readiness_status": "%s",\n' "${release_readiness_status}"
             printf '  "release_readiness_blocking_reason": "%s",\n' "${release_readiness_blocking_reason}"
+            printf '  "compatibility_supported_count": %s,\n' "${compatibility_supported_count}"
+            printf '  "compatibility_partial_count": %s,\n' "${compatibility_partial_count}"
+            printf '  "compatibility_planned_count": %s,\n' "${compatibility_planned_count}"
+            printf '  "compatibility_unsupported_count": %s,\n' "${compatibility_unsupported_count}"
+            printf '  "compatibility_total_count": %s,\n' "${compatibility_total_count}"
             printf '  "artifacts": [\n'
             printf '    {\n'
             printf '      "name": "%s",\n' "${artifact_name}"
@@ -173,6 +202,12 @@ jobs:
             printf 'Publication: blocked.\n\n'
             printf 'CI gate: %s.\n\n' "${RELEASE_CI_GATE}"
             printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
+            printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
+              "${compatibility_supported_count}" \
+              "${compatibility_partial_count}" \
+              "${compatibility_planned_count}" \
+              "${compatibility_unsupported_count}" \
+              "${compatibility_total_count}"
             printf 'Compatibility scope: alpha policy core, runner, bindings, and docs.\n\n'
             printf 'Known gaps: no v1.0.0 stable release claim, no tag publication, no\n'
             printf 'signing/notarization, no platform certificate lifecycle, no production\n'
@@ -204,6 +239,11 @@ jobs:
             printf 'release_readiness_blocking_reason=%s\n' "${release_readiness_blocking_reason}"
             printf 'publish_eligibility_status=blocked\n'
             printf 'publish_blocking_reason=dry-run-does-not-publish\n'
+            printf 'compatibility_supported_count=%s\n' "${compatibility_supported_count}"
+            printf 'compatibility_partial_count=%s\n' "${compatibility_partial_count}"
+            printf 'compatibility_planned_count=%s\n' "${compatibility_planned_count}"
+            printf 'compatibility_unsupported_count=%s\n' "${compatibility_unsupported_count}"
+            printf 'compatibility_total_count=%s\n' "${compatibility_total_count}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate dry-run metadata
@@ -221,8 +261,10 @@ jobs:
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"publication\": \"blocked\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"release_readiness_status\": \"${{ steps.readiness.outputs.release_readiness_status }}\"" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "\"compatibility_total_count\": ${{ steps.compatibility.outputs.compatibility_total_count }}" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "Publication: blocked" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Release readiness:" "${{ steps.metadata.outputs.release_notes_path }}"
+          grep -q "Compatibility matrix status counts:" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Rollback path:" "${{ steps.metadata.outputs.release_notes_path }}"
 
       - name: Write release dry-run summary
@@ -246,6 +288,11 @@ jobs:
             printf '| release_readiness_blocking_reason | `%s` |\n' "${{ steps.metadata.outputs.release_readiness_blocking_reason }}"
             printf '| publish_eligibility_status | `%s` |\n' "${{ steps.metadata.outputs.publish_eligibility_status }}"
             printf '| publish_blocking_reason | `%s` |\n' "${{ steps.metadata.outputs.publish_blocking_reason }}"
+            printf '| compatibility_supported_count | `%s` |\n' "${{ steps.metadata.outputs.compatibility_supported_count }}"
+            printf '| compatibility_partial_count | `%s` |\n' "${{ steps.metadata.outputs.compatibility_partial_count }}"
+            printf '| compatibility_planned_count | `%s` |\n' "${{ steps.metadata.outputs.compatibility_planned_count }}"
+            printf '| compatibility_unsupported_count | `%s` |\n' "${{ steps.metadata.outputs.compatibility_unsupported_count }}"
+            printf '| compatibility_total_count | `%s` |\n' "${{ steps.metadata.outputs.compatibility_total_count }}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - uses: actions/upload-artifact@v7

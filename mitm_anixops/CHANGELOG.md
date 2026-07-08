@@ -163,6 +163,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   `unsupported` status rather than `planned`.
 - Added a release-readiness gate that blocks stable `v1.0.0` publication while
   required manual-intervention markers remain pending.
+- Added compatibility matrix status counts to release and dry-run manifests,
+  notes, and GitHub Step Summaries.
 
 ### Changed
 

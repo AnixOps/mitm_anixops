@@ -61,7 +61,8 @@ A replacement release must include:
 - artifact names;
 - SHA-256 sidecars;
 - manifest JSON and manifest checksum;
-- release notes with compatibility scope, known gaps, and rollback path;
+- release notes with compatibility scope, compatibility status counts, known
+  gaps, and rollback path;
 - changelog entry;
 - manual-intervention entry when external action was required.
 

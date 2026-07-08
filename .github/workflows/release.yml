@@ -156,6 +156,11 @@ jobs:
       publish_eligibility_status: ${{ steps.build_package.outputs.publish_eligibility_status }}
       release_readiness_status: ${{ steps.readiness.outputs.release_readiness_status }}
       release_readiness_blocking_reason: ${{ steps.readiness.outputs.release_readiness_blocking_reason }}
+      compatibility_supported_count: ${{ steps.build_package.outputs.compatibility_supported_count }}
+      compatibility_partial_count: ${{ steps.build_package.outputs.compatibility_partial_count }}
+      compatibility_planned_count: ${{ steps.build_package.outputs.compatibility_planned_count }}
+      compatibility_unsupported_count: ${{ steps.build_package.outputs.compatibility_unsupported_count }}
+      compatibility_total_count: ${{ steps.build_package.outputs.compatibility_total_count }}
     defaults:
       run:
         working-directory: mitm_anixops
@@ -204,6 +209,25 @@ jobs:
             printf 'release_readiness_blocking_markers=%s\n' "${markers:-none}"
             printf 'release_readiness_planned_row_count=%s\n' "${planned_rows:-unknown}"
           } >> "${GITHUB_OUTPUT}"
+      - name: Summarize compatibility matrix status
+        id: compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          compatibility_output="${RUNNER_TEMP}/compatibility-status.env"
+          sh scripts/compatibility-status-summary.sh | tee "${compatibility_output}"
+          for key in \
+            compatibility_supported_count \
+            compatibility_partial_count \
+            compatibility_planned_count \
+            compatibility_unsupported_count \
+            compatibility_total_count
+          do
+            value="$(awk -F= -v key="${key}" '$1 == key {print $2}' "${compatibility_output}")"
+            test -n "${value}"
+            printf '%s=%s\n' "${key}" "${value}" >> "${GITHUB_OUTPUT}"
+          done
       - name: Run release build gate
         run: |
           sh scripts/ensure-mihomo.sh
@@ -217,6 +241,11 @@ jobs:
           version_no_v="${RELEASE_VERSION#v}"
           release_readiness_status="${{ steps.readiness.outputs.release_readiness_status }}"
           release_readiness_blocking_reason="${{ steps.readiness.outputs.release_readiness_blocking_reason }}"
+          compatibility_supported_count="${{ steps.compatibility.outputs.compatibility_supported_count }}"
+          compatibility_partial_count="${{ steps.compatibility.outputs.compatibility_partial_count }}"
+          compatibility_planned_count="${{ steps.compatibility.outputs.compatibility_planned_count }}"
+          compatibility_unsupported_count="${{ steps.compatibility.outputs.compatibility_unsupported_count }}"
+          compatibility_total_count="${{ steps.compatibility.outputs.compatibility_total_count }}"
           package_name="anixops-mitm-release-${version_no_v}"
           make "ALPHA_NAME=${package_name}" alpha-dist
 
@@ -252,6 +281,11 @@ jobs:
             printf '  "release_readiness_status": "%s",\n' "${release_readiness_status}"
             printf '  "release_readiness_blocking_reason": "%s",\n' "${release_readiness_blocking_reason}"
             printf '  "compatibility_scope": "alpha policy-core release artifact",\n'
+            printf '  "compatibility_supported_count": %s,\n' "${compatibility_supported_count}"
+            printf '  "compatibility_partial_count": %s,\n' "${compatibility_partial_count}"
+            printf '  "compatibility_planned_count": %s,\n' "${compatibility_planned_count}"
+            printf '  "compatibility_unsupported_count": %s,\n' "${compatibility_unsupported_count}"
+            printf '  "compatibility_total_count": %s,\n' "${compatibility_total_count}"
             printf '  "artifacts": [\n'
             printf '    {\n'
             printf '      "name": "%s",\n' "${artifact_name}"
@@ -277,6 +311,12 @@ jobs:
             printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
             printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
+            printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
+              "${compatibility_supported_count}" \
+              "${compatibility_partial_count}" \
+              "${compatibility_planned_count}" \
+              "${compatibility_unsupported_count}" \
+              "${compatibility_total_count}"
             if [[ "${RELEASE_KIND}" == "stable" ]]; then
               printf 'Compatibility scope: v1 policy core, runner, bindings, and docs as documented in the compatibility matrix.\n\n'
               printf 'Known gaps: partial and unsupported matrix rows remain limited by their source contracts; no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
@@ -314,6 +354,11 @@ jobs:
             printf 'publish_blocking_reason=%s\n' "${publish_blocking_reason}"
             printf 'release_readiness_status=%s\n' "${release_readiness_status}"
             printf 'release_readiness_blocking_reason=%s\n' "${release_readiness_blocking_reason}"
+            printf 'compatibility_supported_count=%s\n' "${compatibility_supported_count}"
+            printf 'compatibility_partial_count=%s\n' "${compatibility_partial_count}"
+            printf 'compatibility_planned_count=%s\n' "${compatibility_planned_count}"
+            printf 'compatibility_unsupported_count=%s\n' "${compatibility_unsupported_count}"
+            printf 'compatibility_total_count=%s\n' "${compatibility_total_count}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate release metadata
@@ -333,8 +378,10 @@ jobs:
           grep -q "\"publication\": \"${RELEASE_PUBLICATION}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"publish_eligibility_status\": \"${{ steps.build_package.outputs.publish_eligibility_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"release_readiness_status\": \"${{ steps.readiness.outputs.release_readiness_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"compatibility_total_count\": ${{ steps.compatibility.outputs.compatibility_total_count }}" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Release readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Compatibility matrix status counts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Rollback path:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -364,6 +411,11 @@ jobs:
             printf '| publish_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.publish_blocking_reason }}"
             printf '| release_readiness_status | `%s` |\n' "${{ steps.build_package.outputs.release_readiness_status }}"
             printf '| release_readiness_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.release_readiness_blocking_reason }}"
+            printf '| compatibility_supported_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_supported_count }}"
+            printf '| compatibility_partial_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_partial_count }}"
+            printf '| compatibility_planned_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_planned_count }}"
+            printf '| compatibility_unsupported_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_unsupported_count }}"
+            printf '| compatibility_total_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_total_count }}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - uses: actions/upload-artifact@v7
@@ -441,6 +493,8 @@ jobs:
           grep -q "\"publication\": \"github-release-assets\"" "${manifest}"
           grep -q "\"publish_eligibility_status\": \"eligible\"" "${manifest}"
           grep -q "\"release_readiness_status\": \"${RELEASE_READINESS_STATUS}\"" "${manifest}"
+          grep -q "\"compatibility_total_count\":" "${manifest}"
+          grep -q "Compatibility matrix status counts:" "${notes}"
           grep -q "Rollback path:" "${notes}"
 
       - name: Publish GitHub Release assets
@@ -475,5 +529,10 @@ jobs:
             printf '| release_kind | `%s` |\n' "${RELEASE_KIND}"
             printf '| ci_gate | `%s` |\n' "${RELEASE_CI_GATE}"
             printf '| publish_eligibility_status | `%s` |\n' "${PUBLISH_ELIGIBILITY_STATUS}"
+            printf '| compatibility_supported_count | `%s` |\n' "${{ needs.package.outputs.compatibility_supported_count }}"
+            printf '| compatibility_partial_count | `%s` |\n' "${{ needs.package.outputs.compatibility_partial_count }}"
+            printf '| compatibility_planned_count | `%s` |\n' "${{ needs.package.outputs.compatibility_planned_count }}"
+            printf '| compatibility_unsupported_count | `%s` |\n' "${{ needs.package.outputs.compatibility_unsupported_count }}"
+            printf '| compatibility_total_count | `%s` |\n' "${{ needs.package.outputs.compatibility_total_count }}"
             printf '| release_url | `%s/%s/releases/tag/%s` |\n' "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${RELEASE_VERSION}"
           } >> "${GITHUB_STEP_SUMMARY}"
