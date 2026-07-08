@@ -29,11 +29,12 @@ features it understands.
 | Feature | Status | Public API / Evidence |
 | --- | --- | --- |
 | `hostname = host1, host2` | Supported | `anixops_engine_add_mitm_hostname`, `anixops_mitm_evaluate` |
+| Quantumult X `force-http-engine-hosts = host1, host2` | Supported as MITM host-list alias | representative Quantumult X corpus fixture and `config_accepts_quantumultx_mitm_host_options` |
 | `%APPEND%` / `%INSERT%` prefixes | Supported | `module_patch_markers_are_ignored_in_mitm_hostname` |
 | Allow host patterns | Supported | exact, wildcard, `*.` suffix tests |
 | Deny host patterns | Supported | `-host` and `!host` tests |
 | Certificate trust gate | Supported as adapter input | `anixops_engine_set_cert_state` |
-| Server certificate verification bypass flag | Supported as adapter-readable config | `skip-server-cert-verify`, `anixops_engine_skip_server_cert_verify`, `config_exposes_skip_server_cert_verify` |
+| Server certificate verification bypass flag | Supported as adapter-readable config | `skip-server-cert-verify` boolean and host-list forms, `anixops_engine_skip_server_cert_verify`, `config_exposes_skip_server_cert_verify`, representative Quantumult X corpus fixture |
 | QUIC rejection decision and config flag | Supported as adapter signal | `ANIXOPS_MITM_REJECT_QUIC`, `disable-quic`, `disable_quic`, `disable-mitm-quic`, and `disable_mitm_quic` tests |
 | HTTP/2 MITM config flag | Supported | `h2`, `h2-enable`, and `h2_enable` tests |
 | Dynamic certificates / trust store install | Out of scope | adapter responsibility |

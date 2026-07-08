@@ -20,9 +20,9 @@ The full LOON MITM plugin compatibility and no-UI runtime plan is tracked in
 
 Implemented:
 
-- AnixOps-style `[MITM] hostname = ...` parsing.
+- AnixOps-style `[MITM] hostname = ...` parsing plus Quantumult X `force-http-engine-hosts` host-list parsing.
 - Explicit MITM gate: enabled flag, trusted certificate state, allow/deny host patterns, and adapter-readable
-  `skip-server-cert-verify`.
+  `skip-server-cert-verify` boolean or host-list config.
 - QUIC decision output: return `ANIXOPS_MITM_REJECT_QUIC` when a MITM host is requested over QUIC and QUIC-for-MITM is disabled.
 - AnixOps-style `[Rewrite]` URL rules for standard redirects `301`, `302`, `303`, `307`, `308`, plus `reject`,
   `reject-200`, `reject-401`, `reject-img`, `reject-tinygif`, `reject-video`, `reject-dict`, `reject-array`, and
@@ -135,7 +135,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.45.8.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.45.9.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` and script bundle fixtures for runtime replay,
@@ -146,7 +146,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.8/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.9/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:

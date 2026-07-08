@@ -788,7 +788,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.45.8");
+        assert_eq!(version(), "0.45.9");
         let mut engine = Engine::new().unwrap();
         assert_eq!(engine.jq_max_input_bytes(), JQ_MAX_INPUT_BYTES_DEFAULT);
         engine.set_jq_max_input_bytes(4096).unwrap();

@@ -174,6 +174,7 @@ static int anixops_regex_backend_is_valid(anixops_regex_backend_t backend);
 static void anixops_trim_inplace(char *value);
 static void anixops_lower_inplace(char *value);
 static int anixops_parse_bool(const char *value);
+static int anixops_parse_bool_or_nonempty_flag(const char *value);
 static int anixops_parse_size_value(const char *value, size_t *out_value);
 static int anixops_parse_timeout_seconds_value(const char *value, size_t *out_ms);
 static int anixops_starts_with_ci(const char *value, const char *prefix);
@@ -435,7 +436,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.8";
+	return "0.45.9";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1070,7 +1071,9 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 		value = eq + 1;
 		anixops_trim_inplace(key);
 		anixops_trim_inplace(value);
-		if (strcasecmp(key, "hostname") == 0) {
+		if (strcasecmp(key, "hostname") == 0 ||
+			strcasecmp(key, "force-http-engine-hosts") == 0 ||
+			strcasecmp(key, "force_http_engine_hosts") == 0) {
 			int rc = anixops_engine_add_mitm_hostname(engine, value);
 			if (rc != ANIXOPS_OK) {
 				(void)anixops_add_rule_diagnostic(
@@ -1078,7 +1081,7 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					ANIXOPS_RULE_DIAGNOSTIC_REJECTED,
 					line_no,
 					section,
-					"hostname",
+					key,
 					engine->last_error_message);
 				return anixops_config_line_error(engine, rc, line_no, line);
 			}
@@ -1087,14 +1090,15 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 					ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
 					line_no,
 					section,
-					"hostname",
+					key,
 					"mitm hostname accepted") != ANIXOPS_OK) {
 				free(line);
 				return ANIXOPS_ERR_OUT_OF_MEMORY;
 			}
 		}
-		else if (strcasecmp(key, "skip-server-cert-verify") == 0) {
-			engine->skip_server_cert_verify = anixops_parse_bool(value);
+		else if (strcasecmp(key, "skip-server-cert-verify") == 0 ||
+			strcasecmp(key, "skip_server_cert_verify") == 0) {
+			engine->skip_server_cert_verify = anixops_parse_bool_or_nonempty_flag(value);
 			if (anixops_add_rule_diagnostic(
 					engine,
 					ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED,
@@ -3120,6 +3124,29 @@ static int anixops_parse_bool(const char *value)
 		strcasecmp(value, "yes") == 0 ||
 		strcasecmp(value, "on") == 0 ||
 		strcmp(value, "1") == 0;
+}
+
+static int anixops_parse_bool_or_nonempty_flag(const char *value)
+{
+	if (value == NULL) {
+		return 0;
+	}
+	while (*value != '\0' && isspace((unsigned char)*value)) {
+		value++;
+	}
+	if (*value == '\0') {
+		return 0;
+	}
+	if (anixops_parse_bool(value)) {
+		return 1;
+	}
+	if (strcasecmp(value, "false") == 0 ||
+		strcasecmp(value, "no") == 0 ||
+		strcasecmp(value, "off") == 0 ||
+		strcmp(value, "0") == 0) {
+		return 0;
+	}
+	return 1;
 }
 
 static int anixops_parse_size_value(const char *value, size_t *out_value)

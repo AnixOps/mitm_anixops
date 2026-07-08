@@ -24,7 +24,7 @@ Included:
 - P1 parser foundation: compatibility profile selector, strict-profile rejection for ignored rule-shaped lines inside
   supported sections, per-rule accepted/ignored/rejected diagnostics, `[Plugin]` and `#!` metadata tolerance,
   Surge `#!arguments`, `%APPEND%`/`%INSERT%` module patch markers, `[Body Rewrite]` and `[Remote Body Rewrite]`
-  aliases.
+  aliases, and Quantumult X MITM `force-http-engine-hosts` plus host-list `skip-server-cert-verify`.
 - P2 regex foundation: regex backend selector with POSIX Lite default, stable empty-match replacement behavior for `^`,
   `$`, and lazy `.*?`, named capture replacement with `${name}` / `$<name>`, and optional PCRE2 compile/match/replace
   support for lookaround, backreference, Unicode property, word-boundary, atomic group, possessive quantifier, and

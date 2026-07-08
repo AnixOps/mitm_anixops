@@ -205,7 +205,8 @@ static void representative_quantumultx_fixture_is_supported(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 4);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 1);
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_script_evaluate_url(engine, "https://api.qx.example/v1", ANIXOPS_PHASE_RESPONSE, &script),
@@ -228,6 +229,8 @@ static void representative_quantumultx_fixture_is_supported(void)
 	anixops_engine_set_mitm_enabled(engine, 1);
 	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.qx.example", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "force.qx.example", 0, &mitm), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
 
 	anixops_engine_free(engine);

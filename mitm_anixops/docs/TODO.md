@@ -32,7 +32,8 @@ publishing.
   shorthand class subset, horizontal and vertical whitespace subset, control, hex, and Unicode escapes, lazy quantifier
   normalization, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement subset.
 - Full Quantumult X rewrite grammar beyond the tested `url`-prefixed request/response script, `echo-response`, common
-  reject/body/header rewrite actions, and redirect actions.
+  reject/body/header rewrite actions, redirect actions, and MITM `force-http-engine-hosts` / host-list
+  `skip-server-cert-verify`.
 - Full Surge rule grammar beyond tested `type=`, `pattern=`, `script-path=`, `requires-body=`, `tag=`, and `argument=`.
 - Exact AnixOps/Loon behavior for every malformed line. Portable mode still ignores incomplete non-action lines; strict
   profiles reject ignored rule-shaped lines in supported sections and report regex compilation failures.

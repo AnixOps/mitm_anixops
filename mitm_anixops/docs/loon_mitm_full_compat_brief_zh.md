@@ -143,6 +143,7 @@ Quantumult X：
 
 - 覆盖 `#[rewrite_local]`、`#[rewrite_remote]`、`#[mitm]` 和 INI section。
 - 覆盖 `url` prefixed redirect/reject/script/header/body 变体。
+- Alpha 已覆盖 `force-http-engine-hosts` host-list 和 host-list 型 `skip-server-cert-verify`。
 - 以真实插件语料为准，逐条 fixture 固化行为。
 
 ### 边界行为一致性

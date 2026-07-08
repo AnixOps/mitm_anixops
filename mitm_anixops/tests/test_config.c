@@ -207,6 +207,35 @@ static void config_exposes_skip_server_cert_verify(void)
 	anixops_engine_free(engine);
 }
 
+static void config_accepts_quantumultx_mitm_host_options(void)
+{
+	const char *config =
+		"#[mitm]\n"
+		"enable = true\n"
+		"force-http-engine-hosts = %APPEND% forced.example.test, *.engine.example.test\n"
+		"skip-server-cert-verify = forced.example.test, cert.example.test\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_mitm_decision_t decision;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "forced.example.test", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.engine.example.test", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_load_config(engine, "[MITM]\nskip_server_cert_verify = false\n"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
+
+	anixops_engine_free(engine);
+}
+
 static void config_parses_script_and_ignores_unknown_sections(void)
 {
 	const char *config =
@@ -578,6 +607,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/config_exposes_skip_server_cert_verify",
 		config_exposes_skip_server_cert_verify);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/config_accepts_quantumultx_mitm_host_options",
+		config_accepts_quantumultx_mitm_host_options);
 	add_test(
 		tests,
 		count,

@@ -51,13 +51,13 @@
       "platform": "quantumultx",
       "path": "../Representative.QuantumultX.snippet",
       "source": "bundled fixture",
-      "sha256": "397a201010724f485e36dee682dd7222e5fe9316d2dd58c7089ab9d6b6d9bc7d",
+      "sha256": "6de60468f692787827a4b271b1a9ae456803d84119dcc0f07b0a7c68980e85bc",
       "expectedStatus": 0,
-      "expectedMitm": 3,
+      "expectedMitm": 4,
       "expectedRewrite": 2,
       "expectedScript": 1,
       "expectedArgument": 0,
-      "expectedDiagnosticAccepted": 4,
+      "expectedDiagnosticAccepted": 6,
       "expectedDiagnosticIgnored": 1,
       "expectedDiagnosticRejected": 0
     }
