@@ -11,8 +11,10 @@ platform trust checks should be provided by a platform adapter or an explicit ru
 
 ## Scope
 
-The tested compatibility surface is tracked in `docs/compatibility_matrix.md`. Remaining gaps and explicit non-goals
-are tracked in `docs/TODO.md`.
+The v1.0.0 compatibility surface is tracked in `docs/compatibility/matrix.md`.
+The older Alpha implementation matrix remains in `docs/compatibility_matrix.md`
+as historical implementation detail. Remaining gaps and explicit non-goals are
+tracked in `docs/TODO.md`.
 
 The v1.0.0 maintenance track is governed by `ROADMAP.md`, `TODO.md`, `CHANGELOG.md`, `CONTRIBUTING.md`,
 `docs/architecture/`, `docs/compatibility/`, and `docs/manual-intervention.md`. That track follows a CI/CD-only
@@ -372,7 +374,8 @@ For Rust:
 
 See `docs/anixops_mitm_evidence.md`.
 
-For the supported configuration grammar and public-API evidence, see `docs/compatibility_matrix.md`.
+For the supported configuration grammar and public-API evidence, see
+`docs/compatibility/matrix.md`.
 
 For the BiliUniverse Enhanced fixture, see `docs/bili_enhanced_plugin_support.md`.
 

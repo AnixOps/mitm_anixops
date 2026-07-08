@@ -80,6 +80,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for a P1 parser milestone.
 - Added a Shadowrocket MITM certificate-material guard proving `ca-p12`,
   `ca-passphrase`, and `ca-cert` remain ignored and do not establish trust.
+- Aligned v1 release checklist and README evidence links with GitHub
+  Actions-only release acceptance and the v1 compatibility matrix path.
 - Added a request rewrite source contract plus positive and negative parser
   fixtures for the first P2 rule-matching milestone.
 - Added a header mutation source contract plus positive and negative parser

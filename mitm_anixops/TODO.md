@@ -181,3 +181,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   compatibility, manual-intervention, CI, and release-gate evidence auditable.
 - [x] Add a repository governance contract for branch protection, protected
   release tags, and release environment approval evidence.
+- [x] Align v1 release docs with GitHub Actions-only evidence and the v1
+  compatibility matrix path.

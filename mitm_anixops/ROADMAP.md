@@ -18,8 +18,8 @@ roadmap-v1-release-status=not-ready
 
 The P0 repository baseline is complete. Foundation work now exists across P1
 through P6, but the project is not ready for `v1.0.0` because compatibility
-matrix rows still include `partial` and `planned` scope, and manual-intervention
-items still require repository or platform confirmation.
+matrix rows still include `partial` scope and `unsupported` guard rows, and
+manual-intervention items still require repository or platform confirmation.
 
 The latest published artifact is `v0.45.10-alpha`. It proves an embeddable C ABI
 policy core, representative fixtures, an Alpha runner, an Alpha proxy shim, and
@@ -101,7 +101,8 @@ Required evidence:
 - Contract-first matching semantics.
 - Golden positive and negative fixtures.
 - Plan API parity checks against legacy evaluate APIs.
-- Compatibility matrix updated with supported, partial, planned, unsupported.
+- Compatibility matrix updated with supported, partial, planned when present,
+  and unsupported.
 
 ## P3 Script And Runtime Compatibility
 
@@ -182,15 +183,16 @@ Required evidence:
 
 - Release workflow builds artifacts in GitHub Actions, never from local output.
 - Release assets include checksums and a manifest.
-- Release notes state supported, partial, planned, unsupported, and known-risk
-  areas without overclaiming.
+- Release notes state supported, partial, planned count, unsupported, and
+  known-risk areas without overclaiming.
 - v1.0.0 is published only after all v1.0.0 minimum acceptance criteria pass.
 
 ## v1.0.0 Minimum Acceptance Criteria
 
 - README explains purpose, installation, compatibility scope, and limitations.
 - ROADMAP, TODO, CHANGELOG, and compatibility docs match the actual state.
-- Compatibility matrix clearly marks supported, partial, planned, unsupported.
+- Compatibility matrix clearly marks supported, partial, planned when present,
+  and unsupported.
 - Parser, rule engine, MITM policy, and script trigger have stable CI coverage.
 - GitHub Actions passes on PR, main push, and tag push.
 - Release workflow creates artifacts, checksum files, manifest, and release

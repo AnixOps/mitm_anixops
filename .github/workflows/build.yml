@@ -29,6 +29,7 @@ jobs:
             mitm_anixops/docs/architecture/script-runtime-dependency.md
             mitm_anixops/docs/architecture/certificate-lifecycle.md
             mitm_anixops/docs/architecture/adapter-redaction-policy.md
+            mitm_anixops/docs/release_checklist.md
             mitm_anixops/docs/networkcore_integration.md
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md

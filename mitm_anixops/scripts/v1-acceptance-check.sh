@@ -13,6 +13,7 @@ MATRIX="$ROOT/docs/compatibility/matrix.md"
 MANUAL="$ROOT/docs/manual-intervention.md"
 RELEASE_GATE="$ROOT/docs/architecture/release-gate.md"
 RELEASE_DRY_RUN="$ROOT/docs/architecture/release-dry-run.md"
+RELEASE_CHECKLIST="$ROOT/docs/release_checklist.md"
 REPOSITORY_GOVERNANCE="$ROOT/docs/architecture/repository-governance.md"
 BUILD_WORKFLOW="$REPO/.github/workflows/build.yml"
 DRY_RUN_WORKFLOW="$REPO/.github/workflows/release-dry-run.yml"
@@ -28,6 +29,7 @@ for file in \
 	"$MANUAL" \
 	"$RELEASE_GATE" \
 	"$RELEASE_DRY_RUN" \
+	"$RELEASE_CHECKLIST" \
 	"$REPOSITORY_GOVERNANCE" \
 	"$BUILD_WORKFLOW" \
 	"$DRY_RUN_WORKFLOW" \
@@ -41,6 +43,8 @@ grep -q "## Scope" "$README"
 grep -q "## Build" "$README"
 grep -q "Not implemented yet:" "$README"
 grep -q "GitHub Actions" "$README"
+grep -q "docs/compatibility/matrix.md" "$README"
+! grep -q "For the supported configuration grammar and public-API evidence, see \`docs/compatibility_matrix.md\`" "$README"
 
 for phase in \
 	"P0 Repository Baseline" \
@@ -83,6 +87,9 @@ grep -q "windows-binary:" "$BUILD_WORKFLOW"
 
 grep -q "release-dry-run-linux-artifact=linux-x64-tarball-with-checksum" "$RELEASE_DRY_RUN"
 grep -q "release-dry-run-windows-artifact=windows-x64-zip-with-checksum" "$RELEASE_DRY_RUN"
+grep -q "GitHub Actions \`build\` workflow" "$RELEASE_CHECKLIST"
+grep -q "docs/compatibility/matrix.md" "$RELEASE_CHECKLIST"
+! grep -q "^   sh scripts/check.sh$" "$RELEASE_CHECKLIST"
 grep -q "package-windows:" "$DRY_RUN_WORKFLOW"
 grep -q "Validate dry-run metadata" "$DRY_RUN_WORKFLOW"
 grep -q "\"platform\": \"windows-x64\"" "$DRY_RUN_WORKFLOW"
