@@ -8,6 +8,8 @@ Current mode:
 ```text
 release-dry-run-current-mode=workflow-defined
 release-dry-run-workflow=.github/workflows/release-dry-run.yml
+release-dry-run-trigger-scope=workflow-dispatch-pull-request-main-push-main
+release-dry-run-trigger-static-check=scripts/ci-trigger-check.sh
 release-dry-run-publication=blocked
 release-dry-run-ci-gate=equivalent-full-check-in-workflow
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary

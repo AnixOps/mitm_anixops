@@ -54,6 +54,8 @@ ci-workflow-manual-intervention-status=static-schema-check
 ci-workflow-v1-acceptance-status=static-evidence-check
 ci-workflow-repository-governance-status=static-contract-check
 ci-workflow-macos-status=policy-core-smoke
+ci-workflow-trigger-scope=pull-request-push-workflow-dispatch-including-tag-push
+ci-workflow-trigger-static-check=scripts/ci-trigger-check.sh
 ```
 
 Current CI gap: macOS release artifact, signing, notarization, entitlement, and
@@ -81,6 +83,8 @@ Current tag-triggered release workflow status:
 ```text
 release-workflow-current-mode=tag-triggered-build-and-publish
 release-workflow-file=.github/workflows/release.yml
+release-workflow-trigger-scope=vstar-tag-push-and-manual-main-validation
+release-workflow-trigger-static-check=scripts/ci-trigger-check.sh
 release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
 release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment

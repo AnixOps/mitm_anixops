@@ -175,6 +175,7 @@ jobs:
             mitm_anixops/scripts/compatibility-evidence-check.sh
             mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/compatibility-status-summary.sh
+            mitm_anixops/scripts/ci-trigger-check.sh
             mitm_anixops/scripts/security-claim-check.sh
             mitm_anixops/scripts/release-metadata-check.sh
             mitm_anixops/scripts/release-readiness-check.sh
@@ -193,6 +194,7 @@ jobs:
           sh mitm_anixops/scripts/security-claim-check.sh
           sh mitm_anixops/scripts/alpha-fixture-package-check.sh
           sh mitm_anixops/scripts/compatibility-evidence-check.sh
+          sh mitm_anixops/scripts/ci-trigger-check.sh
           sh mitm_anixops/scripts/release-metadata-check.sh
           sh mitm_anixops/scripts/repository-governance-check.sh > /tmp/repository-governance.env
           sh mitm_anixops/scripts/v1-acceptance-check.sh > /tmp/v1-acceptance.env
@@ -206,6 +208,7 @@ jobs:
           grep -q "manual intervention check passed" mitm_anixops/scripts/manual-intervention-check.sh
           grep -q "alpha fixture package check passed" mitm_anixops/scripts/alpha-fixture-package-check.sh
           grep -q "compatibility evidence check passed" mitm_anixops/scripts/compatibility-evidence-check.sh
+          grep -q "ci trigger check passed" mitm_anixops/scripts/ci-trigger-check.sh
           grep -q "release metadata check passed" mitm_anixops/scripts/release-metadata-check.sh
           grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
           grep -q "compatibility-matrix:" .github/workflows/build.yml
@@ -699,6 +702,7 @@ jobs:
           grep -q "release-dry-run-workflow=.github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-publication=blocked" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-ci-gate=equivalent-full-check-in-workflow" mitm_anixops/docs/architecture/release-dry-run.md
+          grep -q "release-dry-run-trigger-static-check=scripts/ci-trigger-check.sh" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-windows-artifact=windows-x64-zip-with-checksum" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "anixops-mitm-release-dry-run" .github/workflows/release-dry-run.yml
           grep -q "package-windows:" .github/workflows/release-dry-run.yml
@@ -725,6 +729,8 @@ jobs:
           grep -q "\"platform\": \"windows-x64\"" .github/workflows/release.yml
           grep -q "same-commit-ci" .github/workflows/release.yml
           grep -q "same-commit-main-build-success" .github/workflows/release.yml
+          grep -q "ci-workflow-trigger-static-check=scripts/ci-trigger-check.sh" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "head_branch == \"main\"" .github/workflows/release.yml
           grep -q "artifact_sha256" .github/workflows/release.yml
           grep -q "manifest_sha256" .github/workflows/release.yml
@@ -761,8 +767,10 @@ jobs:
           grep -q "^- \\[x\\] Add a repository governance contract" mitm_anixops/TODO.md
           grep -q "v1_acceptance_evidence_status" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "compatibility-evidence-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
+          grep -q "ci-trigger-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "repository_governance_status" mitm_anixops/scripts/repository-governance-check.sh
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/check.sh
+          grep -q "ci-trigger-check.sh" mitm_anixops/scripts/check.sh
           grep -q "v1-acceptance-check.sh" mitm_anixops/scripts/check.sh
           grep -q "Source contract:" .github/pull_request_template.md
           grep -q "Manual intervention required" .github/pull_request_template.md

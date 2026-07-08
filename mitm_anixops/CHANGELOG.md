@@ -307,6 +307,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added a release metadata static check for release and dry-run artifact,
   checksum, manifest, release-note, compatibility-count, and
   publication-boundary evidence.
+- Added a CI trigger static check for PR, main push, tag, manual dry-run, and
+  tag-release workflow coverage.
 
 ### Changed
 
