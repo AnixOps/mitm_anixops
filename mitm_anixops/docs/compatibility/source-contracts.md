@@ -27,6 +27,8 @@ Unimplemented items:
 
 ### Loon Plugin Common Subset
 
+Detailed contract: [Loon Plugin Common Fields Source Contract](loon-plugin-common-fields.md).
+
 Capability: parse and evaluate the currently implemented Loon/AnixOps subset.
 
 Input form:

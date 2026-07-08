@@ -32,4 +32,6 @@ corresponding tests.
 
 - [source-contracts.md](source-contracts.md): source contract rules and current
   contracts.
+- [loon-plugin-common-fields.md](loon-plugin-common-fields.md): first P1 Loon
+  common-fields parser contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

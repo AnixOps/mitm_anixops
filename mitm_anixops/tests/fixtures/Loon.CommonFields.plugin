@@ -1,0 +1,22 @@
+#!name = Loon Common Fields Fixture
+#!desc = Minimal Loon plugin fields for P1 parser contract coverage.
+
+[Plugin]
+name = Loon Common Fields
+desc = Metadata is tolerated and recorded as diagnostics.
+
+[Argument]
+Mode = select,prod
+
+[URL Rewrite]
+^http:\/\/old\.common\.loon\.test\/(.*) https://api.common.loon.test/$1 302
+
+[Header Rewrite]
+^https:\/\/api\.common\.loon\.test\/v1 header-add X-Loon-Mode prod
+
+[Script]
+http-request ^https:\/\/api\.common\.loon\.test\/v1 requires-body=1, script-path=https://scripts.example/loon-common-request.js, tag=loon.common.request, argument=[{Mode}]
+http-response ^https:\/\/api\.common\.loon\.test\/v1 requires-body=1, script-path=https://scripts.example/loon-common-response.js, tag=loon.common.response, argument=[{Mode}]
+
+[MITM]
+hostname = api.common.loon.test, -blocked.common.loon.test
