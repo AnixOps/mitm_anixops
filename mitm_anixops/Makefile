@@ -115,13 +115,13 @@ runner-check: $(RUNNER_BIN)
 	grep -F '"value":"trace-item"' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
 	grep -F '"tag":"binding.request"' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
 	grep -F '"timeoutMs":333' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
-	cmp -s tests/fixtures/BindingParity.RequestTrace.json $(BUILD_DIR)/runner-binding-parity-request-trace.out
+	diff -u tests/fixtures/BindingParity.RequestTrace.json $(BUILD_DIR)/runner-binding-parity-request-trace.out
 	$(RUNNER_BIN) trace --plugin tests/fixtures/BindingParity.Common.conf --url https://api.binding.test/response/item --phase response > $(BUILD_DIR)/runner-binding-parity-response-trace.out
 	grep -F '"headerName":"X-Binding"' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
 	grep -F '"value":"resp-item"' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
 	grep -F '"tag":"binding.response"' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
 	grep -F '"timeoutMs":444' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
-	cmp -s tests/fixtures/BindingParity.ResponseTrace.json $(BUILD_DIR)/runner-binding-parity-response-trace.out
+	diff -u tests/fixtures/BindingParity.ResponseTrace.json $(BUILD_DIR)/runner-binding-parity-response-trace.out
 	rm -f $(BUILD_DIR)/runner-script-store.json
 	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-store $(BUILD_DIR)/runner-script-store.json --script-map https://scripts.example/loon-request.js=tests/fixtures/runner_replay_script.js --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_replay_script.js > $(BUILD_DIR)/runner-replay-runtime.out
 	grep -F '"message":"script executed"' $(BUILD_DIR)/runner-replay-runtime.out >/dev/null

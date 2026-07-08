@@ -202,8 +202,8 @@ jobs:
           grep -q "BindingParity.Common.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "BindingParity.RequestTrace.json" mitm_anixops/docs/compatibility/matrix.md
           grep -q "X-Binding-Current" mitm_anixops/tests/fixtures/BindingParity.Common.conf
-          grep -q "cmp -s tests/fixtures/BindingParity.RequestTrace.json" mitm_anixops/Makefile
-          grep -q "cmp -s tests/fixtures/BindingParity.ResponseTrace.json" mitm_anixops/Makefile
+          grep -q "diff -u tests/fixtures/BindingParity.RequestTrace.json" mitm_anixops/Makefile
+          grep -q "diff -u tests/fixtures/BindingParity.ResponseTrace.json" mitm_anixops/Makefile
           grep -q "runner-binding-parity-response-trace.out" mitm_anixops/Makefile
           grep -q "TestGoBindingLoadsSharedParityFixture" mitm_anixops/bindings/go/anixops/anixops_test.go
           grep -q "requestHeader, err := engine.EvaluateNamedHeader" mitm_anixops/bindings/go/anixops/anixops_test.go
