@@ -46,10 +46,19 @@ printf '%s\n' "$required_markers" | while IFS= read -r item; do
 	esac
 	grep -F "$item-scope=" "$MANUAL" >/dev/null
 	grep -F "$item-required-before=" "$MANUAL" >/dev/null
+	evidence_count="$(awk -F= -v key="$item-confirmation-evidence" '$1 == key {count++} END {print count + 0}' "$MANUAL")"
+	if [ "$evidence_count" -ne 1 ]; then
+		printf 'manual intervention marker must have exactly one confirmation evidence field: %s\n' "$item" >&2
+		exit 1
+	fi
+	evidence="$(awk -F= -v key="$item-confirmation-evidence" '$1 == key {print $2}' "$MANUAL")"
 	if [ "$status" = "pending" ]; then
+		if [ "$evidence" != "not-yet-confirmed" ]; then
+			printf 'pending manual intervention marker must use placeholder evidence: %s\n' "$item" >&2
+			exit 1
+		fi
 		grep -F "$item-next-action=" "$MANUAL" >/dev/null
 	else
-		evidence="$(awk -F= -v key="$item-confirmation-evidence" '$1 == key {print $2}' "$MANUAL")"
 		if [ -z "$evidence" ] || [ "$evidence" = "not-yet-confirmed" ]; then
 			printf 'confirmed manual intervention marker lacks confirmation evidence: %s\n' "$item" >&2
 			exit 1

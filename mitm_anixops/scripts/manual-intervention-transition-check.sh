@@ -8,9 +8,11 @@ test -s "$MANUAL"
 
 confirmed_fixture=$(mktemp)
 all_confirmed_fixture=$(mktemp)
+missing_pending_evidence_fixture=$(mktemp)
+missing_pending_evidence_output=$(mktemp)
 missing_evidence_fixture=$(mktemp)
 missing_evidence_output=$(mktemp)
-trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
+trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$missing_pending_evidence_fixture" "$missing_pending_evidence_output" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
 
 sed \
 	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \
@@ -23,13 +25,19 @@ sed \
 	-e 's/-status=pending$/-status=confirmed/' \
 	-e 's/-confirmation-evidence=not-yet-confirmed$/-confirmation-evidence=redacted-manual-gate-audit-note/' \
 	"$MANUAL" > "$all_confirmed_fixture"
-awk -F= '$1 ~ /-status$/ && $2 == "pending" {
-	key = $1
-	sub(/-status$/, "", key)
-	printf "%s-confirmation-evidence=redacted-manual-gate-audit-note\n", key
-}' "$MANUAL" >> "$all_confirmed_fixture"
 
 MANUAL_INTERVENTION_FILE="$all_confirmed_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" >/dev/null
+
+sed \
+	-e '/^branch-protection-confirmation-evidence=/d' \
+	"$MANUAL" > "$missing_pending_evidence_fixture"
+
+if MANUAL_INTERVENTION_FILE="$missing_pending_evidence_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" > "$missing_pending_evidence_output" 2>&1; then
+	printf '%s\n' "manual intervention transition check failed: pending marker without placeholder evidence passed" >&2
+	exit 1
+fi
+
+grep -F "manual intervention marker must have exactly one confirmation evidence field: branch-protection" "$missing_pending_evidence_output" >/dev/null
 
 sed \
 	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \

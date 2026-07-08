@@ -259,6 +259,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   gates pass.
 - Added a manual-intervention register schema check and wired it into the full
   GitHub Actions gate.
+- Hardened the manual-intervention schema so pending required markers must
+  carry exactly one `confirmation-evidence=not-yet-confirmed` placeholder.
 - Added Stash `http.force-http-engine` parser fixtures and CI-covered tests as
   an adapter-visible QUIC fallback signal without claiming HTTP engine runtime
   behavior.
