@@ -23,6 +23,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   test registry.
 - [x] Extend compatibility evidence checks to verify documented Make targets,
   CI-covered script paths, and Go/Rust binding test names.
+- [x] Extend compatibility evidence checks to verify documented
+  `tests/test_*.c` file references.
 - [x] Add a dedicated static format check CI job.
 - [x] Add a dedicated static lint CI job.
 - [x] Add a macOS policy-core smoke CI job.

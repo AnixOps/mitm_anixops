@@ -20,6 +20,7 @@ test -d "$RUST_BINDING_DIR"
 
 fixture_refs=$(mktemp)
 test_refs=$(mktemp)
+c_test_file_refs=$(mktemp)
 make_refs=$(mktemp)
 script_refs=$(mktemp)
 go_test_refs=$(mktemp)
@@ -27,7 +28,7 @@ rust_test_refs=$(mktemp)
 root_fixture_files=$(mktemp)
 missing=$(mktemp)
 undocumented=$(mktemp)
-trap 'rm -f "$fixture_refs" "$test_refs" "$make_refs" "$script_refs" "$go_test_refs" "$rust_test_refs" "$root_fixture_files" "$missing" "$undocumented"' EXIT HUP INT TERM
+trap 'rm -f "$fixture_refs" "$test_refs" "$c_test_file_refs" "$make_refs" "$script_refs" "$go_test_refs" "$rust_test_refs" "$root_fixture_files" "$missing" "$undocumented"' EXIT HUP INT TERM
 
 make_target_exists() {
 	target=$1
@@ -103,6 +104,18 @@ while IFS= read -r test_id; do
 	fi
 done < "$test_refs"
 
+grep -Rho -E '`tests/test_[A-Za-z0-9_.-]+\.c`' "$DOC_DIR" "$LEGACY_MATRIX" |
+	tr -d '`' |
+	sort -u > "$c_test_file_refs"
+
+while IFS= read -r c_test_file_ref; do
+	[ -n "$c_test_file_ref" ] || continue
+	path="$ROOT/$c_test_file_ref"
+	if [ ! -f "$path" ]; then
+		printf 'missing compatibility C test file reference: %s -> %s\n' "$c_test_file_ref" "$path" >> "$missing"
+	fi
+done < "$c_test_file_refs"
+
 grep -Rho -E '`make [A-Za-z0-9_.-]+`' "$DOC_DIR" "$LEGACY_MATRIX" |
 	sed 's/^`make //; s/`$//' |
 	sort -u > "$make_refs"
@@ -157,8 +170,9 @@ fi
 fixture_count=$(wc -l < "$fixture_refs" | tr -d ' ')
 root_fixture_count=$(wc -l < "$root_fixture_files" | tr -d ' ')
 test_count=$(wc -l < "$test_refs" | tr -d ' ')
+c_test_file_count=$(wc -l < "$c_test_file_refs" | tr -d ' ')
 make_count=$(wc -l < "$make_refs" | tr -d ' ')
 script_count=$(wc -l < "$script_refs" | tr -d ' ')
 go_test_count=$(wc -l < "$go_test_refs" | tr -d ' ')
 rust_test_count=$(wc -l < "$rust_test_refs" | tr -d ' ')
-printf 'compatibility evidence check passed (%s fixture refs, %s top-level fixtures, %s registered C test refs, %s Make target refs, %s script refs, %s Go test refs, %s Rust test refs)\n' "$fixture_count" "$root_fixture_count" "$test_count" "$make_count" "$script_count" "$go_test_count" "$rust_test_count"
+printf 'compatibility evidence check passed (%s fixture refs, %s top-level fixtures, %s registered C test refs, %s C test file refs, %s Make target refs, %s script refs, %s Go test refs, %s Rust test refs)\n' "$fixture_count" "$root_fixture_count" "$test_count" "$c_test_file_count" "$make_count" "$script_count" "$go_test_count" "$rust_test_count"

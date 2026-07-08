@@ -91,6 +91,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Extended compatibility evidence checks to validate documented Make targets,
   CI-covered script paths, and Go/Rust binding test names used as compatibility
   evidence.
+- Extended compatibility evidence checks to validate documented
+  `tests/test_*.c` file references used as compatibility evidence.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added Quantumult X `url echo-response` parser fixtures and CI-covered tests

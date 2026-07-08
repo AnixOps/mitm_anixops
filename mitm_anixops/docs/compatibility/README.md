@@ -31,9 +31,9 @@ corresponding tests.
 `scripts/compatibility-evidence-check.sh` enforces that compatibility docs
 reference existing fixture files, document every top-level fixture file, and
 reference registered C test IDs such as `config/...`, `script/...`,
-`rewrite/...`, `mitm/...`, and `abi/...`. It also verifies documented Make
-targets, CI-covered script paths, and Go/Rust binding test names used as
-compatibility evidence.
+`rewrite/...`, `mitm/...`, and `abi/...`. It also verifies documented
+`tests/test_*.c` file references, Make targets, CI-covered script paths, and
+Go/Rust binding test names used as compatibility evidence.
 
 ## Files
 
