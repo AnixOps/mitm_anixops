@@ -1298,12 +1298,15 @@ Input form:
   `[URL Rewrite]`;
 - request and response body regex replacement rules;
 - request and response body JSON replacement rules.
+- request and response body JQ action-token matching with optional libjq
+  runtime execution or default fail-open behavior.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/BodyMutation.Common.conf`;
 - positive fixture `tests/fixtures/BodyRequestJsonMutation.Common.conf`;
 - positive fixture `tests/fixtures/BodyJsonMutation.Common.conf`;
+- positive fixture `tests/fixtures/BodyJqMutation.Common.conf`;
 - positive fixture `tests/fixtures/Loon.BodyMutation.plugin`;
 - positive fixture `tests/fixtures/Loon.BodyJsonMutation.plugin`;
 - positive fixture `tests/fixtures/Loon.ResponseBodyJsonMutation.plugin`;
@@ -1313,6 +1316,7 @@ Current CI evidence:
 - negative fixture `tests/fixtures/BodyMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/BodyRequestJsonMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/BodyJsonMutation.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/BodyJqMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.BodyMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/Loon.BodyJsonMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/Loon.ResponseBodyJsonMutation.Malformed.plugin`;
@@ -1325,6 +1329,8 @@ Current CI evidence:
 - `config/body_request_json_mutation_common_strict_fixture_rejects_missing_json_path`;
 - `config/body_json_mutation_common_fixture_maps_response_body_json_replace`;
 - `config/body_json_mutation_common_strict_fixture_rejects_missing_json_path`;
+- `config/body_jq_mutation_common_fixture_maps_request_and_response_body_jq`;
+- `config/body_jq_mutation_common_strict_fixture_rejects_missing_filter`;
 - `config/loon_body_mutation_fixture_maps_body_rewrites`;
 - `config/loon_body_mutation_malformed_fixture_rejects_invalid_body_regex`;
 - `config/loon_body_json_mutation_fixture_maps_request_body_json_replace`;
