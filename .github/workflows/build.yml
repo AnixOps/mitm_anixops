@@ -108,6 +108,8 @@ jobs:
             mitm_anixops/tests/fixtures/Shadowrocket.RuleDomainKeywordReject.Malformed.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleDomainReject.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleDomainReject.Malformed.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.RuleFinalReject.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.RuleFinalReject.Malformed.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
@@ -317,6 +319,8 @@ jobs:
           grep -q "Shadowrocket.RuleDomainKeywordReject.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.RuleDomainReject.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.RuleDomainReject.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.RuleFinalReject.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.RuleFinalReject.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_rule_domain_exact_reject_fixture_maps_exact_domain_rejects" mitm_anixops/tests/test_config.c
@@ -325,10 +329,13 @@ jobs:
           grep -q "config/shadowrocket_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_rule_domain_reject_fixture_maps_domain_suffix_rejects" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_rule_domain_reject_malformed_fixture_rejects_invalid_domain" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_rule_final_reject_fixture_maps_final_reject" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_action" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*URL-regex reject parser fixtures" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*DOMAIN reject parser fixtures" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*DOMAIN-KEYWORD reject parser fixtures" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*DOMAIN-SUFFIX reject parser fixtures" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Shadowrocket .*Rule.*FINAL reject parser fixtures" mitm_anixops/TODO.md
           grep -q "MITM.Hostname.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/mitm_hostname_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard" mitm_anixops/tests/test_mitm.c

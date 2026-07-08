@@ -2624,6 +2624,102 @@ static void shadowrocket_rule_domain_keyword_reject_malformed_fixture_rejects_in
 	free(fixture);
 }
 
+static void shadowrocket_rule_final_reject_fixture_maps_final_reject(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Shadowrocket.RuleFinalReject.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_rewrite_result_t rewrite;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rule");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rule");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "shadowrocket rule accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 1, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 4);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rule");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rule");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "rule line ignored");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://anything.final.shadowrocket.test/path",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT_200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"http://plain.final.shadowrocket.test/",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT_200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://anything.final.shadowrocket.test/path",
+			ANIXOPS_PHASE_RESPONSE,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_action(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Shadowrocket.RuleFinalReject.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rule");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rule");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "FINAL") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 3);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "FINAL") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void shadowrocket_common_config_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Shadowrocket.CommonConfig.conf");
@@ -4564,6 +4660,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/shadowrocket_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword",
 		shadowrocket_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/shadowrocket_rule_final_reject_fixture_maps_final_reject",
+		shadowrocket_rule_final_reject_fixture_maps_final_reject);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_action",
+		shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_action);
 	add_test(
 		tests,
 		count,

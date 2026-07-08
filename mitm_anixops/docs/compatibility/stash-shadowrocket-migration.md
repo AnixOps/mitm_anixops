@@ -39,17 +39,18 @@ This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
 - Shadowrocket has a dedicated common-config source contract for a narrow
   `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
 - Shadowrocket has a dedicated rule-reject source contract for a narrow
-  `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, and `DOMAIN-SUFFIX`
-  reject subset.
+  `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, `DOMAIN-SUFFIX`, and
+  `FINAL` reject subset.
 - Stash app-level routing, proxy, DNS, UI, script, cron, transparent rewrite,
   and expanded redirect rewrite
   syntax remains a migration guard unless a future source contract, fixture
   pair, positive test, negative test, compatibility matrix row, and GitHub
   Actions evidence explicitly cover it.
 - Shadowrocket app-level profile syntax outside common config and `[Rule]`
-  URL-regex/domain/domain-keyword/domain-suffix reject remains a migration guard
-  unless a future source contract, fixture pair, positive test, negative test,
-  compatibility matrix row, and GitHub Actions evidence explicitly cover it.
+  URL-regex/domain/domain-keyword/domain-suffix/final reject remains a migration
+  guard unless a future source contract, fixture pair, positive test, negative
+  test, compatibility matrix row, and GitHub Actions evidence explicitly cover
+  it.
 
 The current migration guard fixtures are non-support evidence:
 
@@ -74,7 +75,9 @@ the subset described in
 - `tests/fixtures/Shadowrocket.RuleDomainKeywordReject.conf`;
 - `tests/fixtures/Shadowrocket.RuleDomainKeywordReject.Malformed.conf`;
 - `tests/fixtures/Shadowrocket.RuleDomainReject.conf`;
-- `tests/fixtures/Shadowrocket.RuleDomainReject.Malformed.conf`.
+- `tests/fixtures/Shadowrocket.RuleDomainReject.Malformed.conf`;
+- `tests/fixtures/Shadowrocket.RuleFinalReject.conf`;
+- `tests/fixtures/Shadowrocket.RuleFinalReject.Malformed.conf`.
 
 The dedicated Stash HTTP MITM fixtures are support evidence only for the subset
 described in [`stash-http-mitm.md`](stash-http-mitm.md):
@@ -105,9 +108,9 @@ Allowed statements:
   common-config and rule-reject contracts.
 - Shadowrocket common config has partial parser support for documented URL
   rewrite, script metadata, and MITM host/options syntax.
-- Shadowrocket `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, and
-  `DOMAIN-SUFFIX` reject syntax has partial parser support as policy-core
-  reject intent.
+- Shadowrocket `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`,
+  `DOMAIN-SUFFIX`, and `FINAL` reject syntax has partial parser support as
+  policy-core reject intent.
 - Existing Loon, Quantumult X, Surge, Shadowrocket common-config, and portable
   AnixOps fixtures can inform how overlapping rules should be translated.
 - Operators may manually map overlapping rules into a currently covered fixture
@@ -149,6 +152,8 @@ Current CI evidence:
 - `config/shadowrocket_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword`;
 - `config/shadowrocket_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
 - `config/shadowrocket_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
+- `config/shadowrocket_rule_final_reject_fixture_maps_final_reject`;
+- `config/shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_action`;
 - `config/shadowrocket_common_config_fixture_is_supported`;
 - `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
 - GitHub Actions `governance` requires the migration notes, common-config
@@ -209,15 +214,17 @@ Expected Shadowrocket rule-reject behavior:
 - config load succeeds for
   `tests/fixtures/Shadowrocket.RuleDomainKeywordReject.conf`;
 - config load succeeds for `tests/fixtures/Shadowrocket.RuleDomainReject.conf`;
-- `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, and `DOMAIN-SUFFIX` reject
-  entries register request-phase rewrite reject decisions;
+- config load succeeds for `tests/fixtures/Shadowrocket.RuleFinalReject.conf`;
+- `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, `DOMAIN-SUFFIX`, and
+  `FINAL` reject entries register request-phase rewrite reject decisions;
 - unsupported `[Rule]` direct/proxy route-selection entries remain ignored;
 - malformed supported `URL-REGEX` reject entries fail with regex diagnostics;
 - malformed supported `DOMAIN` reject entries fail with parse diagnostics;
 - malformed supported `DOMAIN-KEYWORD` reject entries fail with parse
   diagnostics;
 - malformed supported `DOMAIN-SUFFIX` reject entries fail with parse
-  diagnostics.
+  diagnostics;
+- malformed supported `FINAL` reject entries fail with parse diagnostics.
 
 ## Migration Mapping
 
@@ -227,8 +234,8 @@ concepts:
 - MITM host allow/deny lists;
 - request URL redirect or reject;
 - Stash `http.url-rewrite` reject and 302/307 redirect intent;
-- Shadowrocket `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, and
-  `DOMAIN-SUFFIX` reject intent;
+- Shadowrocket `[Rule]` `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`,
+  `DOMAIN-SUFFIX`, and `FINAL` reject intent;
 - response rewrite where it maps to the documented response rewrite subset;
 - request and response header add, replace, replace-regex, or delete;
 - request and response body regex replacement;

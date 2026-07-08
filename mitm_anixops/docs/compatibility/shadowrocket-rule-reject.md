@@ -10,8 +10,8 @@ Status: `partial`.
 
 This contract defines the first app-profile parser-supported Shadowrocket
 `[Rule]` subset for the v1.0.0 compatibility matrix. It covers URL regex,
-exact-domain, domain-keyword, and domain-suffix rules whose policy maps to the
-existing policy-core reject decision.
+exact-domain, domain-keyword, domain-suffix, and final fallback rules whose
+policy maps to the existing policy-core reject decision.
 
 It does not implement Shadowrocket routing, proxy selection, DNS, or profile UI
 behavior.
@@ -26,6 +26,7 @@ URL-REGEX,^https:\/\/rule\.shadowrocket\.test\/gone,REJECT-410
 DOMAIN,exact.domain-rule.shadowrocket.test,REJECT
 DOMAIN-KEYWORD,tracking,REJECT-200
 DOMAIN-SUFFIX,domain-rule.shadowrocket.test,REJECT-200
+FINAL,REJECT-200
 ```
 
 Supported fields:
@@ -34,6 +35,7 @@ Supported fields:
 - `DOMAIN` exact host rule type;
 - `DOMAIN-KEYWORD` host substring rule type;
 - `DOMAIN-SUFFIX` host suffix rule type;
+- `FINAL` fallback rule type when paired with a reject action;
 - a policy-core URL regex pattern, exact hostname, hostname keyword, or
   hostname suffix;
 - `REJECT`, `REJECT-200`, `REJECT-NNN`, `REJECT-IMG`, `REJECT-VIDEO`,
@@ -42,14 +44,14 @@ Supported fields:
 
 Unsupported Shadowrocket `[Rule]` forms remain ignored in the portable profile:
 
-- `IP-CIDR`, `GEOIP`, `FINAL`, and other routing matchers;
+- `IP-CIDR`, `GEOIP`, and other routing matchers;
 - `DIRECT`, `PROXY`, proxy group names, route policy names, and `no-resolve`;
 - DNS, proxy-node, VPN, packet-capture, UI, or subscription behavior.
 
 ## Parser Output
 
-For supported `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, and `DOMAIN-SUFFIX`
-reject rules, the parser must:
+For supported `URL-REGEX`, `DOMAIN`, `DOMAIN-KEYWORD`, `DOMAIN-SUFFIX`, and
+`FINAL` reject rules, the parser must:
 
 - register request-phase rewrite reject rules through the existing policy-core
   rewrite store;
@@ -62,7 +64,8 @@ reject rules, the parser must:
 Malformed supported `URL-REGEX` reject rules are rejected when the URL regex
 cannot compile. Malformed supported `DOMAIN`, `DOMAIN-KEYWORD`, or
 `DOMAIN-SUFFIX` reject rules are rejected when the hostname or keyword is
-invalid.
+invalid. Malformed supported `FINAL` reject rules are rejected when the reject
+action is missing.
 
 ## Positive Case
 
@@ -73,6 +76,7 @@ tests/fixtures/Shadowrocket.RuleReject.conf
 tests/fixtures/Shadowrocket.RuleDomainExactReject.conf
 tests/fixtures/Shadowrocket.RuleDomainKeywordReject.conf
 tests/fixtures/Shadowrocket.RuleDomainReject.conf
+tests/fixtures/Shadowrocket.RuleFinalReject.conf
 ```
 
 Expected behavior:
@@ -85,6 +89,7 @@ Expected behavior:
   fixture;
 - two `DOMAIN-SUFFIX` reject rules are registered from the dedicated domain
   fixture;
+- one `FINAL` reject rule is registered from the dedicated final fixture;
 - one `DOMAIN-SUFFIX` proxy route remains ignored;
 - request-phase URL evaluation returns the expected reject actions;
 - response-phase URL evaluation does not trigger the request-phase rule.
@@ -98,6 +103,7 @@ tests/fixtures/Shadowrocket.RuleReject.Malformed.conf
 tests/fixtures/Shadowrocket.RuleDomainExactReject.Malformed.conf
 tests/fixtures/Shadowrocket.RuleDomainKeywordReject.Malformed.conf
 tests/fixtures/Shadowrocket.RuleDomainReject.Malformed.conf
+tests/fixtures/Shadowrocket.RuleFinalReject.Malformed.conf
 ```
 
 Expected behavior:
@@ -145,6 +151,10 @@ Required CI evidence:
   `config/shadowrocket_rule_domain_keyword_reject_fixture_maps_domain_keyword_rejects`;
 - `tests/test_config.c` registers
   `config/shadowrocket_rule_domain_keyword_reject_malformed_fixture_rejects_invalid_keyword`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_rule_final_reject_fixture_maps_final_reject`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_action`;
 - `tests/test_config.c` keeps
   `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
@@ -158,6 +168,6 @@ Shadowrocket rule reject policy intent
 ```
 
 The row remains `partial` because only URL-regex, exact-domain, domain-keyword,
-and domain-suffix reject policy intent is covered. Direct/proxy route selection,
-proxy groups, DNS, app-level profile UI, and platform networking behavior remain
-unimplemented.
+domain-suffix, and final fallback reject policy intent is covered. Direct/proxy
+route selection, proxy groups, DNS, app-level profile UI, and platform
+networking behavior remain unimplemented.

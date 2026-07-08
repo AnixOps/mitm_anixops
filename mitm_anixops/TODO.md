@@ -61,6 +61,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   positive/negative tests.
 - [x] Add Shadowrocket `[Rule]` DOMAIN-SUFFIX reject parser fixtures and
   positive/negative tests.
+- [x] Add Shadowrocket `[Rule]` FINAL reject parser fixtures and
+  positive/negative tests.
 - [x] Add reject/direct/proxy policy-intent parser fixtures and
   positive/negative tests.
 - [x] Add cron/task non-support parser fixtures and guard tests.

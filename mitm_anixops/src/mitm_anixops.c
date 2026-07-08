@@ -2389,6 +2389,7 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 	int is_domain = 0;
 	int is_domain_keyword = 0;
 	int is_domain_suffix = 0;
+	int is_final = 0;
 	char rewrite_line[ANIXOPS_VALUE_CAP];
 	int written;
 	int rc;
@@ -2415,19 +2416,29 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 	is_domain = strcasecmp(kind, "DOMAIN") == 0;
 	is_domain_keyword = strcasecmp(kind, "DOMAIN-KEYWORD") == 0;
 	is_domain_suffix = strcasecmp(kind, "DOMAIN-SUFFIX") == 0;
-	if (!is_url_regex && !is_domain && !is_domain_keyword && !is_domain_suffix) {
+	is_final = strcasecmp(kind, "FINAL") == 0;
+	if (!is_url_regex && !is_domain && !is_domain_keyword && !is_domain_suffix && !is_final) {
 		free(copy);
 		return ANIXOPS_OK;
 	}
-	if (!anixops_next_csv_field(&cursor, pattern, sizeof(pattern)) || pattern[0] == '\0') {
-		free(copy);
-		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket rule pattern missing");
-		return ANIXOPS_ERR_PARSE;
+	if (is_final) {
+		if (!anixops_next_csv_field(&cursor, action_token, sizeof(action_token)) || action_token[0] == '\0') {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket FINAL rule action missing");
+			return ANIXOPS_ERR_PARSE;
+		}
 	}
-	if (!anixops_next_csv_field(&cursor, action_token, sizeof(action_token)) || action_token[0] == '\0') {
-		free(copy);
-		anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket rule action missing");
-		return ANIXOPS_ERR_PARSE;
+	else {
+		if (!anixops_next_csv_field(&cursor, pattern, sizeof(pattern)) || pattern[0] == '\0') {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket rule pattern missing");
+			return ANIXOPS_ERR_PARSE;
+		}
+		if (!anixops_next_csv_field(&cursor, action_token, sizeof(action_token)) || action_token[0] == '\0') {
+			free(copy);
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket rule action missing");
+			return ANIXOPS_ERR_PARSE;
+		}
 	}
 	if (!anixops_parse_rewrite_action(action_token, &action, &status_code) ||
 		!anixops_rewrite_action_is_reject(action)) {
@@ -2435,7 +2446,10 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 		return ANIXOPS_OK;
 	}
 
-	if (is_domain || is_domain_suffix) {
+	if (is_final) {
+		written = snprintf(rewrite_line, sizeof(rewrite_line), "^https?:// %s", action_token);
+	}
+	else if (is_domain || is_domain_suffix) {
 		char domain_pattern[512];
 		const char *domain_message = is_domain_suffix ? "shadowrocket DOMAIN-SUFFIX rule domain invalid" :
 								"shadowrocket DOMAIN rule domain invalid";
