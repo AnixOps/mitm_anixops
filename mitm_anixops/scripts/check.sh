@@ -8,6 +8,7 @@ sh scripts/manual-intervention-check.sh
 sh scripts/security-claim-check.sh
 sh scripts/compatibility-evidence-check.sh
 sh scripts/ci-trigger-check.sh
+sh scripts/release-checklist-check.sh
 sh scripts/release-metadata-check.sh
 sh scripts/v1-acceptance-check.sh
 sh scripts/alpha-fixture-package-check.sh

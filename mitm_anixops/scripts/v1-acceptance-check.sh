@@ -66,6 +66,7 @@ grep -q "unsupported" "$MATRIX"
 sh "$ROOT/scripts/compatibility-matrix-check.sh" >/dev/null
 sh "$ROOT/scripts/compatibility-evidence-check.sh" >/dev/null
 sh "$ROOT/scripts/ci-trigger-check.sh" >/dev/null
+sh "$ROOT/scripts/release-checklist-check.sh" >/dev/null
 sh "$ROOT/scripts/release-metadata-check.sh" >/dev/null
 compatibility_status="$(sh "$ROOT/scripts/compatibility-status-summary.sh")"
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_total_count="
@@ -92,6 +93,8 @@ grep -q "windows-binary:" "$BUILD_WORKFLOW"
 grep -q "release-dry-run-linux-artifact=linux-x64-tarball-with-checksum" "$RELEASE_DRY_RUN"
 grep -q "release-dry-run-windows-artifact=windows-x64-zip-with-checksum" "$RELEASE_DRY_RUN"
 grep -q "GitHub Actions \`build\` workflow" "$RELEASE_CHECKLIST"
+grep -q "GitHub Actions \`release-dry-run\` workflow" "$RELEASE_CHECKLIST"
+grep -q "GitHub Actions \`release\` workflow" "$RELEASE_CHECKLIST"
 grep -q "docs/compatibility/matrix.md" "$RELEASE_CHECKLIST"
 ! grep -q "^   sh scripts/check.sh$" "$RELEASE_CHECKLIST"
 grep -q "package-windows:" "$DRY_RUN_WORKFLOW"
@@ -117,6 +120,7 @@ grep -q "release-workflow-windows-artifact=windows-x64-zip-with-checksum" "$RELE
 grep -q "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "$RELEASE_GATE"
 grep -q "ci-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RELEASE_GATE"
 grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RELEASE_GATE"
+grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RELEASE_GATE"
 
 sh "$ROOT/scripts/security-claim-check.sh" >/dev/null
 

@@ -259,3 +259,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   release-note, compatibility-count, and publication-boundary evidence.
 - [x] Add a CI trigger static check for PR, main push, tag, manual dry-run, and
   tag-release workflow coverage.
+- [x] Add a release checklist static check covering v1 stable release workflow,
+  artifact, manifest, checksum, release-note, and manual gate evidence.

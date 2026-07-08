@@ -94,6 +94,7 @@ release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
+release-checklist-static-check=scripts/release-checklist-check.sh
 repository-governance-status=blocked-until-branch-tag-and-environment-confirmation
 release-rollback-policy=accepted
 ```

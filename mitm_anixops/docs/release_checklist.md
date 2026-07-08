@@ -48,3 +48,48 @@ Use this checklist before publishing a `mitm_anixops` source tag, binary artifac
 13. Do not add proxy forwarding, TLS socketing, certificate installation, HTTP/2 parsing, compression handling, a
    JavaScript runtime, GUI code, or platform network extensions to the C library ABI. Keep those in explicit runner,
    shim, or platform-adapter layers.
+
+## v1.0.0 Stable Release Gate
+
+Use GitHub Actions evidence for stable release acceptance. Do not use local build or test output as release acceptance evidence.
+
+1. Confirm the GitHub Actions `build` workflow passed on the release commit.
+   This workflow is the source of truth for lint, format check, unit tests,
+   parser fixtures, compatibility matrix checks, integration smoke tests, and
+   package smoke checks.
+2. Confirm the GitHub Actions `release-dry-run` workflow passed on `main` for
+   the release commit and uploaded the `anixops-mitm-release-dry-run` workflow
+   artifact with Linux x64 and Windows x64 packages.
+3. Confirm the dry-run artifact contains `.sha256` sidecars, `manifest.json`
+   metadata, and `release-notes.md` content with compatibility counts, known
+   gaps, manual-intervention status, and rollback path.
+4. Confirm the stable release-readiness gate has passed for `v1.0.0`. The gate
+   is represented by:
+
+   ```sh
+   scripts/release-readiness-check.sh v1.0.0
+   ```
+
+   Expected stable evidence before publication:
+
+   ```text
+   release_readiness_status=passed
+   release_readiness_blocking_markers=none
+   release_readiness_planned_row_count=0
+   ```
+
+5. Do not publish `v1.0.0` while any of these markers remain pending in
+   `docs/manual-intervention.md`: `branch-protection`, `protected-tags`, or
+   `release-environment-approval`.
+6. Confirm `docs/compatibility/matrix.md` has no `planned` rows and does not
+   describe partial or unsupported behavior as supported.
+7. Create the public release only through the GitHub Actions `release` workflow
+   from a `v*` tag after same-commit main CI, release metadata, and
+   the `github-release-publication` environment gate pass.
+8. Confirm the `release` workflow uploads the `anixops-mitm-release-package`
+   artifact and publishes only workflow-generated GitHub Release assets:
+   Linux x64 tarball, Windows x64 zip, checksum sidecars, manifest, manifest
+   checksum, and release notes.
+9. If publication fails after a public tag exists, follow
+   `docs/architecture/release-rollback-policy.md`; do not overwrite public
+   tags or mutate published assets in place.

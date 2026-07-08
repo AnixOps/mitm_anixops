@@ -309,6 +309,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   publication-boundary evidence.
 - Added a CI trigger static check for PR, main push, tag, manual dry-run, and
   tag-release workflow coverage.
+- Added a release checklist static check covering v1 stable release workflow,
+  artifact, manifest, checksum, release-note, and manual gate evidence.
 
 ### Changed
 
