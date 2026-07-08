@@ -40,6 +40,7 @@ Parser case:
 
 ```text
 tests/fixtures/RequestRewrite.Common.conf
+tests/fixtures/Loon.RequestRewrite.plugin
 ```
 
 Expected behavior:
@@ -48,6 +49,8 @@ Expected behavior:
 - three rewrite rules are registered;
 - direct redirect, URL-prefixed redirect, and reject behavior are observable
   through `anixops_rewrite_evaluate_url`;
+- Loon `[URL Rewrite]` redirect and reject behavior is observable through
+  `anixops_rewrite_evaluate_url`;
 - redirect capture expansion is applied to the output value;
 - response phase does not trigger request rewrite rules.
 
@@ -57,11 +60,13 @@ Parser case:
 
 ```text
 tests/fixtures/RequestRewrite.Common.Malformed.conf
+tests/fixtures/Loon.RequestRewrite.Malformed.plugin
 ```
 
 Expected behavior:
 
 - a strict compatibility profile rejects the malformed rewrite line;
+- an invalid Loon `[URL Rewrite]` URL regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -90,6 +95,10 @@ Required CI evidence:
   `config/request_rewrite_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/request_rewrite_common_strict_fixture_rejects_malformed_rule`;
+- `tests/test_config.c` registers
+  `config/loon_request_rewrite_fixture_maps_redirect_and_reject`;
+- `tests/test_config.c` registers
+  `config/loon_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

@@ -1,0 +1,2 @@
+[URL Rewrite]
+^(https:\/\/request\.loon\.test\/bad https://request.loon.test/new 302

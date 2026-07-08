@@ -1,0 +1,3 @@
+[URL Rewrite]
+^http:\/\/request\.loon\.test\/old\/(.*) https://request.loon.test/new/$1 302
+^https:\/\/request\.loon\.test\/ads reject-200
