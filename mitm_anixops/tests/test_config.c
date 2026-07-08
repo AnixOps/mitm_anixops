@@ -272,6 +272,89 @@ static void loon_hashbang_metadata_unsupported_keys_are_not_claimed(void)
 	free(fixture);
 }
 
+static void loon_inline_arguments_fixture_resolves_script_defaults(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.InlineArguments.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_script_result_t script;
+	anixops_mitm_decision_t mitm;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 1);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Argument");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "arguments");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "inline arguments accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://inline.args.loon.test/v1", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 2000);
+	ANIXOPS_EXPECT_STREQ(script.tag, "loon.inline.arguments");
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example/loon-inline-arguments.js");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=prod&Token=quoted token&Missing=");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_argument_value(engine, "Mode", "override"), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://inline.args.loon.test/v1", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=override&Token=quoted token&Missing=");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "inline.args.loon.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void loon_inline_arguments_malformed_fixture_rejects_missing_separator(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.InlineArguments.Malformed.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 1);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Argument");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "arguments");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "missing ':' separator") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 1);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "missing ':' separator") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void quantumultx_common_config_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/QuantumultX.CommonConfig.snippet");
@@ -2472,6 +2555,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/loon_hashbang_metadata_unsupported_keys_are_not_claimed",
 		loon_hashbang_metadata_unsupported_keys_are_not_claimed);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_inline_arguments_fixture_resolves_script_defaults",
+		loon_inline_arguments_fixture_resolves_script_defaults);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_inline_arguments_malformed_fixture_rejects_missing_separator",
+		loon_inline_arguments_malformed_fixture_rejects_missing_separator);
 	add_test(
 		tests,
 		count,

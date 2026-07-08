@@ -28,6 +28,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define Surge module source contract for module metadata, scripts, MITM,
   and rewrite subsets.
 - [x] Add Loon hashbang metadata parser fixture and positive/negative tests.
+- [x] Add Loon inline-arguments parser fixtures and positive/negative tests.
 - [x] Add Shadowrocket common-config parser fixture and positive/negative tests.
 - [x] Add reject/direct/proxy policy-intent parser fixtures and
   positive/negative tests.

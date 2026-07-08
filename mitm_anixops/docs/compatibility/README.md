@@ -36,6 +36,8 @@ corresponding tests.
   common-fields parser contract.
 - [loon-hashbang-metadata.md](loon-hashbang-metadata.md): Loon `#!`
   metadata tolerance contract.
+- [loon-inline-arguments.md](loon-inline-arguments.md): Loon `#!arguments`
+  inline default parser contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge

@@ -1692,13 +1692,20 @@ static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const c
 		}
 		colon = strchr(field, ':');
 		if (colon == NULL) {
-			continue;
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "inline argument missing ':' separator");
+			free(copy);
+			return ANIXOPS_ERR_PARSE;
 		}
 		*colon = '\0';
 		name = field;
 		value = colon + 1;
 		anixops_trim_inplace(name);
 		anixops_trim_inplace(value);
+		if (name[0] == '\0') {
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "inline argument name is empty");
+			free(copy);
+			return ANIXOPS_ERR_PARSE;
+		}
 		anixops_unquote_inplace(value);
 		rc = anixops_engine_set_argument_default(engine, name, value);
 		if (rc != ANIXOPS_OK) {

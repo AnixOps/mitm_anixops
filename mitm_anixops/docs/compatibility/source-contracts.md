@@ -95,6 +95,39 @@ Unimplemented items:
 - broader Loon metadata corpus;
 - first-class validation of unsupported metadata keys.
 
+### Loon Inline Arguments
+
+Detailed contract: [Loon Inline Arguments Source Contract](loon-inline-arguments.md).
+
+Capability: parse `#!arguments` defaults and resolve them through script
+argument templates without claiming platform UI behavior.
+
+Input form:
+
+- `#!arguments = Name:value,Other:"quoted value"`;
+- comma-separated `name:value` fields;
+- malformed non-empty fields without `:` are rejected.
+
+Parser output:
+
+- accepted diagnostics with section `Argument` and action `arguments`;
+- argument defaults visible through script argument template resolution;
+- no MITM, rewrite, certificate, routing, or platform UI behavior from inline
+  arguments.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.InlineArguments.plugin`;
+- negative fixture `tests/fixtures/Loon.InlineArguments.Malformed.plugin`;
+- `config/loon_inline_arguments_fixture_resolves_script_defaults`;
+- `config/loon_inline_arguments_malformed_fixture_rejects_missing_separator`.
+
+Unimplemented items:
+
+- host-platform UI controls for selecting argument values;
+- broader Loon argument metadata forms;
+- persistence or remote argument sources.
+
 ### Quantumult X Common Subset
 
 Detailed contract:

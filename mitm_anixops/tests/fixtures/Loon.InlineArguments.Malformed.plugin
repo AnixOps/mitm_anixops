@@ -1,0 +1,4 @@
+#!arguments = MissingColon
+
+[MITM]
+hostname = malformed.inline.args.loon.test

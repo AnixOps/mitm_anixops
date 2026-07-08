@@ -17,6 +17,7 @@ unsupported unless a test or E2E fixture is added.
 | AnixOps/Loon plugin | `[Argument]`, `[Script]`, `[MITM]`, `[Rewrite]` | Supported subset | `test_config.c`, `test_script.c`, BiliBili and representative Loon fixtures |
 | Loon plugin metadata | `[Plugin]` | Tolerated metadata section | `plugin_metadata_section_is_tolerated_with_diagnostics` |
 | Hashbang metadata | `#!name`, `#!desc`, `#!arguments-desc`, `#!requirement` | Tolerated with ignored diagnostics | representative corpus fixtures |
+| Loon inline arguments | `#!arguments = Name:value` | Supported subset | `Loon.InlineArguments.plugin`, `Loon.InlineArguments.Malformed.plugin`, `config/loon_inline_arguments_fixture_resolves_script_defaults`, `config/loon_inline_arguments_malformed_fixture_rejects_missing_separator` |
 | Loon rewrite aliases | `[URL Rewrite]`, `[Remote Rewrite]` | Supported subset | `config_accepts_section_aliases_and_crlf` |
 | Loon body rewrite aliases | `[Body Rewrite]`, `[Remote Body Rewrite]` | Supported subset | `config_accepts_body_rewrite_section_aliases` |
 | Loon header rewrite aliases | `[Header Rewrite]`, `[Remote Header Rewrite]` | Supported subset | `config_accepts_header_rewrite_section_aliases` |

@@ -1,0 +1,7 @@
+#!arguments = Mode:prod,Token:"quoted token"
+
+[Script]
+loon.inline.arguments = type=http-request, pattern=^https:\/\/inline\.args\.loon\.test\/v1, requires-body=0, timeout=2, script-path=https://scripts.example/loon-inline-arguments.js, argument=Mode={Mode}&Token={Token}&Missing={Missing}
+
+[MITM]
+hostname = inline.args.loon.test

@@ -56,7 +56,7 @@ Implemented:
   header rewrite paths.
 - AnixOps/Surge-style module script metadata for HTTP request/response hooks, including `enable` dispatch gating and
   rule-level `timeout` / `max-size` scheduling metadata.
-- AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, tolerated `#!` metadata diagnostics, plus
+- AnixOps-style `[Argument]` defaults, Loon/Surge-style `#!arguments`, tolerated `#!` metadata diagnostics, plus
   per-argument overrides for script `$argument` generation.
 - Optional libjq execution for `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` when built
   with `JQ=1`, including a configurable max-input-bytes fail-open guard; the default no-libjq build remains fail-open.

@@ -28,8 +28,8 @@ The parser tolerates these metadata keys:
 - `#!requirement`
 - `#!arguments-desc`
 
-`#!arguments` is not metadata; it is parsed as inline argument defaults and is
-covered by the common Loon/Surge argument behavior.
+`#!arguments` is not metadata; it is parsed as inline argument defaults under
+[Loon Inline Arguments](loon-inline-arguments.md).
 
 ## Parser Output
 
