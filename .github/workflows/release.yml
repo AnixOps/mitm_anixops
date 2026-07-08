@@ -154,6 +154,8 @@ jobs:
       manifest_sha256_file: ${{ steps.build_package.outputs.manifest_sha256_file }}
       release_notes_path: ${{ steps.build_package.outputs.release_notes_path }}
       publish_eligibility_status: ${{ steps.build_package.outputs.publish_eligibility_status }}
+      release_readiness_status: ${{ steps.readiness.outputs.release_readiness_status }}
+      release_readiness_blocking_reason: ${{ steps.readiness.outputs.release_readiness_blocking_reason }}
     defaults:
       run:
         working-directory: mitm_anixops
@@ -181,6 +183,27 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+      - name: Validate stable release readiness
+        id: readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          readiness_output="${RUNNER_TEMP}/release-readiness.env"
+          sh scripts/release-readiness-check.sh "${RELEASE_VERSION}" | tee "${readiness_output}"
+          status="$(awk -F= '$1 == "release_readiness_status" {print $2}' "${readiness_output}")"
+          reason="$(awk -F= '$1 == "release_readiness_blocking_reason" {print $2}' "${readiness_output}")"
+          markers="$(awk -F= '$1 == "release_readiness_blocking_markers" {print $2}' "${readiness_output}")"
+          planned_rows="$(awk -F= '$1 == "release_readiness_planned_row_count" {print $2}' "${readiness_output}")"
+          test -n "${status}"
+          test -n "${reason}"
+
+          {
+            printf 'release_readiness_status=%s\n' "${status}"
+            printf 'release_readiness_blocking_reason=%s\n' "${reason}"
+            printf 'release_readiness_blocking_markers=%s\n' "${markers:-none}"
+            printf 'release_readiness_planned_row_count=%s\n' "${planned_rows:-unknown}"
+          } >> "${GITHUB_OUTPUT}"
       - name: Run release build gate
         run: |
           sh scripts/ensure-mihomo.sh
@@ -192,6 +215,8 @@ jobs:
           set -euo pipefail
 
           version_no_v="${RELEASE_VERSION#v}"
+          release_readiness_status="${{ steps.readiness.outputs.release_readiness_status }}"
+          release_readiness_blocking_reason="${{ steps.readiness.outputs.release_readiness_blocking_reason }}"
           package_name="anixops-mitm-release-${version_no_v}"
           make "ALPHA_NAME=${package_name}" alpha-dist
 
@@ -224,6 +249,8 @@ jobs:
             printf '  "publication": "%s",\n' "${RELEASE_PUBLICATION}"
             printf '  "publication_gate": "%s",\n' "${RELEASE_PUBLICATION_GATE}"
             printf '  "publish_eligibility_status": "%s",\n' "${publish_eligibility_status}"
+            printf '  "release_readiness_status": "%s",\n' "${release_readiness_status}"
+            printf '  "release_readiness_blocking_reason": "%s",\n' "${release_readiness_blocking_reason}"
             printf '  "compatibility_scope": "alpha policy-core release artifact",\n'
             printf '  "artifacts": [\n'
             printf '    {\n'
@@ -249,9 +276,10 @@ jobs:
             printf 'CI run: %s\n\n' "${RELEASE_CI_RUN_URL}"
             printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
             printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
+            printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
             if [[ "${RELEASE_KIND}" == "stable" ]]; then
               printf 'Compatibility scope: v1 policy core, runner, bindings, and docs as documented in the compatibility matrix.\n\n'
-              printf 'Known gaps: planned and partial matrix rows remain limited by their source contracts; no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
+              printf 'Known gaps: partial and unsupported matrix rows remain limited by their source contracts; no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
             else
               printf 'Compatibility scope: prerelease policy core, runner, bindings, and docs.\n\n'
               printf 'Known gaps: no v1.0.0 stable release claim, no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
@@ -284,6 +312,8 @@ jobs:
             printf 'publication_gate=%s\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'publish_eligibility_status=%s\n' "${publish_eligibility_status}"
             printf 'publish_blocking_reason=%s\n' "${publish_blocking_reason}"
+            printf 'release_readiness_status=%s\n' "${release_readiness_status}"
+            printf 'release_readiness_blocking_reason=%s\n' "${release_readiness_blocking_reason}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate release metadata
@@ -302,7 +332,9 @@ jobs:
           grep -q "\"ci_gate\": \"same-commit-main-build-success\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"publication\": \"${RELEASE_PUBLICATION}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"publish_eligibility_status\": \"${{ steps.build_package.outputs.publish_eligibility_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"release_readiness_status\": \"${{ steps.readiness.outputs.release_readiness_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Release readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Rollback path:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -330,6 +362,8 @@ jobs:
             printf '| publication_gate | `%s` |\n' "${{ steps.build_package.outputs.publication_gate }}"
             printf '| publish_eligibility_status | `%s` |\n' "${{ steps.build_package.outputs.publish_eligibility_status }}"
             printf '| publish_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.publish_blocking_reason }}"
+            printf '| release_readiness_status | `%s` |\n' "${{ steps.build_package.outputs.release_readiness_status }}"
+            printf '| release_readiness_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.release_readiness_blocking_reason }}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
       - uses: actions/upload-artifact@v7
@@ -359,6 +393,7 @@ jobs:
       RELEASE_COMMIT: ${{ needs.release-policy.outputs.commit }}
       RELEASE_CI_GATE: ${{ needs.same-commit-ci.outputs.ci_gate }}
       PUBLISH_ELIGIBILITY_STATUS: ${{ needs.package.outputs.publish_eligibility_status }}
+      RELEASE_READINESS_STATUS: ${{ needs.package.outputs.release_readiness_status }}
     steps:
       - uses: actions/download-artifact@v7
         with:
@@ -373,6 +408,10 @@ jobs:
 
           if [[ "${PUBLISH_ELIGIBILITY_STATUS}" != "eligible" ]]; then
             printf 'release assets are not eligible for publication: %s\n' "${PUBLISH_ELIGIBILITY_STATUS}" >&2
+            exit 1
+          fi
+          if [[ "${RELEASE_KIND}" == "stable" && "${RELEASE_READINESS_STATUS}" != "passed" ]]; then
+            printf 'stable release readiness did not pass: %s\n' "${RELEASE_READINESS_STATUS}" >&2
             exit 1
           fi
           if [[ "${RELEASE_CI_GATE}" != "same-commit-main-build-success" ]]; then
@@ -401,6 +440,7 @@ jobs:
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${manifest}"
           grep -q "\"publication\": \"github-release-assets\"" "${manifest}"
           grep -q "\"publish_eligibility_status\": \"eligible\"" "${manifest}"
+          grep -q "\"release_readiness_status\": \"${RELEASE_READINESS_STATUS}\"" "${manifest}"
           grep -q "Rollback path:" "${notes}"
 
       - name: Publish GitHub Release assets

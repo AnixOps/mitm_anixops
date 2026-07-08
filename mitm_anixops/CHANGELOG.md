@@ -161,6 +161,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   adapter-owned.
 - Added compatibility-matrix validation requiring non-support guard rows to use
   `unsupported` status rather than `planned`.
+- Added a release-readiness gate that blocks stable `v1.0.0` publication while
+  required manual-intervention markers remain pending.
 
 ### Changed
 

@@ -69,8 +69,9 @@ A replacement release must include:
 
 The current release workflow builds and validates release artifacts. For `v*`
 tag runs, it publishes those workflow-generated artifacts to GitHub Releases
-only after same-commit `main` CI, checksum, manifest, release-note, existing
-release, and `github-release-publication` environment gates pass.
+only after same-commit `main` CI, stable release readiness, checksum, manifest,
+release-note, existing release, and `github-release-publication` environment
+gates pass.
 
 Manual release workflow validation from `main` remains non-publishing. If a
 workflow artifact is wrong before tag publication, discard it and rerun the

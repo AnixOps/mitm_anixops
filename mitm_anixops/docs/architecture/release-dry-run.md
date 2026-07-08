@@ -43,16 +43,18 @@ The dry-run workflow includes these logical gates:
 1. `release-policy`: validate version format, branch, event, and source docs.
 2. `dry-run`: run an equivalent full CI gate in the same workflow before
    packaging.
-3. `artifact-contract`: output artifact names, target platforms, staging paths,
+3. `release-readiness-dry-run`: run the same stable release-readiness check
+   used by the tag release workflow.
+4. `artifact-contract`: output artifact names, target platforms, staging paths,
    checksum algorithm, manifest path, and release-note path.
-4. `package-*`: build the dry-run artifact in GitHub Actions.
-5. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
-6. `manifest-*`: generate JSON manifest and manifest checksum.
-7. `release-notes-dry-run`: generate notes containing compatibility scope,
+5. `package-*`: build the dry-run artifact in GitHub Actions.
+6. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
+7. `manifest-*`: generate JSON manifest and manifest checksum.
+8. `release-notes-dry-run`: generate notes containing compatibility scope,
    known gaps, manual-intervention status, and rollback path.
-8. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
+9. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
    publication would be eligible.
-9. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
+10. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
    CI, compatibility, and manual-intervention fields.
 
 ## Required Outputs
@@ -76,6 +78,8 @@ manifest_sha256
 manifest_sha256_file
 release_notes_path
 manual_intervention_status
+release_readiness_status
+release_readiness_blocking_reason
 publish_eligibility_status
 publish_blocking_reason
 ```
@@ -93,6 +97,7 @@ The dry-run must fail when:
   compatibility scope;
 - release notes omit known gaps, rollback path, or manual-intervention status;
 - a pending manual-intervention marker is required for the requested target.
+- stable release readiness is blocked for the requested version.
 
 ## Publication Boundary
 

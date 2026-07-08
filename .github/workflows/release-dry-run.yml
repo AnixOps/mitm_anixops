@@ -99,6 +99,23 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+      - name: Validate dry-run release readiness
+        id: readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          readiness_output="${RUNNER_TEMP}/release-readiness.env"
+          sh scripts/release-readiness-check.sh "${RELEASE_VERSION}" | tee "${readiness_output}"
+          status="$(awk -F= '$1 == "release_readiness_status" {print $2}' "${readiness_output}")"
+          reason="$(awk -F= '$1 == "release_readiness_blocking_reason" {print $2}' "${readiness_output}")"
+          test -n "${status}"
+          test -n "${reason}"
+
+          {
+            printf 'release_readiness_status=%s\n' "${status}"
+            printf 'release_readiness_blocking_reason=%s\n' "${reason}"
+          } >> "${GITHUB_OUTPUT}"
       - name: Run same-workflow CI gate
         run: |
           sh scripts/ensure-mihomo.sh
@@ -110,6 +127,8 @@ jobs:
           set -euo pipefail
 
           version_no_v="${RELEASE_VERSION#v}"
+          release_readiness_status="${{ steps.readiness.outputs.release_readiness_status }}"
+          release_readiness_blocking_reason="${{ steps.readiness.outputs.release_readiness_blocking_reason }}"
           package_name="anixops-mitm-release-dry-run-${version_no_v}"
           make "ALPHA_NAME=${package_name}" alpha-dist
 
@@ -130,6 +149,8 @@ jobs:
             printf '  "publication": "%s",\n' "${RELEASE_PUBLICATION}"
             printf '  "compatibility_scope": "alpha policy-core dry-run",\n'
             printf '  "manual_intervention_status": "pending-items-block-publication",\n'
+            printf '  "release_readiness_status": "%s",\n' "${release_readiness_status}"
+            printf '  "release_readiness_blocking_reason": "%s",\n' "${release_readiness_blocking_reason}"
             printf '  "artifacts": [\n'
             printf '    {\n'
             printf '      "name": "%s",\n' "${artifact_name}"
@@ -151,6 +172,7 @@ jobs:
             printf 'Commit: %s\n\n' "${RELEASE_COMMIT}"
             printf 'Publication: blocked.\n\n'
             printf 'CI gate: %s.\n\n' "${RELEASE_CI_GATE}"
+            printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
             printf 'Compatibility scope: alpha policy core, runner, bindings, and docs.\n\n'
             printf 'Known gaps: no v1.0.0 stable release claim, no tag publication, no\n'
             printf 'signing/notarization, no platform certificate lifecycle, no production\n'
@@ -178,6 +200,8 @@ jobs:
             printf 'manifest_sha256_file=%s\n' "${manifest_sha256_file}"
             printf 'release_notes_path=%s\n' "${release_notes_path}"
             printf 'manual_intervention_status=pending-items-block-publication\n'
+            printf 'release_readiness_status=%s\n' "${release_readiness_status}"
+            printf 'release_readiness_blocking_reason=%s\n' "${release_readiness_blocking_reason}"
             printf 'publish_eligibility_status=blocked\n'
             printf 'publish_blocking_reason=dry-run-does-not-publish\n'
           } >> "${GITHUB_OUTPUT}"
@@ -196,7 +220,9 @@ jobs:
           grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"publication\": \"blocked\"" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "\"release_readiness_status\": \"${{ steps.readiness.outputs.release_readiness_status }}\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "Publication: blocked" "${{ steps.metadata.outputs.release_notes_path }}"
+          grep -q "Release readiness:" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Rollback path:" "${{ steps.metadata.outputs.release_notes_path }}"
 
       - name: Write release dry-run summary
@@ -216,6 +242,8 @@ jobs:
             printf '| manifest_name | `%s` |\n' "${{ steps.metadata.outputs.manifest_name }}"
             printf '| manifest_sha256 | `%s` |\n' "${{ steps.metadata.outputs.manifest_sha256 }}"
             printf '| manual_intervention_status | `%s` |\n' "${{ steps.metadata.outputs.manual_intervention_status }}"
+            printf '| release_readiness_status | `%s` |\n' "${{ steps.metadata.outputs.release_readiness_status }}"
+            printf '| release_readiness_blocking_reason | `%s` |\n' "${{ steps.metadata.outputs.release_readiness_blocking_reason }}"
             printf '| publish_eligibility_status | `%s` |\n' "${{ steps.metadata.outputs.publish_eligibility_status }}"
             printf '| publish_blocking_reason | `%s` |\n' "${{ steps.metadata.outputs.publish_blocking_reason }}"
           } >> "${GITHUB_STEP_SUMMARY}"

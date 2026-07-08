@@ -40,6 +40,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-task-metadata.md
             mitm_anixops/docs/compatibility/loon-mitm-options.md
             mitm_anixops/docs/compatibility/loon-rule-reject.md
+            mitm_anixops/docs/compatibility/loon-rule-routing-guard.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
             mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
@@ -158,6 +159,7 @@ jobs:
             mitm_anixops/scripts/manual-intervention-check.sh
             mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/security-claim-check.sh
+            mitm_anixops/scripts/release-readiness-check.sh
             mitm_anixops/scripts/static-format-check.sh
             mitm_anixops/scripts/static-lint-check.sh
             .github/workflows/release-dry-run.yml
@@ -585,6 +587,7 @@ jobs:
           grep -q "ci-workflow-macos-status=policy-core-smoke" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-current-mode=tag-triggered-build-and-publish" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-publication=tag-publish-enabled" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-rollback-policy=accepted" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-rollback-policy-status=accepted" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "release-replacement-policy=immutable-public-tags-and-assets" mitm_anixops/docs/architecture/release-rollback-policy.md
@@ -595,6 +598,8 @@ jobs:
           grep -q "release-dry-run-publication=blocked" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "release-dry-run-ci-gate=equivalent-full-check-in-workflow" mitm_anixops/docs/architecture/release-dry-run.md
           grep -q "anixops-mitm-release-dry-run" .github/workflows/release-dry-run.yml
+          grep -q "release-readiness-check.sh" .github/workflows/release-dry-run.yml
+          grep -q "release_readiness_status" .github/workflows/release-dry-run.yml
           grep -q "publish_eligibility_status=blocked" .github/workflows/release-dry-run.yml
           grep -q "gh release create" .github/workflows/release-dry-run.yml && exit 1 || true
           grep -q "^- \\[x\\] Add release dry-run workflow" mitm_anixops/TODO.md
@@ -614,6 +619,17 @@ jobs:
           grep -q "contents: write" .github/workflows/release.yml
           grep -q "gh release view" .github/workflows/release.yml
           grep -q "gh release create" .github/workflows/release.yml
+          grep -q "release-readiness-check.sh" .github/workflows/release.yml
+          grep -q "stable release readiness did not pass" .github/workflows/release.yml
+          sh mitm_anixops/scripts/release-readiness-check.sh v0.45.10-alpha.1 | grep -q "release_readiness_status=not-required-prerelease"
+          if sh mitm_anixops/scripts/release-readiness-check.sh v1.0.0 > /tmp/v1-release-readiness.env; then
+            cat /tmp/v1-release-readiness.env
+            printf '%s\n' "v1.0.0 readiness must be blocked while required manual markers are pending" >&2
+            exit 1
+          fi
+          grep -q "release_readiness_status=blocked" /tmp/v1-release-readiness.env
+          grep -q "release_readiness_blocking_reason=manual-intervention-required-before-v1" /tmp/v1-release-readiness.env
+          grep -q "branch-protection" /tmp/v1-release-readiness.env
           grep -q "^- \\[x\\] Add tag-triggered release workflow that builds artifacts in GitHub" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Generate checksums, manifest, release notes, and release summary in" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add same-commit CI gate before release publication" mitm_anixops/TODO.md

@@ -154,3 +154,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add same-commit CI gate before release publication.
 - [x] Add release rollback and replacement policy.
 - [x] Add tag-only GitHub Release asset publication after release gates pass.
+- [x] Add stable release-readiness gate blocking v1.0.0 while required manual
+  markers remain pending.
