@@ -1110,10 +1110,12 @@ Current CI evidence:
 - positive fixture `tests/fixtures/Loon.RequestRewrite.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.RequestRewrite.snippet`;
 - positive fixture `tests/fixtures/Surge.RequestRewrite.sgmodule`;
+- positive fixture `tests/fixtures/Shadowrocket.RequestRewrite.conf`;
 - negative fixture `tests/fixtures/RequestRewrite.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.RequestRewrite.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.RequestRewrite.Malformed.snippet`;
 - negative fixture `tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Shadowrocket.RequestRewrite.Malformed.conf`;
 - `config/request_rewrite_common_fixture_is_supported`;
 - `config/request_rewrite_common_strict_fixture_rejects_malformed_rule`;
 - `config/loon_request_rewrite_fixture_maps_redirect_and_reject`;
@@ -1122,6 +1124,8 @@ Current CI evidence:
 - `config/quantumultx_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - `config/surge_request_rewrite_fixture_maps_redirect_and_reject`;
 - `config/surge_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
+- `config/shadowrocket_request_rewrite_fixture_maps_redirect_and_reject`;
+- `config/shadowrocket_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - C rewrite tests under `tests/test_rewrite.c`;
 - runner replay entries for representative rewrite behavior.
 

@@ -42,12 +42,15 @@ Parser case:
 
 ```text
 tests/fixtures/Shadowrocket.CommonConfig.conf
+tests/fixtures/Shadowrocket.RequestRewrite.conf
 ```
 
 Expected behavior:
 
 - config load succeeds;
 - two rewrite rules are registered;
+- the dedicated request rewrite fixture registers two URL redirect/reject
+  rules;
 - two script rules are registered;
 - three MITM host patterns are registered;
 - `skip-server-cert-verify` and `h2` options are exposed to adapters;
@@ -60,12 +63,15 @@ Parser cases:
 
 ```text
 tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
+tests/fixtures/Shadowrocket.RequestRewrite.Malformed.conf
 tests/fixtures/Shadowrocket.MitmCertificateUnsupported.conf
 ```
 
 Expected behavior:
 
 - malformed URL rewrite config load fails with `ANIXOPS_ERR_REGEX`;
+- malformed dedicated request rewrite config load fails with
+  `ANIXOPS_ERR_REGEX`;
 - malformed URL rewrite config records a rejected rule diagnostic with section
   `Rewrite` and action `rewrite`;
 - malformed URL rewrite config last error reports regex failure at the
@@ -119,6 +125,10 @@ Required CI evidence:
   `config/shadowrocket_common_config_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_request_rewrite_fixture_maps_redirect_and_reject`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - `tests/test_config.c` registers
   `config/shadowrocket_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
