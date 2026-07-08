@@ -48,6 +48,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   plane boundary.
 - Added a shared binding parity fixture with C runner, Go wrapper, and Rust
   wrapper CI coverage.
+- Added Stash and Shadowrocket migration notes that keep both ecosystems
+  planned until dedicated parser fixtures and tests exist.
 
 ### Changed
 

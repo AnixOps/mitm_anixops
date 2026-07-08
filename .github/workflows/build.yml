@@ -32,6 +32,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
+            mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
             mitm_anixops/docs/compatibility/response-rewrite-common.md
             mitm_anixops/docs/compatibility/header-mutation-common.md
@@ -161,6 +162,13 @@ jobs:
           grep -q "^- \\[x\\] Update NetworkCore integration notes for the latest" mitm_anixops/TODO.md
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "stash-compatibility-mode=migration-notes-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-compatibility-mode=migration-notes-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "stash-shadowrocket-parser-fixtures=absent" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "stash-shadowrocket-support-claim=forbidden-until-fixtures-and-tests" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "Migration notes only; no Stash parser fixture" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Migration notes only; no Shadowrocket parser fixture" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "^- \\[x\\] Define Stash and Shadowrocket compatibility as migration notes" mitm_anixops/TODO.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "Current gap: no dedicated release workflow exists" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-dry-run-current-mode=contract-only" mitm_anixops/docs/architecture/release-dry-run.md

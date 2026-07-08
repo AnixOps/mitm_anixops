@@ -123,6 +123,30 @@ Unimplemented items:
 - broader body rewrite and JQ corpus;
 - requirement metadata behavior.
 
+### Stash And Shadowrocket Migration Notes
+
+Detailed notes:
+[Stash And Shadowrocket Migration Notes](stash-shadowrocket-migration.md).
+
+Capability: record migration guidance without claiming parser support.
+
+Input form:
+
+- none accepted as first-class Stash or Shadowrocket fixtures yet;
+- future fixtures must be added before either ecosystem moves beyond `planned`.
+
+Current CI evidence:
+
+- compatibility matrix rows remain `planned`;
+- governance checks require migration-only markers.
+
+Unimplemented items:
+
+- dedicated Stash source contract, parser fixtures, positive tests, and negative
+  tests;
+- dedicated Shadowrocket source contract, parser fixtures, positive tests, and
+  negative tests.
+
 ### MITM Hostname Policy
 
 Capability: evaluate whether a host is eligible for MITM and whether QUIC should
