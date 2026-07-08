@@ -27,6 +27,15 @@ jobs:
       publication_gate: ${{ steps.policy.outputs.publication_gate }}
     steps:
       - uses: actions/checkout@v7
+      - name: Validate rollback policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          policy="mitm_anixops/docs/architecture/release-rollback-policy.md"
+          test -s "${policy}"
+          grep -q "release-rollback-policy-status=accepted" "${policy}"
+          grep -q "release-replacement-policy=immutable-public-tags-and-assets" "${policy}"
+          grep -q "release-workflow-publication-status=blocked-until-explicit-publish-step" "${policy}"
       - name: Validate release policy
         id: policy
         shell: bash
@@ -82,7 +91,7 @@ jobs:
             printf 'commit=%s\n' "${GITHUB_SHA}"
             printf 'source_mode=%s\n' "${source_mode}"
             printf 'publication=blocked\n'
-            printf 'publication_gate=pending-rollback-and-publication-policy\n'
+            printf 'publication_gate=pending-explicit-publish-step\n'
           } >> "${GITHUB_OUTPUT}"
 
   same-commit-ci:
@@ -225,9 +234,9 @@ jobs:
             printf 'lifecycle, no production JavaScript runtime, and no platform app-store\n'
             printf 'release assets.\n\n'
             printf 'Rollback path: delete the untrusted workflow artifact and create a new\n'
-            printf 'tag only after the release gate passes on the replacement commit. Do not\n'
-            printf 'move an already-published public release tag without recording the\n'
-            printf 'replacement policy.\n'
+            printf 'tag only after the release gate passes on the replacement commit. Public\n'
+            printf 'tags and release assets are immutable by default; use a successor tag for\n'
+            printf 'corrected public artifacts.\n'
           } > "${release_notes_path}"
 
           {
@@ -251,7 +260,7 @@ jobs:
             printf 'publication=%s\n' "${RELEASE_PUBLICATION}"
             printf 'publication_gate=%s\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'publish_eligibility_status=blocked\n'
-            printf 'publish_blocking_reason=rollback-and-publication-policy-not-yet-added\n'
+            printf 'publish_blocking_reason=explicit-publish-step-not-yet-added\n'
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate release metadata

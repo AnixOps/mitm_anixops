@@ -59,6 +59,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   release workflow artifacts.
 - Added a same-commit `build.yml` success gate before the release workflow can
   package release artifacts.
+- Added a release rollback and replacement policy with immutable public tag and
+  asset rules, enforced by the release workflow policy stage.
 
 ### Changed
 

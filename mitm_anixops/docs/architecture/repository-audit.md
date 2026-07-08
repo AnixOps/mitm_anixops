@@ -27,6 +27,8 @@ Important paths:
 - `mitm_anixops/cmake/` and `mitm_anixops/pkgconfig/`: C consumer package
   metadata.
 - `mitm_anixops/docs/`: compatibility, release, runtime, and roadmap docs.
+- `mitm_anixops/docs/architecture/release-rollback-policy.md`: immutable tag,
+  asset, rollback, and replacement rules for release automation.
 
 ## Language And Toolchain Stack
 
@@ -78,9 +80,10 @@ Current jobs:
   release publication.
 - `release`: validates `v*` tags or manual release workflow checks from `main`,
   requires a successful same-commit `build.yml` run on `main`, runs the release
-  build gate in GitHub Actions, builds the release package, and uploads it with
-  checksum, manifest, release-note, and summary evidence as workflow artifacts
-  while public release publication remains blocked.
+  build gate in GitHub Actions, validates rollback/replacement policy, builds
+  the release package, and uploads it with checksum, manifest, release-note, and
+  summary evidence as workflow artifacts while public release publication
+  remains blocked.
 
 Known CI/CD gaps for v1.0.0:
 
@@ -89,7 +92,6 @@ Known CI/CD gaps for v1.0.0:
 - no explicit compatibility matrix test job;
 - release checksum, manifest, and note evidence is generated as workflow
   artifacts, not public GitHub Release assets yet;
-- no rollback or replacement policy gate for public release publication;
 - no GitHub Release upload workflow for future releases;
 - no macOS runner coverage yet.
 
