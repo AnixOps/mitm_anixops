@@ -1,0 +1,2 @@
+[Script]
+Surge.Task.BadCron = type=cron, cronexp="0 * *", script-path=https://scripts.example/surge-task-bad.js, tag=surge.task.bad

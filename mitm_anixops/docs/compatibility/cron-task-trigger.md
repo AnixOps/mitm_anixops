@@ -61,6 +61,7 @@ Parser case:
 tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
 tests/fixtures/Loon.TaskMetadata.plugin
 tests/fixtures/QuantumultX.TaskMetadata.snippet
+tests/fixtures/Surge.TaskMetadata.sgmodule
 ```
 
 Expected behavior:
@@ -75,6 +76,8 @@ Expected behavior:
   script URL dispatch separation;
 - the Quantumult X parser fixture exposes `[task_local]` cron descriptors while
   preserving HTTP script URL dispatch separation;
+- the Surge parser fixture exposes `[Script]` `type=cron` and `type=interval`
+  task descriptors while preserving HTTP script URL dispatch separation;
 - response-phase URL script evaluation does not return a task descriptor.
 
 ## Unsupported Case
@@ -100,6 +103,7 @@ Parser case:
 tests/fixtures/CronTaskTrigger.Malformed.conf
 tests/fixtures/Loon.TaskMetadata.Malformed.plugin
 tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
+tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule
 ```
 
 Expected behavior:
@@ -169,6 +173,10 @@ Current evidence:
   `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`;
+- `tests/test_config.c` registers
+  `config/surge_task_metadata_fixture_emits_task_descriptors`;
+- `tests/test_config.c` registers
+  `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
   guards against treating bare cron rules as supported HTTP scripts when using
@@ -178,8 +186,8 @@ Missing evidence:
 
 - scheduler/runtime replay or E2E test;
 - task JavaScript runtime bindings;
-- adapter compatibility notes beyond the current Loon and Quantumult X parser
-  boundaries;
+- adapter compatibility notes beyond the current Loon, Quantumult X, and Surge
+  parser boundaries;
 - permission, concurrency, and cancellation policy.
 
 ## Compatibility Matrix Row

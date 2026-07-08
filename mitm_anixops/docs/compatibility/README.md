@@ -56,6 +56,8 @@ corresponding tests.
   module common-config parser contract.
 - [surge-requirement-metadata.md](surge-requirement-metadata.md): Surge
   `#!requirement` metadata tolerance contract.
+- [surge-task-metadata.md](surge-task-metadata.md): Surge `[Script]`
+  cron and interval task descriptor parser contract.
 - [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
   Shadowrocket common-config parser contract.
 - [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): Stash

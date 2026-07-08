@@ -1,0 +1,7 @@
+#!name = Surge Task Metadata Fixture
+#!arguments = Mode:surge
+[Script]
+Surge.Task.Cron = type=cron, cronexp="*/20 * * * *", script-path=https://scripts.example/surge-task-cron.js, argument=Mode={Mode}, timeout=6, max-size=2048
+Surge.Task.Six = type=cron, cronexp="0 15 9 * * *", script-path=https://scripts.example/surge-task-six.js, tag=surge.task.six, enabled=false
+Surge.Task.Interval = type=interval, interval=1800, script-path=https://scripts.example/surge-task-interval.js, tag=surge.task.interval, timeout-ms=750
+Surge.Task.Http = type=http-request, pattern=^https:\/\/task\.surge\.example\/http, script-path=https://scripts.example/surge-task-http.js, tag=surge.task.http

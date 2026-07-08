@@ -18,6 +18,7 @@ Loon task metadata
 Quantumult X rewrite/task/mitm common config
 Quantumult X task metadata
 Surge module common config
+Surge task metadata
 Surge requirement metadata
 hostname / MITM domain matching
 request rewrite

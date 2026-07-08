@@ -1091,6 +1091,153 @@ static void surge_common_config_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void surge_task_metadata_fixture_emits_task_descriptors(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.TaskMetadata.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	anixops_task_descriptor_t task;
+	size_t diagnostic_count;
+	size_t accepted_arguments = 0;
+	size_t accepted_scripts = 0;
+	size_t accepted_tasks = 0;
+	size_t ignored_metadata = 0;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+
+	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic_count, 6);
+	for (i = 0; i < diagnostic_count; i++) {
+		anixops_rule_diagnostic_t diagnostic;
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
+			if (strcmp(diagnostic.action, "arguments") == 0) {
+				accepted_arguments++;
+				ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+				ANIXOPS_EXPECT_STREQ(diagnostic.section, "Argument");
+			}
+			else if (strcmp(diagnostic.action, "task") == 0) {
+				accepted_tasks++;
+				ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+				ANIXOPS_EXPECT_TRUE(
+					diagnostic.line == 4 || diagnostic.line == 5 || diagnostic.line == 6);
+				ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "task descriptor accepted") != NULL);
+			}
+			else if (strcmp(diagnostic.action, "script") == 0) {
+				accepted_scripts++;
+				ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 7);
+				ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+				ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule accepted") != NULL);
+			}
+		}
+		else if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED) {
+			ignored_metadata++;
+			ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 1);
+			ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+			ANIXOPS_EXPECT_STREQ(diagnostic.action, "name");
+		}
+	}
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_arguments, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_scripts, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_tasks, 3);
+	ANIXOPS_EXPECT_EQ_SIZE(ignored_metadata, 1);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://task.surge.example/http", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example/surge-task-http.js");
+	ANIXOPS_EXPECT_STREQ(script.tag, "surge.task.http");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(
+			engine,
+			"https://scripts.example/surge-task-cron.js",
+			ANIXOPS_PHASE_REQUEST,
+			&script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 0, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 6000);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 2048);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "*/20 * * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/surge-task-cron.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "Surge.Task.Cron");
+	ANIXOPS_EXPECT_STREQ(task.argument, "Mode=surge");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 1, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(task.max_size, 0);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 0);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "0 15 9 * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/surge-task-six.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "surge.task.six");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 2, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_INTERVAL);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 1800);
+	ANIXOPS_EXPECT_EQ_SIZE(task.timeout_ms, 750);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "1800");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.example/surge-task-interval.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "surge.task.interval");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void surge_task_metadata_malformed_fixture_rejects_invalid_cron(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_SURGE_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "task");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "cron expression") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "cron expression") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void surge_requirement_metadata_fixture_records_tolerated_keys(void)
 {
 	static const char *expected_actions[] = {
@@ -3355,6 +3502,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/surge_common_config_strict_fixture_rejects_malformed_rule",
 		surge_common_config_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_task_metadata_fixture_emits_task_descriptors",
+		surge_task_metadata_fixture_emits_task_descriptors);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_task_metadata_malformed_fixture_rejects_invalid_cron",
+		surge_task_metadata_malformed_fixture_rejects_invalid_cron);
 	add_test(
 		tests,
 		count,

@@ -398,6 +398,8 @@ Input form:
 - `%APPEND%` and `%INSERT%`;
 - `[Script]` attr-list fields including type, pattern, script-path,
   requires-body, timeout, max-size, tag, and argument;
+- `[Script]` cron and interval task metadata covered by
+  [Surge Task Metadata](surge-task-metadata.md);
 - selected body/JQ rewrite forms.
 
 Current CI evidence:
@@ -415,6 +417,48 @@ Unimplemented items:
 - full Surge module grammar;
 - broader body rewrite and JQ corpus;
 - requirement runtime gating behavior.
+
+### Surge Task Metadata
+
+Detailed contract:
+[Surge Task Metadata Source Contract](surge-task-metadata.md).
+
+Capability: parse Surge `[Script]` cron and interval task descriptors without
+claiming scheduler or runtime execution.
+
+Input form:
+
+- `[Script]` attr-list rules with `type=cron`, `type=scheduled`,
+  `type=scheduled-script`, `type=interval`, or `type=task`;
+- `cronexp`, `cron`, `schedule`, `interval`, `script-path`, `script_path`,
+  `tag`, `argument`, `timeout`, `timeout-ms`, `max-size`, `max_size`,
+  `enable`, and `enabled` metadata;
+- inline `#!arguments` defaults used by task `argument` templates.
+
+Parser output:
+
+- accepted diagnostics with section `Script` and action `task`;
+- task kind, schedule or interval seconds, script path, tag, resolved argument,
+  timeout, max-size, enabled state, and parser origin visible through
+  `anixops_engine_copy_task_descriptor`;
+- task descriptors remain separate from HTTP request/response script dispatch;
+- no scheduler, background execution, JavaScript task runtime, certificate,
+  routing, DNS, proxy, or platform UI behavior from task metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Surge.TaskMetadata.sgmodule`;
+- negative fixture `tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule`;
+- `config/surge_task_metadata_fixture_emits_task_descriptors`;
+- `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`.
+
+Unimplemented items:
+
+- scheduler/runtime execution;
+- event, DNS, rule, and policy-group script task forms;
+- task JavaScript bindings;
+- concurrency and permission policy;
+- broader Surge task corpus.
 
 ### Surge Requirement Metadata
 
@@ -897,6 +941,8 @@ Input form:
 - positive parser fixture `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
 - unsupported parser fixture `tests/fixtures/CronTaskTrigger.Unsupported.conf`;
 - malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`.
+- ecosystem-specific parser fixtures including
+  `tests/fixtures/Surge.TaskMetadata.sgmodule`.
 
 Current CI evidence:
 
@@ -910,6 +956,9 @@ Current CI evidence:
 - `script/malformed_and_non_http_script_rules_are_ignored_or_rejected` proves a
   bare cron rule does not register as an HTTP script rule when using the HTTP
   script parser directly;
+- `config/surge_task_metadata_fixture_emits_task_descriptors` and
+  `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron` prove the
+  documented Surge `type=cron` shape is covered;
 - public ABI functions `anixops_engine_task_descriptor_count` and
   `anixops_engine_copy_task_descriptor`;
 - GitHub Actions governance requires the contract and matrix row.

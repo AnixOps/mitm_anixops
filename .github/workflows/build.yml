@@ -43,6 +43,7 @@ jobs:
             mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
             mitm_anixops/docs/compatibility/surge-requirement-metadata.md
+            mitm_anixops/docs/compatibility/surge-task-metadata.md
             mitm_anixops/docs/compatibility/shadowrocket-common-config.md
             mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
@@ -81,6 +82,8 @@ jobs:
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             mitm_anixops/tests/fixtures/Surge.RequirementMetadata.sgmodule
             mitm_anixops/tests/fixtures/Surge.RequirementMetadata.Unsupported.sgmodule
+            mitm_anixops/tests/fixtures/Surge.TaskMetadata.sgmodule
+            mitm_anixops/tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule
             mitm_anixops/tests/fixtures/Stash.MigrationGuard.yaml
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
@@ -222,6 +225,13 @@ jobs:
           grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/surge_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/surge_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "Surge task metadata" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge Task Metadata Source Contract" mitm_anixops/docs/compatibility/surge-task-metadata.md
+          grep -q "Surge.TaskMetadata.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge.TaskMetadata.Malformed.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/surge_task_metadata_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
+          grep -q "config/surge_task_metadata_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Surge task metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Surge requirement metadata" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge Requirement Metadata Source Contract" mitm_anixops/docs/compatibility/surge-requirement-metadata.md
           grep -q "Surge.RequirementMetadata.sgmodule" mitm_anixops/docs/compatibility/matrix.md

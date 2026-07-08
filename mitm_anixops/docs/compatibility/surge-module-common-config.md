@@ -23,6 +23,8 @@ The current common-config subset accepts:
 - `[Script]` attr-list rules with `type`, `pattern`, `requires-body`,
   `timeout`, `timeout-ms`, `max-size`, `max_size`, `script-path`, and
   `argument`;
+- `[Script]` cron and interval task metadata covered by
+  [Surge Task Metadata](surge-task-metadata.md);
 - `[MITM] hostname = ...` with exact, deny, `%APPEND%`, and `%INSERT%` host
   entries.
 
@@ -84,7 +86,7 @@ It does not implement:
 - JavaScript execution;
 - remote script download or cache refresh;
 - Surge requirement runtime gating;
-- cron/task execution.
+- scheduler/runtime execution for task descriptors.
 
 Those remain runner, runtime, scheduler, or adapter responsibilities.
 
@@ -108,3 +110,5 @@ Surge module common config
 
 The row remains `partial` until broader module grammar, requirement runtime
 gating behavior, body/JQ corpus coverage, and scheduler/runtime behavior exist.
+Dedicated task descriptor parser evidence lives in the `Surge task metadata`
+row.
