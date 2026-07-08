@@ -64,6 +64,7 @@ grep -q "supported" "$MATRIX"
 grep -q "partial" "$MATRIX"
 grep -q "unsupported" "$MATRIX"
 sh "$ROOT/scripts/compatibility-matrix-check.sh" >/dev/null
+sh "$ROOT/scripts/compatibility-evidence-check.sh" >/dev/null
 compatibility_status="$(sh "$ROOT/scripts/compatibility-status-summary.sh")"
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_total_count="
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_planned_count=0"

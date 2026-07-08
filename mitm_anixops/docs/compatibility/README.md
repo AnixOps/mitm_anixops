@@ -28,6 +28,9 @@ Every compatibility capability must have:
 New rows must not be marked `supported` until GitHub Actions proves the
 corresponding tests.
 
+`scripts/compatibility-evidence-check.sh` enforces that compatibility docs
+reference existing fixture files and registered parser-test IDs.
+
 ## Files
 
 - [source-contracts.md](source-contracts.md): source contract rules and current
