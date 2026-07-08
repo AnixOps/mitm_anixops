@@ -178,6 +178,34 @@ Unimplemented items:
 - full ecosystem rewrite grammar;
 - adapter HTTP request serialization.
 
+### Header Mutation Common Subset
+
+Detailed contract: [Header Mutation Common Source Contract](header-mutation-common.md).
+
+Capability: parse and evaluate request/response header mutation rules.
+
+Input form:
+
+- `[Header Rewrite]`, `[Remote Header Rewrite]`, `[Rewrite]`, and
+  `[URL Rewrite]`;
+- request header add, replace, delete, and regex replace rules;
+- response header add, replace, delete, and regex replace rules.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/HeaderMutation.Common.conf`;
+- negative fixture `tests/fixtures/HeaderMutation.Common.Malformed.conf`;
+- `config/header_mutation_common_fixture_is_supported`;
+- `config/header_mutation_common_fixture_rejects_invalid_regex`;
+- named-header and header-list tests under `tests/test_rewrite.c`.
+
+Unimplemented items:
+
+- unbounded platform header map behavior;
+- hop-by-hop header filtering;
+- broader cookie/header corpus;
+- adapter HTTP request/response serialization.
+
 ### Script Trigger Metadata
 
 Capability: select request/response script rules and expose script metadata.

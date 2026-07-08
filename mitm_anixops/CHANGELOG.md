@@ -23,6 +23,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for the third P1 parser milestone.
 - Added a request rewrite source contract plus positive and negative parser
   fixtures for the first P2 rule-matching milestone.
+- Added a header mutation source contract plus positive and negative parser
+  fixtures for the second P2 rule-matching milestone.
 
 ### Changed
 

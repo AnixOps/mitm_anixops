@@ -469,6 +469,130 @@ static void request_rewrite_common_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void header_mutation_common_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/HeaderMutation.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_header_rewrite_result_t header;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 5);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://api.header.mutation.test/add/request",
+			ANIXOPS_PHASE_REQUEST,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_HEADER_ADD);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Trace");
+	ANIXOPS_EXPECT_STREQ(header.value, "trace-request");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://api.header.mutation.test/replace/prod",
+			ANIXOPS_PHASE_REQUEST,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_HEADER_REPLACE);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(header.value, "mode-prod");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://api.header.mutation.test/drop",
+			ANIXOPS_PHASE_REQUEST,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_HEADER_DEL);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Drop");
+	ANIXOPS_EXPECT_STREQ(header.value, "");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://api.header.mutation.test/response",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			"old=Fast",
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "X-Mode");
+	ANIXOPS_EXPECT_STREQ(header.value, "new=Fast");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://api.header.mutation.test/cookie",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_RESPONSE_HEADER_DEL);
+	ANIXOPS_EXPECT_STREQ(header.header_name, "Set-Cookie");
+	ANIXOPS_EXPECT_STREQ(header.value, "");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_header(
+			engine,
+			"https://api.header.mutation.test/add/request",
+			ANIXOPS_PHASE_RESPONSE,
+			0,
+			NULL,
+			&header),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(header.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void header_mutation_common_fixture_rejects_invalid_regex(void)
+{
+	char *fixture = read_fixture("tests/fixtures/HeaderMutation.Common.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "rewrite header regex") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "rewrite header regex") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -1048,6 +1172,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/request_rewrite_common_strict_fixture_rejects_malformed_rule",
 		request_rewrite_common_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/header_mutation_common_fixture_is_supported",
+		header_mutation_common_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/header_mutation_common_fixture_rejects_invalid_regex",
+		header_mutation_common_fixture_rejects_invalid_regex);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

@@ -40,4 +40,6 @@ corresponding tests.
   module common-config parser contract.
 - [request-rewrite-common.md](request-rewrite-common.md): request URL rewrite
   parser and policy-core contract.
+- [header-mutation-common.md](header-mutation-common.md): bounded request and
+  response header mutation parser and policy-core contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

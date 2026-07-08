@@ -30,6 +30,7 @@ jobs:
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
+            mitm_anixops/docs/compatibility/header-mutation-common.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
@@ -40,6 +41,8 @@ jobs:
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
+            mitm_anixops/tests/fixtures/HeaderMutation.Common.conf
+            mitm_anixops/tests/fixtures/HeaderMutation.Common.Malformed.conf
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -74,6 +77,11 @@ jobs:
           grep -q "RequestRewrite.Common.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/request_rewrite_common_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/request_rewrite_common_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "header mutation" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Header Mutation Common Source Contract" mitm_anixops/docs/compatibility/header-mutation-common.md
+          grep -q "HeaderMutation.Common.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/header_mutation_common_fixture_is_supported" mitm_anixops/tests/test_config.c
+          grep -q "config/header_mutation_common_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
