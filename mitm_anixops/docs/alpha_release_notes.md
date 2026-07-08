@@ -40,9 +40,9 @@ Included:
   legacy single-rule `anixops_rewrite_apply_body` API.
 - P4 script foundation: script dispatch metadata, the Node-based contract runner, file-backed `$persistentStore`,
   request/response script E2E, rule-level `enable` dispatch gating, `timeout`/`max-size` scheduling metadata, script
-  timeout/max-size fail-open in the runner/proxy shim, runner `replay --script-runner` writeback, and offline script
-  bundle replay with sha256 match/mismatch/cache-miss diagnostics are supported. Embedded QuickJS/JavaScriptCore is
-  still future work.
+  timeout/max-size/exception fail-open in the runner/proxy shim, runner `replay --script-runner` writeback, and offline
+  script bundle replay with sha256 match/mismatch/cache-miss diagnostics are supported. Embedded QuickJS/JavaScriptCore
+  is still future work.
 - P5 runner foundation: `scan`, `scan --corpus`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics,
   corpus count, sha256, and diagnostic-status checks, and comparable URL, rewrite, header, body, and script traces;
   `anixops_rewrite_build_plan`
@@ -87,5 +87,5 @@ The check gate covers unit tests, the C ABI plan builder, optional PCRE2/libjq b
 pkg-config compile/run smoke, CMake package configure/build/run smoke, Go cgo binding tests, Rust wrapper tests, ABI
 exports, strategy demo, runner corpus scan with sha256 and diagnostic-status checks, runner replay with and without
 script execution, proxy-shim smoke tests, mihomo proxy E2E, BiliUniverse fixture, generic script contract E2E with
-persistentStore, header/body rewrite ordering, gzip/deflate response decode coverage, and script timeout fail-open,
-plus the Bilibili homepage demo E2E. Go and Rust wrapper tests also cover the aggregated plan helper.
+persistentStore, header/body rewrite ordering, gzip/deflate response decode coverage, and script timeout/exception
+fail-open, plus the Bilibili homepage demo E2E. Go and Rust wrapper tests also cover the aggregated plan helper.

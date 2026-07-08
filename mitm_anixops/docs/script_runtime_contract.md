@@ -150,7 +150,8 @@ Recommended production behavior:
 ## Current E2E Proof
 
 The Alpha proxy shim follows this policy for script runner failures. `make script-contract-e2e` includes a response
-script timeout case and asserts that the client receives the static-rewritten response instead of a proxy 502.
+script timeout case and a throwing response script case, and asserts that the client receives the static-rewritten
+response instead of a proxy 502.
 
 `make script-contract-e2e` starts `mihomo`, the Go MITM shim, a local HTTPS origin, and `curl`.
 

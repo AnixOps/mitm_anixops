@@ -92,7 +92,7 @@ features it understands.
 | JavaScript runtime | Adapter contract supported | C library returns dispatch metadata; Alpha runner can execute mapped scripts or offline script bundles through the Node contract runner during `replay --script-runner`; embedded QuickJS/JSC remains future work |
 | `$persistentStore` | Alpha runner backend | Node contract runner supports `--store <file>` with read/write/remove; runner replay and proxy script-contract E2E verify state shared across invocations |
 | Script asset bundle/digest | Alpha runner backend | `replay --script-bundle` resolves local offline assets, verifies sha256 pins, and reports digest mismatch/cache miss without network IO |
-| Script timeout/error policy | Alpha runner/proxy shim subset | Rule-level `timeout` metadata overrides the global runner timeout; max-size overflow fails open; `make script-contract-e2e` verifies a timed-out response script fails open after static rewrites instead of returning 502 |
+| Script timeout/error policy | Alpha runner/proxy shim subset | Rule-level `timeout` metadata overrides the global runner timeout; max-size overflow fails open; `make runner-check` covers a throwing replay script, and `make script-contract-e2e` verifies timed-out and throwing response scripts fail open after static rewrites instead of returning 502 |
 | Response compression for scripts | Alpha proxy shim subset | gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
 
 ## Diagnostics And ABI
@@ -122,10 +122,11 @@ features it understands.
 - `make demo-check`: pure C strategy-chain demo, no sockets/TLS/JS.
 - `make runner-check`: no-UI runner scan/trace/replay smoke test over the representative Loon fixture, corpus manifest
   scan over Loon/Surge/Quantumult X/BiliBili fixtures with sha256 and diagnostic-status checks, optional Node
-  script-runtime replay, `$done.body` writeback, and file-backed `$persistentStore`.
+  script-runtime replay, `$done.body` writeback, throwing-script fail-open, and file-backed `$persistentStore`.
 - `make proxy-shim-check`: Alpha HTTP/1.1 CONNECT/TLS proxy shim build smoke test.
 - `make script-contract-e2e`: request/response header/body-chain rewrite and script mutation through the proxy path,
-  including shared `$persistentStore`, script timeout fail-open, gzip/deflate response decode, and identity writeback.
+  including shared `$persistentStore`, script timeout/exception fail-open, gzip/deflate response decode, and identity
+  writeback.
 - `make pkg-config-check`: staged Alpha-style install layout compiled and executed through `pkg-config`.
 - `make cmake-package-check`: staged Alpha-style install layout checked as a CMake config package, including
   configure/build/run smoke when `cmake` is available.
@@ -137,6 +138,6 @@ features it understands.
   parsing.
 - `make e2e`: local shim plus mihomo, proving library decisions through a proxy path.
 - `make bili-e2e`: BiliUniverse Enhanced plugin/script dispatch and script execution fixture.
-- `make script-contract-e2e`: request/response script metadata, persistentStore, timeout fail-open, and adapter writeback
-  contract.
+- `make script-contract-e2e`: request/response script metadata, persistentStore, timeout/exception fail-open, and
+  adapter writeback contract.
 - `make bilibili-homepage-demo-e2e`: built-in Windows Bilibili homepage demo behavior through the shim path.

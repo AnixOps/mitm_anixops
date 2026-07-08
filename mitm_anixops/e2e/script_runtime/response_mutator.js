@@ -25,6 +25,8 @@ if ($script.phase === "request") {
     },
     body: JSON.stringify(payload),
   });
+} else if ($request.url.includes("throw=1")) {
+  throw new Error("contract response script failed");
 } else if (!$request.url.includes("timeout=1")) {
   $done({
     status: 201,
