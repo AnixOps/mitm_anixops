@@ -198,6 +198,44 @@ Unimplemented items:
 - broader Loon inline argument metadata forms;
 - persistence or remote argument sources.
 
+### Loon Script Metadata
+
+Detailed contract:
+[Loon Script Metadata Source Contract](loon-script-metadata.md).
+
+Capability: parse Loon `[Script]` request/response dispatch metadata without
+claiming JavaScript runtime execution.
+
+Input form:
+
+- `[Script]` `http-request` and `http-response` rules;
+- URL regex pattern and `script-path`;
+- `requires-body`, `timeout`, `timeout-ms`, `max-size`, `tag`, `argument`,
+  `enable`, and `enabled` metadata.
+
+Parser output:
+
+- accepted diagnostics with section `Script` and action `script`;
+- request/response phase, script path, tag, argument, `requires_body`,
+  `timeout_ms`, and `max_size` visible through `anixops_script_evaluate_url`;
+- disabled script rules are stored but skipped during dispatch;
+- no JavaScript execution, remote fetching, certificate, routing, task, or
+  platform UI behavior from script metadata.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Loon.ScriptMetadata.plugin`;
+- negative fixture `tests/fixtures/Loon.ScriptMetadata.Malformed.plugin`;
+- `config/loon_script_metadata_fixture_exposes_dispatch_fields`;
+- `config/loon_script_metadata_malformed_fixture_rejects_missing_path`.
+
+Unimplemented items:
+
+- JavaScript execution;
+- remote script download/cache/signature policy;
+- runtime permission model;
+- broader Loon script option corpus.
+
 ### Quantumult X Common Subset
 
 Detailed contract:

@@ -33,6 +33,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for `[Argument]` defaults.
 - Added a Loon inline-arguments source contract plus positive and negative
   parser fixtures for `#!arguments` script argument defaults.
+- Added a Loon script metadata source contract plus positive and negative
+  parser fixtures for request/response dispatch fields.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Quantumult X MITM options source contract plus positive and negative

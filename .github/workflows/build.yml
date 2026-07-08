@@ -36,6 +36,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-hashbang-metadata.md
             mitm_anixops/docs/compatibility/loon-argument-section.md
             mitm_anixops/docs/compatibility/loon-inline-arguments.md
+            mitm_anixops/docs/compatibility/loon-script-metadata.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/quantumultx-mitm-options.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
@@ -64,6 +65,8 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.ArgumentSection.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.InlineArguments.plugin
             mitm_anixops/tests/fixtures/Loon.InlineArguments.Malformed.plugin
+            mitm_anixops/tests/fixtures/Loon.ScriptMetadata.plugin
+            mitm_anixops/tests/fixtures/Loon.ScriptMetadata.Malformed.plugin
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.MitmOptions.snippet
@@ -175,6 +178,13 @@ jobs:
           grep -q "config/loon_inline_arguments_fixture_resolves_script_defaults" mitm_anixops/tests/test_config.c
           grep -q "config/loon_inline_arguments_malformed_fixture_rejects_missing_separator" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Loon inline-arguments parser fixtures and positive/negative tests" mitm_anixops/TODO.md
+          grep -q "Loon script metadata" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon Script Metadata Source Contract" mitm_anixops/docs/compatibility/loon-script-metadata.md
+          grep -q "Loon.ScriptMetadata.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Loon.ScriptMetadata.Malformed.plugin" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/loon_script_metadata_fixture_exposes_dispatch_fields" mitm_anixops/tests/test_config.c
+          grep -q "config/loon_script_metadata_malformed_fixture_rejects_missing_path" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Loon script metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Quantumult X rewrite/task/mitm common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Quantumult X Common Config Source Contract" mitm_anixops/docs/compatibility/quantumultx-common-config.md
           grep -q "QuantumultX.CommonConfig.snippet" mitm_anixops/docs/compatibility/matrix.md

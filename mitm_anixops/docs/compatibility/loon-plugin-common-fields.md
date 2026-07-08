@@ -23,8 +23,8 @@ The current common-field subset accepts:
   [Loon Argument Section](loon-argument-section.md);
 - `[URL Rewrite]` URL redirect and reject rules;
 - `[Header Rewrite]` request/response header mutation rules;
-- `[Script]` `http-request` and `http-response` rules with `requires-body`,
-  `script-path`, `tag`, and `argument`;
+- `[Script]` `http-request` and `http-response` rules with dispatch metadata
+  covered by [Loon Script Metadata](loon-script-metadata.md);
 - `[MITM] hostname = ...` with exact and deny host entries.
 
 ## Parser Output

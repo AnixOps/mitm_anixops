@@ -1,0 +1,7 @@
+[Script]
+http-request ^https:\/\/script\.metadata\.loon\.test\/v1 requires-body=1, timeout=2, max-size=4096, script-path=https://scripts.example/loon-script-request.js, tag=loon.script.request, argument=Mode=request
+http-response ^https:\/\/script\.metadata\.loon\.test\/v1 requires_body=0, timeout-ms=750, max_size=2048, script-path=https://scripts.example/loon-script-response.js, tag=loon.script.response, argument=Mode=response
+http-request ^https:\/\/script\.metadata\.loon\.test\/disabled script-path=https://scripts.example/loon-script-disabled.js, tag=loon.script.disabled, enabled=false
+
+[MITM]
+hostname = script.metadata.loon.test

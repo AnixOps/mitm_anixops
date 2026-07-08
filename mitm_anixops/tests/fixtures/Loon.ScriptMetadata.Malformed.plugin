@@ -1,0 +1,5 @@
+[Script]
+http-request ^https:\/\/script\.metadata\.loon\.test\/broken requires-body=1, timeout=2, max-size=1024
+
+[MITM]
+hostname = malformed.script.metadata.loon.test
