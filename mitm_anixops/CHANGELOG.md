@@ -18,6 +18,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   matrix row structure, status values, source contracts, and required evidence.
 - Added a dedicated static format check GitHub Actions job for whitespace,
   CRLF, final newline, and shell syntax checks.
+- Added a dedicated static lint GitHub Actions job using `shellcheck` for
+  repository shell scripts.
 - Added a release dry-run source contract before introducing release automation.
 - Added a Loon common-fields source contract plus positive and negative parser
   fixtures for the first P1 parser milestone.

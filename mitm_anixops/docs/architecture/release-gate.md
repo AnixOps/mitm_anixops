@@ -37,14 +37,14 @@ Current release workflow: .github/workflows/release.yml.
 Current CI workflow status:
 
 ```text
-ci-workflow-current-jobs=governance,format-check,compatibility-matrix,linux-test,windows-binary
+ci-workflow-current-jobs=governance,lint,format-check,compatibility-matrix,linux-test,windows-binary
+ci-workflow-lint-status=shellcheck-error-severity
 ci-workflow-format-status=static-format-check
 ci-workflow-compatibility-matrix-status=dedicated-job
-ci-workflow-lint-status=pending
 ci-workflow-macos-status=pending
 ```
 
-Current CI gaps: dedicated lint job and macOS runner coverage remain pending.
+Current CI gap: macOS runner coverage remains pending.
 
 ### Release Workflow
 
