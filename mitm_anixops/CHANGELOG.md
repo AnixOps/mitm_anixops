@@ -44,6 +44,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   for double `$done` first-wins behavior.
 - Added a planned cron/task trigger source contract that keeps scheduler
   support out of the supported surface until parser/runtime evidence exists.
+- Added cron/task parser guard fixtures proving scheduler-like lines do not
+  register as HTTP script triggers while cron/task support remains planned.
 - Added a script runtime dependency decision recording no embedded QuickJS,
   JavaScriptCore, or other production JavaScript engine in the v1 policy core.
 - Added a certificate lifecycle architecture contract, manual-intervention

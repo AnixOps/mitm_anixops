@@ -9,7 +9,7 @@ Status: `planned`.
 ## Purpose
 
 This contract fixes the P3 boundary for cron and task trigger compatibility. It
-does not implement a scheduler, parser fixtures, or JavaScript task runtime.
+does not implement a scheduler, task descriptor API, or JavaScript task runtime.
 Until those exist, cron/task capability must remain `planned` and must not be
 described as `partial` or `supported`.
 
@@ -26,6 +26,10 @@ ecosystems before this row can move out of `planned`:
   the supported plugin corpus.
 
 No cron/task parser fixture is currently accepted as a supported capability.
+The current fixtures are non-support guards only:
+
+- `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
+- `tests/fixtures/CronTaskTrigger.Unsupported.conf`.
 
 ## Parser Output
 
@@ -44,9 +48,24 @@ Current parser behavior must not register bare cron/task forms as HTTP script
 rules. Existing script evaluation APIs only return HTTP request/response script
 dispatch metadata.
 
-## Positive Case
+## Positive Guard Case
 
-No positive parser fixture exists yet.
+Parser case:
+
+```text
+tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
+```
+
+Expected behavior:
+
+- config load succeeds;
+- one HTTP request script trigger is registered;
+- scheduler-like cron/task lines in the same `[Script]` section are ignored;
+- `anixops_script_evaluate_url` can match the HTTP request script trigger;
+- no task descriptor or scheduler behavior is claimed.
+
+This is a positive parser guard for the already-supported HTTP script trigger,
+not a positive cron/task support case.
 
 Before this capability can become `partial`, the same change must add:
 
@@ -66,6 +85,19 @@ script/malformed_and_non_http_script_rules_are_ignored_or_rejected
 That test includes a bare `cron "0 * * * *" script-path=...` rule and verifies
 it does not register an HTTP script rule. This is only a non-support guard; it
 does not prove cron/task compatibility.
+
+Dedicated parser case:
+
+```text
+tests/fixtures/CronTaskTrigger.Unsupported.conf
+```
+
+Expected behavior:
+
+- config load succeeds in the portable profile;
+- cron/task-like lines are ignored with diagnostics;
+- no HTTP script rules are registered;
+- URL script evaluation returns `ANIXOPS_SCRIPT_NONE`.
 
 Future negative tests must cover malformed cron expressions, missing script
 assets, disabled tasks, duplicate tags, unsupported scheduler types, and
@@ -113,14 +145,18 @@ Current evidence:
 - GitHub Actions `governance` requires this planned source contract and matrix
   row.
 - GitHub Actions `linux-test` runs `sh scripts/check.sh`.
+- `tests/test_config.c` registers
+  `config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored`;
+- `tests/test_config.c` registers
+  `config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
   guards against treating bare cron rules as supported HTTP scripts.
 
 Missing evidence:
 
-- positive cron/task parser fixture;
-- negative malformed cron/task parser fixture;
+- positive cron/task parser fixture that emits a task descriptor;
+- negative malformed cron/task parser fixture for task descriptors;
 - task descriptor public API;
 - scheduler/runtime replay or E2E test;
 - adapter compatibility note for each ecosystem.

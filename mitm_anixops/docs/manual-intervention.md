@@ -112,6 +112,14 @@ route-selection-adapter-current-policy-core-decision=reject-only-url-decision-di
 route-selection-adapter-next-action=confirm-adapter-route-contract-proxy-group-resolution-dns-fallback-platform-network-extension-behavior-and-github-actions-evidence
 ```
 
+```text
+task-scheduler-runtime-status=pending
+task-scheduler-runtime-scope=cron-task-descriptor-scheduler-and-background-javascript-runtime
+task-scheduler-runtime-required-before=claiming-cron-or-task-trigger-support
+task-scheduler-runtime-current-policy-core-decision=no-task-descriptor-api-and-task-like-lines-do-not-register-as-http-scripts
+task-scheduler-runtime-next-action=confirm-task-descriptor-api-scheduler-runtime-bindings-permission-model-concurrency-policy-and-github-actions-evidence
+```
+
 ## Completed Items
 
 ```text

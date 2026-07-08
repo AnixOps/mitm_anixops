@@ -26,6 +26,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add Loon hashbang metadata parser fixture and positive/negative tests.
 - [x] Add reject/direct/proxy policy-intent parser fixtures and
   positive/negative tests.
+- [x] Add cron/task non-support parser fixtures and guard tests.
 - [ ] Add one parser fixture and one positive/negative parser test per new
   grammar unit.
 - [ ] Extend compatibility matrix rows only after the corresponding CI test
@@ -56,6 +57,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define script runtime source contract for `$request`, `$response`,
   `$argument`, `$persistentStore`, `$done`, timeout, exception, and double done.
 - [x] Define cron/task trigger as planned until parser and runtime tests exist.
+- [x] Add CI-covered parser guards proving cron/task-like lines do not register
+  as HTTP script triggers.
 - [x] Record any QuickJS, JavaScriptCore, or new runtime dependency decision
   before implementation.
 

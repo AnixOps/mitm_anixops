@@ -541,16 +541,24 @@ Input form:
 - future Surge scheduled script forms;
 - future Loon or AnixOps-style scheduled script/task declarations from the
   supported corpus.
+- current non-support guard fixtures
+  `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf` and
+  `tests/fixtures/CronTaskTrigger.Unsupported.conf`.
 
 Current CI evidence:
 
+- `config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored`
+  proves HTTP script triggers stay separate from scheduler-like task lines;
+- `config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts`
+  proves task-like lines do not register as HTTP script rules;
 - `script/malformed_and_non_http_script_rules_are_ignored_or_rejected` proves a
   bare cron rule does not register as an HTTP script rule;
 - GitHub Actions governance requires the planned contract and matrix row.
 
 Unimplemented items:
 
-- parser fixtures and positive/negative parser tests;
+- positive parser fixture that emits a task descriptor;
+- negative malformed task descriptor parser fixture;
 - public task descriptor API;
 - scheduler/runtime replay or E2E evidence;
 - task JavaScript bindings and concurrency policy.

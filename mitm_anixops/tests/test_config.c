@@ -653,6 +653,98 @@ static void policy_intent_unsupported_routes_are_ignored(void)
 	free(fixture);
 }
 
+static void cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored(void)
+{
+	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	size_t diagnostic_count;
+	size_t accepted = 0;
+	size_t ignored = 0;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+
+	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic_count, 4);
+	for (i = 0; i < diagnostic_count; i++) {
+		anixops_rule_diagnostic_t diagnostic;
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
+			accepted++;
+			ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+			ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule accepted") != NULL);
+		}
+		else if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED) {
+			ignored++;
+			ANIXOPS_EXPECT_TRUE(diagnostic.line == 3 || diagnostic.line == 4 || diagnostic.line == 5);
+			ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule ignored") != NULL);
+		}
+	}
+	ANIXOPS_EXPECT_EQ_SIZE(accepted, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(ignored, 3);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://cron.task.test/http", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 3000);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 1024);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.test/http.js");
+	ANIXOPS_EXPECT_STREQ(script.tag, "cron.task.http.guard");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://cron.task.test/http", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void cron_task_trigger_unsupported_fixture_does_not_register_http_scripts(void)
+{
+	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.Unsupported.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_script_result_t script;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+
+	for (i = 0; i < 3; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+		ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "script rule ignored") != NULL);
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://cron.task.test/http", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void header_mutation_common_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/HeaderMutation.Common.conf");
@@ -2108,6 +2200,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/policy_intent_unsupported_routes_are_ignored",
 		policy_intent_unsupported_routes_are_ignored);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored",
+		cron_task_trigger_http_script_guard_fixture_keeps_tasks_ignored);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/cron_task_trigger_unsupported_fixture_does_not_register_http_scripts",
+		cron_task_trigger_unsupported_fixture_does_not_register_http_scripts);
 	add_test(
 		tests,
 		count,
