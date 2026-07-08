@@ -40,8 +40,10 @@ corresponding tests.
   Quantumult X rewrite/MITM common-config parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
   module common-config parser contract.
-- [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): planned
-  Stash and Shadowrocket migration notes without parser support claims.
+- [shadowrocket-common-config.md](shadowrocket-common-config.md): P1
+  Shadowrocket common-config parser contract.
+- [stash-shadowrocket-migration.md](stash-shadowrocket-migration.md): Stash
+  migration notes and Shadowrocket app-profile boundary guards.
 - [request-rewrite-common.md](request-rewrite-common.md): request URL rewrite
   parser and policy-core contract.
 - [policy-intent-common.md](policy-intent-common.md): reject/direct/proxy

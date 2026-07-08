@@ -28,6 +28,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define Surge module source contract for module metadata, scripts, MITM,
   and rewrite subsets.
 - [x] Add Loon hashbang metadata parser fixture and positive/negative tests.
+- [x] Add Shadowrocket common-config parser fixture and positive/negative tests.
 - [x] Add reject/direct/proxy policy-intent parser fixtures and
   positive/negative tests.
 - [x] Add cron/task non-support parser fixtures and guard tests.
@@ -79,8 +80,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Update NetworkCore integration notes for the latest `v0.45.10-alpha`
   baseline and future v1.0.0 adapter boundary.
 - [x] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper.
-- [x] Define Stash and Shadowrocket compatibility as migration notes unless
-  parser fixtures and tests are added.
+- [x] Define Stash and Shadowrocket app-profile compatibility as migration
+  notes unless parser fixtures and tests are added.
 - [x] Add Stash and Shadowrocket migration guard fixtures and parser tests.
 
 ## P6 Release Hardening

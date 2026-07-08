@@ -157,33 +157,70 @@ Unimplemented items:
 - broader body rewrite and JQ corpus;
 - requirement metadata behavior.
 
-### Stash And Shadowrocket Migration Notes
+### Shadowrocket Common Config Subset
+
+Detailed contract:
+[Shadowrocket Common Config Source Contract](shadowrocket-common-config.md).
+
+Capability: parse and evaluate the currently implemented Shadowrocket common
+config subset.
+
+Input form:
+
+- `[URL Rewrite]` URL redirect and reject rules;
+- `[Script]` attr-list fields including type, pattern, script-path,
+  requires-body, timeout, max-size, tag, and argument;
+- `[MITM] hostname = ...`;
+- `[MITM] skip-server-cert-verify = ...`;
+- `[MITM] h2 = ...`.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/Shadowrocket.CommonConfig.conf`;
+- negative fixture `tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf`;
+- `config/shadowrocket_common_config_fixture_is_supported`;
+- `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
+- app-profile guard fixture `tests/fixtures/Shadowrocket.MigrationGuard.conf`
+  remains unsupported syntax evidence.
+
+Unimplemented items:
+
+- full Shadowrocket app-level profile grammar;
+- proxy nodes, routing policy, DNS, VPN, packet-capture, or UI behavior;
+- certificate lifecycle;
+- runtime and scheduler behavior.
+
+### Stash Migration And Shadowrocket App-Profile Boundary
 
 Detailed notes:
 [Stash And Shadowrocket Migration Notes](stash-shadowrocket-migration.md).
 
-Capability: record migration guidance without claiming parser support.
+Capability: record migration guidance for Stash and for Shadowrocket syntax
+outside the dedicated common-config source contract.
 
 Input form:
 
 - `tests/fixtures/Stash.MigrationGuard.yaml` as a non-support guard;
 - `tests/fixtures/Shadowrocket.MigrationGuard.conf` as a non-support guard;
-- no first-class Stash or Shadowrocket parser fixture is accepted as supported
-  syntax yet.
+- no first-class Stash parser fixture is accepted as supported syntax yet;
+- Shadowrocket app-level profile sections remain unsupported unless they are
+  explicitly covered by `shadowrocket-common-config.md`.
 
 Current CI evidence:
 
-- compatibility matrix rows remain `planned`;
+- Stash compatibility matrix row remains `planned`;
+- Shadowrocket common-config matrix row is `partial`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
-- governance checks require migration-only markers and guard fixture/test links.
+- governance checks require migration and app-profile boundary markers plus
+  guard fixture/test links.
 
 Unimplemented items:
 
 - dedicated Stash source contract, parser fixtures, positive tests, and negative
   tests;
-- dedicated Shadowrocket source contract, parser fixtures, positive tests, and
-  negative tests.
+- expanded Shadowrocket app-level profile source contract, parser fixtures,
+  positive tests, and negative tests.
 
 ### MITM Hostname Policy
 

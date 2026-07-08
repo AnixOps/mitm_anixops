@@ -34,6 +34,7 @@ jobs:
             mitm_anixops/docs/compatibility/loon-hashbang-metadata.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
             mitm_anixops/docs/compatibility/surge-module-common-config.md
+            mitm_anixops/docs/compatibility/shadowrocket-common-config.md
             mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
             mitm_anixops/docs/compatibility/request-rewrite-common.md
             mitm_anixops/docs/compatibility/policy-intent-common.md
@@ -57,6 +58,8 @@ jobs:
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             mitm_anixops/tests/fixtures/Stash.MigrationGuard.yaml
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
@@ -134,6 +137,13 @@ jobs:
           grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/surge_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/surge_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
+          grep -q "Shadowrocket common config" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket Common Config Source Contract" mitm_anixops/docs/compatibility/shadowrocket-common-config.md
+          grep -q "Shadowrocket.CommonConfig.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.CommonConfig.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/shadowrocket_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_common_config_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
+          grep -q "^- \\[x\\] Add Shadowrocket common-config parser fixture and positive/negative tests" mitm_anixops/TODO.md
           grep -q "MITM.Hostname.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/mitm_hostname_malformed_fixture_rejects_invalid_host" mitm_anixops/tests/test_config.c
           grep -q "mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard" mitm_anixops/tests/test_mitm.c
@@ -213,17 +223,22 @@ jobs:
           grep -q "networkcore-v1-adapter-boundary-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Update NetworkCore integration notes for the latest" mitm_anixops/TODO.md
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
-          grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket app profile migration guard" mitm_anixops/docs/compatibility/matrix.md
           grep -q "stash-compatibility-mode=migration-notes-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "shadowrocket-compatibility-mode=migration-notes-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "stash-shadowrocket-parser-fixtures=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
-          grep -q "stash-shadowrocket-support-claim=forbidden-until-dedicated-contract-fixtures-and-tests" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-common-config-mode=partial-parser-support" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-app-profile-mode=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "stash-parser-fixtures=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-app-profile-fixtures=migration-guard-only" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "stash-support-claim=forbidden-until-dedicated-contract-fixtures-and-tests" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
+          grep -q "shadowrocket-expanded-support-claim=forbidden-outside-common-config-contract" mitm_anixops/docs/compatibility/stash-shadowrocket-migration.md
           grep -q "Stash.MigrationGuard.yaml" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.MigrationGuard.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/stash_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_migration_guard_fixture_stays_parser_unsupported" mitm_anixops/tests/test_config.c
-          grep -q "stash-shadowrocket-parser-support-status=pending" mitm_anixops/docs/manual-intervention.md
-          grep -q "^- \\[x\\] Define Stash and Shadowrocket compatibility as migration notes" mitm_anixops/TODO.md
+          grep -q "stash-parser-support-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "shadowrocket-expanded-parser-support-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "^- \\[x\\] Define Stash and Shadowrocket app-profile compatibility as migration" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Stash and Shadowrocket migration guard fixtures" mitm_anixops/TODO.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "GitHub Release upload exists only for gated" mitm_anixops/docs/architecture/repository-audit.md

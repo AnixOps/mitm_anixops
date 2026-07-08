@@ -1,51 +1,69 @@
 # Stash And Shadowrocket Migration Notes
 
-Capability: migration notes for Stash and Shadowrocket compatibility.
+Capability: migration notes for Stash and Shadowrocket app-profile
+compatibility.
 
 Ecosystem: `stash`, `shadowrocket`.
 
-Status: `planned`.
+Status: Stash `planned`; Shadowrocket common config `partial`; Shadowrocket app
+profile `planned`.
 
 ```text
 stash-compatibility-mode=migration-notes-only
-shadowrocket-compatibility-mode=migration-notes-only
-stash-shadowrocket-parser-fixtures=migration-guard-only
-stash-shadowrocket-support-claim=forbidden-until-dedicated-contract-fixtures-and-tests
+shadowrocket-common-config-mode=partial-parser-support
+shadowrocket-app-profile-mode=migration-guard-only
+stash-parser-fixtures=migration-guard-only
+shadowrocket-app-profile-fixtures=migration-guard-only
+shadowrocket-common-config-fixtures=positive-and-negative-parser-fixtures
+stash-support-claim=forbidden-until-dedicated-contract-fixtures-and-tests
+shadowrocket-expanded-support-claim=forbidden-outside-common-config-contract
 ```
 
 ## Purpose
 
 This note defines the current v1.0.0 boundary for Stash and Shadowrocket:
-neither is a first-class parser target yet. Any overlapping syntax must be
-treated as migration guidance until this repository adds redistributable parser
-fixtures, positive tests, negative tests, compatibility matrix evidence, and
-GitHub Actions coverage.
 
-The current fixtures are non-support migration guards only:
+- Stash remains migration notes only.
+- Shadowrocket has a dedicated common-config source contract for a narrow
+  `[URL Rewrite]`, `[Script]`, and `[MITM]` subset.
+- Shadowrocket app-level profile syntax remains a migration guard unless a
+  future source contract, fixture pair, positive test, negative test,
+  compatibility matrix row, and GitHub Actions evidence explicitly cover it.
+
+The current migration guard fixtures are non-support evidence:
 
 - `tests/fixtures/Stash.MigrationGuard.yaml`;
 - `tests/fixtures/Shadowrocket.MigrationGuard.conf`.
 
-They prove representative app-level profile syntax stays ignored by the current
-policy-core parser. They do not prove Stash or Shadowrocket compatibility.
+The dedicated Shadowrocket common-config fixtures are support evidence only for
+the subset described in
+[`shadowrocket-common-config.md`](shadowrocket-common-config.md):
+
+- `tests/fixtures/Shadowrocket.CommonConfig.conf`;
+- `tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf`.
 
 ## Current Claim
 
 Allowed statements:
 
-- Stash and Shadowrocket are migration targets.
-- Existing Loon, Quantumult X, Surge, and portable AnixOps fixtures can inform
-  how overlapping rules should be translated.
+- Stash is a migration target.
+- Shadowrocket app-level profile syntax remains a migration target outside the
+  common-config contract.
+- Shadowrocket common config has partial parser support for documented URL
+  rewrite, script metadata, and MITM host/options syntax.
+- Existing Loon, Quantumult X, Surge, Shadowrocket common-config, and portable
+  AnixOps fixtures can inform how overlapping rules should be translated.
 - Operators may manually map overlapping rules into a currently covered fixture
   profile for evaluation.
 
 Forbidden statements:
 
 - Stash parser support is implemented.
-- Shadowrocket parser support is implemented.
-- Stash or Shadowrocket behavior is compatible without dedicated fixtures.
-- App-level routing, DNS, proxy-node, certificate, UI, or script runtime behavior
-  is supported by the C policy core.
+- Full Shadowrocket parser support is implemented.
+- Shadowrocket `[General]`, `[Rule]`, `[Proxy]`, DNS, routing, profile UI, or
+  proxy-node behavior is implemented.
+- App-level routing, DNS, proxy-node, certificate, UI, or script runtime
+  behavior is supported by the C policy core.
 
 ## CI Evidence
 
@@ -53,17 +71,28 @@ Current CI evidence:
 
 - `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
-- GitHub Actions `governance` requires the migration notes, guard fixtures,
-  matrix rows, manual-intervention marker, and test registrations;
+- `config/shadowrocket_common_config_fixture_is_supported`;
+- `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
+- GitHub Actions `governance` requires the migration notes, common-config
+  contract, fixtures, matrix rows, manual-intervention markers, and test
+  registrations;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh`.
 
-Expected parser behavior:
+Expected Stash guard behavior:
 
 - config load succeeds in the portable profile;
 - no rewrite rules, script rules, MITM host patterns, or argument defaults are
   registered;
 - parser diagnostics record ignored app-level profile lines;
 - no route, proxy-node, DNS, certificate, UI, or runtime behavior is claimed.
+
+Expected Shadowrocket app-profile guard behavior:
+
+- config load succeeds in the portable profile;
+- `[General]`, `[Rule]`, and `[Proxy]` lines remain ignored;
+- no rewrite rules, script rules, MITM host patterns, or argument defaults are
+  registered from that guard fixture;
+- no app-level profile behavior is claimed.
 
 ## Migration Mapping
 
@@ -95,11 +124,12 @@ These notes do not cover:
 - task/cron scheduler behavior;
 - platform-specific storage behavior.
 
-## Entry Criteria For Parser Support
+## Entry Criteria For Expanded Parser Support
 
-Before either ecosystem can move beyond `planned`, a future change must add:
+Before Stash can move beyond `planned`, or before Shadowrocket app-profile
+support can move beyond the common-config contract, a future change must add:
 
-1. A dedicated source contract for the target ecosystem.
+1. A dedicated source contract for the target ecosystem surface.
 2. At least one redistributable positive fixture for supported syntax.
 3. At least one negative fixture for malformed or unsupported syntax.
 4. C parser tests that load or reject those fixtures.
@@ -107,5 +137,6 @@ Before either ecosystem can move beyond `planned`, a future change must add:
 6. GitHub Actions governance checks proving the contract, fixture, tests, and
    matrix row stay linked.
 
-The current migration guard fixtures do not satisfy those entry criteria.
-Until dedicated parser evidence exists, keep both rows as migration notes only.
+The current Stash and Shadowrocket app-profile migration guard fixtures do not
+satisfy those entry criteria. Keep those surfaces as migration notes only until
+dedicated parser evidence exists.

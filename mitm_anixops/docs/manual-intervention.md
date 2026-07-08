@@ -121,11 +121,19 @@ task-scheduler-runtime-next-action=confirm-task-descriptor-api-scheduler-runtime
 ```
 
 ```text
-stash-shadowrocket-parser-support-status=pending
-stash-shadowrocket-parser-support-scope=dedicated-stash-and-shadowrocket-profile-parsers
-stash-shadowrocket-parser-support-required-before=claiming-stash-or-shadowrocket-parser-support
-stash-shadowrocket-parser-support-current-policy-core-decision=migration-guard-fixtures-only-no-first-class-parser-support
-stash-shadowrocket-parser-support-next-action=confirm-redistributable-fixtures-source-contract-supported-and-malformed-parser-cases-and-github-actions-evidence
+stash-parser-support-status=pending
+stash-parser-support-scope=dedicated-stash-profile-parser
+stash-parser-support-required-before=claiming-stash-parser-support
+stash-parser-support-current-policy-core-decision=migration-guard-fixture-only-no-first-class-parser-support
+stash-parser-support-next-action=confirm-redistributable-fixtures-source-contract-supported-and-malformed-parser-cases-and-github-actions-evidence
+```
+
+```text
+shadowrocket-expanded-parser-support-status=pending
+shadowrocket-expanded-parser-support-scope=shadowrocket-app-profile-and-behavior-outside-common-config
+shadowrocket-expanded-parser-support-required-before=claiming-shadowrocket-app-profile-or-expanded-parser-support
+shadowrocket-expanded-parser-support-current-policy-core-decision=common-config-subset-only-app-profile-guard-fixture-ignored
+shadowrocket-expanded-parser-support-next-action=confirm-app-profile-source-contract-fixtures-supported-and-malformed-parser-cases-and-github-actions-evidence
 ```
 
 ## Completed Items

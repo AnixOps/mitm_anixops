@@ -59,7 +59,8 @@ Scope:
 - Loon plugin sections and common fields.
 - Quantumult X rewrite/task/mitm subset.
 - Surge module subset.
-- Stash and Shadowrocket migration notes where syntax overlaps.
+- Shadowrocket common-config subset, plus Stash and Shadowrocket app-profile
+  migration notes where syntax overlaps.
 - Malformed-line behavior by compatibility profile.
 
 Required evidence:

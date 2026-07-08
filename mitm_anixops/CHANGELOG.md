@@ -31,6 +31,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Surge module common-config source contract plus positive and negative
   parser fixtures for the third P1 parser milestone.
+- Added a Shadowrocket common-config source contract plus positive and negative
+  parser fixtures for a P1 parser milestone.
 - Added a request rewrite source contract plus positive and negative parser
   fixtures for the first P2 rule-matching milestone.
 - Added a header mutation source contract plus positive and negative parser
@@ -63,8 +65,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   plane boundary.
 - Added a shared binding parity fixture with C runner, Go wrapper, and Rust
   wrapper CI coverage.
-- Added Stash and Shadowrocket migration notes that keep both ecosystems
-  planned until dedicated parser fixtures and tests exist.
+- Added Stash and Shadowrocket migration notes that keep Stash and
+  Shadowrocket app-profile behavior planned outside dedicated parser fixtures
+  and tests.
 - Added Stash and Shadowrocket migration guard fixtures proving app-level
   profile syntax remains ignored until dedicated parser support exists.
 - Added a dedicated GitHub Actions release dry-run workflow that runs a

@@ -24,6 +24,7 @@ unsupported unless a test or E2E fixture is added.
 | Quantumult X | `[rewrite_local]`, `[rewrite_remote]`, `[mitm]` | Supported subset | `quantumultx_rewrite_local_section_is_supported`, `config_accepts_quantumultx_rewrite_remote_section_aliases` |
 | Surge module | `[Script]` plus `name = type=http-response, pattern=...` | Supported subset | `surge_style_script_rule_template_is_supported`, representative Surge fixture |
 | Surge module arguments | `#!arguments = Name:value` | Supported subset | `sgmodule_inline_arguments_are_supported` |
+| Shadowrocket common config | `[URL Rewrite]`, `[Script]`, `[MITM]` | Supported subset | `Shadowrocket.CommonConfig.conf`, `Shadowrocket.CommonConfig.Malformed.conf`, `config/shadowrocket_common_config_fixture_is_supported`, `config/shadowrocket_common_config_fixture_rejects_invalid_regex` |
 
 Unknown sections are ignored so clients can load larger platform configs and let this library consume only the policy
 features it understands.
@@ -142,8 +143,8 @@ features it understands.
   dispatch, and plan helper.
 - `make rust-binding-check`: Rust FFI wrapper tests over config load, rewrite, body rewrite, body-chain rewrite, script
   dispatch, and plan helper.
-- `make test`: public C ABI unit tests, including the plan builder, representative Loon, Surge, and Quantumult X fixture
-  parsing.
+- `make test`: public C ABI unit tests, including the plan builder, representative Loon, Surge, Quantumult X, and
+  Shadowrocket common-config fixture parsing.
 - `make e2e`: local shim plus mihomo, proving library decisions through a proxy path.
 - `make bili-e2e`: BiliUniverse Enhanced plugin/script dispatch and script execution fixture.
 - `make script-contract-e2e`: request/response script metadata, persistentStore, timeout/exception fail-open, and

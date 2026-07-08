@@ -130,13 +130,14 @@ Current test assets include:
 - URL/header/body rewrite tests.
 - script dispatch tests.
 - fixture corpus manifest with Loon, Surge, Quantumult X, and BiliUniverse
-  fixtures.
+  fixtures, plus dedicated compatibility fixtures for Shadowrocket common
+  config.
 - runner scan/trace/replay checks.
 - proxy shim, script contract, BiliUniverse, and Bilibili homepage E2E scripts.
 - ABI export allowlist check.
 - pkg-config, CMake, Go wrapper, and Rust wrapper checks.
 
-Source inspection currently shows 116 registered C test entries. Actual pass/fail
+Source inspection currently shows 118 registered C test entries. Actual pass/fail
 status must be taken from GitHub Actions, not local execution.
 
 ## Current Strengths
@@ -157,7 +158,8 @@ status must be taken from GitHub Actions, not local execution.
   protection still requires manual configuration.
 - No macOS release artifact, signing, notarization, entitlement, or platform
   adapter coverage yet.
-- Stash and Shadowrocket are not yet first-class parser targets.
+- Stash remains migration notes only; Shadowrocket has a narrow common-config
+  parser contract, while app-level profile syntax remains migration-guarded.
 - Cron/task trigger behavior has a planned source contract, but parser fixtures,
   scheduler dispatch, and runtime execution remain unimplemented.
 - Production JS runtime remains out of scope for the C policy core; the
