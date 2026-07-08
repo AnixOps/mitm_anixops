@@ -14,6 +14,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   and manual intervention register.
 - [x] Add CI governance checks for the new baseline files.
 - [x] Add a dedicated compatibility matrix CI job.
+- [x] Add a dedicated static format check CI job.
 - [x] Add PR template fields for source contract, test, compatibility matrix,
   changelog, and manual-intervention impact.
 - [x] Add a release dry-run design before changing release automation.

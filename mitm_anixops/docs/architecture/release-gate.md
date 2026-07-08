@@ -1,7 +1,7 @@
 # Release Gate Design
 
 This document defines the intended v1.0.0 release gate. It is a design baseline;
-the current workflow has not implemented every item.
+some v1.0.0 gates remain pending until their GitHub Actions evidence exists.
 
 ## Principles
 
@@ -34,7 +34,17 @@ Current dry-run workflow: .github/workflows/release-dry-run.yml.
 
 Current release workflow: .github/workflows/release.yml.
 
-Current gap: there is no matrix-specific release job yet.
+Current CI workflow status:
+
+```text
+ci-workflow-current-jobs=governance,format-check,compatibility-matrix,linux-test,windows-binary
+ci-workflow-format-status=static-format-check
+ci-workflow-compatibility-matrix-status=dedicated-job
+ci-workflow-lint-status=pending
+ci-workflow-macos-status=pending
+```
+
+Current CI gaps: dedicated lint job and macOS runner coverage remain pending.
 
 ### Release Workflow
 

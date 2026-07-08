@@ -78,6 +78,7 @@ jobs:
             mitm_anixops/tests/fixtures/runner_double_done_script.js
             mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/security-claim-check.sh
+            mitm_anixops/scripts/static-format-check.sh
             .github/workflows/release-dry-run.yml
             .github/workflows/release.yml
             .github/pull_request_template.md
@@ -88,6 +89,8 @@ jobs:
           sh mitm_anixops/scripts/security-claim-check.sh
           grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
           grep -q "compatibility-matrix:" .github/workflows/build.yml
+          grep -q "static format check passed" mitm_anixops/scripts/static-format-check.sh
+          grep -q "format-check:" .github/workflows/build.yml
           grep -q "P0 Repository Baseline" mitm_anixops/ROADMAP.md
           grep -q "P1 Plugin Parser" mitm_anixops/ROADMAP.md
           grep -q "P2 Rule Matching Engine" mitm_anixops/ROADMAP.md
@@ -97,7 +100,9 @@ jobs:
           grep -q "P6 Release Hardening" mitm_anixops/ROADMAP.md
           grep -q "GitHub Actions" mitm_anixops/CONTRIBUTING.md
           grep -q "^- \\[x\\] Add a dedicated compatibility matrix CI job" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add a dedicated static format check CI job" mitm_anixops/TODO.md
           grep -q "compatibility-matrix" mitm_anixops/docs/architecture/repository-audit.md
+          grep -q "format-check" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "branch-protection-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "Loon plugin common fields" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Plugin Common Fields Source Contract" mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
@@ -216,6 +221,8 @@ jobs:
           grep -q "GitHub Release upload exists only for gated" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "Current dry-run workflow: .github/workflows/release-dry-run.yml" mitm_anixops/docs/architecture/release-gate.md
           grep -q "Current release workflow: .github/workflows/release.yml" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "ci-workflow-format-status=static-format-check" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "ci-workflow-compatibility-matrix-status=dedicated-job" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-current-mode=tag-triggered-build-and-publish" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-publication=tag-publish-enabled" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-rollback-policy=accepted" mitm_anixops/docs/architecture/release-gate.md
@@ -263,6 +270,15 @@ jobs:
       - uses: actions/checkout@v7
       - name: Validate compatibility matrix contract
         run: sh mitm_anixops/scripts/compatibility-matrix-check.sh
+
+  format-check:
+    runs-on: ubuntu-latest
+    needs:
+      - governance
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate static formatting
+        run: sh mitm_anixops/scripts/static-format-check.sh
 
   linux-test:
     runs-on: ubuntu-latest

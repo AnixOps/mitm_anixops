@@ -75,6 +75,8 @@ Current jobs:
 - `compatibility-matrix`: validates the v1.0.0 compatibility matrix row
   structure, allowed status values, source contract links, and required evidence
   fields without running a build.
+- `format-check`: validates tracked text files for trailing whitespace, CRLF,
+  final newlines, and POSIX shell syntax without running a build.
 - `windows-binary`: builds the Windows Bilibili demo binary with MSYS2 and
   uploads `anixops-mitm-windows-x64`.
 - `release-dry-run`: validates a dry-run version, runs an equivalent full check
@@ -92,7 +94,6 @@ Current jobs:
 Known CI/CD gaps for v1.0.0:
 
 - no dedicated lint job;
-- no dedicated format check;
 - GitHub Release upload exists only for gated `v*` tag runs; release
   environment approval still needs repository configuration;
 - no macOS runner coverage yet.
