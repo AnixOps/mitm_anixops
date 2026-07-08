@@ -76,6 +76,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   keeping direct/proxy routing adapter-owned.
 - Added portable/common echo-response parser fixtures and CI-covered tests
   while keeping HTTP serialization, streaming, and framing adapter-owned.
+- Added an alpha fixture package check so release artifacts include all
+  top-level compatibility fixtures instead of relying on a hand-maintained
+  allowlist.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added Quantumult X `url echo-response` parser fixtures and CI-covered tests

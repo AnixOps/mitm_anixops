@@ -51,8 +51,8 @@ Included:
   request/response header and chain body rewrite before script dispatch and gzip/deflate response decoding for
   body/script mutation with identity writeback.
 - P6 packaging foundation: `make alpha-dist` creates a tar.gz package with libraries, pkg-config metadata, CMake package
-  config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, representative fixtures, the corpus
-  manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan, body-chain
+  config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, all top-level compatibility fixtures,
+  the corpus manifest, header, and docs. The Go and Rust Alpha wrappers expose the aggregated rewrite plan, body-chain
   application, named-header lookup, bounded header-list application, and JQ max-input configuration in addition to
   rewrite/body/script helpers.
 

@@ -171,6 +171,7 @@ jobs:
             mitm_anixops/tests/fixtures/MITM.Hostname.Malformed.conf
             mitm_anixops/tests/fixtures/runner_double_done_script.js
             mitm_anixops/scripts/manual-intervention-check.sh
+            mitm_anixops/scripts/alpha-fixture-package-check.sh
             mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/compatibility-status-summary.sh
             mitm_anixops/scripts/security-claim-check.sh
@@ -188,6 +189,7 @@ jobs:
           done
           sh mitm_anixops/scripts/manual-intervention-check.sh
           sh mitm_anixops/scripts/security-claim-check.sh
+          sh mitm_anixops/scripts/alpha-fixture-package-check.sh
           sh mitm_anixops/scripts/repository-governance-check.sh > /tmp/repository-governance.env
           sh mitm_anixops/scripts/v1-acceptance-check.sh > /tmp/v1-acceptance.env
           sh mitm_anixops/scripts/compatibility-status-summary.sh > /tmp/compatibility-status-summary.env
@@ -198,6 +200,7 @@ jobs:
           grep -Eq "repository_governance_status=(blocked|passed)" /tmp/repository-governance.env
           grep -q "repository_governance_blocking_markers=branch-protection,protected-tags,release-environment-approval" /tmp/repository-governance.env
           grep -q "manual intervention check passed" mitm_anixops/scripts/manual-intervention-check.sh
+          grep -q "alpha fixture package check passed" mitm_anixops/scripts/alpha-fixture-package-check.sh
           grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
           grep -q "compatibility-matrix:" .github/workflows/build.yml
           grep -q "static format check passed" mitm_anixops/scripts/static-format-check.sh
