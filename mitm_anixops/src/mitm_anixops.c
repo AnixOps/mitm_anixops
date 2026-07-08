@@ -74,6 +74,7 @@ typedef struct anixops_script_rule {
 	int requires_body;
 	size_t timeout_ms;
 	size_t max_size;
+	int enabled;
 } anixops_script_rule_t;
 
 typedef struct anixops_argument {
@@ -376,7 +377,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.0";
+	return "0.45.1";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -1539,8 +1540,10 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	char timeout[128];
 	char timeout_ms[128];
 	char max_size[128];
+	char enable[128];
 	size_t parsed_timeout_ms = 0;
 	size_t parsed_max_size = 0;
+	int parsed_enabled = 1;
 	anixops_script_kind_t kind = ANIXOPS_SCRIPT_NONE;
 	anixops_phase_t phase = ANIXOPS_PHASE_REQUEST;
 	const char *attrs = NULL;
@@ -1576,6 +1579,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	timeout[0] = '\0';
 	timeout_ms[0] = '\0';
 	max_size[0] = '\0';
+	enable[0] = '\0';
 
 	cursor = trimmed;
 	if (anixops_next_token(&cursor, first, sizeof(first)) && anixops_parse_script_kind(first, &kind, &phase)) {
@@ -1661,6 +1665,10 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	if (max_size[0] == '\0') {
 		(void)anixops_extract_attr(attrs, "max_size", max_size, sizeof(max_size));
 	}
+	(void)anixops_extract_attr(attrs, "enable", enable, sizeof(enable));
+	if (enable[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "enabled", enable, sizeof(enable));
+	}
 	anixops_unquote_inplace(pattern);
 	anixops_unquote_inplace(script_path);
 	anixops_unquote_inplace(tag);
@@ -1669,6 +1677,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	anixops_unquote_inplace(timeout_ms);
 	anixops_unquote_inplace(timeout);
 	anixops_unquote_inplace(max_size);
+	anixops_unquote_inplace(enable);
 	if (timeout_ms[0] != '\0') {
 		(void)anixops_parse_size_value(timeout_ms, &parsed_timeout_ms);
 	}
@@ -1677,6 +1686,9 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	}
 	if (max_size[0] != '\0') {
 		(void)anixops_parse_size_value(max_size, &parsed_max_size);
+	}
+	if (enable[0] != '\0') {
+		parsed_enabled = anixops_parse_bool(enable);
 	}
 
 	if (kind == ANIXOPS_SCRIPT_NONE || pattern[0] == '\0' || script_path[0] == '\0') {
@@ -1714,6 +1726,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	rule->requires_body = anixops_parse_bool(requires_body);
 	rule->timeout_ms = parsed_timeout_ms;
 	rule->max_size = parsed_max_size;
+	rule->enabled = parsed_enabled;
 	engine->script_len++;
 	free(copy);
 	return ANIXOPS_OK;
@@ -2527,7 +2540,7 @@ ANIXOPS_API int anixops_script_evaluate_url(
 	for (i = 0; i < engine->script_len; i++) {
 		const anixops_script_rule_t *rule = &engine->scripts[i];
 		int rc;
-		if (rule->phase != phase || !rule->regex_ready) {
+		if (!rule->enabled || rule->phase != phase || !rule->regex_ready) {
 			continue;
 		}
 		rc = anixops_regex_exec(&rule->regex, url, 0, NULL);

@@ -506,6 +506,50 @@ static void script_scheduling_attributes_are_exposed(void)
 	anixops_engine_free(engine);
 }
 
+static void disabled_script_rules_do_not_dispatch(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"http-response ^https://api\\.script\\.test/enabled enable=false, "
+			"script-path=https://scripts.example/disabled.js, tag=disabled"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"http-response ^https://api\\.script\\.test/enabled enabled=true, "
+			"script-path=https://scripts.example/enabled.js, tag=enabled"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_script_rule(
+			engine,
+			"Disabled.Surge = type=http-response, pattern=^https:\\/\\/api\\.script\\.test\\/disabled, "
+			"enable=false, script-path=https://scripts.example/surge-disabled.js"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 3);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.script.test/enabled", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example/enabled.js");
+	ANIXOPS_EXPECT_STREQ(script.tag, "enabled");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.script.test/disabled", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+	ANIXOPS_EXPECT_STREQ(script.message, "no script matched");
+
+	anixops_engine_free(engine);
+}
+
 static void sgmodule_inline_arguments_are_supported(void)
 {
 	const char *config =
@@ -627,6 +671,7 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		"script/quantumultx_url_prefixed_response_header_scripts_are_supported",
 		quantumultx_url_prefixed_response_header_scripts_are_supported);
 	add_test(tests, count, cap, "script/script_scheduling_attributes_are_exposed", script_scheduling_attributes_are_exposed);
+	add_test(tests, count, cap, "script/disabled_script_rules_do_not_dispatch", disabled_script_rules_do_not_dispatch);
 	add_test(tests, count, cap, "script/sgmodule_inline_arguments_are_supported", sgmodule_inline_arguments_are_supported);
 	add_test(
 		tests,

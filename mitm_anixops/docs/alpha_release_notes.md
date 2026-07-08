@@ -35,8 +35,8 @@ Included:
   JQ body rewrite rules in rule order, feeding each successful output into the next body rule while preserving the
   legacy single-rule `anixops_rewrite_apply_body` API.
 - P4 script foundation: script dispatch metadata, the Node-based contract runner, file-backed `$persistentStore`,
-  request/response script E2E, rule-level `timeout`/`max-size` scheduling metadata, script timeout/max-size fail-open
-  in the runner/proxy shim, and runner `replay --script-runner` writeback are supported. Embedded
+  request/response script E2E, rule-level `enable` dispatch gating, `timeout`/`max-size` scheduling metadata, script
+  timeout/max-size fail-open in the runner/proxy shim, and runner `replay --script-runner` writeback are supported. Embedded
   QuickJS/JavaScriptCore is still future work.
 - P5 runner foundation: `scan`, `scan --corpus`, `trace`, and TSV-backed `replay` commands provide no-UI diagnostics,
   corpus count, sha256, and diagnostic-status checks, and comparable URL, rewrite, header, body, and script traces;

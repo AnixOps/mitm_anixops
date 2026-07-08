@@ -83,6 +83,7 @@ features it understands.
 | `script-path` / `script_path` | Supported | plugin and Surge tests |
 | `tag` | Supported | plugin and Surge tests |
 | `argument=[{Name},...]` | Supported | BiliBili fixture tests |
+| `enable`, `enabled` | Supported dispatch gating | `disabled_script_rules_do_not_dispatch` |
 | `timeout`, `timeout-ms`, `max-size`, `max_size` | Supported as scheduling metadata | `script_scheduling_attributes_are_exposed`, representative Surge fixture; runner/proxy shim use timeout override and max-size fail-open |
 | Surge template arguments `{Name}`, `{{{Name}}}` | Supported subset | `surge_style_script_rule_template_is_supported` |
 | Malformed Surge attr-list script rules | Ignored, except invalid regex reports an error | `malformed_and_non_http_script_rules_are_ignored_or_rejected` |

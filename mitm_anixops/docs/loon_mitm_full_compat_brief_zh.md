@@ -136,7 +136,7 @@ Surge：
 
 - 补齐 `.sgmodule` metadata、`#!arguments`、`%APPEND%`、`%INSERT%`。
 - 补齐 `[Body Rewrite]` regex chain 和 JQ body rewrite。
-- Alpha 已扩展 `[Script]` attr-list 的 `type`、`pattern`、`script-path`、`requires-body`、`timeout`、`max-size`、`argument` 基础元数据；后续补 `enable`、`debug` 和更广 malformed 语义。
+- Alpha 已扩展 `[Script]` attr-list 的 `type`、`pattern`、`script-path`、`requires-body`、`enable`、`timeout`、`max-size`、`argument` 基础元数据；后续补 `debug` 和更广 malformed 语义。
 
 Quantumult X：
 
