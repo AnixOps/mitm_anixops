@@ -773,6 +773,9 @@ fn empty_script_result() -> AnixopsScriptResult {
 mod tests {
     use super::*;
 
+    const SHARED_PARITY_CONFIG: &str =
+        include_str!("../../../../tests/fixtures/BindingParity.Common.conf");
+
     const FIXTURE_CONFIG: &str = r#"
 [Argument]
 Mode = select,rust
@@ -851,6 +854,73 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert_eq!(script.argument, "Mode=rust");
         assert_eq!(script.timeout_ms, 4000);
         assert_eq!(script.max_size, 2048);
+    }
+
+    #[test]
+    fn rust_binding_loads_shared_parity_fixture() {
+        let mut engine = Engine::new().unwrap();
+        engine.load_config(SHARED_PARITY_CONFIG).unwrap();
+        assert_eq!(engine.rewrite_rule_count(), 5);
+        assert_eq!(engine.script_rule_count(), 2);
+
+        let redirect = engine
+            .evaluate_rewrite("http://old.binding.test/item", Phase::Request)
+            .unwrap();
+        assert_eq!(redirect.action, RewriteAction::Redirect302);
+        assert_eq!(redirect.value, "https://api.binding.test/item");
+
+        let (request_plan, request_body) = engine
+            .build_plan("https://api.binding.test/request/item", Phase::Request, "token=42")
+            .unwrap();
+        assert_eq!(request_body, "token=42-bound");
+        assert!(request_plan.body_available);
+        assert!(request_plan.requires_body);
+        assert_eq!(
+            request_plan.rewrite.action,
+            RewriteAction::RequestBodyReplaceRegex
+        );
+        assert_eq!(request_plan.header_rewrites.len(), 1);
+        assert_eq!(request_plan.header_rewrites[0].action, RewriteAction::HeaderAdd);
+        assert_eq!(request_plan.header_rewrites[0].header_name, "X-Binding");
+        assert_eq!(request_plan.header_rewrites[0].value, "trace-item");
+        assert_eq!(request_plan.script.kind, ScriptKind::HttpRequest);
+        assert_eq!(request_plan.script.tag, "binding.request");
+        assert_eq!(
+            request_plan.script.script_path,
+            "https://scripts.binding.test/request.js"
+        );
+        assert_eq!(request_plan.script.argument, "Mode=binding");
+        assert_eq!(request_plan.script.timeout_ms, 333);
+        assert_eq!(request_plan.script.max_size, 777);
+
+        let (response_plan, response_body) = engine
+            .build_plan(
+                "https://api.binding.test/response/item",
+                Phase::Response,
+                "ad=1&ok=1",
+            )
+            .unwrap();
+        assert_eq!(response_body, "clean=1&ok=1");
+        assert_eq!(
+            response_plan.rewrite.action,
+            RewriteAction::ResponseBodyReplaceRegex
+        );
+        assert_eq!(response_plan.header_rewrites.len(), 1);
+        assert_eq!(
+            response_plan.header_rewrites[0].action,
+            RewriteAction::ResponseHeaderAdd
+        );
+        assert_eq!(response_plan.header_rewrites[0].header_name, "X-Binding");
+        assert_eq!(response_plan.header_rewrites[0].value, "resp-item");
+        assert_eq!(response_plan.script.kind, ScriptKind::HttpResponse);
+        assert_eq!(response_plan.script.tag, "binding.response");
+        assert_eq!(
+            response_plan.script.script_path,
+            "https://scripts.binding.test/response.js"
+        );
+        assert_eq!(response_plan.script.argument, "Mode=binding");
+        assert_eq!(response_plan.script.timeout_ms, 444);
+        assert_eq!(response_plan.script.max_size, 888);
     }
 
     #[test]

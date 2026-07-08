@@ -66,7 +66,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 
 - [x] Update NetworkCore integration notes for the latest `v0.45.10-alpha`
   baseline and future v1.0.0 adapter boundary.
-- [ ] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper.
+- [x] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper.
 - [ ] Define Stash and Shadowrocket compatibility as migration notes unless
   parser fixtures and tests are added.
 

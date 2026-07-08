@@ -38,6 +38,7 @@ jobs:
             mitm_anixops/docs/compatibility/body-mutation-common.md
             mitm_anixops/docs/compatibility/decision-trace-schema.md
             mitm_anixops/docs/compatibility/plan-api-parity.md
+            mitm_anixops/docs/compatibility/binding-parity.md
             mitm_anixops/docs/compatibility/script-runtime-common.md
             mitm_anixops/docs/compatibility/cron-task-trigger.md
             mitm_anixops/docs/compatibility/matrix.md
@@ -60,6 +61,7 @@ jobs:
             mitm_anixops/tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf
             mitm_anixops/tests/fixtures/PlanApiParity.Golden.conf
             mitm_anixops/tests/fixtures/PlanApiParity.PhaseMismatch.conf
+            mitm_anixops/tests/fixtures/BindingParity.Common.conf
             mitm_anixops/tests/fixtures/MITM.Hostname.Malformed.conf
             mitm_anixops/tests/fixtures/runner_double_done_script.js
             mitm_anixops/scripts/security-claim-check.sh
@@ -126,6 +128,13 @@ jobs:
           grep -q "PlanApiParity.Golden.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/plan_api_parity_fixture_matches_legacy_evaluation" mitm_anixops/tests/test_config.c
           grep -q "config/plan_api_parity_fixture_keeps_phase_mismatches_empty" mitm_anixops/tests/test_config.c
+          grep -q "binding parity" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Binding Parity Source Contract" mitm_anixops/docs/compatibility/binding-parity.md
+          grep -q "BindingParity.Common.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "runner-binding-parity-response-trace.out" mitm_anixops/Makefile
+          grep -q "TestGoBindingLoadsSharedParityFixture" mitm_anixops/bindings/go/anixops/anixops_test.go
+          grep -q "rust_binding_loads_shared_parity_fixture" mitm_anixops/bindings/rust/mitm-anixops/src/lib.rs
+          grep -q "^- \\[x\\] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper" mitm_anixops/TODO.md
           grep -q "script runtime contract" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Script Runtime Common Source Contract" mitm_anixops/docs/compatibility/script-runtime-common.md
           grep -q "script-runtime-dependency.md" mitm_anixops/docs/compatibility/matrix.md

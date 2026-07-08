@@ -105,6 +105,21 @@ runner-check: $(RUNNER_BIN)
 	grep -F '"action":4' $(BUILD_DIR)/runner-replay.out >/dev/null
 	grep -F '"tag":"loon.request"' $(BUILD_DIR)/runner-replay.out >/dev/null
 	grep -F '"tag":"loon.response"' $(BUILD_DIR)/runner-replay.out >/dev/null
+	$(RUNNER_BIN) scan tests/fixtures/BindingParity.Common.conf > $(BUILD_DIR)/runner-binding-parity-scan.out
+	grep -F '"counts":{"mitm":1,"rewrite":5,"script":2,"argument":1}' $(BUILD_DIR)/runner-binding-parity-scan.out >/dev/null
+	$(RUNNER_BIN) trace --plugin tests/fixtures/BindingParity.Common.conf --url http://old.binding.test/item --phase request > $(BUILD_DIR)/runner-binding-parity-redirect-trace.out
+	grep -F '"action":1' $(BUILD_DIR)/runner-binding-parity-redirect-trace.out >/dev/null
+	grep -F '"value":"https://api.binding.test/item"' $(BUILD_DIR)/runner-binding-parity-redirect-trace.out >/dev/null
+	$(RUNNER_BIN) trace --plugin tests/fixtures/BindingParity.Common.conf --url https://api.binding.test/request/item --phase request > $(BUILD_DIR)/runner-binding-parity-request-trace.out
+	grep -F '"headerName":"X-Binding"' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
+	grep -F '"value":"trace-item"' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
+	grep -F '"tag":"binding.request"' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
+	grep -F '"timeoutMs":333' $(BUILD_DIR)/runner-binding-parity-request-trace.out >/dev/null
+	$(RUNNER_BIN) trace --plugin tests/fixtures/BindingParity.Common.conf --url https://api.binding.test/response/item --phase response > $(BUILD_DIR)/runner-binding-parity-response-trace.out
+	grep -F '"headerName":"X-Binding"' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
+	grep -F '"value":"resp-item"' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
+	grep -F '"tag":"binding.response"' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
+	grep -F '"timeoutMs":444' $(BUILD_DIR)/runner-binding-parity-response-trace.out >/dev/null
 	rm -f $(BUILD_DIR)/runner-script-store.json
 	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-store $(BUILD_DIR)/runner-script-store.json --script-map https://scripts.example/loon-request.js=tests/fixtures/runner_replay_script.js --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_replay_script.js > $(BUILD_DIR)/runner-replay-runtime.out
 	grep -F '"message":"script executed"' $(BUILD_DIR)/runner-replay-runtime.out >/dev/null
@@ -191,10 +206,10 @@ alpha-dist: all runner proxy-shim
 	cp bindings/go/anixops/*.go $(BUILD_DIR)/$(ALPHA_NAME)/bindings/go/anixops/
 	cp bindings/rust/mitm-anixops/Cargo.toml bindings/rust/mitm-anixops/Cargo.lock bindings/rust/mitm-anixops/build.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/
 	cp bindings/rust/mitm-anixops/src/*.rs $(BUILD_DIR)/$(ALPHA_NAME)/bindings/rust/mitm-anixops/src/
-	cp tests/fixtures/BiliBili.Enhanced.plugin tests/fixtures/Representative.Loon.plugin tests/fixtures/Loon.CommonFields.plugin tests/fixtures/Loon.CommonFields.Malformed.plugin tests/fixtures/Representative.Surge.sgmodule tests/fixtures/Surge.CommonConfig.sgmodule tests/fixtures/Surge.CommonConfig.Malformed.sgmodule tests/fixtures/Representative.QuantumultX.snippet tests/fixtures/QuantumultX.CommonConfig.snippet tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet tests/fixtures/RequestRewrite.Common.conf tests/fixtures/RequestRewrite.Common.Malformed.conf tests/fixtures/HeaderMutation.Common.conf tests/fixtures/HeaderMutation.Common.Malformed.conf tests/fixtures/ResponseRewrite.Common.conf tests/fixtures/ResponseRewrite.Common.Malformed.conf tests/fixtures/BodyMutation.Common.conf tests/fixtures/BodyMutation.Common.Malformed.conf tests/fixtures/DecisionTrace.Schema.conf tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf tests/fixtures/PlanApiParity.Golden.conf tests/fixtures/PlanApiParity.PhaseMismatch.conf tests/fixtures/MITM.Hostname.Malformed.conf tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js tests/fixtures/runner_throw_script.js tests/fixtures/runner_double_done_script.js tests/fixtures/ScriptBundle.json tests/fixtures/ScriptBundleBadDigest.json tests/fixtures/ScriptBundlePartial.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
+	cp tests/fixtures/BiliBili.Enhanced.plugin tests/fixtures/Representative.Loon.plugin tests/fixtures/Loon.CommonFields.plugin tests/fixtures/Loon.CommonFields.Malformed.plugin tests/fixtures/Representative.Surge.sgmodule tests/fixtures/Surge.CommonConfig.sgmodule tests/fixtures/Surge.CommonConfig.Malformed.sgmodule tests/fixtures/Representative.QuantumultX.snippet tests/fixtures/QuantumultX.CommonConfig.snippet tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet tests/fixtures/RequestRewrite.Common.conf tests/fixtures/RequestRewrite.Common.Malformed.conf tests/fixtures/HeaderMutation.Common.conf tests/fixtures/HeaderMutation.Common.Malformed.conf tests/fixtures/ResponseRewrite.Common.conf tests/fixtures/ResponseRewrite.Common.Malformed.conf tests/fixtures/BodyMutation.Common.conf tests/fixtures/BodyMutation.Common.Malformed.conf tests/fixtures/DecisionTrace.Schema.conf tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf tests/fixtures/PlanApiParity.Golden.conf tests/fixtures/PlanApiParity.PhaseMismatch.conf tests/fixtures/BindingParity.Common.conf tests/fixtures/MITM.Hostname.Malformed.conf tests/fixtures/RunnerReplay.tsv tests/fixtures/runner_replay_script.js tests/fixtures/runner_throw_script.js tests/fixtures/runner_double_done_script.js tests/fixtures/ScriptBundle.json tests/fixtures/ScriptBundleBadDigest.json tests/fixtures/ScriptBundlePartial.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/
 	cp tests/fixtures/corpus/manifest.json $(BUILD_DIR)/$(ALPHA_NAME)/fixtures/corpus/
 	cp README.md ROADMAP.md TODO.md CHANGELOG.md CONTRIBUTING.md $(BUILD_DIR)/$(ALPHA_NAME)/
-	cp README.md docs/TODO.md docs/compatibility_matrix.md docs/alpha_release_notes.md docs/loon_mitm_full_compat_plan.md docs/loon_mitm_full_compat_brief_zh.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
+	cp README.md docs/TODO.md docs/compatibility_matrix.md docs/alpha_release_notes.md docs/loon_mitm_full_compat_plan.md docs/loon_mitm_full_compat_brief_zh.md docs/networkcore_integration.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
 	cp docs/manual-intervention.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/
 	cp docs/architecture/*.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/architecture/
 	cp docs/compatibility/*.md $(BUILD_DIR)/$(ALPHA_NAME)/docs/compatibility/

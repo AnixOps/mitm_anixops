@@ -1,6 +1,9 @@
 package anixops
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 const fixtureConfig = `
 [Argument]
@@ -129,6 +132,89 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	}
 	if script.Argument != "Mode=go" {
 		t.Fatalf("script.Argument = %q", script.Argument)
+	}
+}
+
+func TestGoBindingLoadsSharedParityFixture(t *testing.T) {
+	config, err := os.ReadFile("../../../tests/fixtures/BindingParity.Common.conf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	engine, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	if err := engine.LoadConfig(string(config)); err != nil {
+		t.Fatal(err)
+	}
+	if engine.RewriteRuleCount() != 5 {
+		t.Fatalf("RewriteRuleCount() = %d", engine.RewriteRuleCount())
+	}
+	if engine.ScriptRuleCount() != 2 {
+		t.Fatalf("ScriptRuleCount() = %d", engine.ScriptRuleCount())
+	}
+
+	redirect, err := engine.EvaluateRewrite("http://old.binding.test/item", PhaseRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if redirect.Action != RewriteRedirect302 || redirect.Value != "https://api.binding.test/item" {
+		t.Fatalf("unexpected redirect: %+v", redirect)
+	}
+
+	requestPlan, requestBody, err := engine.BuildPlan("https://api.binding.test/request/item", PhaseRequest, "token=42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if requestBody != "token=42-bound" {
+		t.Fatalf("request body = %q", requestBody)
+	}
+	if !requestPlan.BodyAvailable || !requestPlan.RequiresBody {
+		t.Fatalf("unexpected request plan body flags: %+v", requestPlan)
+	}
+	if requestPlan.Rewrite.Action != RewriteRequestBodyReplaceRegex {
+		t.Fatalf("unexpected request rewrite: %+v", requestPlan.Rewrite)
+	}
+	if len(requestPlan.HeaderRewrites) != 1 ||
+		requestPlan.HeaderRewrites[0].Action != RewriteHeaderAdd ||
+		requestPlan.HeaderRewrites[0].HeaderName != "X-Binding" ||
+		requestPlan.HeaderRewrites[0].Value != "trace-item" {
+		t.Fatalf("unexpected request headers: %+v", requestPlan.HeaderRewrites)
+	}
+	if requestPlan.Script.Kind != ScriptHTTPRequest ||
+		requestPlan.Script.Tag != "binding.request" ||
+		requestPlan.Script.ScriptPath != "https://scripts.binding.test/request.js" ||
+		requestPlan.Script.Argument != "Mode=binding" ||
+		requestPlan.Script.TimeoutMs != 333 ||
+		requestPlan.Script.MaxSize != 777 {
+		t.Fatalf("unexpected request script: %+v", requestPlan.Script)
+	}
+
+	responsePlan, responseBody, err := engine.BuildPlan("https://api.binding.test/response/item", PhaseResponse, "ad=1&ok=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if responseBody != "clean=1&ok=1" {
+		t.Fatalf("response body = %q", responseBody)
+	}
+	if responsePlan.Rewrite.Action != RewriteResponseBodyReplaceRegex {
+		t.Fatalf("unexpected response rewrite: %+v", responsePlan.Rewrite)
+	}
+	if len(responsePlan.HeaderRewrites) != 1 ||
+		responsePlan.HeaderRewrites[0].Action != RewriteResponseHeaderAdd ||
+		responsePlan.HeaderRewrites[0].HeaderName != "X-Binding" ||
+		responsePlan.HeaderRewrites[0].Value != "resp-item" {
+		t.Fatalf("unexpected response headers: %+v", responsePlan.HeaderRewrites)
+	}
+	if responsePlan.Script.Kind != ScriptHTTPResponse ||
+		responsePlan.Script.Tag != "binding.response" ||
+		responsePlan.Script.ScriptPath != "https://scripts.binding.test/response.js" ||
+		responsePlan.Script.Argument != "Mode=binding" ||
+		responsePlan.Script.TimeoutMs != 444 ||
+		responsePlan.Script.MaxSize != 888 {
+		t.Fatalf("unexpected response script: %+v", responsePlan.Script)
 	}
 }
 

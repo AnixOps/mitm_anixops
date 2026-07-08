@@ -46,6 +46,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added updated NetworkCore integration notes for the `v0.45.10-alpha`
   adapter baseline, deferred live-mutation gates, and v1.0.0 host-owned data
   plane boundary.
+- Added a shared binding parity fixture with C runner, Go wrapper, and Rust
+  wrapper CI coverage.
 
 ### Changed
 

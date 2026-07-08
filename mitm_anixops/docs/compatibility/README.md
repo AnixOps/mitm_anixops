@@ -50,6 +50,8 @@ corresponding tests.
   rewrite, header, body, script, and policy-intent trace contract.
 - [plan-api-parity.md](plan-api-parity.md): plan API and legacy
   `evaluate_*`/`apply_*` parity contract.
+- [binding-parity.md](binding-parity.md): C runner, Go wrapper, and Rust
+  wrapper parity contract for shared policy fixtures.
 - [script-runtime-common.md](script-runtime-common.md): portable script runtime
   adapter contract for globals, timeout/error behavior, and double `$done`.
 - [cron-task-trigger.md](cron-task-trigger.md): planned cron/task trigger

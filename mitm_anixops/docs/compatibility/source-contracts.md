@@ -354,9 +354,33 @@ Current CI evidence:
 Unimplemented items:
 
 - runner golden JSON trace fixtures;
-- binding parity fixtures for Go and Rust wrappers;
 - named-header current-value parity matrix;
 - adapter ordering coverage.
+
+### Binding Parity
+
+Detailed contract: [Binding Parity Source Contract](binding-parity.md).
+
+Capability: prove the C runner, Go wrapper, and Rust wrapper expose equivalent
+policy outputs from a shared fixture.
+
+Input form:
+
+- `tests/fixtures/BindingParity.Common.conf`;
+- request/response URL, header, body, and script policy rules;
+- argument substitution shared across all binding surfaces.
+
+Current CI evidence:
+
+- C runner `scan` and `trace` checks in `make runner-check`;
+- Go wrapper `TestGoBindingLoadsSharedParityFixture`;
+- Rust wrapper `rust_binding_loads_shared_parity_fixture`.
+
+Unimplemented items:
+
+- golden JSON fixtures for runner traces;
+- named-header current-value parity matrix;
+- release-package binding surface parity.
 
 ### Script Trigger Metadata
 
