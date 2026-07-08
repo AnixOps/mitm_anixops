@@ -351,3 +351,37 @@ Unimplemented items:
 - cron/task triggers;
 - remote script cache refresh policy;
 - memory limits.
+
+### Script Runtime Common Subset
+
+Detailed contract: [Script Runtime Common Source Contract](script-runtime-common.md).
+
+Capability: execute matched request/response scripts through an adapter-owned
+runtime with portable globals and fail-open behavior.
+
+Input form:
+
+- request and response script metadata from Loon/AnixOps, Surge, and
+  Quantumult X parser subsets;
+- local no-network assets supplied by runner `--script-map` or
+  `--script-bundle`;
+- rule-level `argument`, `timeout`, `max-size`, `requires-body`, and `tag`
+  metadata.
+
+Current CI evidence:
+
+- runner replay with the Alpha Node contract runner;
+- `$request`, `$response`, `$argument`, `$persistentStore`, and `$done.body`
+  replay evidence;
+- double `$done` first-wins fixture
+  `tests/fixtures/runner_double_done_script.js`;
+- timeout and exception fail-open coverage in `script-contract-e2e`;
+- script bundle sha256 match, digest mismatch, and cache miss diagnostics.
+
+Unimplemented items:
+
+- production embedded QuickJS, JavaScriptCore, or other JavaScript runtime;
+- production script download/cache refresh/signature policy;
+- full platform Web API compatibility;
+- streaming and binary body runtime behavior;
+- production memory, CPU, storage, and log-redaction policy.

@@ -50,4 +50,6 @@ corresponding tests.
   rewrite, header, body, script, and policy-intent trace contract.
 - [plan-api-parity.md](plan-api-parity.md): plan API and legacy
   `evaluate_*`/`apply_*` parity contract.
+- [script-runtime-common.md](script-runtime-common.md): portable script runtime
+  adapter contract for globals, timeout/error behavior, and double `$done`.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

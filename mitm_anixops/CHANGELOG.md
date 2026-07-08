@@ -35,6 +35,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   legacy URL/body/header/script evaluation for matched and mismatched phases.
 - Added malformed MITM hostname parser and runtime negative tests so invalid
   hosts do not register or intercept through wildcard policy.
+- Added a script runtime common source contract plus no-network replay evidence
+  for double `$done` first-wins behavior.
 
 ### Changed
 

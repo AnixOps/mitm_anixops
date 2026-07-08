@@ -35,6 +35,7 @@ jobs:
             mitm_anixops/docs/compatibility/body-mutation-common.md
             mitm_anixops/docs/compatibility/decision-trace-schema.md
             mitm_anixops/docs/compatibility/plan-api-parity.md
+            mitm_anixops/docs/compatibility/script-runtime-common.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
@@ -56,6 +57,7 @@ jobs:
             mitm_anixops/tests/fixtures/PlanApiParity.Golden.conf
             mitm_anixops/tests/fixtures/PlanApiParity.PhaseMismatch.conf
             mitm_anixops/tests/fixtures/MITM.Hostname.Malformed.conf
+            mitm_anixops/tests/fixtures/runner_double_done_script.js
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -118,6 +120,10 @@ jobs:
           grep -q "PlanApiParity.Golden.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/plan_api_parity_fixture_matches_legacy_evaluation" mitm_anixops/tests/test_config.c
           grep -q "config/plan_api_parity_fixture_keeps_phase_mismatches_empty" mitm_anixops/tests/test_config.c
+          grep -q "script runtime contract" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Script Runtime Common Source Contract" mitm_anixops/docs/compatibility/script-runtime-common.md
+          grep -q "runner_double_done_script.js" mitm_anixops/Makefile
+          grep -q "runner-replay-double-done.out" mitm_anixops/Makefile
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md

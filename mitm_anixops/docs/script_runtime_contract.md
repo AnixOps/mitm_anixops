@@ -79,7 +79,7 @@ The adapter should expose these AnixOps-compatible bindings:
 - `$argument`: resolved argument string from `anixops_script_result_t.argument`.
 - `$persistentStore`: platform storage adapter with `read`, `write`, and optional `remove`. The Alpha Node contract
   runner supports a JSON file backend through `--store <file>`.
-- `$done(value)`: completion callback.
+- `$done(value)`: completion callback. The first call wins; later calls must not overwrite the accepted result.
 
 ## Request Result
 
@@ -171,3 +171,4 @@ It proves this contract through the proxy path:
 - offline script bundle replay with sha256 match, digest mismatch, and cache miss diagnostics
 - `$argument` propagation
 - `$done.body` writeback into the replay JSON body field
+- double `$done` first-wins behavior
