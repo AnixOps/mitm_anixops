@@ -187,7 +187,7 @@ jobs:
           Compress-Archive -Path $PackageRoot -DestinationPath $ZipPath -Force
           $Hash = (Get-FileHash -Algorithm SHA256 $ZipPath).Hash.ToLowerInvariant()
           $ZipName = Split-Path -Leaf $ZipPath
-          "$Hash  $ZipName" | Set-Content -Encoding ascii "$ZipPath.sha256"
+          [System.IO.File]::WriteAllText("$ZipPath.sha256", "$Hash  $ZipName`n", [System.Text.Encoding]::ASCII)
       - uses: actions/upload-artifact@v7
         with:
           name: anixops-mitm-release-windows
