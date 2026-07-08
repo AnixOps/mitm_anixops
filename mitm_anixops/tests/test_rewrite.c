@@ -1822,6 +1822,21 @@ static void pcre2_backend_matches_advanced_features_when_available(void)
 			engine,
 			"^https://unicode\\.test request-body-replace-regex \"\\p{L}+\" letters"),
 		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://atomic\\.test/(?>ab|a)c$ https://dest.test/atomic 302"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://possessive\\.test request-body-replace-regex \"\\d++\" number"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://named-backref\\.test/(?<word>[a-z]+)-\\k<word>$ https://dest.test/$<word> 302"),
+		ANIXOPS_OK);
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_evaluate_url(engine, "https://api.test/item/42", ANIXOPS_PHASE_REQUEST, &rewrite),
@@ -1877,6 +1892,39 @@ static void pcre2_backend_matches_advanced_features_when_available(void)
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
 	ANIXOPS_EXPECT_STREQ(body, "letters=123");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://atomic.test/abc",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/atomic");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://possessive.test",
+			ANIXOPS_PHASE_REQUEST,
+			"id=12345; ok",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX);
+	ANIXOPS_EXPECT_STREQ(body, "id=number; ok");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://named-backref.test/token-token",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://dest.test/token");
 
 	anixops_engine_free(engine);
 }

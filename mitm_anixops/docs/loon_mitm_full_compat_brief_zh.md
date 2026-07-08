@@ -119,7 +119,8 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 方案：
 
 - 保留 `posix-lite`，作为无依赖 fallback。
-- 增加 `pcre2`，覆盖 lookaround、backreference、Unicode property、word boundary、atomic/possessive 等。
+- 增加 `pcre2`，Alpha 可选 backend 已覆盖 lookaround、backreference、Unicode property、word boundary、
+  atomic/possessive、named backreference fixture。
 - Darwin 平台增加 NSRegularExpression/ICU 对照测试。
 - 编译失败时输出明确诊断，例如 “requires pcre2 backend”。
 

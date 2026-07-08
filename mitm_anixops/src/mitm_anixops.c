@@ -423,7 +423,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.3";
+	return "0.45.4";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
