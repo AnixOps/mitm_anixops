@@ -45,6 +45,7 @@ Parser case:
 tests/fixtures/BodyMutation.Common.conf
 tests/fixtures/QuantumultX.BodyMutation.snippet
 tests/fixtures/Surge.BodyMutation.sgmodule
+tests/fixtures/Surge.BodyJsonMutation.sgmodule
 ```
 
 Expected behavior:
@@ -59,6 +60,8 @@ Expected behavior:
   observable through `anixops_rewrite_apply_body`;
 - Surge `[URL Rewrite]` `response-body-replace-regex` response body mutation
   is observable through `anixops_rewrite_apply_body`;
+- Surge `[URL Rewrite]` `response-body-json-replace` response body mutation is
+  observable through `anixops_rewrite_apply_body`;
 - phase separation prevents request body rules from matching response phase
   evaluation.
 
@@ -70,6 +73,7 @@ Parser case:
 tests/fixtures/BodyMutation.Common.Malformed.conf
 tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet
 tests/fixtures/Surge.BodyMutation.Malformed.sgmodule
+tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
 ```
 
 Expected behavior:
@@ -78,6 +82,8 @@ Expected behavior:
 - the invalid Quantumult X `url response-body-replace-regex` body regex rejects
   config load;
 - the invalid Surge `[URL Rewrite]` response body regex rejects config load;
+- malformed Surge `[URL Rewrite]` `response-body-json-replace` without a JSON
+  path and replacement rejects config load under `ANIXOPS_COMPAT_SURGE_STRICT`;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -114,6 +120,10 @@ Required CI evidence:
   `config/surge_body_mutation_fixture_maps_response_body_regex`;
 - `tests/test_config.c` registers
   `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
+- `tests/test_config.c` registers
+  `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

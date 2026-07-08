@@ -591,19 +591,23 @@ Input form:
   [Surge Task Metadata](surge-task-metadata.md);
 - `[MITM] hostname`;
 - unsupported certificate-material keys `ca-p12` and `ca-passphrase`;
-- selected body regex and JQ rewrite forms.
+- selected body regex, JSON, and JQ rewrite forms.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/Surge.CommonConfig.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
+- positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
 - negative fixture `tests/fixtures/Surge.CommonConfig.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
 - unsupported fixture `tests/fixtures/Surge.MitmCertificateUnsupported.sgmodule`;
 - `config/surge_common_config_fixture_is_supported`;
 - `config/surge_common_config_strict_fixture_rejects_malformed_rule`;
 - `config/surge_body_mutation_fixture_maps_response_body_regex`;
 - `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
+- `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
+- `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
 - `config/surge_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - C parser/script tests;
 - runner corpus entry `Representative.Surge.sgmodule`;
@@ -1176,15 +1180,19 @@ Current CI evidence:
 - positive fixture `tests/fixtures/BodyMutation.Common.conf`;
 - positive fixture `tests/fixtures/QuantumultX.BodyMutation.snippet`;
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
+- positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
 - negative fixture `tests/fixtures/BodyMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
 - `config/body_mutation_common_fixture_is_supported`;
 - `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
 - `config/quantumultx_body_mutation_fixture_maps_response_body_regex`;
 - `config/quantumultx_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/surge_body_mutation_fixture_maps_response_body_regex`;
 - `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
+- `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
+- `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
 - regex, JSON path, body-chain, and optional JQ tests under
   `tests/test_rewrite.c`.
 

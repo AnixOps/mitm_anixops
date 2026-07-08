@@ -1,0 +1,2 @@
+[URL Rewrite]
+^https:\/\/json\.common\.surge\.test\/bad response-body-json-replace

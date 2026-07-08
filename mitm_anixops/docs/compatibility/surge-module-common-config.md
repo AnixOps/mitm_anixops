@@ -23,7 +23,7 @@ The current common-config subset accepts:
   [Surge Requirement Metadata](surge-requirement-metadata.md);
 - `#!arguments = Feature:true,Mode:value` inline argument defaults;
 - `[URL Rewrite]` URL redirect and reject rules;
-- `[URL Rewrite]` response body regex mutation rules;
+- `[URL Rewrite]` response body regex and JSON mutation rules;
 - `[Script]` attr-list rules with `type`, `pattern`, `requires-body`,
   `timeout`, `timeout-ms`, `max-size`, `max_size`, `script-path`, and
   `argument`;
@@ -53,6 +53,7 @@ Parser case:
 ```text
 tests/fixtures/Surge.CommonConfig.sgmodule
 tests/fixtures/Surge.BodyMutation.sgmodule
+tests/fixtures/Surge.BodyJsonMutation.sgmodule
 ```
 
 Expected behavior:
@@ -62,12 +63,14 @@ Expected behavior:
 - two rewrite rules are registered;
 - one response body regex mutation rule is registered in the dedicated body
   mutation fixture;
+- one response body JSON replacement rule is registered in the dedicated body
+  mutation fixture;
 - two script rules are registered;
 - three MITM host patterns are registered;
 - module metadata is tolerated and recorded as diagnostics;
-- redirect, reject, response body regex mutation, request script, response
-  script, argument resolution, and MITM allow/deny behavior are observable
-  through public ABI calls.
+- redirect, reject, response body regex mutation, response body JSON mutation,
+  request script, response script, argument resolution, and MITM allow/deny
+  behavior are observable through public ABI calls.
 
 ## Negative Case
 
@@ -76,12 +79,15 @@ Parser case:
 ```text
 tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
 tests/fixtures/Surge.BodyMutation.Malformed.sgmodule
+tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
 ```
 
 Expected behavior:
 
 - `ANIXOPS_COMPAT_SURGE_STRICT` rejects the malformed script line;
 - an invalid response body regex rejects config load;
+- `ANIXOPS_COMPAT_SURGE_STRICT` rejects a malformed
+  `response-body-json-replace` line without a JSON path and replacement value;
 - the malformed script line records a rejected diagnostic with section `Script`
   and action `script`;
 - the invalid response body regex records a rejected diagnostic with section
@@ -132,6 +138,10 @@ Required CI evidence:
 - `tests/test_config.c` registers
   `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `tests/test_config.c` registers
+  `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
+- `tests/test_config.c` registers
+  `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
+- `tests/test_config.c` registers
   `config/surge_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
@@ -144,6 +154,6 @@ Surge module common config
 ```
 
 The row remains `partial` until broader module grammar, requirement runtime
-gating behavior, certificate lifecycle, body/JQ corpus coverage, and
+gating behavior, certificate lifecycle, broader body/JQ corpus coverage, and
 scheduler/runtime behavior exist. Dedicated task descriptor parser evidence
 lives in the `Surge task metadata` row.

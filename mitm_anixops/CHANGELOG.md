@@ -71,6 +71,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Surge `[URL Rewrite]` `response-body-replace-regex` parser fixtures
   and CI-covered tests while keeping HTTP serialization, compression, and
   streaming adapter-owned.
+- Added Surge `[URL Rewrite]` `response-body-json-replace` parser fixtures and
+  CI-covered tests while keeping HTTP serialization, compression, and streaming
+  adapter-owned.
 - Added a Surge requirement metadata source contract plus positive and negative
   parser fixtures for `#!requirement` diagnostics.
 - Added a Surge task metadata source contract plus positive and negative parser
