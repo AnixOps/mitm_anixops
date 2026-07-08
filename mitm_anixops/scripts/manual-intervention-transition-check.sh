@@ -14,9 +14,11 @@ missing_scope_fixture=$(mktemp)
 missing_scope_output=$(mktemp)
 missing_pending_evidence_fixture=$(mktemp)
 missing_pending_evidence_output=$(mktemp)
+missing_completed_evidence_fixture=$(mktemp)
+missing_completed_evidence_output=$(mktemp)
 missing_evidence_fixture=$(mktemp)
 missing_evidence_output=$(mktemp)
-trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$duplicate_status_fixture" "$duplicate_status_output" "$missing_scope_fixture" "$missing_scope_output" "$missing_pending_evidence_fixture" "$missing_pending_evidence_output" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
+trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$duplicate_status_fixture" "$duplicate_status_output" "$missing_scope_fixture" "$missing_scope_output" "$missing_pending_evidence_fixture" "$missing_pending_evidence_output" "$missing_completed_evidence_fixture" "$missing_completed_evidence_output" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
 
 sed \
 	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \
@@ -65,6 +67,17 @@ if MANUAL_INTERVENTION_FILE="$missing_pending_evidence_fixture" sh "$ROOT/script
 fi
 
 grep -F "manual intervention marker must have exactly one confirmation-evidence field: branch-protection" "$missing_pending_evidence_output" >/dev/null
+
+sed \
+	-e '/^github-remote-confirmation-evidence=/d' \
+	"$MANUAL" > "$missing_completed_evidence_fixture"
+
+if MANUAL_INTERVENTION_FILE="$missing_completed_evidence_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" > "$missing_completed_evidence_output" 2>&1; then
+	printf '%s\n' "manual intervention transition check failed: completed marker without evidence passed" >&2
+	exit 1
+fi
+
+grep -F "manual intervention marker must have exactly one confirmation-evidence field: github-remote" "$missing_completed_evidence_output" >/dev/null
 
 sed \
 	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \

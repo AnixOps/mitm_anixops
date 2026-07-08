@@ -32,6 +32,12 @@ stash-expanded-parser-support
 shadowrocket-expanded-parser-support
 '
 
+completed_markers='
+github-remote
+alpha-0.45.10-release
+script-runtime-policy-core-dependency-decision
+'
+
 field_count() {
 	key=$1
 	awk -F= -v key="$key" '$1 == key {count++} END {print count + 0}' "$MANUAL"
@@ -49,6 +55,22 @@ require_single_field() {
 	count="$(field_count "$key")"
 	if [ "$count" -ne 1 ]; then
 		printf 'manual intervention marker must have exactly one %s field: %s\n' "$suffix" "$item" >&2
+		exit 1
+	fi
+}
+
+require_confirmed_evidence() {
+	item=$1
+	require_single_field "$item" "status"
+	require_single_field "$item" "confirmation-evidence"
+	status="$(field_value "$item-status")"
+	if [ "$status" != "confirmed" ]; then
+		printf 'manual intervention completed marker must be confirmed: %s=%s\n' "$item" "$status" >&2
+		exit 1
+	fi
+	evidence="$(field_value "$item-confirmation-evidence")"
+	if [ -z "$evidence" ] || [ "$evidence" = "not-yet-confirmed" ]; then
+		printf 'confirmed manual intervention marker lacks confirmation evidence: %s\n' "$item" >&2
 		exit 1
 	fi
 }
@@ -83,9 +105,10 @@ printf '%s\n' "$required_markers" | while IFS= read -r item; do
 	fi
 done
 
-grep -F "github-remote-status=confirmed" "$MANUAL" >/dev/null
-grep -F "alpha-0.45.10-release-status=confirmed" "$MANUAL" >/dev/null
-grep -F "script-runtime-policy-core-dependency-decision-status=confirmed" "$MANUAL" >/dev/null
+printf '%s\n' "$completed_markers" | while IFS= read -r item; do
+	[ -n "$item" ] || continue
+	require_confirmed_evidence "$item"
+done
 
 awk -F= '
 /-status=/ {

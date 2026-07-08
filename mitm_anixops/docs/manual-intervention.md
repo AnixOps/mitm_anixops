@@ -168,6 +168,7 @@ shadowrocket-expanded-parser-support-next-action=confirm-app-profile-source-cont
 ```text
 github-remote-status=confirmed
 github-remote=https://github.com/AnixOps/mitm_anixops.git
+github-remote-confirmation-evidence=https://github.com/AnixOps/mitm_anixops.git
 ```
 
 ```text
@@ -176,12 +177,14 @@ alpha-0.45.10-release-tag=v0.45.10-alpha
 alpha-0.45.10-release-url=https://github.com/AnixOps/mitm_anixops/releases/tag/v0.45.10-alpha
 alpha-0.45.10-ci-run=https://github.com/AnixOps/mitm_anixops/actions/runs/28911145604
 alpha-0.45.10-release-assets=anixops-mitm-alpha-0.45.10.tar.gz,anixops-mitm-windows-x64.zip
+alpha-0.45.10-release-confirmation-evidence=https://github.com/AnixOps/mitm_anixops/releases/tag/v0.45.10-alpha
 ```
 
 ```text
 script-runtime-policy-core-dependency-decision-status=confirmed
 script-runtime-policy-core-dependency-decision=no-embedded-quickjs-javascriptcore-or-other-js-engine-in-v1-policy-core
 script-runtime-policy-core-dependency-decision-doc=docs/architecture/script-runtime-dependency.md
+script-runtime-policy-core-dependency-decision-confirmation-evidence=docs/architecture/script-runtime-dependency.md
 ```
 
 ## Rules
@@ -194,6 +197,8 @@ script-runtime-policy-core-dependency-decision-doc=docs/architecture/script-runt
 - Confirmed items must include non-placeholder confirmation evidence. Use a
   redacted URL, audit note, or settings summary; never commit credentials,
   signing material, reviewer identity details, or private policy.
+- Completed-item markers must include exactly one `status` and
+  `confirmation-evidence` field.
 - A pending marker may block a release gate, but it must not be used to skip
   CI, tests, checksum, manifest, or release-note generation.
 - Any future credential, certificate, signing key, provisioning profile,
