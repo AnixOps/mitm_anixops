@@ -281,6 +281,115 @@ static void quantumultx_common_config_strict_fixture_rejects_malformed_rule(void
 	free(fixture);
 }
 
+static void surge_common_config_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.CommonConfig.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	anixops_script_result_t script;
+	anixops_mitm_decision_t mitm;
+	size_t diagnostic_count;
+	size_t accepted = 0;
+	size_t ignored = 0;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 3);
+
+	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+	for (i = 0; i < diagnostic_count; i++) {
+		anixops_rule_diagnostic_t diagnostic;
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
+			accepted++;
+		}
+		else if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_IGNORED) {
+			ignored++;
+		}
+	}
+	ANIXOPS_EXPECT_TRUE(accepted >= 6);
+	ANIXOPS_EXPECT_TRUE(ignored >= 4);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "http://old.common.surge.test/path", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://api.common.surge.test/path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://ads.common.surge.test", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT_200);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.common.surge.test/v1", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 3000);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 8192);
+	ANIXOPS_EXPECT_STREQ(script.tag, "Surge.Common.Request");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Feature=true&Mode=surge");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.common.surge.test/v1", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 1200);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 4096);
+	ANIXOPS_EXPECT_STREQ(script.tag, "Surge.Common.Response");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Feature=\"true\"&Mode=surge");
+
+	anixops_engine_set_mitm_enabled(engine, 1);
+	anixops_engine_set_cert_state(engine, ANIXOPS_CERT_TRUSTED);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.common.surge.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "blocked.common.surge.test", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_DENY_HOST);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void surge_common_config_strict_fixture_rejects_malformed_rule(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.CommonConfig.Malformed.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_SURGE_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -836,6 +945,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/quantumultx_common_config_strict_fixture_rejects_malformed_rule",
 		quantumultx_common_config_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_common_config_fixture_is_supported",
+		surge_common_config_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_common_config_strict_fixture_rejects_malformed_rule",
+		surge_common_config_strict_fixture_rejects_malformed_rule);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

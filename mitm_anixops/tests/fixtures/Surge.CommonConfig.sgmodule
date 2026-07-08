@@ -1,0 +1,16 @@
+#!name = Surge Common Config Fixture
+#!desc = Minimal Surge module fields for P1 parser contract coverage.
+#!arguments = Feature:true,Mode:surge
+#!arguments-desc = Feature: enables fixture behavior, Mode: fixture mode
+#!requirement = Surge >= 5.0
+
+[URL Rewrite]
+^http:\/\/old\.common\.surge\.test\/(.*) https://api.common.surge.test/$1 302
+^https:\/\/ads\.common\.surge\.test reject-200
+
+[Script]
+Surge.Common.Request = type=http-request, pattern=^https:\/\/api\.common\.surge\.test\/v1, requires-body=1, timeout=3, max-size=8192, script-path=https://scripts.example/surge-common-request.js, argument=Feature={Feature}&Mode={Mode}
+Surge.Common.Response = type=http-response, pattern=^https:\/\/api\.common\.surge\.test\/v1, requires-body=1, timeout-ms=1200, max_size=4096, script-path=https://scripts.example/surge-common-response.js, argument=Feature="{{{Feature}}}"&Mode={Mode}
+
+[MITM]
+hostname = %APPEND% api.common.surge.test, ads.common.surge.test, -blocked.common.surge.test

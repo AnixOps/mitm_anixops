@@ -28,12 +28,15 @@ jobs:
             mitm_anixops/docs/compatibility/source-contracts.md
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
             mitm_anixops/docs/compatibility/quantumultx-common-config.md
+            mitm_anixops/docs/compatibility/surge-module-common-config.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
             mitm_anixops/tests/fixtures/Loon.CommonFields.Malformed.plugin
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.snippet
             mitm_anixops/tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
+            mitm_anixops/tests/fixtures/Surge.CommonConfig.sgmodule
+            mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             .github/pull_request_template.md
           )
           for file in "${required_files[@]}"; do
@@ -59,6 +62,10 @@ jobs:
           grep -q "config/quantumultx_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/quantumultx_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
           grep -q "Surge module common config" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge Module Common Config Source Contract" mitm_anixops/docs/compatibility/surge-module-common-config.md
+          grep -q "Surge.CommonConfig.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "config/surge_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
+          grep -q "config/surge_common_config_strict_fixture_rejects_malformed_rule" mitm_anixops/tests/test_config.c
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md

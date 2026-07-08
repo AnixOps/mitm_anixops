@@ -1,0 +1,2 @@
+[Script]
+MissingPattern = type=http-response, script-path=https://scripts.example/surge-common-response.js

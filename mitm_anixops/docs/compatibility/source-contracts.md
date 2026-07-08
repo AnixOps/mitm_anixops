@@ -94,6 +94,8 @@ Unimplemented items:
 
 ### Surge Module Common Subset
 
+Detailed contract: [Surge Module Common Config Source Contract](surge-module-common-config.md).
+
 Capability: parse and evaluate the currently implemented Surge module subset.
 
 Input form:
@@ -107,6 +109,10 @@ Input form:
 
 Current CI evidence:
 
+- positive fixture `tests/fixtures/Surge.CommonConfig.sgmodule`;
+- negative fixture `tests/fixtures/Surge.CommonConfig.Malformed.sgmodule`;
+- `config/surge_common_config_fixture_is_supported`;
+- `config/surge_common_config_strict_fixture_rejects_malformed_rule`;
 - C parser/script tests;
 - runner corpus entry `Representative.Surge.sgmodule`;
 - optional `JQ=1` GitHub Actions coverage when libjq headers are installed.

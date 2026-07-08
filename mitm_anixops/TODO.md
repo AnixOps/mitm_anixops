@@ -21,7 +21,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 
 - [x] Define Loon plugin source contract for common sections and fields.
 - [x] Define Quantumult X source contract for rewrite/task/mitm subsets.
-- [ ] Define Surge module source contract for module metadata, scripts, MITM,
+- [x] Define Surge module source contract for module metadata, scripts, MITM,
   and rewrite subsets.
 - [ ] Add one parser fixture and one positive/negative parser test per new
   grammar unit.

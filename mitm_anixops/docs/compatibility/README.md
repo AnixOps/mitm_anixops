@@ -36,4 +36,6 @@ corresponding tests.
   common-fields parser contract.
 - [quantumultx-common-config.md](quantumultx-common-config.md): P1
   Quantumult X rewrite/MITM common-config parser contract.
+- [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
+  module common-config parser contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.
