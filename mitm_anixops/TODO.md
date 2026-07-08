@@ -51,7 +51,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Define script runtime source contract for `$request`, `$response`,
   `$argument`, `$persistentStore`, `$done`, timeout, exception, and double done.
 - [x] Define cron/task trigger as planned until parser and runtime tests exist.
-- [ ] Record any QuickJS, JavaScriptCore, or new runtime dependency decision
+- [x] Record any QuickJS, JavaScriptCore, or new runtime dependency decision
   before implementation.
 
 ## P4 MITM Policy And Certificate Lifecycle

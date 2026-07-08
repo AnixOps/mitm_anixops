@@ -100,6 +100,8 @@ pipeline for that HTTP object.
 The Alpha Node runner executes no-network replay scripts through
 `anixops-mitm-runner replay` using `--script-map` or `--script-bundle`. It is
 reference evidence for this boundary, not a final embedded runtime selection.
+The v1.0.0 policy core dependency decision is documented in
+`docs/architecture/script-runtime-dependency.md`.
 
 ## Diagnostics
 
@@ -144,7 +146,8 @@ The matrix row is `script runtime contract` in
 ## Unimplemented Items
 
 - Production embedded QuickJS, JavaScriptCore, or other JavaScript runtime
-  selection.
+  selection. The current v1.0.0 policy-core decision is no embedded JavaScript
+  engine.
 - Production script download, cache refresh, and signature policy.
 - Full platform Web API compatibility.
 - Streaming body runtime.

@@ -376,6 +376,9 @@ For the BiliUniverse Enhanced fixture, see `docs/bili_enhanced_plugin_support.md
 
 For the script runtime adapter boundary, see `docs/script_runtime_contract.md`.
 
+For the v1.0.0 script runtime dependency decision, see
+`docs/architecture/script-runtime-dependency.md`.
+
 For `networkcore_anixops` compatibility and integration staging, see `docs/networkcore_integration.md`.
 
 For release blockers, compatibility gaps, and stage non-goals, see `docs/TODO.md`.

@@ -380,7 +380,8 @@ Current CI evidence:
 
 Unimplemented items:
 
-- production embedded QuickJS, JavaScriptCore, or other JavaScript runtime;
+- production embedded QuickJS, JavaScriptCore, or other JavaScript runtime. The
+  current v1 policy-core dependency decision is no embedded JavaScript engine;
 - production script download/cache refresh/signature policy;
 - full platform Web API compatibility;
 - streaming and binary body runtime behavior;

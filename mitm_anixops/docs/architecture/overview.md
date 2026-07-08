@@ -55,6 +55,11 @@ Owned by host projects such as NetworkCore or downstream clients:
 - storage, quotas, and concurrency for persistent stores;
 - app-store, OS, or enterprise policy compliance.
 
+The v1.0.0 policy-core runtime dependency decision is recorded in
+[Script Runtime Dependency Decision](script-runtime-dependency.md): the default
+C policy core does not embed QuickJS, JavaScriptCore, or another production
+JavaScript engine.
+
 ## NetworkCore Alignment
 
 `networkcore_anixops` currently integrates `mitm_anixops` as a MITM policy

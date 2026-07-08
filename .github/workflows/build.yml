@@ -24,6 +24,7 @@ jobs:
             mitm_anixops/docs/architecture/overview.md
             mitm_anixops/docs/architecture/release-gate.md
             mitm_anixops/docs/architecture/release-dry-run.md
+            mitm_anixops/docs/architecture/script-runtime-dependency.md
             mitm_anixops/docs/compatibility/README.md
             mitm_anixops/docs/compatibility/source-contracts.md
             mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
@@ -123,11 +124,15 @@ jobs:
           grep -q "config/plan_api_parity_fixture_keeps_phase_mismatches_empty" mitm_anixops/tests/test_config.c
           grep -q "script runtime contract" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Script Runtime Common Source Contract" mitm_anixops/docs/compatibility/script-runtime-common.md
+          grep -q "script-runtime-dependency.md" mitm_anixops/docs/compatibility/matrix.md
           grep -q "runner_double_done_script.js" mitm_anixops/Makefile
           grep -q "runner-replay-double-done.out" mitm_anixops/Makefile
           grep -q "cron-task-trigger.md" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Cron And Task Trigger Source Contract" mitm_anixops/docs/compatibility/cron-task-trigger.md
           grep -q "script/malformed_and_non_http_script_rules_are_ignored_or_rejected" mitm_anixops/tests/test_script.c
+          grep -q "script-runtime-policy-core-dependency=none" mitm_anixops/docs/architecture/script-runtime-dependency.md
+          grep -q "script-runtime-engine-selection-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "^- \\[x\\] Record any QuickJS, JavaScriptCore, or new runtime dependency decision" mitm_anixops/TODO.md
           grep -q "Stash migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket migration notes" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Known CI/CD gaps for v1.0.0" mitm_anixops/docs/architecture/repository-audit.md

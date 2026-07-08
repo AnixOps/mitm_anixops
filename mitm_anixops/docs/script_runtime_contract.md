@@ -6,6 +6,8 @@ mutation.
 
 The Alpha package includes `anixops-script-runner.js`, the Node-based contract runner used by demos and E2E replay. It
 is a reference adapter for the bindings below, not the final embedded QuickJS/JavaScriptCore runtime.
+The v1.0.0 policy-core runtime dependency decision is recorded in
+`docs/architecture/script-runtime-dependency.md`; the C policy core does not embed a production JavaScript engine.
 
 `anixops-mitm-runner replay` can execute the same contract without network IO when `--script-runner` is paired with
 one or more `--script-map <script-url=local-file>` entries or with `--script-bundle <manifest.json>`. Bundle manifests

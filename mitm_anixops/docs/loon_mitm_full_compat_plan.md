@@ -2,6 +2,11 @@
 
 本文档用于排版前的方案草稿。目标不是把 `mitm_anixops` 变成 GUI 客户端，而是把它扩展成一个可嵌入、无 UI、跨平台的 LOON/AnixOps MITM 插件兼容工具链。
 
+当前 v1.0.0 policy-core 依赖决策以
+`docs/architecture/script-runtime-dependency.md` 为准：C policy core 不嵌入
+QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/JSC
+内容属于长期 runtime/adapter backlog，不能作为当前支持声明。
+
 ## 目标
 
 1. 补齐兼容性缺口：更完整的 JQ body rewrite、PCRE/NSRegularExpression 行为覆盖、Quantumult X / Surge / LOON 语法覆盖、边界行为一致性。

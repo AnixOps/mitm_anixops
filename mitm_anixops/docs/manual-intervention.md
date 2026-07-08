@@ -34,6 +34,14 @@ third-party-plugin-corpus-next-action=confirm-source-url-license-redaction-and-r
 ```
 
 ```text
+script-runtime-engine-selection-status=pending
+script-runtime-engine-selection-scope=production-embedded-javascript-runtime
+script-runtime-engine-selection-required-before=claiming-production-embedded-js-runtime-support
+script-runtime-engine-selection-current-v1-policy-core-decision=no-embedded-js-engine
+script-runtime-engine-selection-next-action=choose-quickjs-javascriptcore-adapter-owned-runtime-or-external-runner-after-source-contract-license-review-platform-review-and-github-actions-evidence
+```
+
+```text
 windows-signing-status=pending
 windows-signing-scope=windows-release-artifacts
 windows-signing-required-before=signed-windows-v1-release
@@ -74,6 +82,12 @@ alpha-0.45.10-release-tag=v0.45.10-alpha
 alpha-0.45.10-release-url=https://github.com/AnixOps/mitm_anixops/releases/tag/v0.45.10-alpha
 alpha-0.45.10-ci-run=https://github.com/AnixOps/mitm_anixops/actions/runs/28911145604
 alpha-0.45.10-release-assets=anixops-mitm-alpha-0.45.10.tar.gz,anixops-mitm-windows-x64.zip
+```
+
+```text
+script-runtime-policy-core-dependency-decision-status=confirmed
+script-runtime-policy-core-dependency-decision=no-embedded-quickjs-javascriptcore-or-other-js-engine-in-v1-policy-core
+script-runtime-policy-core-dependency-decision-doc=docs/architecture/script-runtime-dependency.md
 ```
 
 ## Rules

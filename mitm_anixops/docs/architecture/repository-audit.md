@@ -141,7 +141,8 @@ status must be taken from GitHub Actions, not local execution.
 - Stash and Shadowrocket are not yet first-class parser targets.
 - Cron/task trigger behavior has a planned source contract, but parser fixtures,
   scheduler dispatch, and runtime execution remain unimplemented.
-- Production JS runtime remains out of scope for the C policy core.
+- Production JS runtime remains out of scope for the C policy core; the
+  dependency decision is recorded in `docs/architecture/script-runtime-dependency.md`.
 - Certificate lifecycle is adapter-owned and not yet documented as a v1.0.0
   source contract in this repository.
 

@@ -4,6 +4,11 @@
 
 把现有 `mitm_anixops` 扩展为一个无 UI、可嵌入、跨平台的 LOON MITM 插件兼容工具链，让 LOON/AnixOps 插件能力可以在 Windows、Linux、macOS、iOS/macOS Network Extension，以及 Rust/Go/C/C++ 宿主中复用。
 
+当前 v1.0.0 policy-core 依赖决策以
+`docs/architecture/script-runtime-dependency.md` 为准：C policy core 不嵌入
+QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/JSC
+内容属于长期 runtime/adapter backlog，不能作为当前支持声明。
+
 ## 已拍板方向
 
 | 决策项 | 选择 |
