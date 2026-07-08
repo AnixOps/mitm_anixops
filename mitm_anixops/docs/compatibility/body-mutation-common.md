@@ -43,6 +43,7 @@ Parser case:
 
 ```text
 tests/fixtures/BodyMutation.Common.conf
+tests/fixtures/BodyJsonMutation.Common.conf
 tests/fixtures/Loon.BodyMutation.plugin
 tests/fixtures/Loon.BodyJsonMutation.plugin
 tests/fixtures/Loon.ResponseBodyJsonMutation.plugin
@@ -59,6 +60,8 @@ Expected behavior:
 - response body regex mutation is observable through
   `anixops_rewrite_apply_body`;
 - request JSON body mutation is observable through `anixops_rewrite_apply_body`;
+- common response JSON body mutation is observable through
+  `anixops_rewrite_apply_body`;
 - Loon `[Body Rewrite]` request and response body regex mutations are
   observable through `anixops_rewrite_apply_body`;
 - Loon `[Body Rewrite]` request body JSON mutation is observable through
@@ -80,6 +83,7 @@ Parser case:
 
 ```text
 tests/fixtures/BodyMutation.Common.Malformed.conf
+tests/fixtures/BodyJsonMutation.Common.Malformed.conf
 tests/fixtures/Loon.BodyMutation.Malformed.plugin
 tests/fixtures/Loon.BodyJsonMutation.Malformed.plugin
 tests/fixtures/Loon.ResponseBodyJsonMutation.Malformed.plugin
@@ -91,6 +95,8 @@ tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
 Expected behavior:
 
 - the invalid body regex rejects config load;
+- malformed common `response-body-json-replace` without a JSON path and
+  replacement rejects config load under `ANIXOPS_COMPAT_LOON_STRICT`;
 - the invalid Loon `[Body Rewrite]` body regex rejects config load;
 - malformed Loon `[Body Rewrite]` `request-body-json-replace` without a JSON
   path and replacement rejects config load under `ANIXOPS_COMPAT_LOON_STRICT`;
@@ -129,6 +135,10 @@ Required CI evidence:
   `config/body_mutation_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/body_json_mutation_common_fixture_maps_response_body_json_replace`;
+- `tests/test_config.c` registers
+  `config/body_json_mutation_common_strict_fixture_rejects_missing_json_path`;
 - `tests/test_config.c` registers
   `config/loon_body_mutation_fixture_maps_body_rewrites`;
 - `tests/test_config.c` registers
