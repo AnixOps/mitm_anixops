@@ -1,0 +1,3 @@
+http:
+  mitm:
+    - weather-data.stash.example.test:443

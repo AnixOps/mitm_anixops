@@ -60,7 +60,8 @@ described in [`stash-http-mitm.md`](stash-http-mitm.md):
 Allowed statements:
 
 - Stash is a migration target.
-- Stash `http.mitm` has partial parser support for documented MITM host lists.
+- Stash `http.mitm` has partial parser support for documented MITM host lists,
+  including host-only normalization for `host:*` port-wildcard entries.
 - Shadowrocket app-level profile syntax remains a migration target outside the
   common-config contract.
 - Shadowrocket common config has partial parser support for documented URL
@@ -88,6 +89,7 @@ Current CI evidence:
 - `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
+- `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
 - `config/shadowrocket_common_config_fixture_is_supported`;
 - `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
@@ -107,7 +109,10 @@ Expected Stash guard behavior:
 Expected Stash HTTP MITM behavior:
 
 - config load succeeds for `tests/fixtures/Stash.HttpMitm.yaml`;
-- exact, wildcard, and deny host entries register as MITM host patterns;
+- exact, wildcard, deny, and `host:*` entries register as MITM host patterns;
+- `host:*` entries expose host-only matched patterns because port-specific MITM
+  decisions are adapter-owned;
+- `host:443` entries remain unsupported and do not register MITM host patterns;
 - no rewrite rules, script rules, task descriptors, route policies, proxy
   nodes, DNS settings, or argument defaults are registered;
 - malformed `http.mitm` host entries reject with parse diagnostics.

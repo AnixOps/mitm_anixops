@@ -41,6 +41,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   tests.
 - [x] Add Surge task metadata parser fixtures and positive/negative tests.
 - [x] Add Stash HTTP MITM host parser fixtures and positive/negative tests.
+- [x] Normalize Stash HTTP MITM `host:*` port-wildcard entries to host-only
+  policy patterns.
 - [x] Add Shadowrocket common-config parser fixture and positive/negative tests.
 - [x] Add reject/direct/proxy policy-intent parser fixtures and
   positive/negative tests.

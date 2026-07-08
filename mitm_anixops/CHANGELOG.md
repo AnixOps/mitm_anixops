@@ -51,6 +51,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   fixtures for `[Script]` cron and interval task descriptors.
 - Added a Stash HTTP MITM source contract plus positive and negative parser
   fixtures for `http.mitm` host policy metadata.
+- Added Stash HTTP MITM `host:*` port-wildcard fixture coverage, normalized to
+  host-only policy-core matching while keeping port-specific behavior
+  adapter-owned.
 - Added a Shadowrocket common-config source contract plus positive and negative
   parser fixtures for a P1 parser milestone.
 - Added a request rewrite source contract plus positive and negative parser

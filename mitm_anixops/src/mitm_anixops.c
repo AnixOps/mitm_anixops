@@ -3758,6 +3758,7 @@ static int anixops_yaml_mapping_key_is_empty(const char *line, const char *key)
 static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap)
 {
 	char *p;
+	char *port_wildcard = NULL;
 	char quote = '\0';
 	size_t i;
 	if (line == NULL || out == NULL || out_cap == 0 || line[0] != '-') {
@@ -3791,8 +3792,16 @@ static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t 
 	anixops_unquote_inplace(out);
 	for (p = out; *p != '\0'; p++) {
 		if (*p == ':') {
+			if (p != out && p[1] == '*' && p[2] == '\0') {
+				port_wildcard = p;
+				break;
+			}
 			return 0;
 		}
+	}
+	if (port_wildcard != NULL) {
+		*port_wildcard = '\0';
+		anixops_trim_inplace(out);
 	}
 	return out[0] != '\0';
 }

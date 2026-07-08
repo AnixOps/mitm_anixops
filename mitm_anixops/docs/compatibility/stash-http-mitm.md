@@ -32,6 +32,7 @@ http:
     - stash.example.test
     - "*.stash.example.test"
     - -blocked.stash.example.test
+    - weather-data.stash.example.test:*
 ```
 
 Supported forms:
@@ -42,11 +43,13 @@ Supported forms:
 - exact host patterns;
 - wildcard host patterns already accepted by the policy core;
 - deny host patterns using the existing `-host` marker after the YAML list
-  marker.
+  marker;
+- Stash `host:*` port-wildcard suffixes, normalized to host-only policy-core
+  patterns because the current ABI has no port dimension.
 
 Unsupported forms remain ignored or outside this contract:
 
-- port-qualified host patterns such as `host:*`;
+- port-specific matching such as `host:443`;
 - Stash `force-http-engine`;
 - `url-rewrite`, `script`, `cron`, `rules`, `proxies`, DNS, and routing keys;
 - anchors, aliases, folded scalars, inline arrays, maps, or arbitrary YAML
@@ -58,7 +61,8 @@ For valid `http.mitm` list entries, the parser must:
 
 - register MITM hostname patterns through the existing policy-core host store;
 - emit accepted diagnostics with section `MITM` and action `mitm`;
-- preserve existing exact, wildcard, and deny-host MITM evaluation behavior;
+- preserve existing exact, wildcard, deny-host, and normalized `host:*` MITM
+  evaluation behavior;
 - avoid registering rewrite rules, script rules, task descriptors, arguments,
   route policies, proxy nodes, DNS settings, or certificate lifecycle behavior.
 
@@ -76,7 +80,8 @@ tests/fixtures/Stash.HttpMitm.yaml
 Expected behavior:
 
 - config load succeeds;
-- three MITM host patterns are registered;
+- four MITM host patterns are registered;
+- `host:*` input is normalized to the host-only matched pattern;
 - no rewrite, script, task, or argument entries are registered;
 - exact and wildcard hosts can be intercepted only after the adapter supplies
   enabled MITM and trusted certificate state;
@@ -88,6 +93,7 @@ Parser case:
 
 ```text
 tests/fixtures/Stash.HttpMitm.Malformed.yaml
+tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml
 ```
 
 Expected behavior:
@@ -96,6 +102,8 @@ Expected behavior:
 - no MITM host patterns are registered;
 - a rejected diagnostic is recorded with section `MITM` and action `mitm`;
 - last error reports invalid MITM hostname context at the malformed line.
+- port-specific `host:443` input loads as unsupported syntax, does not register
+  any MITM host pattern, and records an ignored diagnostic.
 
 ## Runtime And Security Boundary
 
@@ -119,6 +127,8 @@ Required CI evidence:
   `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `tests/test_config.c` registers
   `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
+- `tests/test_config.c` registers
+  `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
 - `tests/test_config.c` keeps
   `config/stash_migration_guard_fixture_stays_parser_unsupported`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
@@ -132,6 +142,6 @@ Stash HTTP MITM hosts
 ```
 
 The row remains `partial` because only the `http.mitm` host-policy subset is
-covered. Full Stash YAML profiles, `rules`, `proxies`, DNS, routing,
-`force-http-engine`, `url-rewrite`, scripts, cron, UI, and certificate
-lifecycle behavior remain unimplemented.
+covered. Full Stash YAML profiles, port-specific matching, `rules`, `proxies`,
+DNS, routing, `force-http-engine`, `url-rewrite`, scripts, cron, UI, and
+certificate lifecycle behavior remain unimplemented.

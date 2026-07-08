@@ -1693,10 +1693,10 @@ static void stash_http_mitm_fixture_exposes_host_patterns(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 3);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 4);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 4);
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 4; i++) {
 		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
 		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
 		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 4);
@@ -1719,6 +1719,10 @@ static void stash_http_mitm_fixture_exposes_host_patterns(void)
 	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_BYPASS);
 	ANIXOPS_EXPECT_EQ_INT(mitm.reason, ANIXOPS_MITM_REASON_DENY_HOST);
 	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "blocked.stash.example.test");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "weather-data.stash.example.test:443", 0, &mitm), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(mitm.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(mitm.matched_pattern, "weather-data.stash.example.test");
 
 	anixops_engine_free(engine);
 	free(fixture);
@@ -1754,6 +1758,32 @@ static void stash_http_mitm_malformed_fixture_rejects_invalid_host(void)
 	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
 	ANIXOPS_EXPECT_EQ_SIZE(line, 3);
 	ANIXOPS_EXPECT_TRUE(strstr(message, "invalid mitm hostname pattern") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void stash_http_mitm_port_specific_fixture_stays_unsupported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 3);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "line ignored outside supported section");
 
 	anixops_engine_free(engine);
 	free(fixture);
@@ -3661,6 +3691,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/stash_http_mitm_malformed_fixture_rejects_invalid_host",
 		stash_http_mitm_malformed_fixture_rejects_invalid_host);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/stash_http_mitm_port_specific_fixture_stays_unsupported",
+		stash_http_mitm_port_specific_fixture_stays_unsupported);
 	add_test(
 		tests,
 		count,

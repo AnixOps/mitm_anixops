@@ -505,13 +505,15 @@ Input form:
 - top-level YAML `http:` mapping;
 - nested `mitm:` list;
 - list scalar host patterns;
-- exact, wildcard, and deny host patterns accepted by the policy core.
+- exact, wildcard, deny, and `host:*` port-wildcard host patterns accepted by
+  the policy core.
 
 Parser output:
 
 - accepted diagnostics with section `MITM` and action `mitm`;
 - host patterns visible through `anixops_engine_mitm_pattern_count`;
-- existing MITM evaluation semantics for exact, wildcard, and deny hosts;
+- existing MITM evaluation semantics for exact, wildcard, deny, and normalized
+  `host:*` inputs;
 - no rewrite, script, task, argument, route, proxy, DNS, certificate lifecycle,
   or platform UI behavior from Stash YAML input.
 
@@ -519,15 +521,18 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/Stash.HttpMitm.yaml`;
 - negative fixture `tests/fixtures/Stash.HttpMitm.Malformed.yaml`;
+- unsupported port-specific fixture
+  `tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml`;
 - `config/stash_http_mitm_fixture_exposes_host_patterns`;
 - `config/stash_http_mitm_malformed_fixture_rejects_invalid_host`;
+- `config/stash_http_mitm_port_specific_fixture_stays_unsupported`;
 - `config/stash_migration_guard_fixture_stays_parser_unsupported` continues to
   guard unsupported Stash app-profile routing syntax.
 
 Unimplemented items:
 
 - full YAML parser behavior;
-- port-qualified MITM patterns such as `host:*`;
+- port-specific MITM matching such as `host:443`;
 - `force-http-engine`, `url-rewrite`, script, cron, DNS, routing, proxy, and UI
   behavior;
 - certificate lifecycle and platform trust handling.
