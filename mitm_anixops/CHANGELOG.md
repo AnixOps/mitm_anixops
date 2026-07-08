@@ -84,6 +84,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Extended the compatibility evidence check to cover fenced/plain fixture paths
   and documented script bundle manifest fixtures, plus orphan top-level fixture
   detection.
+- Extended compatibility evidence checks to validate registered `config/...`,
+  `script/...`, `rewrite/...`, `mitm/...`, and `abi/...` C test IDs, and
+  hardened compatibility matrix rows so partial/supported positive and negative
+  test evidence must be traceable.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added Quantumult X `url echo-response` parser fixtures and CI-covered tests

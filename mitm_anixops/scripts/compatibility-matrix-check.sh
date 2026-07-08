@@ -72,6 +72,16 @@ function check_contract_paths(source, row, refs, ref, path, safe_path) {
 	}
 }
 
+function has_test_reference(value) {
+	return value ~ /(config|mitm|rewrite|script|abi)\/[A-Za-z0-9_.-]+/ ||
+	    value ~ /tests\/test_[A-Za-z0-9_.-]+\.c/ ||
+	    value ~ /scripts\/[A-Za-z0-9_.-]+\.sh/ ||
+	    value ~ /e2e\/scripts\/[A-Za-z0-9_.-]+\.sh/ ||
+	    value ~ /make [A-Za-z0-9_.-]+/ ||
+	    value ~ /Test[A-Za-z0-9_]+/ ||
+	    value ~ /rust_[A-Za-z0-9_]+/
+}
+
 BEGIN {
 	allowed["supported"] = 1
 	allowed["partial"] = 1
@@ -123,6 +133,12 @@ $0 == expected_header {
 	if (status == "partial" && (positive ~ /^none(;|$)/ || negative ~ /^none(;|$)/ ||
 	    parser ~ /^none(;|$)/)) {
 		fail("partial capability lacks concrete parser or test evidence: " capability)
+	}
+	if (status != "unsupported" && !has_test_reference(positive)) {
+		fail("matrix row lacks traceable positive test evidence: " capability)
+	}
+	if (!has_test_reference(negative)) {
+		fail("matrix row lacks traceable negative test evidence: " capability)
 	}
 	if (status != "supported" && unimplemented ~ /^none(;|$)/) {
 		fail("non-supported capability must list unimplemented items: " capability)

@@ -30,7 +30,8 @@ corresponding tests.
 
 `scripts/compatibility-evidence-check.sh` enforces that compatibility docs
 reference existing fixture files, document every top-level fixture file, and
-reference registered parser-test IDs.
+reference registered C test IDs such as `config/...`, `script/...`,
+`rewrite/...`, `mitm/...`, and `abi/...`.
 
 ## Files
 

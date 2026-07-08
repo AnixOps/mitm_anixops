@@ -18,6 +18,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   parser-test IDs.
 - [x] Extend compatibility evidence checks to cover fenced/plain fixture paths
   and script bundle manifest fixtures, plus orphan top-level fixture detection.
+- [x] Extend compatibility evidence checks to verify registered `config/...`,
+  `script/...`, `rewrite/...`, `mitm/...`, and `abi/...` test IDs across the C
+  test registry.
 - [x] Add a dedicated static format check CI job.
 - [x] Add a dedicated static lint CI job.
 - [x] Add a macOS policy-core smoke CI job.
