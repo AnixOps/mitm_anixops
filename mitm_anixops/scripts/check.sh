@@ -6,6 +6,7 @@ cd "$ROOT"
 
 sh scripts/manual-intervention-check.sh
 sh scripts/security-claim-check.sh
+sh scripts/v1-acceptance-check.sh
 make clean
 make test
 if [ -f /usr/include/pcre2.h ]; then

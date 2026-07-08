@@ -51,6 +51,7 @@ ci-workflow-lint-status=shellcheck-error-severity
 ci-workflow-format-status=static-format-check
 ci-workflow-compatibility-matrix-status=dedicated-job
 ci-workflow-manual-intervention-status=static-schema-check
+ci-workflow-v1-acceptance-status=static-evidence-check
 ci-workflow-macos-status=policy-core-smoke
 ```
 

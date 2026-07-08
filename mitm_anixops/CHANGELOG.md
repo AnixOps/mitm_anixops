@@ -170,6 +170,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Windows x64 dry-run artifact generation, checksum validation, manifest
   coverage, release notes, and Step Summary evidence to keep release dry-run
   metadata aligned with the tag-triggered release artifact set.
+- Added a v1.0.0 acceptance evidence check that ties release readiness,
+  compatibility status, manual-intervention markers, CI jobs, and release-gate
+  metadata into the GitHub Actions governance baseline.
 
 ### Changed
 
