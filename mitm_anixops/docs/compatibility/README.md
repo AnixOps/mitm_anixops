@@ -38,4 +38,6 @@ corresponding tests.
   Quantumult X rewrite/MITM common-config parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
   module common-config parser contract.
+- [request-rewrite-common.md](request-rewrite-common.md): request URL rewrite
+  parser and policy-core contract.
 - [matrix.md](matrix.md): v1.0.0 compatibility matrix.

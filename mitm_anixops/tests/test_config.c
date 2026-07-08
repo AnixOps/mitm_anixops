@@ -390,6 +390,85 @@ static void surge_common_config_strict_fixture_rejects_malformed_rule(void)
 	free(fixture);
 }
 
+static void request_rewrite_common_fixture_is_supported(void)
+{
+	char *fixture = read_fixture("tests/fixtures/RequestRewrite.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 3);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "http://old.request.rewrite.test/path", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_302);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 302);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://api.request.rewrite.test/path");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://seeother.request.rewrite.test/next",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REDIRECT_303);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 303);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://api.request.rewrite.test/next");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://ads.request.rewrite.test", ANIXOPS_PHASE_REQUEST, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REJECT_200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "http://old.request.rewrite.test/path", ANIXOPS_PHASE_RESPONSE, &rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void request_rewrite_common_strict_fixture_rejects_malformed_rule(void)
+{
+	char *fixture = read_fixture("tests/fixtures/RequestRewrite.Common.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void config_accepts_section_aliases_and_crlf(void)
 {
 	const char *config =
@@ -957,6 +1036,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/surge_common_config_strict_fixture_rejects_malformed_rule",
 		surge_common_config_strict_fixture_rejects_malformed_rule);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/request_rewrite_common_fixture_is_supported",
+		request_rewrite_common_fixture_is_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/request_rewrite_common_strict_fixture_rejects_malformed_rule",
+		request_rewrite_common_strict_fixture_rejects_malformed_rule);
 	add_test(tests, count, cap, "config/config_accepts_section_aliases_and_crlf", config_accepts_section_aliases_and_crlf);
 	add_test(
 		tests,

@@ -21,6 +21,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   and negative parser fixtures for the second P1 parser milestone.
 - Added a Surge module common-config source contract plus positive and negative
   parser fixtures for the third P1 parser milestone.
+- Added a request rewrite source contract plus positive and negative parser
+  fixtures for the first P2 rule-matching milestone.
 
 ### Changed
 

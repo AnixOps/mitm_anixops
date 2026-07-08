@@ -149,6 +149,35 @@ Unimplemented items:
 - trust store mutation;
 - platform-specific revocation and expiry probes.
 
+### Request Rewrite Common Subset
+
+Detailed contract: [Request Rewrite Common Source Contract](request-rewrite-common.md).
+
+Capability: parse and evaluate request URL rewrite rules.
+
+Input form:
+
+- `[Rewrite]`, `[URL Rewrite]`, and `[Remote Rewrite]`;
+- direct redirect rules;
+- URL-prefixed redirect rules;
+- reject rules.
+
+Current CI evidence:
+
+- positive fixture `tests/fixtures/RequestRewrite.Common.conf`;
+- negative fixture `tests/fixtures/RequestRewrite.Common.Malformed.conf`;
+- `config/request_rewrite_common_fixture_is_supported`;
+- `config/request_rewrite_common_strict_fixture_rejects_malformed_rule`;
+- C rewrite tests under `tests/test_rewrite.c`;
+- runner replay entries for representative rewrite behavior.
+
+Unimplemented items:
+
+- remote rule refresh;
+- direct/proxy route selection;
+- full ecosystem rewrite grammar;
+- adapter HTTP request serialization.
+
 ### Script Trigger Metadata
 
 Capability: select request/response script rules and expose script metadata.
