@@ -322,7 +322,11 @@ static int anixops_engine_set_argument_default(anixops_engine_t *engine, const c
 static int anixops_engine_add_inline_arguments(anixops_engine_t *engine, const char *line);
 static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *line);
 static int anixops_engine_add_stash_url_rewrite(anixops_engine_t *engine, const char *line);
-static int anixops_shadowrocket_domain_suffix_regex(const char *domain, char *out, size_t out_cap);
+static int anixops_shadowrocket_domain_rule_regex(
+	const char *domain,
+	int include_subdomains,
+	char *out,
+	size_t out_cap);
 static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const char *line);
 static const char *anixops_argument_value(const anixops_engine_t *engine, const char *name);
 static int anixops_resolve_script_argument(
@@ -2282,7 +2286,11 @@ static int anixops_engine_add_stash_url_rewrite(anixops_engine_t *engine, const 
 	return anixops_engine_add_rewrite_rule(engine, rewrite_line);
 }
 
-static int anixops_shadowrocket_domain_suffix_regex(const char *domain, char *out, size_t out_cap)
+static int anixops_shadowrocket_domain_rule_regex(
+	const char *domain,
+	int include_subdomains,
+	char *out,
+	size_t out_cap)
 {
 	char normalized[ANIXOPS_PATTERN_CAP];
 	char escaped[ANIXOPS_PATTERN_CAP * 2];
@@ -2310,7 +2318,12 @@ static int anixops_shadowrocket_domain_suffix_regex(const char *domain, char *ou
 		}
 	}
 	escaped[pos] = '\0';
-	written = snprintf(out, out_cap, "^https?://([^/?#@:]+\\.)*%s(:[0-9]+)?([/?#]|$)", escaped);
+	if (include_subdomains) {
+		written = snprintf(out, out_cap, "^https?://([^/?#@:]+\\.)*%s(:[0-9]+)?([/?#]|$)", escaped);
+	}
+	else {
+		written = snprintf(out, out_cap, "^https?://%s(:[0-9]+)?([/?#]|$)", escaped);
+	}
 	if (written < 0 || (size_t)written >= out_cap) {
 		return 0;
 	}
@@ -2327,6 +2340,7 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 	anixops_rewrite_action_t action = ANIXOPS_REWRITE_NONE;
 	int status_code = 0;
 	int is_url_regex = 0;
+	int is_domain = 0;
 	int is_domain_suffix = 0;
 	char rewrite_line[ANIXOPS_VALUE_CAP];
 	int written;
@@ -2351,8 +2365,9 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 		return ANIXOPS_OK;
 	}
 	is_url_regex = strcasecmp(kind, "URL-REGEX") == 0;
+	is_domain = strcasecmp(kind, "DOMAIN") == 0;
 	is_domain_suffix = strcasecmp(kind, "DOMAIN-SUFFIX") == 0;
-	if (!is_url_regex && !is_domain_suffix) {
+	if (!is_url_regex && !is_domain && !is_domain_suffix) {
 		free(copy);
 		return ANIXOPS_OK;
 	}
@@ -2372,11 +2387,17 @@ static int anixops_engine_add_shadowrocket_rule(anixops_engine_t *engine, const 
 		return ANIXOPS_OK;
 	}
 
-	if (is_domain_suffix) {
+	if (is_domain || is_domain_suffix) {
 		char domain_pattern[512];
-		if (!anixops_shadowrocket_domain_suffix_regex(pattern, domain_pattern, sizeof(domain_pattern))) {
+		const char *domain_message = is_domain_suffix ? "shadowrocket DOMAIN-SUFFIX rule domain invalid" :
+								"shadowrocket DOMAIN rule domain invalid";
+		if (!anixops_shadowrocket_domain_rule_regex(
+				pattern,
+				is_domain_suffix,
+				domain_pattern,
+				sizeof(domain_pattern))) {
 			free(copy);
-			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "shadowrocket DOMAIN-SUFFIX rule domain invalid");
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, domain_message);
 			return ANIXOPS_ERR_PARSE;
 		}
 		written = snprintf(rewrite_line, sizeof(rewrite_line), "%s %s", domain_pattern, action_token);

@@ -633,14 +633,17 @@ Unimplemented items:
 Detailed contract:
 [Shadowrocket Rule Reject Source Contract](shadowrocket-rule-reject.md).
 
-Capability: parse Shadowrocket `[Rule]` URL-regex and domain-suffix reject
-policy intent.
+Capability: parse Shadowrocket `[Rule]` URL-regex, exact-domain, and
+domain-suffix reject policy intent.
 
 Input form:
 
 - `[Rule]` `URL-REGEX,<pattern>,REJECT`;
 - `[Rule]` `URL-REGEX,<pattern>,REJECT-NNN` and other common reject variants
   already supported by the policy-core rewrite parser;
+- `[Rule]` `DOMAIN,<host>,REJECT`;
+- `[Rule]` `DOMAIN,<host>,REJECT-NNN` and other common reject variants already
+  supported by the policy-core rewrite parser;
 - `[Rule]` `DOMAIN-SUFFIX,<host>,REJECT`;
 - `[Rule]` `DOMAIN-SUFFIX,<host>,REJECT-NNN` and other common reject variants
   already supported by the policy-core rewrite parser.
@@ -658,11 +661,16 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/Shadowrocket.RuleReject.conf`;
 - negative fixture `tests/fixtures/Shadowrocket.RuleReject.Malformed.conf`;
+- positive fixture `tests/fixtures/Shadowrocket.RuleDomainExactReject.conf`;
+- negative fixture
+  `tests/fixtures/Shadowrocket.RuleDomainExactReject.Malformed.conf`;
 - positive fixture `tests/fixtures/Shadowrocket.RuleDomainReject.conf`;
 - negative fixture
   `tests/fixtures/Shadowrocket.RuleDomainReject.Malformed.conf`;
 - `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
 - `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
+- `config/shadowrocket_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;
+- `config/shadowrocket_rule_domain_exact_reject_malformed_fixture_rejects_invalid_domain`;
 - `config/shadowrocket_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
 - `config/shadowrocket_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`
@@ -671,8 +679,8 @@ Current CI evidence:
 Unimplemented items:
 
 - `DIRECT`, `PROXY`, proxy groups, and route policy names;
-- unsupported matchers such as `DOMAIN`, `DOMAIN-KEYWORD`, `IP-CIDR`,
-  `GEOIP`, and `FINAL`;
+- unsupported matchers such as `DOMAIN-KEYWORD`, `IP-CIDR`, `GEOIP`, and
+  `FINAL`;
 - `no-resolve`, DNS behavior, app-profile UI, proxy-node parsing, and platform
   networking behavior.
 
@@ -692,8 +700,8 @@ Input form:
   [Stash HTTP MITM Source Contract](stash-http-mitm.md);
 - Stash `http.url-rewrite` request URL policy intent is covered separately by
   [Stash URL Rewrite Source Contract](stash-url-rewrite.md);
-- Shadowrocket `[Rule]` URL-regex and domain-suffix reject policy intent is
-  covered separately by
+- Shadowrocket `[Rule]` URL-regex, exact-domain, and domain-suffix reject policy
+  intent is covered separately by
   [Shadowrocket Rule Reject Source Contract](shadowrocket-rule-reject.md);
 - Shadowrocket app-level profile sections remain unsupported unless they are
   explicitly covered by `shadowrocket-common-config.md` or
@@ -715,6 +723,8 @@ Current CI evidence:
 - `config/stash_url_rewrite_redirect_malformed_fixture_rejects_invalid_regex`;
 - `config/shadowrocket_rule_reject_fixture_maps_url_regex_rejects`;
 - `config/shadowrocket_rule_reject_malformed_fixture_rejects_invalid_regex`;
+- `config/shadowrocket_rule_domain_exact_reject_fixture_maps_exact_domain_rejects`;
+- `config/shadowrocket_rule_domain_exact_reject_malformed_fixture_rejects_invalid_domain`;
 - `config/shadowrocket_rule_domain_reject_fixture_maps_domain_suffix_rejects`;
 - `config/shadowrocket_rule_domain_reject_malformed_fixture_rejects_invalid_domain`;
 - `config/shadowrocket_migration_guard_fixture_stays_parser_unsupported`;
