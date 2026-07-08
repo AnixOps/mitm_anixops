@@ -84,7 +84,7 @@ features it understands.
 | PCRE quoted literals `\Q...\E` | Supported subset | URL, body, header, and script regex test |
 | Empty regex replacement matches | Supported subset | Body/header global replacement tests cover `^`, `$`, and lazy `.*?` normalization without repeated anchor replacement |
 | Request body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` and chain-capable `anixops_rewrite_apply_body_chain` |
-| Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` and chain-capable `anixops_rewrite_apply_body_chain` |
+| Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body`, chain-capable `anixops_rewrite_apply_body_chain`, `ResponseEchoRewrite.Common.conf`, `ResponseEchoRewrite.Common.Malformed.conf`, `config/response_echo_rewrite_common_fixture_maps_direct_and_url_echo_response`, and `config/response_echo_rewrite_common_strict_fixture_rejects_missing_body` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, capture replacement, global replacement, empty-match tests, and chain API tests proving previous output feeds the next matching body rule |
 | Request/response body JSON path replace | Supported subset for buffered JSON | `$.field`, `$['field']`, empty, common escaped, and `\uXXXX` bracket keys, nested object path, and positive/negative array index tests |
 | Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with configurable max-input bytes |

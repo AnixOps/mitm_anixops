@@ -1274,15 +1274,19 @@ Input form:
 Current CI evidence:
 
 - positive fixture `tests/fixtures/ResponseRewrite.Common.conf`;
+- positive fixture `tests/fixtures/ResponseEchoRewrite.Common.conf`;
 - positive fixture `tests/fixtures/Loon.ResponseRewrite.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.ResponseRewrite.snippet`;
 - positive fixture `tests/fixtures/Surge.ResponseRewrite.sgmodule`;
 - negative fixture `tests/fixtures/ResponseRewrite.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/ResponseEchoRewrite.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.ResponseRewrite.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet`;
 - negative fixture `tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule`;
 - `config/response_rewrite_common_fixture_is_supported`;
 - `config/response_rewrite_common_fixture_rejects_invalid_body_regex`;
+- `config/response_echo_rewrite_common_fixture_maps_direct_and_url_echo_response`;
+- `config/response_echo_rewrite_common_strict_fixture_rejects_missing_body`;
 - `config/loon_response_rewrite_fixture_maps_response_echo_and_body`;
 - `config/loon_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - `config/quantumultx_response_rewrite_fixture_maps_response_echo_and_body`;

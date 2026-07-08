@@ -40,6 +40,7 @@ Parser case:
 
 ```text
 tests/fixtures/ResponseRewrite.Common.conf
+tests/fixtures/ResponseEchoRewrite.Common.conf
 tests/fixtures/Loon.ResponseRewrite.plugin
 tests/fixtures/QuantumultX.ResponseRewrite.snippet
 tests/fixtures/Surge.ResponseRewrite.sgmodule
@@ -49,12 +50,15 @@ Expected behavior:
 
 - config load succeeds;
 - the common fixture registers three rewrite rules;
+- the common echo fixture registers two rewrite rules;
 - the Loon fixture registers two rewrite rules;
 - the Quantumult X fixture registers two rewrite rules;
 - the Surge fixture registers one response body regex rewrite rule;
 - request phase does not trigger response rewrite rules;
 - response mock body and echo-response behavior are observable through
   `anixops_rewrite_apply_body`;
+- portable direct `echo-response` and `url echo-response` response bodies are
+  observable through `anixops_rewrite_apply_body`;
 - response body regex replacement is observable for an already-buffered body.
 - Loon `[URL Rewrite]` response echo and response body regex rules are
   observable through `anixops_rewrite_apply_body`.
@@ -69,6 +73,7 @@ Parser case:
 
 ```text
 tests/fixtures/ResponseRewrite.Common.Malformed.conf
+tests/fixtures/ResponseEchoRewrite.Common.Malformed.conf
 tests/fixtures/Loon.ResponseRewrite.Malformed.plugin
 tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet
 tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule
@@ -77,6 +82,8 @@ tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule
 Expected behavior:
 
 - the invalid response body regex rejects config load;
+- the malformed portable `echo-response` rule without a response body is
+  rejected under `ANIXOPS_COMPAT_LOON_STRICT`;
 - the invalid Loon `[URL Rewrite]` response body regex rejects config load;
 - the invalid Quantumult X `url` response body regex rejects config load;
 - the invalid Surge `[URL Rewrite]` response body regex rejects config load;
@@ -107,6 +114,10 @@ Required CI evidence:
   `config/response_rewrite_common_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/response_rewrite_common_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/response_echo_rewrite_common_fixture_maps_direct_and_url_echo_response`;
+- `tests/test_config.c` registers
+  `config/response_echo_rewrite_common_strict_fixture_rejects_missing_body`;
 - `tests/test_config.c` registers
   `config/loon_response_rewrite_fixture_maps_response_echo_and_body`;
 - `tests/test_config.c` registers
