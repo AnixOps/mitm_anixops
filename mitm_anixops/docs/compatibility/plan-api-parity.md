@@ -99,5 +99,5 @@ Row:
 plan API parity
 ```
 
-The row remains `partial` until runner golden JSON traces and adapter ordering
-coverage exist.
+The row remains `partial` until adapter ordering coverage expands beyond the
+shared binding golden JSON traces.

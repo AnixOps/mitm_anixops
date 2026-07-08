@@ -448,13 +448,15 @@ Current CI evidence:
 - negative fixture `tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf`;
 - golden runner fixtures `tests/fixtures/BindingParity.RequestTrace.json` and
   `tests/fixtures/BindingParity.ResponseTrace.json`;
+- MITM golden runner fixtures `tests/fixtures/BindingParity.MitmTrace.json`
+  and `tests/fixtures/BindingParity.MitmQuicTrace.json`;
 - `config/decision_trace_schema_fixture_covers_policy_fields`;
 - `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
 - runner `trace` smoke checks under `runner-check`.
 
 Unimplemented items:
 
-- full runner MITM trace coverage;
+- broader MITM negative trace corpus;
 - adapter redaction policy;
 - direct/proxy route-selection contract;
 - serialized trace object for every ABI decision.
@@ -485,8 +487,7 @@ Current CI evidence:
 
 Unimplemented items:
 
-- runner golden JSON trace fixtures;
-- adapter ordering coverage.
+- adapter ordering coverage beyond the shared binding golden JSON traces.
 
 ### Binding Parity
 
@@ -500,14 +501,17 @@ Input form:
 - `tests/fixtures/BindingParity.Common.conf`;
 - `tests/fixtures/BindingParity.RequestTrace.json`;
 - `tests/fixtures/BindingParity.ResponseTrace.json`;
+- `tests/fixtures/BindingParity.MitmTrace.json`;
+- `tests/fixtures/BindingParity.MitmQuicTrace.json`;
 - request/response URL, header, body, and script policy rules;
+- TCP allow and QUIC fallback MITM decisions;
 - request/response named-header current-value rewrite rules;
 - argument substitution shared across all binding surfaces.
 
 Current CI evidence:
 
 - C runner `scan` and `trace` checks in `make runner-check`;
-- C runner request/response golden JSON trace comparisons;
+- C runner request/response/MITM golden JSON trace comparisons;
 - Go wrapper `TestGoBindingLoadsSharedParityFixture`, including named-header
   current-value rewrite checks;
 - Rust wrapper `rust_binding_loads_shared_parity_fixture`, including

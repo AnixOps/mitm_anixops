@@ -25,6 +25,7 @@ tests/fixtures/BindingParity.Common.conf
 It covers:
 
 - MITM hostname parsing;
+- runner MITM decision trace fields for TCP allow and QUIC fallback;
 - request URL redirect;
 - request header mutation;
 - request named-header current-value mutation;
@@ -42,6 +43,8 @@ Expected behavior:
 - C runner `scan` loads the fixture and reports stable rule counts.
 - C runner `trace` reports the same request/response header and script metadata
   that bindings expose through plan APIs.
+- C runner `trace --host` reports stable MITM decision, reason, matched pattern,
+  and message fields for TCP allow and QUIC fallback.
 - Go wrapper `TestGoBindingLoadsSharedParityFixture` loads the fixture and
   verifies redirect, request plan, response plan, body rewrite, header rewrite,
   named-header current-value rewrite, script tag, script path, timeout,
@@ -79,8 +82,9 @@ It does not implement:
 Required CI evidence:
 
 - `make runner-check` runs C runner `scan` and `trace` checks against
-  `BindingParity.Common.conf` and compares request/response trace output with
-  `BindingParity.RequestTrace.json` and `BindingParity.ResponseTrace.json`;
+  `BindingParity.Common.conf` and compares request/response/MITM trace output
+  with `BindingParity.RequestTrace.json`, `BindingParity.ResponseTrace.json`,
+  `BindingParity.MitmTrace.json`, and `BindingParity.MitmQuicTrace.json`;
 - `make go-binding-check` runs `TestGoBindingLoadsSharedParityFixture`,
   including named-header current-value rewrite checks;
 - `make rust-binding-check` runs `rust_binding_loads_shared_parity_fixture`,

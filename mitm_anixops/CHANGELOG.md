@@ -72,6 +72,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   against the shared binding fixture.
 - Added runner golden JSON trace fixtures for binding parity request and
   response traces.
+- Added runner MITM decision golden JSON trace fixtures for TCP allow and QUIC
+  fallback decisions.
 - Added Stash and Shadowrocket migration notes that keep Stash and
   Shadowrocket app-profile behavior planned outside dedicated parser fixtures
   and tests.

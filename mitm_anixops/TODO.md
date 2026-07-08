@@ -49,6 +49,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   positive/negative tests.
 - [x] Define trace schema for URL, host, header, body, script trigger, and
   policy intent decisions.
+- [x] Add runner MITM decision golden JSON trace fixtures for TCP allow and
+  QUIC fallback.
 - [x] Add negative fixture proving unsupported direct/proxy policy intent stays
   ignored until routing semantics are contracted.
 - [x] Define reject/direct/proxy policy-intent contract with CI-covered reject

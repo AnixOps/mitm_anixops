@@ -81,6 +81,7 @@ Runner JSON `trace` currently serializes:
 - `loadStatus`
 - `url`
 - `phase`
+- `mitm`, when `--host` is supplied with explicit MITM/certificate state inputs
 - `planStatus`
 - `requiresBody`
 - `rewrite`
@@ -107,6 +108,8 @@ Expected behavior:
   available;
 - script trigger appears in the plan script slot with timeout-ms, max-size, tag,
   argument, and body requirement fields.
+- runner MITM traces expose TCP allow and QUIC fallback decisions without
+  logging request or response payloads.
 
 ## Negative Case
 
@@ -149,6 +152,8 @@ Required CI evidence:
   `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent`;
 - `make runner-check` compares `BindingParity.RequestTrace.json` and
   `BindingParity.ResponseTrace.json` against runner `trace` output;
+- `make runner-check` compares `BindingParity.MitmTrace.json` and
+  `BindingParity.MitmQuicTrace.json` against runner `trace --host` output;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -159,5 +164,6 @@ Row:
 decision trace schema
 ```
 
-The row remains `partial` until full runner MITM trace coverage, adapter
-redaction policy, and direct/proxy route-selection contracts exist.
+The row remains `partial` until adapter redaction policy, direct/proxy
+route-selection contracts, and broader MITM negative trace corpus coverage
+exist.

@@ -912,6 +912,48 @@ static anixops_phase_t parse_phase(const char *phase)
 	return phase != NULL && strcmp(phase, "response") == 0 ? ANIXOPS_PHASE_RESPONSE : ANIXOPS_PHASE_REQUEST;
 }
 
+static int parse_cert_state(const char *value, anixops_cert_state_t *out_state)
+{
+	if (value == NULL || out_state == NULL) {
+		return 0;
+	}
+	if (strcmp(value, "unknown") == 0) {
+		*out_state = ANIXOPS_CERT_UNKNOWN;
+		return 1;
+	}
+	if (strcmp(value, "not-installed") == 0) {
+		*out_state = ANIXOPS_CERT_NOT_INSTALLED;
+		return 1;
+	}
+	if (strcmp(value, "installed-untrusted") == 0) {
+		*out_state = ANIXOPS_CERT_INSTALLED_UNTRUSTED;
+		return 1;
+	}
+	if (strcmp(value, "trusted") == 0) {
+		*out_state = ANIXOPS_CERT_TRUSTED;
+		return 1;
+	}
+	if (strcmp(value, "revoked") == 0) {
+		*out_state = ANIXOPS_CERT_REVOKED;
+		return 1;
+	}
+	return 0;
+}
+
+static void print_mitm_result(const char *host, int is_quic, int status, const anixops_mitm_decision_t *decision)
+{
+	printf("{\"status\":%d,\"host\":", status);
+	json_string(host);
+	printf(",\"quic\":%d,\"decision\":%d,\"reason\":%d,\"matchedPattern\":",
+		is_quic,
+		decision->decision,
+		decision->reason);
+	json_string(decision->matched_pattern);
+	printf(",\"message\":");
+	json_string(decision->message);
+	putchar('}');
+}
+
 static void print_rewrite_result(const anixops_rewrite_result_t *rewrite)
 {
 	printf("{\"action\":%d,\"statusCode\":%d,\"ruleIndex\":%d,\"value\":",
@@ -961,10 +1003,17 @@ static int cmd_trace(int argc, char **argv)
 	const char *plugin = NULL;
 	const char *url = NULL;
 	const char *phase_text = "request";
+	const char *host = NULL;
+	const char *cert_state_text = NULL;
 	anixops_phase_t phase;
+	anixops_cert_state_t cert_state;
 	anixops_engine_t *engine = NULL;
 	anixops_rewrite_plan_t plan;
+	anixops_mitm_decision_t mitm;
 	int status;
+	int mitm_status = ANIXOPS_OK;
+	int mitm_enabled = 0;
+	int is_quic = 0;
 	int plan_status;
 	int i;
 
@@ -978,20 +1027,51 @@ static int cmd_trace(int argc, char **argv)
 		else if (strcmp(argv[i], "--phase") == 0 && i + 1 < argc) {
 			phase_text = argv[++i];
 		}
+		else if (strcmp(argv[i], "--host") == 0 && i + 1 < argc) {
+			host = argv[++i];
+		}
+		else if (strcmp(argv[i], "--mitm-enabled") == 0) {
+			mitm_enabled = 1;
+		}
+		else if (strcmp(argv[i], "--cert-state") == 0 && i + 1 < argc) {
+			cert_state_text = argv[++i];
+		}
+		else if (strcmp(argv[i], "--quic") == 0) {
+			is_quic = 1;
+		}
 		else {
 			fprintf(stderr, "unknown trace argument: %s\n", argv[i]);
 			return 1;
 		}
 	}
 	if (plugin == NULL || url == NULL) {
-		fprintf(stderr, "usage: anixops-mitm-runner trace --plugin <file> --url <url> [--phase request|response]\n");
+		fprintf(
+			stderr,
+			"usage: anixops-mitm-runner trace --plugin <file> --url <url> "
+			"[--phase request|response] [--host <hostname>] [--mitm-enabled] "
+			"[--cert-state unknown|not-installed|installed-untrusted|trusted|revoked] [--quic]\n");
 		return 1;
 	}
 	if (!load_engine(plugin, &engine, &status)) {
 		fprintf(stderr, "failed to load plugin: %s\n", plugin);
 		return 1;
 	}
+	if (mitm_enabled) {
+		anixops_engine_set_mitm_enabled(engine, 1);
+	}
+	if (cert_state_text != NULL) {
+		if (!parse_cert_state(cert_state_text, &cert_state)) {
+			fprintf(stderr, "unknown cert state: %s\n", cert_state_text);
+			anixops_engine_free(engine);
+			return 1;
+		}
+		anixops_engine_set_cert_state(engine, cert_state);
+	}
 	phase = parse_phase(phase_text);
+	memset(&mitm, 0, sizeof(mitm));
+	if (host != NULL) {
+		mitm_status = anixops_mitm_evaluate(engine, host, is_quic, &mitm);
+	}
 	plan_status = anixops_rewrite_build_plan(engine, url, phase, NULL, NULL, 0, NULL, &plan);
 	printf("{\"version\":");
 	json_string(anixops_version());
@@ -999,6 +1079,10 @@ static int cmd_trace(int argc, char **argv)
 	json_string(url);
 	printf(",\"phase\":");
 	json_string(phase == ANIXOPS_PHASE_RESPONSE ? "response" : "request");
+	if (host != NULL) {
+		printf(",\"mitm\":");
+		print_mitm_result(host, is_quic, mitm_status, &mitm);
+	}
 	printf(",\"planStatus\":%d,\"requiresBody\":%d,\"rewrite\":", plan_status, plan.requires_body);
 	print_rewrite_result(&plan.rewrite);
 	printf(",\"headers\":[");
@@ -1608,6 +1692,7 @@ static void usage(void)
 		"  anixops-mitm-runner scan <plugin-file>\n"
 		"  anixops-mitm-runner scan --corpus <manifest.json>\n"
 		"  anixops-mitm-runner trace --plugin <file> --url <url> [--phase request|response]\n"
+		"    [--host <hostname>] [--mitm-enabled] [--cert-state <state>] [--quic]\n"
 		"  anixops-mitm-runner replay --plugin <file> --fixture <cases.tsv> "
 		"[--script-runner <node-runner.js> --script-map <url=file> --script-bundle <manifest.json> "
 		"--script-store <file>]\n",
