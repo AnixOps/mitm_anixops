@@ -2,7 +2,7 @@
 
 Capability: request and response header mutation.
 
-Ecosystem: `portable`, `loon`, `quantumultx`.
+Ecosystem: `portable`, `loon`, `quantumultx`, `surge`.
 
 Status: `partial`.
 
@@ -49,6 +49,7 @@ tests/fixtures/QuantumultX.ResponseHeaderDelete.snippet
 tests/fixtures/QuantumultX.HeaderMutation.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.snippet
 tests/fixtures/QuantumultX.HeaderDelete.snippet
+tests/fixtures/Surge.HeaderMutation.sgmodule
 ```
 
 Expected behavior:
@@ -75,6 +76,8 @@ Expected behavior:
   through `anixops_rewrite_evaluate_header`;
 - Quantumult X `url header-del` request header deletion is observable through
   `anixops_rewrite_evaluate_header`;
+- Surge `[URL Rewrite]` request and response header mutation actions are
+  observable through `anixops_rewrite_evaluate_header`;
 - phase separation prevents request header rules from matching response phase
   evaluation.
 
@@ -92,6 +95,7 @@ tests/fixtures/QuantumultX.ResponseHeaderDelete.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet
+tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
 ```
 
 Expected behavior:
@@ -113,6 +117,7 @@ Expected behavior:
   load;
 - the malformed Quantumult X `url header-del` rule without a header name is
   rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
+- the invalid Surge `[URL Rewrite]` response header regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -172,6 +177,10 @@ Required CI evidence:
   `config/quantumultx_header_delete_fixture_maps_request_header_delete`;
 - `tests/test_config.c` registers
   `config/quantumultx_header_delete_malformed_fixture_rejects_missing_header_name`;
+- `tests/test_config.c` registers
+  `config/surge_header_mutation_fixture_maps_header_rewrites`;
+- `tests/test_config.c` registers
+  `config/surge_header_mutation_malformed_fixture_rejects_invalid_header_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

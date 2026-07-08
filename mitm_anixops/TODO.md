@@ -84,6 +84,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   and positive/negative tests for the common-config/body-mutation contracts.
 - [x] Add Surge `[URL Rewrite]` `response-body-json-replace` parser fixtures
   and positive/negative tests for the common-config/body-mutation contracts.
+- [x] Add Surge `[URL Rewrite]` header mutation parser fixtures and
+  positive/negative tests for the common-config/header-mutation contracts.
 - [x] Add Surge requirement metadata parser fixtures and positive/negative
   tests.
 - [x] Add Surge task metadata parser fixtures and positive/negative tests.

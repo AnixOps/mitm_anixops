@@ -1,0 +1,2 @@
+[URL Rewrite]
+^https:\/\/header\.surge\.test\/bad response-header-replace-regex X-Bad [

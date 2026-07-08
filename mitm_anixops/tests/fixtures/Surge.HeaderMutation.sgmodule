@@ -1,0 +1,9 @@
+[URL Rewrite]
+^https:\/\/header\.surge\.test\/request-add\/(.*) header-add X-Surge-Trace trace-$1
+^https:\/\/header\.surge\.test\/request-replace\/(.*) header-replace X-Surge-Mode mode-$1
+^https:\/\/header\.surge\.test\/request-drop header-del X-Surge-Drop
+^https:\/\/header\.surge\.test\/request-regex header-replace-regex X-Surge-Token "old=([A-Za-z]+)" "new=$1"
+^https:\/\/header\.surge\.test\/response-add\/(.*) response-header-add X-Surge-Trace resp-$1
+^https:\/\/header\.surge\.test\/response-replace\/(.*) response-header-replace X-Surge-Mode resp-$1
+^https:\/\/header\.surge\.test\/response-drop response-header-del Set-Cookie
+^https:\/\/header\.surge\.test\/response-regex response-header-replace-regex X-Surge-Mode "old=([A-Za-z]+)" "resp=$1"
