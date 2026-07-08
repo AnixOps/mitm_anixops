@@ -44,6 +44,7 @@ Parser case:
 tests/fixtures/RequestRewrite.Common.conf
 tests/fixtures/Loon.RequestRewrite.plugin
 tests/fixtures/QuantumultX.RequestRewrite.snippet
+tests/fixtures/Surge.RequestRewrite.sgmodule
 ```
 
 Expected behavior:
@@ -52,11 +53,14 @@ Expected behavior:
 - the common fixture registers three rewrite rules;
 - the Loon fixture registers two rewrite rules;
 - the Quantumult X fixture registers two rewrite rules;
+- the Surge fixture registers two rewrite rules;
 - direct redirect, URL-prefixed redirect, and reject behavior are observable
   through `anixops_rewrite_evaluate_url`;
 - Loon `[URL Rewrite]` redirect and reject behavior is observable through
   `anixops_rewrite_evaluate_url`;
 - Quantumult X `url` redirect and reject behavior is observable through
+  `anixops_rewrite_evaluate_url`;
+- Surge `[URL Rewrite]` redirect and reject behavior is observable through
   `anixops_rewrite_evaluate_url`;
 - redirect capture expansion is applied to the output value;
 - response phase does not trigger request rewrite rules.
@@ -69,6 +73,7 @@ Parser case:
 tests/fixtures/RequestRewrite.Common.Malformed.conf
 tests/fixtures/Loon.RequestRewrite.Malformed.plugin
 tests/fixtures/QuantumultX.RequestRewrite.Malformed.snippet
+tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule
 ```
 
 Expected behavior:
@@ -76,6 +81,7 @@ Expected behavior:
 - a strict compatibility profile rejects the malformed rewrite line;
 - an invalid Loon `[URL Rewrite]` URL regex rejects config load;
 - an invalid Quantumult X `url` rewrite URL regex rejects config load;
+- an invalid Surge `[URL Rewrite]` URL regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -112,6 +118,10 @@ Required CI evidence:
   `config/quantumultx_request_rewrite_fixture_maps_redirect_and_reject`;
 - `tests/test_config.c` registers
   `config/quantumultx_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
+- `tests/test_config.c` registers
+  `config/surge_request_rewrite_fixture_maps_redirect_and_reject`;
+- `tests/test_config.c` registers
+  `config/surge_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

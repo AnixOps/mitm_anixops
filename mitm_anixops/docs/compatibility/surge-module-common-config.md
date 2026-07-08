@@ -53,6 +53,7 @@ Parser case:
 
 ```text
 tests/fixtures/Surge.CommonConfig.sgmodule
+tests/fixtures/Surge.RequestRewrite.sgmodule
 tests/fixtures/Surge.BodyMutation.sgmodule
 tests/fixtures/Surge.BodyJsonMutation.sgmodule
 tests/fixtures/Surge.HeaderMutation.sgmodule
@@ -63,6 +64,8 @@ Expected behavior:
 - config load succeeds;
 - two inline arguments are registered;
 - two rewrite rules are registered;
+- two URL redirect/reject rules are registered in the dedicated request-rewrite
+  fixture;
 - one response body regex mutation rule is registered in the dedicated body
   mutation fixture;
 - one response body JSON replacement rule is registered in the dedicated body
@@ -82,6 +85,7 @@ Parser case:
 
 ```text
 tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
+tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule
 tests/fixtures/Surge.BodyMutation.Malformed.sgmodule
 tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
 tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
@@ -90,6 +94,7 @@ tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
 Expected behavior:
 
 - `ANIXOPS_COMPAT_SURGE_STRICT` rejects the malformed script line;
+- an invalid URL rewrite regex rejects config load;
 - an invalid response body regex rejects config load;
 - `ANIXOPS_COMPAT_SURGE_STRICT` rejects a malformed
   `response-body-json-replace` line without a JSON path and replacement value;
@@ -139,6 +144,10 @@ Required CI evidence:
   `config/surge_common_config_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/surge_common_config_strict_fixture_rejects_malformed_rule`;
+- `tests/test_config.c` registers
+  `config/surge_request_rewrite_fixture_maps_redirect_and_reject`;
+- `tests/test_config.c` registers
+  `config/surge_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
 - `tests/test_config.c` registers
   `config/surge_body_mutation_fixture_maps_response_body_regex`;
 - `tests/test_config.c` registers

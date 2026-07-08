@@ -1,0 +1,3 @@
+[URL Rewrite]
+^http:\/\/request\.surge\.test\/old\/(.*) https://request.surge.test/new/$1 302
+^https:\/\/request\.surge\.test\/ads reject-200
