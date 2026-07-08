@@ -129,6 +129,7 @@ struct anixops_engine {
 
 	anixops_compat_profile_t compat_profile;
 	anixops_regex_backend_t regex_backend;
+	size_t jq_max_input_bytes;
 	int mitm_enabled;
 	int h2_mitm_enabled;
 	int disable_quic_for_mitm;
@@ -329,10 +330,12 @@ static int anixops_apply_body_json_replacement(
 static int anixops_apply_body_jq_replacement(
 	const char *body,
 	const char *filter,
+	size_t max_input_bytes,
 	char *out,
 	size_t out_cap,
 	int *out_replaced,
-	int *out_runtime_available);
+	int *out_runtime_available,
+	int *out_input_limited);
 static int anixops_rewrite_evaluate_header_internal(
 	const anixops_engine_t *engine,
 	const char *url,
@@ -432,7 +435,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.7";
+	return "0.45.8";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -487,6 +490,7 @@ ANIXOPS_API anixops_engine_t *anixops_engine_new(void)
 	engine->skip_server_cert_verify = 0;
 	engine->compat_profile = ANIXOPS_COMPAT_PORTABLE;
 	engine->regex_backend = ANIXOPS_REGEX_BACKEND_POSIX_LITE;
+	engine->jq_max_input_bytes = ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT;
 	engine->cert_state = ANIXOPS_CERT_UNKNOWN;
 	anixops_clear_diagnostic(engine);
 	return engine;
@@ -546,6 +550,7 @@ ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine)
 	engine->skip_server_cert_verify = 0;
 	engine->compat_profile = ANIXOPS_COMPAT_PORTABLE;
 	engine->regex_backend = ANIXOPS_REGEX_BACKEND_POSIX_LITE;
+	engine->jq_max_input_bytes = ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT;
 	engine->cert_state = ANIXOPS_CERT_UNKNOWN;
 	anixops_clear_diagnostic(engine);
 }
@@ -637,6 +642,21 @@ ANIXOPS_API int anixops_engine_set_regex_backend(anixops_engine_t *engine, anixo
 ANIXOPS_API anixops_regex_backend_t anixops_engine_regex_backend(const anixops_engine_t *engine)
 {
 	return engine == NULL ? ANIXOPS_REGEX_BACKEND_POSIX_LITE : engine->regex_backend;
+}
+
+ANIXOPS_API int anixops_engine_set_jq_max_input_bytes(anixops_engine_t *engine, size_t max_input_bytes)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	engine->jq_max_input_bytes = max_input_bytes;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_max_input_bytes(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT : engine->jq_max_input_bytes;
 }
 
 ANIXOPS_API size_t anixops_engine_rule_diagnostic_count(const anixops_engine_t *engine)
@@ -2109,20 +2129,31 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 		}
 		if (anixops_rewrite_action_replaces_body_jq(out_result->action)) {
 			int runtime_available = 0;
+			int input_limited = 0;
 			anixops_copy_text(out_result->value, sizeof(out_result->value), rule->replacement);
 			rc = anixops_apply_body_jq_replacement(
 				body,
 				rule->replacement,
+				engine->jq_max_input_bytes,
 				out_body,
 				out_body_cap,
 				&replaced,
-				&runtime_available);
+				&runtime_available,
+				&input_limited);
 			if (!runtime_available) {
 				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
 					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
 				}
 				else {
 					anixops_copy_text(out_result->message, sizeof(out_result->message), "jq backend unavailable");
+				}
+			}
+			else if (input_limited) {
+				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				}
+				else {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "jq input exceeds limit");
 				}
 			}
 			else if (rc == ANIXOPS_ERR_CAPACITY) {
@@ -2276,14 +2307,17 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 		}
 		else if (anixops_rewrite_action_replaces_body_jq(rule->action)) {
 			int runtime_available = 0;
+			int input_limited = 0;
 			anixops_copy_text(result.value, sizeof(result.value), rule->replacement);
 			apply_rc = anixops_apply_body_jq_replacement(
 				current_body,
 				rule->replacement,
+				engine->jq_max_input_bytes,
 				next_body,
 				out_body_cap,
 				&replaced,
-				&runtime_available);
+				&runtime_available,
+				&input_limited);
 			if (!runtime_available) {
 				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
 					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
@@ -2291,6 +2325,15 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 				}
 				else {
 					anixops_copy_text(result.message, sizeof(result.message), "jq backend unavailable");
+				}
+			}
+			else if (input_limited) {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(result.message, sizeof(result.message), "jq input exceeds limit");
 				}
 			}
 			else if (apply_rc == ANIXOPS_ERR_CAPACITY) {
@@ -4809,10 +4852,12 @@ static int anixops_apply_body_json_replacement(
 static int anixops_apply_body_jq_replacement(
 	const char *body,
 	const char *filter,
+	size_t max_input_bytes,
 	char *out,
 	size_t out_cap,
 	int *out_replaced,
-	int *out_runtime_available)
+	int *out_runtime_available,
+	int *out_input_limited)
 {
 #if defined(ANIXOPS_ENABLE_LIBJQ)
 	jq_state *jq;
@@ -4824,11 +4869,17 @@ static int anixops_apply_body_jq_replacement(
 	int compile_ok;
 
 	if (body == NULL || filter == NULL || out == NULL || out_cap == 0 || out_replaced == NULL ||
-		out_runtime_available == NULL) {
+		out_runtime_available == NULL || out_input_limited == NULL) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
 	*out_replaced = 0;
 	*out_runtime_available = 1;
+	*out_input_limited = 0;
+
+	if (max_input_bytes != 0 && strlen(body) > max_input_bytes) {
+		*out_input_limited = 1;
+		return ANIXOPS_ERR_CAPACITY;
+	}
 
 	jq = jq_init();
 	if (jq == NULL) {
@@ -4866,6 +4917,7 @@ static int anixops_apply_body_jq_replacement(
 #else
 	(void)body;
 	(void)filter;
+	(void)max_input_bytes;
 	(void)out;
 	(void)out_cap;
 	if (out_replaced != NULL) {
@@ -4873,6 +4925,9 @@ static int anixops_apply_body_jq_replacement(
 	}
 	if (out_runtime_available != NULL) {
 		*out_runtime_available = 0;
+	}
+	if (out_input_limited != NULL) {
+		*out_input_limited = 0;
 	}
 	return ANIXOPS_OK;
 #endif

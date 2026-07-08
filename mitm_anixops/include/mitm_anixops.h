@@ -21,7 +21,7 @@ extern "C" {
 
 #define ANIXOPS_VERSION_MAJOR 0
 #define ANIXOPS_VERSION_MINOR 45
-#define ANIXOPS_VERSION_PATCH 7
+#define ANIXOPS_VERSION_PATCH 8
 
 #define ANIXOPS_PATTERN_CAP 256
 #define ANIXOPS_VALUE_CAP 2048
@@ -30,6 +30,7 @@ extern "C" {
 #define ANIXOPS_PLAN_HEADER_CAP 16
 #define ANIXOPS_HEADER_LIST_CAP 32
 #define ANIXOPS_BODY_CHAIN_CAP 16
+#define ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT 1048576u
 
 typedef struct anixops_engine anixops_engine_t;
 
@@ -224,6 +225,8 @@ ANIXOPS_API anixops_compat_profile_t anixops_engine_compat_profile(const anixops
 ANIXOPS_API int anixops_regex_backend_available(anixops_regex_backend_t backend);
 ANIXOPS_API int anixops_engine_set_regex_backend(anixops_engine_t *engine, anixops_regex_backend_t backend);
 ANIXOPS_API anixops_regex_backend_t anixops_engine_regex_backend(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_jq_max_input_bytes(anixops_engine_t *engine, size_t max_input_bytes);
+ANIXOPS_API size_t anixops_engine_jq_max_input_bytes(const anixops_engine_t *engine);
 ANIXOPS_API size_t anixops_engine_rule_diagnostic_count(const anixops_engine_t *engine);
 ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
 	const anixops_engine_t *engine,

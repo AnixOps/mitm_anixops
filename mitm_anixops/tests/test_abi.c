@@ -17,10 +17,11 @@ static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, cons
 
 static void version_is_stable(void)
 {
-	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.45.7");
+	ANIXOPS_EXPECT_STREQ(anixops_version(), "0.45.8");
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MAJOR, 0);
 	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_MINOR, 45);
-	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 7);
+	ANIXOPS_EXPECT_EQ_INT(ANIXOPS_VERSION_PATCH, 8);
+	ANIXOPS_EXPECT_EQ_SIZE(ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT, 1048576u);
 }
 
 static void null_arguments_are_rejected(void)
@@ -177,10 +178,28 @@ static void null_arguments_are_rejected(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, (anixops_compat_profile_t)99), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(NULL, ANIXOPS_REGEX_BACKEND_POSIX_LITE), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, (anixops_regex_backend_t)99), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_input_bytes(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(NULL), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(NULL, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_max_input_option_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(NULL), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_input_bytes(engine, 4096), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), 4096);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_input_bytes(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), 0);
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
 
 	anixops_engine_free(engine);
 }
@@ -246,6 +265,7 @@ static void default_engine_state_is_conservative(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_PORTABLE);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_regex_backend_available(ANIXOPS_REGEX_BACKEND_POSIX_LITE), 1);
 	ANIXOPS_EXPECT_EQ_INT(anixops_regex_backend_available((anixops_regex_backend_t)99), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
@@ -290,6 +310,7 @@ static void clear_resets_and_engine_remains_usable(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_PORTABLE);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.example.com", 0, &decision), ANIXOPS_OK);
@@ -308,6 +329,7 @@ void anixops_register_abi_tests(anixops_test_case_t *tests, size_t *count, size_
 {
 	add_test(tests, count, cap, "abi/version_is_stable", version_is_stable);
 	add_test(tests, count, cap, "abi/null_arguments_are_rejected", null_arguments_are_rejected);
+	add_test(tests, count, cap, "abi/jq_max_input_option_is_configurable", jq_max_input_option_is_configurable);
 	add_test(tests, count, cap, "abi/status_messages_are_stable", status_messages_are_stable);
 	add_test(tests, count, cap, "abi/last_error_api_copies_status_line_and_message", last_error_api_copies_status_line_and_message);
 	add_test(tests, count, cap, "abi/default_engine_state_is_conservative", default_engine_state_is_conservative);

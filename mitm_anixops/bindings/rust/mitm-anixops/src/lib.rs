@@ -10,6 +10,7 @@ const ANIXOPS_PATTERN_CAP: usize = 256;
 const ANIXOPS_PLAN_HEADER_CAP: usize = 16;
 const ANIXOPS_HEADER_LIST_CAP: usize = 32;
 const ANIXOPS_BODY_CHAIN_CAP: usize = 16;
+pub const JQ_MAX_INPUT_BYTES_DEFAULT: usize = 1_048_576;
 
 #[repr(C)]
 struct AnixopsEngine {
@@ -100,6 +101,11 @@ extern "C" {
     fn anixops_engine_load_config(engine: *mut AnixopsEngine, config_text: *const c_char) -> c_int;
     fn anixops_engine_rewrite_rule_count(engine: *const AnixopsEngine) -> usize;
     fn anixops_engine_script_rule_count(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_jq_max_input_bytes(
+        engine: *mut AnixopsEngine,
+        max_input_bytes: usize,
+    ) -> c_int;
+    fn anixops_engine_jq_max_input_bytes(engine: *const AnixopsEngine) -> usize;
     fn anixops_rewrite_evaluate_url(
         engine: *const AnixopsEngine,
         url: *const c_char,
@@ -334,6 +340,17 @@ impl Engine {
             "load_config",
             unsafe { anixops_engine_load_config(self.ptr, config.as_ptr()) },
         )
+    }
+
+    pub fn set_jq_max_input_bytes(&mut self, max_input_bytes: usize) -> Result<(), Error> {
+        check_status(
+            "set_jq_max_input_bytes",
+            unsafe { anixops_engine_set_jq_max_input_bytes(self.ptr, max_input_bytes) },
+        )
+    }
+
+    pub fn jq_max_input_bytes(&self) -> usize {
+        unsafe { anixops_engine_jq_max_input_bytes(self.ptr) }
     }
 
     pub fn rewrite_rule_count(&self) -> usize {
@@ -771,8 +788,11 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
 
     #[test]
     fn rust_binding_evaluates_policy() {
-        assert_eq!(version(), "0.45.7");
+        assert_eq!(version(), "0.45.8");
         let mut engine = Engine::new().unwrap();
+        assert_eq!(engine.jq_max_input_bytes(), JQ_MAX_INPUT_BYTES_DEFAULT);
+        engine.set_jq_max_input_bytes(4096).unwrap();
+        assert_eq!(engine.jq_max_input_bytes(), 4096);
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);
         assert_eq!(engine.script_rule_count(), 1);

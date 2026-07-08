@@ -64,14 +64,14 @@ features it understands.
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body` and chain-capable `anixops_rewrite_apply_body_chain` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, capture replacement, global replacement, empty-match tests, and chain API tests proving previous output feeds the next matching body rule |
 | Request/response body JSON path replace | Supported subset for buffered JSON | `$.field`, `$['field']`, empty, common escaped, and `\uXXXX` bracket keys, nested object path, and positive/negative array index tests |
-| Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq |
+| Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with configurable max-input bytes |
 | Alpha proxy body rewrite path | Supported subset | `make script-contract-e2e` verifies buffered request/response body rewrite before script dispatch through the HTTP/1.1 MITM shim, which now calls the chain body rewrite API |
 | Request header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Response header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header` |
 | Case-insensitive named header lookup | Supported foundation | `anixops_rewrite_evaluate_named_header` filters rewrite rules by header name using case-insensitive matching; Go/Rust wrappers expose the same helper |
 | Multi-value header-list application | Supported Alpha bounded list | `anixops_rewrite_apply_headers` applies add/replace/delete and regex replace across a bounded header list with case-insensitive names; tests cover request multi-value semantics and response `Set-Cookie` fields kept as independent header entries |
 | Alpha proxy header rewrite path | Supported subset | `make script-contract-e2e` verifies request/response header rewrite before script dispatch through the HTTP/1.1 MITM shim |
-| Full JQ-style JSON rewrites | Supported subset with gaps | libjq first-output-wins, empty-output, invalid JSON, compile-error, and output-buffer fail-open policies are tested; timeout/memory limits and broad corpus coverage remain gaps |
+| Full JQ-style JSON rewrites | Supported subset with gaps | libjq first-output-wins, empty-output, invalid JSON, compile-error, input-limit fail-open, and output-buffer fail-open policies are tested; timeout/memory limits and broad corpus coverage remain gaps |
 | Compression/chunk handling | Out of scope | adapter responsibility |
 
 ## Script Dispatch
@@ -108,7 +108,7 @@ features it understands.
 | Request/response plan builder | Supported foundation | `anixops_rewrite_build_plan` aggregates phase rewrite, matching header rewrites, script dispatch, body-rewrite output, and `requires_body`; unit test compares it against individual evaluation APIs |
 | Regex backend selector | Supported foundation | `anixops_regex_backend_available`, `anixops_engine_set_regex_backend`, POSIX Lite default, `requires pcre2 backend` diagnostics for PCRE2-only constructs in URL/body/header/script regexes |
 | Optional PCRE2 backend | Supported optional backend | `make pcre2-test`, `PCRE2=1`, lookahead/lookbehind, backreference, Unicode property, word-boundary, atomic group, possessive quantifier, and named-backreference fixtures |
-| Optional libjq backend | Supported optional backend | `make jq-test`, `JQ=1`, body rewrite, output-buffer fail-open, and general fail-open policy fixtures |
+| Optional libjq backend | Supported optional backend | `make jq-test`, `JQ=1`, body rewrite, max-input and output-buffer fail-open, and general fail-open policy fixtures |
 | ABI export allowlist | Supported | `ci/abi_exports.txt` checked by `scripts/check.sh` |
 | pkg-config metadata | Supported Alpha packaging | `make pkg-config-check`, relocatable `lib/pkgconfig/mitm_anixops.pc` in `alpha-dist` |
 | CMake package config | Supported Alpha packaging | `make cmake-package-check`, relocatable `lib/cmake/mitm_anixops`; configure/build smoke runs when `cmake` is installed |

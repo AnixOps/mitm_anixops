@@ -22,6 +22,8 @@ const (
 	PhaseResponse Phase = C.ANIXOPS_PHASE_RESPONSE
 )
 
+const JQMaxInputBytesDefault uint = C.ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT
+
 type RewriteAction int
 
 const (
@@ -128,6 +130,20 @@ func (e *Engine) Close() {
 	}
 	C.anixops_engine_free(e.ptr)
 	e.ptr = nil
+}
+
+func (e *Engine) SetJQMaxInputBytes(maxInputBytes uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set jq max input bytes", C.anixops_engine_set_jq_max_input_bytes(e.ptr, C.size_t(maxInputBytes)))
+}
+
+func (e *Engine) JQMaxInputBytes() uint {
+	if e == nil || e.ptr == nil {
+		return JQMaxInputBytesDefault
+	}
+	return uint(C.anixops_engine_jq_max_input_bytes(e.ptr))
 }
 
 func (e *Engine) LoadConfig(config string) error {

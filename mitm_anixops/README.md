@@ -54,7 +54,7 @@ Implemented:
 - AnixOps-style `[Argument]` defaults, Surge-style `#!arguments`, tolerated `#!` metadata diagnostics, plus
   per-argument overrides for script `$argument` generation.
 - Optional libjq execution for `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` when built
-  with `JQ=1`; the default no-libjq build remains fail-open.
+  with `JQ=1`, including a configurable max-input-bytes fail-open guard; the default no-libjq build remains fail-open.
 - BiliUniverse Enhanced-style `.plugin`, `.snippet`, and `.sgmodule` fixtures.
 - Status text and last-error diagnostics for config/add-rule failures, including config line numbers.
 - C ABI result structs with no exposed internal pointers.
@@ -65,8 +65,8 @@ Not implemented yet:
 
 - TLS socketing, dynamic leaf certificate generation, CA storage, or iOS trust detection.
 - HTTP parser, HTTP/2 frame parser, compression/chunk handling, body buffering.
-- Full JQ compatibility beyond the optional libjq first-output execution policy, including resource limits and broader
-  corpus coverage.
+- Full JQ compatibility beyond the optional libjq first-output execution policy, including timeout/memory limits and
+  broader corpus coverage.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand classes, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement
@@ -135,7 +135,7 @@ For a local Alpha package:
 make alpha-dist
 ```
 
-That writes `build/anixops-mitm-alpha-0.45.7.tar.gz`. Alpha scope and known gaps are documented in
+That writes `build/anixops-mitm-alpha-0.45.8.tar.gz`. Alpha scope and known gaps are documented in
 `docs/alpha_release_notes.md`. The package includes representative Loon, Surge, Quantumult X, and BiliBili fixtures,
 `fixtures/corpus/manifest.json`, and `fixtures/RunnerReplay.tsv` so the runner can be exercised without the source
 tree; it also includes `fixtures/runner_replay_script.js` and script bundle fixtures for runtime replay,
@@ -146,7 +146,7 @@ For pkg-config integration:
 
 ```sh
 make pkg-config-check
-PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.7/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
+PKG_CONFIG_PATH=/path/to/anixops-mitm-alpha-0.45.8/lib/pkgconfig pkg-config --cflags --libs mitm_anixops
 ```
 
 For CMake package metadata coverage:
@@ -165,7 +165,8 @@ make go-binding-check
 
 The Go package lives under `bindings/go/anixops` and uses `pkg-config: mitm_anixops`, so consumers should point
 `PKG_CONFIG_PATH` at the Alpha package's `lib/pkgconfig` directory. The Alpha wrapper exposes config load, rewrite/body
-evaluation, body-chain application, header-list application, script dispatch, and the aggregated rewrite plan.
+evaluation, body-chain application, header-list application, script dispatch, JQ max-input configuration, and the
+aggregated rewrite plan.
 
 For Rust binding coverage:
 
@@ -176,8 +177,8 @@ make rust-binding-check
 The Rust crate lives under `bindings/rust/mitm-anixops` and uses `pkg-config` from `build.rs`, so consumers should point
 `PKG_CONFIG_PATH` at the Alpha package's `lib/pkgconfig` directory and set `LD_LIBRARY_PATH` to the package `lib`
 directory when running tests against the shared library. The Alpha wrapper exposes rewrite/body evaluation,
-body-chain application, named-header lookup, bounded header-list application, script dispatch, and the aggregated
-rewrite plan.
+body-chain application, named-header lookup, bounded header-list application, script dispatch, JQ max-input
+configuration, and the aggregated rewrite plan.
 
 For optional PCRE2 regex backend coverage:
 

@@ -16,7 +16,7 @@ http-response ^https:\/\/api\.go\.example\/v1 requires-body=1, timeout=4, max-si
 `
 
 func TestGoBindingEvaluatesPolicy(t *testing.T) {
-	if Version() != "0.45.7" {
+	if Version() != "0.45.8" {
 		t.Fatalf("Version() = %q", Version())
 	}
 	engine, err := NewEngine()
@@ -24,6 +24,15 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer engine.Close()
+	if engine.JQMaxInputBytes() != JQMaxInputBytesDefault {
+		t.Fatalf("JQMaxInputBytes() = %d", engine.JQMaxInputBytes())
+	}
+	if err := engine.SetJQMaxInputBytes(4096); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQMaxInputBytes() != 4096 {
+		t.Fatalf("JQMaxInputBytes() = %d", engine.JQMaxInputBytes())
+	}
 
 	if err := engine.LoadConfig(fixtureConfig); err != nil {
 		t.Fatal(err)

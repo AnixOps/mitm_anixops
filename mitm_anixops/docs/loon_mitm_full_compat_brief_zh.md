@@ -27,7 +27,7 @@
 
 当前短板主要不在 “是否能识别几条规则”，而在是否能完整复刻 LOON MITM 插件运行环境：
 
-- JQ rewrite 仍停留在 JSON path replacement 子集。
+- JQ rewrite 已有可选 libjq Alpha 基础，但完整资源限制、语料覆盖和边界行为还没补齐。
 - 正则能力仍是 POSIX ERE 加部分 PCRE/ICU 语法归一化，不等于完整 PCRE2 或 NSRegularExpression。
 - Quantumult X / Surge / LOON 的语法覆盖还不是全量。
 - JavaScript runtime、脚本缓存、`$persistentStore`、body 解压重压、HTTP/2、TLS MITM、证书安装等仍由外部 adapter 承担。
@@ -108,7 +108,7 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 - `select(...)`
 - `map(...)`
 - `with_entries(...)`
-- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、output-buffer fail-open
+- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、input-limit fail-open、output-buffer fail-open
 
 验收标准：Surge `http-request-jq` / `http-response-jq`、LOON JSON rewrite、真实插件 corpus 都能生成稳定 trace。
 

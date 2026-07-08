@@ -187,7 +187,7 @@ anixops-mitm-runner trace --plugin plugin.plugin --url https://example.com/api
 
 - Surge `http-request-jq` / `http-response-jq` fixture 通过。
 - LOON/AnixOps 同类 JSON rewrite 规则通过。
-- jq compile error、multi-output、empty output、non-object output、invalid JSON 输入行为有明确诊断。
+- jq compile error、multi-output、empty output、non-object output、invalid JSON 输入、输入超限和输出超限行为有明确诊断。
 - mutation 后 JSON 序列化和 body framing 在 runner E2E 中一致。
 
 ## PCRE / NSRegularExpression 补洞路线
@@ -395,7 +395,7 @@ int anixops_runtime_apply_plan(
 | P0 | Body pipeline | text/json body view、max body size、empty body、binary passthrough | body matrix 覆盖空 body、invalid UTF-8、超限 body |
 | P1 | JS runtime | QuickJS backend，支持 `$request`、`$response`、`$argument`、`$persistentStore`、`$done` | BiliUniverse runtime fixture 不依赖测试专用 Node runner |
 | P1 | Script cache | Alpha runner 已支持 offline bundle、sha256 digest 校验、digest mismatch/cache miss 诊断；后续补 remote fetch/cache refresh policy | digest mismatch、cache miss、offline mode 均有 fixture |
-| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、output-buffer fail-open；后续补 timeout/memory limit | jq manual 常用 filter 子集和插件 corpus 均通过 |
+| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、max-input fail-open、output-buffer fail-open；后续补 timeout/memory limit | jq manual 常用 filter 子集和插件 corpus 均通过 |
 | P1 | Compression | gzip/deflate/brotli/zstd decode/re-encode 或 remove encoding 策略 | Content-Encoding 和 Content-Length replay fixture 通过 |
 | P2 | Async script | async `$done`、timeout、promise、exception fail-open | timeout/throw/double `$done` fixture 通过 |
 | P2 | Persistent store | namespace、read/write、transaction 或 file backend | 多脚本共享状态 fixture 通过 |
