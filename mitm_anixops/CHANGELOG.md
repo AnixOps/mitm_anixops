@@ -55,6 +55,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   manifest, release-note, and summary evidence without publishing a release.
 - Added a tag-triggered GitHub Actions release workflow that builds release
   package artifacts while public release publication remains blocked.
+- Added checksum, manifest, release-note, and Step Summary generation to the
+  release workflow artifacts.
 
 ### Changed
 

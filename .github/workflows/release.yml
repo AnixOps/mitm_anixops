@@ -130,6 +130,54 @@ jobs:
           artifact_name="$(basename "${artifact_path}")"
           test -s "${artifact_path}"
 
+          artifact_sha256="$(sha256sum "${artifact_path}" | awk '{print $1}')"
+          artifact_sha256_file="build/${artifact_name}.sha256"
+          printf '%s  %s\n' "${artifact_sha256}" "${artifact_name}" > "${artifact_sha256_file}"
+
+          manifest_name="anixops-mitm-release-${version_no_v}-manifest.json"
+          manifest_path="build/${manifest_name}"
+          {
+            printf '{\n'
+            printf '  "release_version": "%s",\n' "${RELEASE_VERSION}"
+            printf '  "release_kind": "%s",\n' "${RELEASE_KIND}"
+            printf '  "release_commit": "%s",\n' "${RELEASE_COMMIT}"
+            printf '  "source_mode": "%s",\n' "${RELEASE_SOURCE_MODE}"
+            printf '  "publication": "%s",\n' "${RELEASE_PUBLICATION}"
+            printf '  "publication_gate": "%s",\n' "${RELEASE_PUBLICATION_GATE}"
+            printf '  "compatibility_scope": "alpha policy-core release artifact",\n'
+            printf '  "artifacts": [\n'
+            printf '    {\n'
+            printf '      "name": "%s",\n' "${artifact_name}"
+            printf '      "path": "%s",\n' "${artifact_path}"
+            printf '      "sha256": "%s",\n' "${artifact_sha256}"
+            printf '      "sha256_file": "%s"\n' "$(basename "${artifact_sha256_file}")"
+            printf '    }\n'
+            printf '  ]\n'
+            printf '}\n'
+          } > "${manifest_path}"
+
+          manifest_sha256="$(sha256sum "${manifest_path}" | awk '{print $1}')"
+          manifest_sha256_file="build/${manifest_name}.sha256"
+          printf '%s  %s\n' "${manifest_sha256}" "${manifest_name}" > "${manifest_sha256_file}"
+
+          release_notes_path="build/release-notes.md"
+          {
+            printf '# mitm_anixops %s Release Artifact\n\n' "${RELEASE_VERSION}"
+            printf 'Commit: %s\n\n' "${RELEASE_COMMIT}"
+            printf 'Source mode: %s\n\n' "${RELEASE_SOURCE_MODE}"
+            printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
+            printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
+            printf 'Compatibility scope: alpha policy core, runner, bindings, and docs.\n\n'
+            printf 'Known gaps: no v1.0.0 stable release claim, no public GitHub\n'
+            printf 'Release upload yet, no signing/notarization, no platform certificate\n'
+            printf 'lifecycle, no production JavaScript runtime, and no platform app-store\n'
+            printf 'release assets.\n\n'
+            printf 'Rollback path: delete the untrusted workflow artifact and create a new\n'
+            printf 'tag only after the release gate passes on the replacement commit. Do not\n'
+            printf 'move an already-published public release tag without recording the\n'
+            printf 'replacement policy.\n'
+          } > "${release_notes_path}"
+
           {
             printf 'release_version=%s\n' "${RELEASE_VERSION}"
             printf 'release_kind=%s\n' "${RELEASE_KIND}"
@@ -137,11 +185,36 @@ jobs:
             printf 'source_mode=%s\n' "${RELEASE_SOURCE_MODE}"
             printf 'artifact_name=%s\n' "${artifact_name}"
             printf 'artifact_path=%s\n' "${artifact_path}"
+            printf 'artifact_sha256=%s\n' "${artifact_sha256}"
+            printf 'artifact_sha256_file=%s\n' "${artifact_sha256_file}"
+            printf 'manifest_name=%s\n' "${manifest_name}"
+            printf 'manifest_path=%s\n' "${manifest_path}"
+            printf 'manifest_sha256=%s\n' "${manifest_sha256}"
+            printf 'manifest_sha256_file=%s\n' "${manifest_sha256_file}"
+            printf 'release_notes_path=%s\n' "${release_notes_path}"
             printf 'publication=%s\n' "${RELEASE_PUBLICATION}"
             printf 'publication_gate=%s\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'publish_eligibility_status=blocked\n'
             printf 'publish_blocking_reason=same-commit-ci-gate-not-yet-added\n'
           } >> "${GITHUB_OUTPUT}"
+
+      - name: Validate release metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "${{ steps.build_package.outputs.artifact_path }}"
+          test -s "${{ steps.build_package.outputs.artifact_sha256_file }}"
+          test -s "${{ steps.build_package.outputs.manifest_path }}"
+          test -s "${{ steps.build_package.outputs.manifest_sha256_file }}"
+          test -s "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.artifact_name }}$" "${{ steps.build_package.outputs.artifact_sha256_file }}"
+          grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.manifest_name }}$" "${{ steps.build_package.outputs.manifest_sha256_file }}"
+          grep -q "\"release_version\": \"${RELEASE_VERSION}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"publication\": \"blocked\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Rollback path:" "${{ steps.build_package.outputs.release_notes_path }}"
 
       - name: Write release build summary
         shell: bash
@@ -155,6 +228,10 @@ jobs:
             printf '| release_commit | `%s` |\n' "${{ steps.build_package.outputs.release_commit }}"
             printf '| source_mode | `%s` |\n' "${{ steps.build_package.outputs.source_mode }}"
             printf '| artifact_name | `%s` |\n' "${{ steps.build_package.outputs.artifact_name }}"
+            printf '| artifact_sha256 | `%s` |\n' "${{ steps.build_package.outputs.artifact_sha256 }}"
+            printf '| manifest_name | `%s` |\n' "${{ steps.build_package.outputs.manifest_name }}"
+            printf '| manifest_sha256 | `%s` |\n' "${{ steps.build_package.outputs.manifest_sha256 }}"
+            printf '| release_notes_path | `%s` |\n' "${{ steps.build_package.outputs.release_notes_path }}"
             printf '| publication | `%s` |\n' "${{ steps.build_package.outputs.publication }}"
             printf '| publication_gate | `%s` |\n' "${{ steps.build_package.outputs.publication_gate }}"
             printf '| publish_eligibility_status | `%s` |\n' "${{ steps.build_package.outputs.publish_eligibility_status }}"
@@ -164,4 +241,9 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: anixops-mitm-release-package
-          path: mitm_anixops/${{ steps.build_package.outputs.artifact_path }}
+          path: |
+            mitm_anixops/${{ steps.build_package.outputs.artifact_path }}
+            mitm_anixops/${{ steps.build_package.outputs.artifact_sha256_file }}
+            mitm_anixops/${{ steps.build_package.outputs.manifest_path }}
+            mitm_anixops/${{ steps.build_package.outputs.manifest_sha256_file }}
+            mitm_anixops/${{ steps.build_package.outputs.release_notes_path }}

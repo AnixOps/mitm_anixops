@@ -78,8 +78,8 @@ Current jobs:
   release publication.
 - `release`: validates `v*` tags or manual release workflow checks from `main`,
   runs the release build gate in GitHub Actions, builds the release package, and
-  uploads it as a workflow artifact while public release publication remains
-  blocked.
+  uploads it with checksum, manifest, release-note, and summary evidence as
+  workflow artifacts while public release publication remains blocked.
 
 Known CI/CD gaps for v1.0.0:
 
@@ -87,9 +87,8 @@ Known CI/CD gaps for v1.0.0:
 - no dedicated format check;
 - no explicit compatibility matrix test job;
 - no same-commit CI lookup gate for public tag release publication;
-- no checksum file generation for public tag release publication;
-- no artifact manifest generation for public tag release publication;
-- no release-note generation gate for public tag release publication;
+- release checksum, manifest, and note evidence is generated as workflow
+  artifacts, not public GitHub Release assets yet;
 - no GitHub Release upload workflow for future releases;
 - no macOS runner coverage yet.
 

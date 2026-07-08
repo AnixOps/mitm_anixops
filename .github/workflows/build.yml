@@ -186,9 +186,14 @@ jobs:
           grep -q "tags:" .github/workflows/release.yml
           grep -q "v\\*" .github/workflows/release.yml
           grep -q "anixops-mitm-release-package" .github/workflows/release.yml
+          grep -q "artifact_sha256" .github/workflows/release.yml
+          grep -q "manifest_sha256" .github/workflows/release.yml
+          grep -q "release-notes.md" .github/workflows/release.yml
+          grep -q "Rollback path:" .github/workflows/release.yml
           grep -q "publish_eligibility_status=blocked" .github/workflows/release.yml
           grep -q "gh release create" .github/workflows/release.yml && exit 1 || true
           grep -q "^- \\[x\\] Add tag-triggered release workflow that builds artifacts in GitHub" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Generate checksums, manifest, release notes, and release summary in" mitm_anixops/TODO.md
           grep -q "Source contract:" .github/pull_request_template.md
           grep -q "Manual intervention required" .github/pull_request_template.md
 
