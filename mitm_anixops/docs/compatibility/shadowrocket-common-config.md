@@ -22,13 +22,16 @@ The current common-config subset accepts:
   `argument`;
 - `[MITM] hostname = ...` with exact, deny, and `%APPEND%` host entries;
 - `[MITM] skip-server-cert-verify = ...` as an adapter-visible boolean;
-- `[MITM] h2 = ...` as an adapter-visible HTTP/2 MITM flag.
+- `[MITM] h2 = ...` as an adapter-visible HTTP/2 MITM flag;
+- `[MITM] ca-p12`, `ca-passphrase`, and `ca-cert` as unsupported
+  certificate-material diagnostics only.
 
 ## Parser Output
 
 The parser must produce:
 
 - accepted diagnostics for supported rewrite, script, and MITM lines;
+- ignored diagnostics for unsupported certificate-material MITM lines;
 - rejected diagnostics for malformed supported-section regex rules;
 - URL rewrite rules, script trigger metadata, MITM host patterns, and MITM
   options observable through the public ABI.
@@ -53,18 +56,25 @@ Expected behavior:
 
 ## Negative Case
 
-Parser case:
+Parser cases:
 
 ```text
 tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
+tests/fixtures/Shadowrocket.MitmCertificateUnsupported.conf
 ```
 
 Expected behavior:
 
-- config load fails with `ANIXOPS_ERR_REGEX`;
-- a rejected rule diagnostic is recorded with section `Rewrite` and action
-  `rewrite`;
-- last error reports regex failure at the malformed line.
+- malformed URL rewrite config load fails with `ANIXOPS_ERR_REGEX`;
+- malformed URL rewrite config records a rejected rule diagnostic with section
+  `Rewrite` and action `rewrite`;
+- malformed URL rewrite config last error reports regex failure at the
+  malformed line;
+- certificate-material config load succeeds;
+- `ca-p12`, `ca-passphrase`, and `ca-cert` record ignored diagnostics, do not
+  enable skip-server-cert-verify, do not establish trust, and keep a matching
+  host as a conservative MITM bypass until the adapter supplies trusted
+  certificate state.
 
 ## App Profile Boundary
 
@@ -82,6 +92,7 @@ Out-of-scope behavior includes:
 - DNS, VPN, packet-capture, or TUN behavior;
 - profile import UI;
 - certificate installation or trust lifecycle;
+- certificate material loading or passphrase use;
 - JavaScript runtime execution;
 - task/cron scheduler behavior.
 
@@ -93,6 +104,7 @@ It does not implement:
 
 - TLS interception;
 - certificate generation or trust installation;
+- certificate material loading;
 - HTTP parser or body streaming;
 - JavaScript execution;
 - remote script download or cache refresh.
@@ -107,6 +119,8 @@ Required CI evidence:
   `config/shadowrocket_common_config_fixture_is_supported`;
 - `tests/test_config.c` registers
   `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -118,4 +132,5 @@ Shadowrocket common config
 ```
 
 The row remains `partial` because app-level profile grammar, routing, DNS,
-proxy nodes, certificate lifecycle, and runtime behavior are not covered.
+proxy nodes, certificate lifecycle, certificate material loading, and runtime
+behavior are not covered.

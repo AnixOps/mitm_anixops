@@ -796,14 +796,19 @@ Input form:
   requires-body, timeout, max-size, tag, and argument;
 - `[MITM] hostname = ...`;
 - `[MITM] skip-server-cert-verify = ...`;
-- `[MITM] h2 = ...`.
+- `[MITM] h2 = ...`;
+- unsupported certificate-material keys `ca-p12`, `ca-passphrase`, and
+  `ca-cert`.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/Shadowrocket.CommonConfig.conf`;
 - negative fixture `tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf`;
+- unsupported certificate-material fixture
+  `tests/fixtures/Shadowrocket.MitmCertificateUnsupported.conf`;
 - `config/shadowrocket_common_config_fixture_is_supported`;
 - `config/shadowrocket_common_config_fixture_rejects_invalid_regex`;
+- `config/shadowrocket_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - app-profile guard fixture `tests/fixtures/Shadowrocket.MigrationGuard.conf`
   remains unsupported syntax evidence.
 
@@ -812,7 +817,7 @@ Unimplemented items:
 - full Shadowrocket app-level profile grammar beyond the dedicated rule-reject
   subset;
 - proxy nodes, routing policy, DNS, VPN, packet-capture, or UI behavior;
-- certificate lifecycle;
+- certificate lifecycle and certificate material loading;
 - runtime and scheduler behavior.
 
 ### Shadowrocket Rule Reject Subset

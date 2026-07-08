@@ -128,6 +128,7 @@ jobs:
             mitm_anixops/tests/fixtures/Shadowrocket.MigrationGuard.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.conf
             mitm_anixops/tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
+            mitm_anixops/tests/fixtures/Shadowrocket.MitmCertificateUnsupported.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleReject.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleReject.Malformed.conf
             mitm_anixops/tests/fixtures/Shadowrocket.RuleDomainExactReject.conf
@@ -434,9 +435,13 @@ jobs:
           grep -q "Shadowrocket Common Config Source Contract" mitm_anixops/docs/compatibility/shadowrocket-common-config.md
           grep -q "Shadowrocket.CommonConfig.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket.CommonConfig.Malformed.conf" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Shadowrocket.MitmCertificateUnsupported.conf" mitm_anixops/docs/compatibility/matrix.md
           grep -q "config/shadowrocket_common_config_fixture_is_supported" mitm_anixops/tests/test_config.c
           grep -q "config/shadowrocket_common_config_fixture_rejects_invalid_regex" mitm_anixops/tests/test_config.c
+          grep -q "config/shadowrocket_mitm_certificate_unsupported_fixture_keeps_material_ignored" mitm_anixops/tests/test_config.c
           grep -q "^- \\[x\\] Add Shadowrocket common-config parser fixture and positive/negative tests" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Shadowrocket MITM certificate-material" mitm_anixops/TODO.md
+          grep -q "ca-passphrase" mitm_anixops/docs/compatibility/shadowrocket-common-config.md
           grep -q "Shadowrocket rule reject policy intent" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Shadowrocket Rule Reject Source Contract" mitm_anixops/docs/compatibility/shadowrocket-rule-reject.md
           grep -q "Shadowrocket.RuleReject.conf" mitm_anixops/docs/compatibility/matrix.md

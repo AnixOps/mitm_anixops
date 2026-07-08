@@ -79,6 +79,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add Stash `http.url-rewrite` 302/307 redirect parser fixtures and
   positive/negative tests.
 - [x] Add Shadowrocket common-config parser fixture and positive/negative tests.
+- [x] Add Shadowrocket MITM certificate-material non-support guard and negative
+  test.
 - [x] Add Shadowrocket `[Rule]` URL-regex reject parser fixtures and
   positive/negative tests.
 - [x] Add Shadowrocket `[Rule]` DOMAIN reject parser fixtures and
