@@ -76,6 +76,7 @@ jobs:
             mitm_anixops/tests/fixtures/BindingParity.Common.conf
             mitm_anixops/tests/fixtures/MITM.Hostname.Malformed.conf
             mitm_anixops/tests/fixtures/runner_double_done_script.js
+            mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/security-claim-check.sh
             .github/workflows/release-dry-run.yml
             .github/workflows/release.yml
@@ -85,6 +86,8 @@ jobs:
             test -f "${file}"
           done
           sh mitm_anixops/scripts/security-claim-check.sh
+          grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
+          grep -q "compatibility-matrix:" .github/workflows/build.yml
           grep -q "P0 Repository Baseline" mitm_anixops/ROADMAP.md
           grep -q "P1 Plugin Parser" mitm_anixops/ROADMAP.md
           grep -q "P2 Rule Matching Engine" mitm_anixops/ROADMAP.md
@@ -93,6 +96,8 @@ jobs:
           grep -q "P5 Integration Adapter" mitm_anixops/ROADMAP.md
           grep -q "P6 Release Hardening" mitm_anixops/ROADMAP.md
           grep -q "GitHub Actions" mitm_anixops/CONTRIBUTING.md
+          grep -q "^- \\[x\\] Add a dedicated compatibility matrix CI job" mitm_anixops/TODO.md
+          grep -q "compatibility-matrix" mitm_anixops/docs/architecture/repository-audit.md
           grep -q "branch-protection-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "Loon plugin common fields" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Loon Plugin Common Fields Source Contract" mitm_anixops/docs/compatibility/loon-plugin-common-fields.md
@@ -249,6 +254,15 @@ jobs:
           grep -q "^- \\[x\\] Add tag-only GitHub Release asset publication" mitm_anixops/TODO.md
           grep -q "Source contract:" .github/pull_request_template.md
           grep -q "Manual intervention required" .github/pull_request_template.md
+
+  compatibility-matrix:
+    runs-on: ubuntu-latest
+    needs:
+      - governance
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate compatibility matrix contract
+        run: sh mitm_anixops/scripts/compatibility-matrix-check.sh
 
   linux-test:
     runs-on: ubuntu-latest

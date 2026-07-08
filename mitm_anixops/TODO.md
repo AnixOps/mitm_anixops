@@ -13,6 +13,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add v1.0.0 roadmap, TODO, CHANGELOG, CONTRIBUTING, compatibility docs,
   and manual intervention register.
 - [x] Add CI governance checks for the new baseline files.
+- [x] Add a dedicated compatibility matrix CI job.
 - [x] Add PR template fields for source contract, test, compatibility matrix,
   changelog, and manual-intervention impact.
 - [x] Add a release dry-run design before changing release automation.

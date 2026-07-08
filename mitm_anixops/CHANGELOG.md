@@ -14,6 +14,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   intervention register.
 - Added a pull request template that requires source contract, test,
   compatibility matrix, changelog, security, and manual-intervention evidence.
+- Added a dedicated compatibility matrix GitHub Actions job that validates
+  matrix row structure, status values, source contracts, and required evidence.
 - Added a release dry-run source contract before introducing release automation.
 - Added a Loon common-fields source contract plus positive and negative parser
   fixtures for the first P1 parser milestone.

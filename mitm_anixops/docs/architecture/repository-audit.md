@@ -16,7 +16,7 @@ Important paths:
 - `.github/workflows/release-dry-run.yml`: release dry-run workflow that blocks
   publication and uploads workflow artifacts only.
 - `.github/workflows/release.yml`: tag-triggered release workflow that builds
-  artifacts in GitHub Actions and blocks public publication.
+  artifacts in GitHub Actions and publishes GitHub Release assets after gates.
 - `mitm_anixops/include/`: public C ABI.
 - `mitm_anixops/src/`: C implementation.
 - `mitm_anixops/tests/`: C unit and compatibility fixture tests.
@@ -72,6 +72,9 @@ Current jobs:
 - `linux-test`: installs CMake, pkg-config, PCRE2, libjq, Go, Node, and the
   pinned mihomo fixture; runs `sh scripts/check.sh`; builds Alpha tarball;
   uploads `anixops-mitm-alpha-linux`.
+- `compatibility-matrix`: validates the v1.0.0 compatibility matrix row
+  structure, allowed status values, source contract links, and required evidence
+  fields without running a build.
 - `windows-binary`: builds the Windows Bilibili demo binary with MSYS2 and
   uploads `anixops-mitm-windows-x64`.
 - `release-dry-run`: validates a dry-run version, runs an equivalent full check
@@ -90,7 +93,6 @@ Known CI/CD gaps for v1.0.0:
 
 - no dedicated lint job;
 - no dedicated format check;
-- no explicit compatibility matrix test job;
 - GitHub Release upload exists only for gated `v*` tag runs; release
   environment approval still needs repository configuration;
 - no macOS runner coverage yet.
@@ -147,11 +149,10 @@ status must be taken from GitHub Actions, not local execution.
 ## Current Gaps
 
 - v1.0.0 governance files were incomplete before this P0 baseline.
-- Compatibility documentation is not yet organized as source contracts plus
-  matrix rows.
-- Release automation is artifact-producing on push, but not yet tag-release
-  hardened.
-- No generated checksums, manifest, or release-note gate.
+- New parser grammar units still need one fixture and positive/negative tests
+  before matrix rows can be promoted.
+- Release environment approval is documented, but repository environment
+  protection still requires manual configuration.
 - No macOS CI coverage.
 - Stash and Shadowrocket are not yet first-class parser targets.
 - Cron/task trigger behavior has a planned source contract, but parser fixtures,
