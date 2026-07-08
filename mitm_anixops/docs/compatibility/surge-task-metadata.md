@@ -45,9 +45,10 @@ Supported fields:
 - `argument`, including current argument-template substitution;
 - `timeout`, `timeout-ms`, `max-size`, `max_size`, `enable`, and `enabled`.
 
-Unsupported Surge script types such as `dns`, `rule`, and `policy-group`, plus
-unsupported event names, remain ignored or rejected until separate source
-contracts and tests exist.
+Unsupported Surge script types such as `dns`, `rule`, and `policy-group`
+remain ignored until separate source contracts and tests exist. Unknown event
+names are rejected because accepting them would overstate event dispatch
+compatibility.
 
 ## Parser Output
 
@@ -94,16 +95,18 @@ Parser case:
 ```text
 tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule
 tests/fixtures/Surge.TaskEvent.Malformed.sgmodule
+tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule
 ```
 
 Expected behavior:
 
 - `ANIXOPS_COMPAT_SURGE_STRICT` rejects the malformed cron task line;
 - `ANIXOPS_COMPAT_SURGE_STRICT` rejects the malformed event task line;
+- `ANIXOPS_COMPAT_SURGE_STRICT` rejects unknown event names;
 - no task descriptors are registered;
 - a rejected diagnostic is recorded with section `Script` and action `task`;
-- last error reports cron expression or event name failure at the malformed
-  line.
+- last error reports cron expression, missing event name, or unsupported event
+  name failure at the malformed line.
 
 ## Runtime And Security Boundary
 
@@ -132,6 +135,8 @@ Required CI evidence:
   `config/surge_task_event_fixture_emits_event_descriptors`;
 - `tests/test_config.c` registers
   `config/surge_task_event_malformed_fixture_rejects_missing_event_name`;
+- `tests/test_config.c` registers
+  `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -144,5 +149,5 @@ Surge task metadata
 
 The row remains `partial` because parser task descriptors are covered while
 scheduler/runtime execution, event dispatch, DNS/rule/policy-group scripts,
-task JavaScript bindings, permission policy, and broader Surge task corpus
-coverage remain unimplemented.
+task JavaScript bindings, unknown event names, permission policy, and broader
+Surge task corpus coverage remain unimplemented.

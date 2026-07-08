@@ -113,6 +113,7 @@ tests/fixtures/Loon.TaskMetadata.Malformed.plugin
 tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
 tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet
 tests/fixtures/Surge.TaskEvent.Malformed.sgmodule
+tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule
 tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule
 ```
 
@@ -121,7 +122,8 @@ Expected behavior:
 - config load fails with `ANIXOPS_ERR_PARSE`;
 - a rejected rule diagnostic is recorded with section `Script` and action
   `task`;
-- last error reports cron expression failure at the malformed line.
+- last error reports cron expression, event script path, missing event name, or
+  unsupported event name failure at the malformed line.
 
 ## Runtime And Matching Behavior
 
@@ -150,7 +152,8 @@ Current diagnostics cover:
 - accepted Surge event task descriptor;
 - ignored unsupported scheduler type;
 - rejected malformed cron expression;
-- rejected malformed event task missing a script path.
+- rejected malformed event task missing a script path;
+- rejected Surge event task with an unknown event name.
 
 Future diagnostics must cover missing script assets, disabled task scheduling
 policy, scheduler/runtime not configured, timeout behavior, exception behavior,
@@ -196,6 +199,8 @@ Current evidence:
   `config/surge_task_event_fixture_emits_event_descriptors`;
 - `tests/test_config.c` registers
   `config/surge_task_event_malformed_fixture_rejects_missing_event_name`;
+- `tests/test_config.c` registers
+  `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`;
 - `tests/test_script.c` contains
   `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`, which
   guards against treating bare cron rules as supported HTTP scripts when using

@@ -1,0 +1,2 @@
+[Script]
+Surge.Event.Unsupported = type=event, event-name=wifi-changed, script-path=https://scripts.example/surge-event-unsupported.js, tag=surge.event.unsupported

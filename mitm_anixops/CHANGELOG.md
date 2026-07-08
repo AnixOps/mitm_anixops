@@ -54,6 +54,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Surge `[Script]` `type=event` parser descriptors for
   `network-changed` and `notification` events while keeping event dispatch
   adapter-owned.
+- Added a Surge event parser guard proving unknown event names are rejected
+  instead of becoming unverified task descriptors.
 - Added a Stash HTTP MITM source contract plus positive and negative parser
   fixtures for `http.mitm` host policy metadata.
 - Added Stash HTTP MITM `host:*` port-wildcard fixture coverage, normalized to

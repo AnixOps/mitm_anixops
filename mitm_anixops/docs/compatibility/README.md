@@ -57,13 +57,13 @@ corresponding tests.
 - [quantumultx-mitm-options.md](quantumultx-mitm-options.md): Quantumult X
   MITM host/options parser contract.
 - [quantumultx-task-metadata.md](quantumultx-task-metadata.md): Quantumult X
-  `[task_local]` cron task descriptor parser contract.
+  `[task_local]` cron and event task descriptor parser contract.
 - [surge-module-common-config.md](surge-module-common-config.md): P1 Surge
   module common-config parser contract.
 - [surge-requirement-metadata.md](surge-requirement-metadata.md): Surge
   `#!requirement` metadata tolerance contract.
 - [surge-task-metadata.md](surge-task-metadata.md): Surge `[Script]`
-  cron and interval task descriptor parser contract.
+  cron, interval, and event task descriptor parser contract.
 - [stash-http-mitm.md](stash-http-mitm.md): Stash `http.mitm` host policy and
   `http.force-http-engine` option parser contract.
 - [stash-url-rewrite.md](stash-url-rewrite.md): Stash `http.url-rewrite`

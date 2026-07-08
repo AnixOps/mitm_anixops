@@ -603,10 +603,12 @@ Current CI evidence:
 - negative fixture `tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule`;
 - positive fixture `tests/fixtures/Surge.TaskEvent.sgmodule`;
 - negative fixture `tests/fixtures/Surge.TaskEvent.Malformed.sgmodule`;
+- unsupported-name fixture `tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule`;
 - `config/surge_task_metadata_fixture_emits_task_descriptors`;
 - `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - `config/surge_task_event_fixture_emits_event_descriptors`;
-- `config/surge_task_event_malformed_fixture_rejects_missing_event_name`.
+- `config/surge_task_event_malformed_fixture_rejects_missing_event_name`;
+- `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`.
 
 Unimplemented items:
 
@@ -1302,7 +1304,8 @@ Input form:
 - malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`;
 - ecosystem-specific parser fixtures including
   `tests/fixtures/QuantumultX.TaskMetadata.snippet`,
-  `tests/fixtures/Surge.TaskEvent.sgmodule`, and
+  `tests/fixtures/Surge.TaskEvent.sgmodule`,
+  `tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule`, and
   `tests/fixtures/Surge.TaskMetadata.sgmodule`.
 
 Current CI evidence:

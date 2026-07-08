@@ -107,6 +107,7 @@ jobs:
             mitm_anixops/tests/fixtures/Surge.TaskMetadata.Malformed.sgmodule
             mitm_anixops/tests/fixtures/Surge.TaskEvent.sgmodule
             mitm_anixops/tests/fixtures/Surge.TaskEvent.Malformed.sgmodule
+            mitm_anixops/tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule
             mitm_anixops/tests/fixtures/Stash.HttpMitm.yaml
             mitm_anixops/tests/fixtures/Stash.HttpMitm.Malformed.yaml
             mitm_anixops/tests/fixtures/Stash.HttpMitm.PortSpecificUnsupported.yaml
@@ -341,14 +342,19 @@ jobs:
           grep -q "Surge.TaskMetadata.Malformed.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge.TaskEvent.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge.TaskEvent.Malformed.sgmodule" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "Surge.TaskEvent.Unsupported.sgmodule" mitm_anixops/docs/compatibility/matrix.md
           grep -q "ANIXOPS_TASK_EVENT = 6" mitm_anixops/include/mitm_anixops.h
           grep -q "config/surge_task_metadata_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
           grep -q "config/surge_task_metadata_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
           grep -q "config/surge_task_event_fixture_emits_event_descriptors" mitm_anixops/tests/test_config.c
           grep -q "config/surge_task_event_malformed_fixture_rejects_missing_event_name" mitm_anixops/tests/test_config.c
+          grep -q "config/surge_task_event_unsupported_fixture_rejects_unknown_event_name" mitm_anixops/tests/test_config.c
+          grep -q "unsupported task event name" mitm_anixops/src/mitm_anixops.c
           grep -q "network-changed" mitm_anixops/docs/compatibility/surge-task-metadata.md
           grep -q "notification" mitm_anixops/docs/compatibility/surge-task-metadata.md
+          grep -q "unknown event names" mitm_anixops/docs/compatibility/surge-task-metadata.md
           grep -q "^- \\[x\\] Add Surge event task metadata parser fixture" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Surge event unknown-name parser guard" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Surge task metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Surge requirement metadata" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge Requirement Metadata Source Contract" mitm_anixops/docs/compatibility/surge-requirement-metadata.md
