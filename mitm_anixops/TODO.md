@@ -161,6 +161,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   and positive/negative tests for the body-mutation contract.
 - [x] Add portable/common response body JSON mutation parser fixtures and
   positive/negative tests for the body-mutation contract.
+- [x] Add portable/common request body JSON mutation parser fixtures and
+  positive/negative tests for the body-mutation contract.
 - [x] Define trace schema for URL, host, header, body, script trigger, and
   policy intent decisions.
 - [x] Add runner MITM decision golden JSON trace fixtures for TCP allow and

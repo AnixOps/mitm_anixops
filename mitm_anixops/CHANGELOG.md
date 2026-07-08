@@ -56,6 +56,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added portable/common response body JSON mutation parser fixtures and
   CI-covered tests while keeping streaming, compression, and HTTP serialization
   adapter-owned.
+- Added portable/common request body JSON mutation parser fixtures and
+  CI-covered tests while keeping streaming, compression, and HTTP serialization
+  adapter-owned.
 - Added a Quantumult X rewrite/MITM common-config source contract plus positive
   and negative parser fixtures for the second P1 parser milestone.
 - Added Quantumult X `url echo-response` parser fixtures and CI-covered tests

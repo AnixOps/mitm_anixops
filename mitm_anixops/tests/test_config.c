@@ -6558,6 +6558,101 @@ static void body_mutation_common_fixture_rejects_invalid_body_regex(void)
 	free(fixture);
 }
 
+static void body_request_json_mutation_common_fixture_maps_request_body_json_replace(void)
+{
+	char *fixture = read_fixture("tests/fixtures/BodyRequestJsonMutation.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_rewrite_result_t rewrite;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "rewrite rule accepted");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://json.body.mutation.test/request",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"enabled\":false,\"name\":\"common\"}",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 0);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "json body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true,\"name\":\"common\"}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://json.body.mutation.test/request",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"enabled\":false,\"name\":\"common\"}",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, -1);
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":false,\"name\":\"common\"}");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void body_request_json_mutation_common_strict_fixture_rejects_missing_json_path(void)
+{
+	char *fixture = read_fixture("tests/fixtures/BodyRequestJsonMutation.Common.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void body_json_mutation_common_fixture_maps_response_body_json_replace(void)
 {
 	char *fixture = read_fixture("tests/fixtures/BodyJsonMutation.Common.conf");
@@ -8935,6 +9030,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/body_mutation_common_fixture_rejects_invalid_body_regex",
 		body_mutation_common_fixture_rejects_invalid_body_regex);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/body_request_json_mutation_common_fixture_maps_request_body_json_replace",
+		body_request_json_mutation_common_fixture_maps_request_body_json_replace);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/body_request_json_mutation_common_strict_fixture_rejects_missing_json_path",
+		body_request_json_mutation_common_strict_fixture_rejects_missing_json_path);
 	add_test(
 		tests,
 		count,
