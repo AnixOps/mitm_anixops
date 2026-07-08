@@ -45,6 +45,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   parser fixtures for `[task_local]` cron descriptors.
 - Added Quantumult X `[task_local]` `event-network` and `event-interaction`
   parser descriptors while keeping event dispatch adapter-owned.
+- Added a Quantumult X unsupported event trigger guard proving unknown event
+  forms stay ignored and do not register task descriptors.
 - Added a Surge module common-config source contract plus positive and negative
   parser fixtures for the third P1 parser milestone.
 - Added a Surge requirement metadata source contract plus positive and negative

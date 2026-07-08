@@ -99,6 +99,7 @@ jobs:
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.snippet
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet
             mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet
+            mitm_anixops/tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet
             mitm_anixops/tests/fixtures/Surge.CommonConfig.sgmodule
             mitm_anixops/tests/fixtures/Surge.CommonConfig.Malformed.sgmodule
             mitm_anixops/tests/fixtures/Surge.RequirementMetadata.sgmodule
@@ -322,14 +323,18 @@ jobs:
           grep -q "QuantumultX.TaskMetadata.snippet" mitm_anixops/docs/compatibility/matrix.md
           grep -q "QuantumultX.TaskMetadata.Malformed.snippet" mitm_anixops/docs/compatibility/matrix.md
           grep -q "QuantumultX.TaskMetadata.EventMalformed.snippet" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "QuantumultX.TaskMetadata.UnsupportedEvent.snippet" mitm_anixops/docs/compatibility/matrix.md
           grep -q "ANIXOPS_TASK_EVENT_NETWORK" mitm_anixops/include/mitm_anixops.h
           grep -q "ANIXOPS_TASK_EVENT_INTERACTION" mitm_anixops/include/mitm_anixops.h
           grep -q "config/quantumultx_task_metadata_fixture_emits_task_descriptors" mitm_anixops/tests/test_config.c
           grep -q "config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path" mitm_anixops/tests/test_config.c
+          grep -q "config/quantumultx_task_metadata_unsupported_event_fixture_stays_ignored" mitm_anixops/tests/test_config.c
           grep -q "config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron" mitm_anixops/tests/test_config.c
           grep -q "event-network" mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
           grep -q "event-interaction" mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
+          grep -q "Other event trigger forms stay ignored" mitm_anixops/docs/compatibility/quantumultx-task-metadata.md
           grep -q "^- \\[x\\] Add Quantumult X event task metadata parser fixture" mitm_anixops/TODO.md
+          grep -q "^- \\[x\\] Add Quantumult X unsupported event task guard" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add Quantumult X task metadata parser fixtures" mitm_anixops/TODO.md
           grep -q "Surge module common config" mitm_anixops/docs/compatibility/matrix.md
           grep -q "Surge Module Common Config Source Contract" mitm_anixops/docs/compatibility/surge-module-common-config.md

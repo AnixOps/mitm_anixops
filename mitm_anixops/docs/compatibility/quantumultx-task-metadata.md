@@ -1,6 +1,6 @@
 # Quantumult X Task Metadata Source Contract
 
-Capability: Quantumult X `[task_local]` cron task metadata.
+Capability: Quantumult X `[task_local]` cron and event task metadata.
 
 Ecosystem: `quantumultx`.
 
@@ -79,6 +79,20 @@ Expected behavior:
 - no HTTP script URL dispatch rules are registered by task lines;
 - task descriptors expose scheduling metadata through the public ABI.
 
+## Unsupported Case
+
+Parser case:
+
+```text
+tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet
+```
+
+Expected behavior:
+
+- config load succeeds in the portable profile;
+- the unsupported event trigger line records an ignored diagnostic;
+- no HTTP script rules or task descriptors are registered.
+
 ## Negative Case
 
 Parser case:
@@ -121,6 +135,8 @@ Required CI evidence:
   `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path`;
+- `tests/test_config.c` registers
+  `config/quantumultx_task_metadata_unsupported_event_fixture_stays_ignored`;
 - `tests/test_config.c` registers
   `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.

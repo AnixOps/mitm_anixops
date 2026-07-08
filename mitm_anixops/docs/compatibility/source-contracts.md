@@ -493,8 +493,11 @@ Current CI evidence:
 - negative fixture `tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet`;
 - negative fixture
   `tests/fixtures/QuantumultX.TaskMetadata.EventMalformed.snippet`;
+- unsupported-event fixture
+  `tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet`;
 - `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
 - `config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path`;
+- `config/quantumultx_task_metadata_unsupported_event_fixture_stays_ignored`;
 - `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`.
 
 Unimplemented items:
@@ -1304,6 +1307,7 @@ Input form:
 - malformed parser fixture `tests/fixtures/CronTaskTrigger.Malformed.conf`;
 - ecosystem-specific parser fixtures including
   `tests/fixtures/QuantumultX.TaskMetadata.snippet`,
+  `tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet`,
   `tests/fixtures/Surge.TaskEvent.sgmodule`,
   `tests/fixtures/Surge.TaskEvent.Unsupported.sgmodule`, and
   `tests/fixtures/Surge.TaskMetadata.sgmodule`.

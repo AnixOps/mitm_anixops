@@ -94,12 +94,14 @@ Parser case:
 
 ```text
 tests/fixtures/CronTaskTrigger.Unsupported.conf
+tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet
 ```
 
 Expected behavior:
 
 - config load succeeds in the portable profile;
 - unsupported scheduler-like lines are ignored with diagnostics;
+- unsupported Quantumult X event trigger lines are ignored with diagnostics;
 - no HTTP script rules are registered;
 - no task descriptors are registered.
 
@@ -151,6 +153,7 @@ Current diagnostics cover:
 - accepted Quantumult X event task descriptor;
 - accepted Surge event task descriptor;
 - ignored unsupported scheduler type;
+- ignored unsupported Quantumult X event trigger;
 - rejected malformed cron expression;
 - rejected malformed event task missing a script path;
 - rejected Surge event task with an unknown event name.
@@ -189,6 +192,8 @@ Current evidence:
   `config/quantumultx_task_metadata_fixture_emits_task_descriptors`;
 - `tests/test_config.c` registers
   `config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path`;
+- `tests/test_config.c` registers
+  `config/quantumultx_task_metadata_unsupported_event_fixture_stays_ignored`;
 - `tests/test_config.c` registers
   `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`;
 - `tests/test_config.c` registers

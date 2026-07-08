@@ -1638,6 +1638,40 @@ static void quantumultx_task_metadata_event_malformed_fixture_rejects_missing_pa
 	free(fixture);
 }
 
+static void quantumultx_task_metadata_unsupported_event_fixture_stays_ignored(void)
+{
+	char *fixture = read_fixture("tests/fixtures/QuantumultX.TaskMetadata.UnsupportedEvent.snippet");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "script");
+	ANIXOPS_EXPECT_STREQ(diagnostic.message, "script rule ignored");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://scripts.example/qx-task-location.js", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron(void)
 {
 	char *fixture = read_fixture("tests/fixtures/QuantumultX.TaskMetadata.Malformed.snippet");
@@ -5409,6 +5443,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path",
 		quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/quantumultx_task_metadata_unsupported_event_fixture_stays_ignored",
+		quantumultx_task_metadata_unsupported_event_fixture_stays_ignored);
 	add_test(
 		tests,
 		count,

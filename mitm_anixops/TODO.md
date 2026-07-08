@@ -55,6 +55,7 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   tests.
 - [x] Add Quantumult X event task metadata parser fixture and
   positive/negative tests.
+- [x] Add Quantumult X unsupported event task guard and negative test.
 - [x] Add Surge requirement metadata parser fixtures and positive/negative
   tests.
 - [x] Add Surge task metadata parser fixtures and positive/negative tests.
