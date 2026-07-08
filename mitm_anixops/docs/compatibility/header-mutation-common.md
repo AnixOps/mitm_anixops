@@ -43,6 +43,7 @@ Parser case:
 tests/fixtures/HeaderMutation.Common.conf
 tests/fixtures/QuantumultX.HeaderAdd.snippet
 tests/fixtures/QuantumultX.HeaderReplace.snippet
+tests/fixtures/QuantumultX.ResponseHeaderAdd.snippet
 tests/fixtures/QuantumultX.HeaderMutation.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.snippet
 tests/fixtures/QuantumultX.HeaderDelete.snippet
@@ -59,6 +60,8 @@ Expected behavior:
 - Quantumult X `url header-add` request header mutation is observable through
   `anixops_rewrite_evaluate_header`;
 - Quantumult X `url header-replace` request header mutation is observable
+  through `anixops_rewrite_evaluate_header`;
+- Quantumult X `url response-header-add` response header mutation is observable
   through `anixops_rewrite_evaluate_header`;
 - Quantumult X `url response-header-replace-regex` response header mutation is
   observable through `anixops_rewrite_evaluate_header`;
@@ -77,6 +80,7 @@ Parser case:
 tests/fixtures/HeaderMutation.Common.Malformed.conf
 tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderReplace.Malformed.snippet
+tests/fixtures/QuantumultX.ResponseHeaderAdd.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet
@@ -89,6 +93,8 @@ Expected behavior:
   rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - the malformed Quantumult X `url header-replace` rule without a header name is
   rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
+- the malformed Quantumult X `url response-header-add` rule without a header
+  name is rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - the invalid Quantumult X `url response-header-replace-regex` pattern rejects
   config load;
 - the invalid Quantumult X `url header-replace-regex` pattern rejects config
@@ -130,6 +136,10 @@ Required CI evidence:
   `config/quantumultx_header_replace_fixture_maps_request_header_replace`;
 - `tests/test_config.c` registers
   `config/quantumultx_header_replace_malformed_fixture_rejects_missing_header_name`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_header_add_fixture_maps_response_header_add`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_header_add_malformed_fixture_rejects_missing_header_name`;
 - `tests/test_config.c` registers
   `config/quantumultx_header_mutation_fixture_maps_response_header_regex`;
 - `tests/test_config.c` registers

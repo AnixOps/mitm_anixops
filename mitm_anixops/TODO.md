@@ -59,6 +59,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   tests for the common-config/header-mutation contracts.
 - [x] Add Quantumult X `url header-replace` parser fixtures and
   positive/negative tests for the common-config/header-mutation contracts.
+- [x] Add Quantumult X `url response-header-add` parser fixtures and
+  positive/negative tests for the common-config/header-mutation contracts.
 - [x] Add Quantumult X `url response-header-replace-regex` parser fixtures and
   positive/negative tests for the common-config/header-mutation contracts.
 - [x] Add Quantumult X `url header-replace-regex` parser fixtures and
