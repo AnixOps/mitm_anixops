@@ -141,6 +141,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Loon `[URL Rewrite]` response echo/body-regex parser fixtures and
   CI-covered tests while keeping streaming, compression, and HTTP serialization
   adapter-owned.
+- Added Quantumult X `url` response echo/body-regex parser fixtures and
+  CI-covered tests while keeping streaming, compression, and HTTP serialization
+  adapter-owned.
 - Added a body mutation source contract plus positive and negative parser
   fixtures for the fourth P2 rule-matching milestone.
 - Added a decision trace schema source contract plus CI-covered fixtures for

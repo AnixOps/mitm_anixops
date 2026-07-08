@@ -50,6 +50,7 @@ Parser case:
 ```text
 tests/fixtures/QuantumultX.CommonConfig.snippet
 tests/fixtures/QuantumultX.RequestRewrite.snippet
+tests/fixtures/QuantumultX.ResponseRewrite.snippet
 tests/fixtures/QuantumultX.EchoResponse.snippet
 tests/fixtures/QuantumultX.BodyMutation.snippet
 tests/fixtures/QuantumultX.HeaderAdd.snippet
@@ -68,6 +69,8 @@ Expected behavior:
 - the common fixture registers three rewrite rules;
 - two `url` request redirect/reject rules are registered in the dedicated
   request-rewrite fixture;
+- two `url` response echo/body-regex rules are registered in the dedicated
+  response-rewrite fixture;
 - one `url echo-response` rule is registered in the dedicated echo-response
   fixture;
 - one `url response-body-replace-regex` rule is registered in the dedicated
@@ -103,6 +106,7 @@ Parser case:
 ```text
 tests/fixtures/QuantumultX.CommonConfig.Malformed.snippet
 tests/fixtures/QuantumultX.RequestRewrite.Malformed.snippet
+tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet
 tests/fixtures/QuantumultX.EchoResponse.Malformed.snippet
 tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderAdd.Malformed.snippet
@@ -119,6 +123,7 @@ Expected behavior:
 
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects the malformed rewrite line;
 - an invalid `url` request rewrite URL regex rejects config load;
+- an invalid `url` response rewrite body regex rejects config load;
 - `ANIXOPS_COMPAT_QUANTUMULTX_STRICT` rejects a malformed `echo-response`
   line without body content;
 - an invalid `response-body-replace-regex` pattern rejects config load;
@@ -179,6 +184,10 @@ Required CI evidence:
   `config/quantumultx_request_rewrite_fixture_maps_redirect_and_reject`;
 - `tests/test_config.c` registers
   `config/quantumultx_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_rewrite_fixture_maps_response_echo_and_body`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - `tests/test_config.c` registers
   `config/quantumultx_echo_response_fixture_maps_response_body`;
 - `tests/test_config.c` registers

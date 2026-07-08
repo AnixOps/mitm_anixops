@@ -18,7 +18,7 @@ compression, or platform network behavior.
 The current common subset accepts:
 
 - `[Rewrite]`, `[URL Rewrite]`, `[Remote Rewrite]`, and Quantumult X
-  `[rewrite_local]` section aliases;
+  `[rewrite_local]` / `#[rewrite_local]` section aliases;
 - response mock body actions such as `mock-response-body`;
 - Quantumult X style `url echo-response content-type body` forms;
 - response body regex replacement actions such as
@@ -40,6 +40,7 @@ Parser case:
 ```text
 tests/fixtures/ResponseRewrite.Common.conf
 tests/fixtures/Loon.ResponseRewrite.plugin
+tests/fixtures/QuantumultX.ResponseRewrite.snippet
 ```
 
 Expected behavior:
@@ -47,11 +48,14 @@ Expected behavior:
 - config load succeeds;
 - the common fixture registers three rewrite rules;
 - the Loon fixture registers two rewrite rules;
+- the Quantumult X fixture registers two rewrite rules;
 - request phase does not trigger response rewrite rules;
 - response mock body and echo-response behavior are observable through
   `anixops_rewrite_apply_body`;
 - response body regex replacement is observable for an already-buffered body.
 - Loon `[URL Rewrite]` response echo and response body regex rules are
+  observable through `anixops_rewrite_apply_body`.
+- Quantumult X `url` response echo and response body regex rules are
   observable through `anixops_rewrite_apply_body`.
 
 ## Negative Case
@@ -61,12 +65,14 @@ Parser case:
 ```text
 tests/fixtures/ResponseRewrite.Common.Malformed.conf
 tests/fixtures/Loon.ResponseRewrite.Malformed.plugin
+tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet
 ```
 
 Expected behavior:
 
 - the invalid response body regex rejects config load;
 - the invalid Loon `[URL Rewrite]` response body regex rejects config load;
+- the invalid Quantumult X `url` response body regex rejects config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -98,6 +104,10 @@ Required CI evidence:
   `config/loon_response_rewrite_fixture_maps_response_echo_and_body`;
 - `tests/test_config.c` registers
   `config/loon_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_rewrite_fixture_maps_response_echo_and_body`;
+- `tests/test_config.c` registers
+  `config/quantumultx_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

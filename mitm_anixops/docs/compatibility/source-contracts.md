@@ -1249,12 +1249,16 @@ Current CI evidence:
 
 - positive fixture `tests/fixtures/ResponseRewrite.Common.conf`;
 - positive fixture `tests/fixtures/Loon.ResponseRewrite.plugin`;
+- positive fixture `tests/fixtures/QuantumultX.ResponseRewrite.snippet`;
 - negative fixture `tests/fixtures/ResponseRewrite.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.ResponseRewrite.Malformed.plugin`;
+- negative fixture `tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet`;
 - `config/response_rewrite_common_fixture_is_supported`;
 - `config/response_rewrite_common_fixture_rejects_invalid_body_regex`;
 - `config/loon_response_rewrite_fixture_maps_response_echo_and_body`;
 - `config/loon_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
+- `config/quantumultx_response_rewrite_fixture_maps_response_echo_and_body`;
+- `config/quantumultx_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - response phase rewrite tests under `tests/test_rewrite.c`;
 - script contract E2E coverage for Alpha response ordering.
 

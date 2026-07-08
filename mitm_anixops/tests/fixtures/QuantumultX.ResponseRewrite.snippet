@@ -1,0 +1,3 @@
+#[rewrite_local]
+^https:\/\/response\.qx\.test\/echo\/(.*) url echo-response text/plain qx-$1
+^https:\/\/response\.qx\.test\/clean url response-body-replace-regex ad clean
