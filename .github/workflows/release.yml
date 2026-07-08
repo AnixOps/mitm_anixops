@@ -236,10 +236,6 @@ jobs:
       RELEASE_CI_RUN_CONCLUSION: ${{ needs.same-commit-ci.outputs.ci_run_conclusion }}
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v7
-        with:
-          name: anixops-mitm-release-windows
-          path: mitm_anixops/build/release-windows
       - uses: actions/setup-go@v6
         with:
           go-version: "1.22.x"
@@ -295,6 +291,10 @@ jobs:
         run: |
           sh scripts/ensure-mihomo.sh
           sh scripts/check.sh
+      - uses: actions/download-artifact@v7
+        with:
+          name: anixops-mitm-release-windows
+          path: mitm_anixops/build/release-windows
       - name: Build release artifact
         id: build_package
         shell: bash
