@@ -24,8 +24,9 @@ publishing.
   diagnostics for PCRE2-only constructs; NSRegularExpression still needs a real
   Darwin backend.
 - Full JQ-style JSON body rewrite hardening beyond the optional libjq backend behind `JQ=1`. Default builds still
-  fail-open with `jq backend unavailable`; remaining work includes resource limits, production cache/reuse policy,
-  broad plugin-corpus coverage, and edge behavior for predicates, slices, recursive selectors, and computed filters.
+  fail-open with `jq backend unavailable`, and `JQ=1` now fails open when output exceeds the caller buffer; remaining
+  work includes timeout/memory limits, production cache/reuse policy, broad plugin-corpus coverage, and edge behavior
+  for predicates, slices, recursive selectors, and computed filters.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand class subset, horizontal and vertical whitespace subset, control, hex, and Unicode escapes, lazy quantifier
   normalization, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement subset.

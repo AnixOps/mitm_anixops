@@ -395,7 +395,7 @@ int anixops_runtime_apply_plan(
 | P0 | Body pipeline | text/json body view、max body size、empty body、binary passthrough | body matrix 覆盖空 body、invalid UTF-8、超限 body |
 | P1 | JS runtime | QuickJS backend，支持 `$request`、`$response`、`$argument`、`$persistentStore`、`$done` | BiliUniverse runtime fixture 不依赖测试专用 Node runner |
 | P1 | Script cache | Alpha runner 已支持 offline bundle、sha256 digest 校验、digest mismatch/cache miss 诊断；后续补 remote fetch/cache refresh policy | digest mismatch、cache miss、offline mode 均有 fixture |
-| P1 | JQ runtime | libjq backend，支持 jq compile/run/error/resource limit | jq manual 常用 filter 子集和插件 corpus 均通过 |
+| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、output-buffer fail-open；后续补 timeout/memory limit | jq manual 常用 filter 子集和插件 corpus 均通过 |
 | P1 | Compression | gzip/deflate/brotli/zstd decode/re-encode 或 remove encoding 策略 | Content-Encoding 和 Content-Length replay fixture 通过 |
 | P2 | Async script | async `$done`、timeout、promise、exception fail-open | timeout/throw/double `$done` fixture 通过 |
 | P2 | Persistent store | namespace、read/write、transaction 或 file backend | 多脚本共享状态 fixture 通过 |

@@ -5,6 +5,6 @@ includedir=${prefix}/include
 
 Name: mitm_anixops
 Description: AnixOps-compatible MITM and rewrite policy C ABI
-Version: 0.45.6
+Version: 0.45.7
 Libs: -L${libdir} -lmitm_anixops
 Cflags: -I${includedir}

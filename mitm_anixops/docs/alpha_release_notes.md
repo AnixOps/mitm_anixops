@@ -33,7 +33,7 @@ Included:
   NSRegularExpression is still a future Darwin backend.
 - P3 JQ foundation: `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` rules parse and
   match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with tested
-  first-output, empty-output, compile-error, and invalid-JSON behavior.
+  first-output, empty-output, compile-error, invalid-JSON behavior, and output-buffer fail-open diagnostics.
 - P3 body-chain foundation: `anixops_rewrite_apply_body_chain` applies matching mock, regex, JSON path, and optional
   JQ body rewrite rules in rule order, feeding each successful output into the next body rule while preserving the
   legacy single-rule `anixops_rewrite_apply_body` API.
@@ -62,7 +62,8 @@ Included:
 - Script timeout/max-size/error fail-open and offline bundle digest checks are covered in the Alpha runner/proxy shim;
   production script scheduling, cancellation, memory limits, network download, and cache refresh policy remain future
   work.
-- Optional libjq execution exists, but resource limits, cache/reuse policy, and broad jq corpus coverage are not complete.
+- Optional libjq execution exists, but timeout/memory limits, cache/reuse policy, and broad jq corpus coverage are not
+  complete.
 - No NSRegularExpression Darwin backend yet.
 - The Rust and Go bindings are Alpha wrappers, not versioned registry/module releases yet. The CMake package config is
   included and covered by a staged configure/build/run smoke in the Alpha verification environment.

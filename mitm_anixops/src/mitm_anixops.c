@@ -432,7 +432,7 @@ static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
 
 ANIXOPS_API const char *anixops_version(void)
 {
-	return "0.45.6";
+	return "0.45.7";
 }
 
 ANIXOPS_API const char *anixops_status_message(int status)
@@ -2126,7 +2126,12 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 				}
 			}
 			else if (rc == ANIXOPS_ERR_CAPACITY) {
-				anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				}
+				else {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "jq output exceeds buffer");
+				}
 			}
 			else if (rc == ANIXOPS_ERR_PARSE) {
 				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
@@ -2289,8 +2294,13 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 				}
 			}
 			else if (apply_rc == ANIXOPS_ERR_CAPACITY) {
-				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
-				out_chain->truncated = 1;
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(result.message, sizeof(result.message), "jq output exceeds buffer");
+				}
 			}
 			else if (apply_rc == ANIXOPS_ERR_PARSE) {
 				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
@@ -4847,14 +4857,6 @@ static int anixops_apply_body_jq_replacement(
 	dumped_text = jv_string_value(dumped);
 	copy_rc = anixops_copy_text_checked(out, out_cap, dumped_text == NULL ? "" : dumped_text);
 	jv_free(dumped);
-	while (1) {
-		jv extra = jq_next(jq);
-		if (!jv_is_valid(extra)) {
-			jv_free(extra);
-			break;
-		}
-		jv_free(extra);
-	}
 	jq_teardown(&jq);
 	if (copy_rc != ANIXOPS_OK) {
 		return ANIXOPS_ERR_CAPACITY;

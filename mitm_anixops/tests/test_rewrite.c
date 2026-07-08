@@ -2129,6 +2129,11 @@ static void jq_backend_handles_output_and_error_policy(void)
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/jq/bad-filter response-body-jq '['"),
 		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/jq/large response-body-jq '\"abcdefghijklmnopqrstuvwxyz\"'"),
+		ANIXOPS_OK);
 
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_apply_body(
@@ -2185,6 +2190,40 @@ static void jq_backend_handles_output_and_error_policy(void)
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
 	ANIXOPS_EXPECT_STREQ(result.message, "jq execution failed");
 	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+
+	{
+		char small_body[16];
+		anixops_body_rewrite_chain_t chain;
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_apply_body(
+				engine,
+				"https://api.test/jq/large",
+				ANIXOPS_PHASE_RESPONSE,
+				"{\"ok\":true}",
+				small_body,
+				sizeof(small_body),
+				&result),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+		ANIXOPS_EXPECT_STREQ(result.message, "jq output exceeds buffer");
+		ANIXOPS_EXPECT_STREQ(small_body, "{\"ok\":true}");
+
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_apply_body_chain(
+				engine,
+				"https://api.test/jq/large",
+				ANIXOPS_PHASE_RESPONSE,
+				"{\"ok\":true}",
+				small_body,
+				sizeof(small_body),
+				&chain),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+		ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+		ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq output exceeds buffer");
+		ANIXOPS_EXPECT_STREQ(small_body, "{\"ok\":true}");
+	}
 
 	anixops_engine_free(engine);
 }

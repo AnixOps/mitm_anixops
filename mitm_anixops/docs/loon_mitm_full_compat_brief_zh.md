@@ -108,7 +108,7 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 - `select(...)`
 - `map(...)`
 - `with_entries(...)`
-- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error
+- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、output-buffer fail-open
 
 验收标准：Surge `http-request-jq` / `http-response-jq`、LOON JSON rewrite、真实插件 corpus 都能生成稳定 trace。
 
