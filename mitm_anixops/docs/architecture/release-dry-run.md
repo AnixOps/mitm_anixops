@@ -15,6 +15,7 @@ release-dry-run-ci-gate=equivalent-full-check-in-workflow
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
 release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh
 release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
+release-dry-run-release-checklist-static-check=scripts/release-checklist-check.sh
 release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
 release-dry-run-metadata-static-check=scripts/release-metadata-check.sh
@@ -54,21 +55,23 @@ The dry-run workflow includes these logical gates:
    packaging.
 3. `manual-intervention-dry-run`: validate manual marker schema, confirmation
    evidence, and pending-to-confirmed transition behavior.
-4. `release-readiness-dry-run`: run the same stable release-readiness check
+4. `release-contract-dry-run`: validate release checklist and metadata static
+   gates before packaging.
+5. `release-readiness-dry-run`: run the same stable release-readiness check
    used by the tag release workflow.
-5. `compatibility-summary`: summarize compatibility matrix status counts for
+6. `compatibility-summary`: summarize compatibility matrix status counts for
    `supported`, `partial`, `planned`, and `unsupported` rows.
-6. `artifact-contract`: output artifact names, target platforms, staging paths,
+7. `artifact-contract`: output artifact names, target platforms, staging paths,
    checksum algorithm, manifest path, and release-note path.
-7. `package-*`: build the dry-run artifact in GitHub Actions.
-8. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
-9. `manifest-*`: generate JSON manifest and manifest checksum.
-10. `release-notes-dry-run`: generate notes containing compatibility scope,
+8. `package-*`: build the dry-run artifact in GitHub Actions.
+9. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
+10. `manifest-*`: generate JSON manifest and manifest checksum.
+11. `release-notes-dry-run`: generate notes containing compatibility scope,
    compatibility status counts, known gaps, manual-intervention status, and
    rollback path.
-11. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
+12. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
    publication would be eligible.
-12. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
+13. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
    CI, compatibility, and manual-intervention fields.
 
 ## Required Outputs

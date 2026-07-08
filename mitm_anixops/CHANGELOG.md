@@ -317,6 +317,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   marker evidence validation.
 - Added direct manual-intervention evidence and transition gates to release and
   release dry-run workflows before stable release-readiness evaluation.
+- Added direct release checklist and metadata static gates to release and
+  release dry-run workflows before stable release-readiness evaluation.
 
 ### Changed
 

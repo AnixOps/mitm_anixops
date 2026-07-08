@@ -267,3 +267,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   evidence validation.
 - [x] Run manual-intervention evidence and transition gates directly in release
   and release dry-run workflows before release-readiness checks.
+- [x] Run release checklist and metadata static gates directly in release and
+  release dry-run workflows before release-readiness checks.

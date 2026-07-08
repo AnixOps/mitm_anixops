@@ -108,6 +108,8 @@ jobs:
 
           sh scripts/manual-intervention-check.sh
           sh scripts/manual-intervention-transition-check.sh
+          sh scripts/release-checklist-check.sh
+          sh scripts/release-metadata-check.sh
 
           readiness_output="${RUNNER_TEMP}/release-readiness.env"
           sh scripts/release-readiness-check.sh "${RELEASE_VERSION}" | tee "${readiness_output}"

@@ -64,11 +64,13 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    metadata, and `release-notes.md` content with compatibility counts, known
    gaps, manual-intervention status, and rollback path.
 4. Confirm the GitHub Actions `release-dry-run` and `release` workflow logs run
-   both manual-intervention evidence gates before release readiness:
+   the manual-intervention and release contract gates before release readiness:
 
    ```sh
    scripts/manual-intervention-check.sh
    scripts/manual-intervention-transition-check.sh
+   scripts/release-checklist-check.sh
+   scripts/release-metadata-check.sh
    ```
 
 5. Confirm the stable release-readiness gate has passed for `v1.0.0`. The gate
