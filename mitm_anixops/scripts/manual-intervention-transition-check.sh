@@ -21,8 +21,8 @@ missing_evidence_output=$(mktemp)
 trap 'rm -f "$confirmed_fixture" "$all_confirmed_fixture" "$duplicate_status_fixture" "$duplicate_status_output" "$missing_scope_fixture" "$missing_scope_output" "$missing_pending_evidence_fixture" "$missing_pending_evidence_output" "$missing_completed_evidence_fixture" "$missing_completed_evidence_output" "$missing_evidence_fixture" "$missing_evidence_output"' EXIT HUP INT TERM
 
 sed \
-	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \
-	-e 's/^branch-protection-confirmation-evidence=not-yet-confirmed$/branch-protection-confirmation-evidence=redacted-github-ruleset-audit-note/' \
+	-e 's/^third-party-plugin-corpus-license-status=pending$/third-party-plugin-corpus-license-status=confirmed/' \
+	-e 's/^third-party-plugin-corpus-license-confirmation-evidence=not-yet-confirmed$/third-party-plugin-corpus-license-confirmation-evidence=redacted-github-ruleset-audit-note/' \
 	"$MANUAL" > "$confirmed_fixture"
 
 MANUAL_INTERVENTION_FILE="$confirmed_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" >/dev/null
@@ -80,7 +80,7 @@ fi
 grep -F "manual intervention marker must have exactly one confirmation-evidence field: github-remote" "$missing_completed_evidence_output" >/dev/null
 
 sed \
-	-e 's/^branch-protection-status=pending$/branch-protection-status=confirmed/' \
+	-e 's/^third-party-plugin-corpus-license-status=pending$/third-party-plugin-corpus-license-status=confirmed/' \
 	"$MANUAL" > "$missing_evidence_fixture"
 
 if MANUAL_INTERVENTION_FILE="$missing_evidence_fixture" sh "$ROOT/scripts/manual-intervention-check.sh" > "$missing_evidence_output" 2>&1; then
@@ -88,6 +88,6 @@ if MANUAL_INTERVENTION_FILE="$missing_evidence_fixture" sh "$ROOT/scripts/manual
 	exit 1
 fi
 
-grep -F "confirmed manual intervention marker lacks confirmation evidence: branch-protection" "$missing_evidence_output" >/dev/null
+grep -F "confirmed manual intervention marker lacks confirmation evidence: third-party-plugin-corpus-license" "$missing_evidence_output" >/dev/null
 
 printf '%s\n' "manual intervention transition check passed"

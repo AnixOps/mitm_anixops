@@ -14,12 +14,16 @@ Current track: v1.0.0 evidence hardening and compatibility expansion.
 
 roadmap-current-track=v1.0.0-evidence-hardening
 roadmap-p0-baseline-status=complete
-roadmap-v1-release-status=not-ready
+roadmap-v1-release-status=ready-for-tag-after-ci
 
 The P0 repository baseline is complete. Foundation work now exists across P1
-through P6, but the project is not ready for `v1.0.0` because compatibility
-matrix rows still include `partial` scope and `unsupported` guard rows, and
-manual-intervention items still require repository or platform confirmation.
+through P6, and the repository-level `v1.0.0` publication blockers have
+confirmed external evidence in `docs/manual-intervention.md`. The project is
+ready for a `v1.0.0` tag after the release commit has green GitHub Actions
+evidence and the tag-triggered release workflow passes its environment gate.
+Compatibility matrix rows still include documented `partial` scope and
+`unsupported` guard rows; those are release notes scope limits, not hidden
+supported claims.
 
 The latest published artifact is `v0.45.10-alpha`. It proves an embeddable C ABI
 policy core, representative fixtures, an Alpha runner, an Alpha proxy shim, and

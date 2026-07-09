@@ -58,7 +58,7 @@ do
 	grep -q "$phase" "$ROADMAP"
 done
 grep -q "## v1.0.0 Minimum Acceptance Criteria" "$ROADMAP"
-grep -q "roadmap-v1-release-status=not-ready" "$ROADMAP"
+grep -q "roadmap-v1-release-status=ready-for-tag-after-ci" "$ROADMAP"
 
 grep -q "supported" "$MATRIX"
 grep -q "partial" "$MATRIX"

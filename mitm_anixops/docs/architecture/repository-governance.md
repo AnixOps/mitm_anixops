@@ -10,10 +10,10 @@ Current mode:
 ```text
 repository-governance-contract-status=accepted
 repository-governance-automation-mode=static-contract-and-manual-confirmation
-repository-governance-branch-protection=manual-confirmation-required
-repository-governance-protected-tags=manual-confirmation-required
-repository-governance-release-environment=manual-confirmation-required
-repository-governance-v1-publication-status=blocked-until-manual-confirmation
+repository-governance-branch-protection=confirmed
+repository-governance-protected-tags=confirmed
+repository-governance-release-environment=confirmed
+repository-governance-v1-publication-status=ready-after-release-readiness-and-environment-approval
 ```
 
 ## Required Manual Controls
@@ -26,15 +26,15 @@ inputs.
 
 Minimum expected controls:
 
-- required status checks include the GitHub Actions `build` workflow;
-- pull request or equivalent reviewed-change policy is enabled;
+- required status checks include the GitHub Actions `build` workflow jobs;
+- strict status checks are enabled before protected-branch updates;
 - force pushes and branch deletion are blocked;
 - bypass permissions are limited to repository maintainers who own release
   operations;
 - any exception is recorded in `docs/manual-intervention.md`.
 
-The manual marker is `branch-protection-status`. It must remain `pending` until
-a maintainer verifies the GitHub repository settings and records confirmation
+The manual marker is `branch-protection-status`. It is `confirmed` after a
+maintainer verified the GitHub repository settings and recorded confirmation
 evidence in `docs/manual-intervention.md`.
 
 ### Protected Release Tags
@@ -51,8 +51,8 @@ Minimum expected controls:
   the default;
 - any emergency exception is recorded before publication.
 
-The manual marker is `protected-tags-status`. It must remain `pending` until a
-maintainer verifies the GitHub repository settings and records confirmation
+The manual marker is `protected-tags-status`. It is `confirmed` after a
+maintainer verified the GitHub repository settings and recorded confirmation
 evidence in `docs/manual-intervention.md`.
 
 ### Release Publication Environment
@@ -71,9 +71,9 @@ Minimum expected controls:
 - manual approval, if required, cannot skip checksum, manifest, release-note,
   same-commit CI, or stable readiness gates.
 
-The manual marker is `release-environment-approval-status`. It must remain
-`pending` until a maintainer verifies the GitHub environment settings and
-records confirmation evidence in `docs/manual-intervention.md`.
+The manual marker is `release-environment-approval-status`. It is `confirmed`
+after a maintainer verified the GitHub environment settings and recorded
+confirmation evidence in `docs/manual-intervention.md`.
 
 ## Automation Boundary
 

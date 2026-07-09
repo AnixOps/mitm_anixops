@@ -101,7 +101,7 @@ release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
 release-checklist-static-check=scripts/release-checklist-check.sh
-repository-governance-status=blocked-until-branch-tag-and-environment-confirmation
+repository-governance-status=confirmed-for-v1-publication
 release-rollback-policy=accepted
 ```
 
@@ -123,8 +123,9 @@ from `main` remain validation-only and do not publish public release assets.
 Repository-level branch protection, `v*` tag protection or rulesets, and
 release environment approval are defined in
 [Repository Governance Contract](repository-governance.md). These settings are
-external to the source tree and remain manual-intervention blockers until
-confirmed in `docs/manual-intervention.md`.
+external to the source tree; the v1 publication controls are confirmed in
+`docs/manual-intervention.md`, and the release workflow still requires the
+`github-release-publication` environment gate for tag publication.
 
 The release manifest, release notes, and GitHub Step Summary include
 compatibility matrix counts for `supported`, `partial`, `planned`,

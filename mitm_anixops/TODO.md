@@ -292,3 +292,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a compatibility status summary static check so release count outputs
   must be unique, numeric, and total-consistent before publication metadata is
   generated.
+- [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
+  `github-release-publication` environment approval evidence for `v1.0.0`.

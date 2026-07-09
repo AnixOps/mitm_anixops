@@ -6,30 +6,6 @@ not silently skip these items, and do not use them to bypass GitHub Actions.
 ## Current Pending Items
 
 ```text
-branch-protection-status=pending
-branch-protection-scope=main
-branch-protection-required-before=v1.0.0
-branch-protection-confirmation-evidence=not-yet-confirmed
-branch-protection-next-action=configure-required-github-actions-checks-and-protected-main-in-github
-```
-
-```text
-protected-tags-status=pending
-protected-tags-scope=v*
-protected-tags-required-before=v1.0.0-release
-protected-tags-confirmation-evidence=not-yet-confirmed
-protected-tags-next-action=configure-tag-protection-or-repository-ruleset-in-github
-```
-
-```text
-release-environment-approval-status=pending
-release-environment-approval-scope=github-release-publication
-release-environment-approval-required-before=v1.0.0-release
-release-environment-approval-confirmation-evidence=not-yet-confirmed
-release-environment-approval-next-action=decide-whether-release-publication-needs-protected-environment-approval
-```
-
-```text
 third-party-plugin-corpus-license-status=pending
 third-party-plugin-corpus-license-scope=expanded-real-plugin-corpus
 third-party-plugin-corpus-license-required-before=bundling-non-representative-third-party-fixtures
@@ -164,6 +140,30 @@ shadowrocket-expanded-parser-support-next-action=confirm-app-profile-source-cont
 ```
 
 ## Completed Items
+
+```text
+branch-protection-status=confirmed
+branch-protection-scope=main
+branch-protection-required-before=v1.0.0
+branch-protection-confirmation-evidence=https://api.github.com/repos/AnixOps/mitm_anixops/branches/main/protection
+branch-protection-settings-summary=required-build-jobs-strict-admin-enforced-linear-history-no-force-pushes-no-deletions-conversation-resolution
+```
+
+```text
+protected-tags-status=confirmed
+protected-tags-scope=v*
+protected-tags-required-before=v1.0.0-release
+protected-tags-confirmation-evidence=https://github.com/AnixOps/mitm_anixops/rules/18694923
+protected-tags-settings-summary=active-repository-ruleset-protect-v-tags-blocks-deletion-update-and-non-fast-forward
+```
+
+```text
+release-environment-approval-status=confirmed
+release-environment-approval-scope=github-release-publication
+release-environment-approval-required-before=v1.0.0-release
+release-environment-approval-confirmation-evidence=https://github.com/AnixOps/mitm_anixops/deployments/activity_log?environments_filter=github-release-publication
+release-environment-approval-settings-summary=environment-exists-with-required-reviewers-and-release-workflow-environment-gate
+```
 
 ```text
 github-remote-status=confirmed

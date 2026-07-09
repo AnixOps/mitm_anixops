@@ -14,10 +14,10 @@ test -s "$RELEASE_WORKFLOW"
 
 grep -q "repository-governance-contract-status=accepted" "$DOC"
 grep -q "repository-governance-automation-mode=static-contract-and-manual-confirmation" "$DOC"
-grep -q "repository-governance-branch-protection=manual-confirmation-required" "$DOC"
-grep -q "repository-governance-protected-tags=manual-confirmation-required" "$DOC"
-grep -q "repository-governance-release-environment=manual-confirmation-required" "$DOC"
-grep -q "repository-governance-v1-publication-status=blocked-until-manual-confirmation" "$DOC"
+grep -q "repository-governance-branch-protection=confirmed" "$DOC"
+grep -q "repository-governance-protected-tags=confirmed" "$DOC"
+grep -q "repository-governance-release-environment=confirmed" "$DOC"
+grep -q "repository-governance-v1-publication-status=ready-after-release-readiness-and-environment-approval" "$DOC"
 
 blocking_markers=""
 for marker in branch-protection protected-tags release-environment-approval; do
