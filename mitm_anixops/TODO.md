@@ -325,6 +325,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   release notes, summaries, and metadata gates.
 - [x] Add release manifest schema-version evidence to release and dry-run
   manifests, release notes, summaries, and metadata gates.
+- [x] Add release digest algorithm and checksum sidecar format evidence to
+  release and dry-run manifests, release notes, summaries, and metadata gates.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and

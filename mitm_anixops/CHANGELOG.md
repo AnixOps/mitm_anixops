@@ -9,6 +9,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.3` release digest-format evidence field set so
+  tag-triggered releases and release dry-runs record `sha256` digest
+  semantics and `sha256sum-two-space-filename` checksum sidecar format in
+  generated manifests, release notes, GitHub Step Summaries, and metadata
+  gates.
 - Added a `v1.2.2` release manifest schema-version evidence field so
   tag-triggered releases and release dry-runs record `release-manifest-v1` in
   generated manifests, release notes, GitHub Step Summaries, and metadata
