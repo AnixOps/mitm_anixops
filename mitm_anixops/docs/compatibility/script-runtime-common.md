@@ -33,6 +33,9 @@ script rules.
 - Script metadata parsed from Quantumult X url-prefixed script rules.
 - Rule-level `argument`, `timeout`, `max-size`, `requires-body`, `tag`, and
   script-path fields when the grammar exposes them.
+- Direct url-prefixed script triggers may attach attr-list metadata immediately
+  after the script path with a comma; the comma remains a field delimiter and
+  is not part of `script_path`.
 - Quantumult X `script-request-body` and `script-response-body` trigger tokens
   are body triggers by definition and must expose `requires_body=1` even if a
   later attr-list segment tries to override that body requirement.
@@ -80,6 +83,9 @@ execution, body decoding, header map mutation, and HTTP writeback.
 - Body trigger tokens expose request or response phase metadata with
   `requires_body=1`; header trigger tokens expose the matching phase without
   requiring a body by default.
+- Direct script trigger attributes accept quoted and spaced values for
+  `requires_body`/`requires-body`, `timeout_ms`/`timeout-ms`, and
+  `max_size`/`max-size` without leaking path delimiters into `script_path`.
 - `$done.body` writes back to the no-network replay trace body.
 - `$persistentStore` state is shared across request and response script
   invocations when a store file is configured.

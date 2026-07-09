@@ -2637,6 +2637,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	char timeout_ms[128];
 	char max_size[128];
 	char enable[128];
+	char direct_attrs[8192];
 	size_t parsed_timeout_ms = 0;
 	size_t parsed_max_size = 0;
 	int parsed_enabled = 1;
@@ -2677,6 +2678,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	timeout_ms[0] = '\0';
 	max_size[0] = '\0';
 	enable[0] = '\0';
+	direct_attrs[0] = '\0';
 
 	cursor = trimmed;
 	if (anixops_next_token(&cursor, first, sizeof(first)) && anixops_parse_script_kind(first, &kind, &phase)) {
@@ -2707,12 +2709,86 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 			}
 		}
 		if (parsed_direct_script) {
+			char *path_comma;
 			if (anixops_script_kind_requires_body_token(rewrite_type)) {
 				anixops_copy_text(requires_body, sizeof(requires_body), "1");
 				direct_body_trigger = 1;
 			}
 			direct_script_path = 1;
-			attrs = rewrite_cursor;
+			path_comma = strchr(script_path, ',');
+			if (path_comma != NULL) {
+				const char *inline_attrs;
+				const char *tail_attrs;
+				const char *tail_trimmed;
+				size_t attr_pos = 0;
+				int attr_rc = ANIXOPS_OK;
+
+				*path_comma = '\0';
+				anixops_trim_inplace(script_path);
+				inline_attrs = path_comma + 1;
+				while (*inline_attrs != '\0' && (isspace((unsigned char)*inline_attrs) || *inline_attrs == ',')) {
+					inline_attrs++;
+				}
+				if (*inline_attrs != '\0') {
+					attr_rc = anixops_append_range(
+						direct_attrs,
+						sizeof(direct_attrs),
+						&attr_pos,
+						inline_attrs,
+						strlen(inline_attrs));
+					anixops_trim_inplace(direct_attrs);
+					attr_pos = strlen(direct_attrs);
+					while (attr_pos > 0 &&
+						(isspace((unsigned char)direct_attrs[attr_pos - 1]) || direct_attrs[attr_pos - 1] == ',')) {
+						direct_attrs[--attr_pos] = '\0';
+					}
+				}
+				tail_attrs = rewrite_cursor;
+				tail_trimmed = tail_attrs;
+				while (*tail_trimmed != '\0' && (isspace((unsigned char)*tail_trimmed) || *tail_trimmed == ',')) {
+					tail_trimmed++;
+				}
+				if (attr_rc == ANIXOPS_OK && *tail_trimmed != '\0') {
+					int continues_attr_segment =
+						attr_pos > 0 && (*tail_trimmed == '=' || direct_attrs[attr_pos - 1] == '=');
+					if (continues_attr_segment) {
+						attr_rc = anixops_append_range(
+							direct_attrs,
+							sizeof(direct_attrs),
+							&attr_pos,
+							tail_attrs,
+							strlen(tail_attrs));
+					}
+					else {
+						if (attr_pos > 0) {
+							attr_rc = anixops_append_char(direct_attrs, sizeof(direct_attrs), &attr_pos, ',');
+							if (attr_rc == ANIXOPS_OK) {
+								attr_rc = anixops_append_char(direct_attrs, sizeof(direct_attrs), &attr_pos, ' ');
+							}
+						}
+						if (attr_rc == ANIXOPS_OK) {
+							attr_rc = anixops_append_range(
+								direct_attrs,
+								sizeof(direct_attrs),
+								&attr_pos,
+								tail_trimmed,
+								strlen(tail_trimmed));
+						}
+					}
+				}
+				if (attr_rc != ANIXOPS_OK) {
+					free(copy);
+					anixops_set_diagnostic(engine, ANIXOPS_ERR_PARSE, 0, "script attributes too long");
+					return ANIXOPS_ERR_PARSE;
+				}
+				attrs = direct_attrs;
+			}
+			else {
+				attrs = rewrite_cursor;
+			}
+			while (*attrs != '\0' && (isspace((unsigned char)*attrs) || *attrs == ',')) {
+				attrs++;
+			}
 		}
 		else {
 			char *eq = strchr(trimmed, '=');

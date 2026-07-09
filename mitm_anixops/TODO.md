@@ -231,6 +231,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   before implementation.
 - [x] Add a script trigger compatibility guard proving body trigger tokens keep
   `requires_body=1` in dispatch metadata.
+- [x] Add a script trigger attribute-boundary guard proving comma-delimited
+  direct script path attributes preserve `script_path`, quoted values, and
+  hyphen/underscore field aliases.
 
 ## P4 MITM Policy And Certificate Lifecycle
 

@@ -25,9 +25,9 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.0.5`. The `v1.1.0` minor train is
-reserved for script trigger compatibility, starting with deterministic
-request/response body trigger dispatch metadata.
+The latest published stable artifact is `v1.1.0`. The `v1.1.x` train is
+reserved for script trigger compatibility, covering deterministic body trigger
+dispatch metadata and direct trigger attribute-boundary parsing.
 
 ## Operating Rules
 
