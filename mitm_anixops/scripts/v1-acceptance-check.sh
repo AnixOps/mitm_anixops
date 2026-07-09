@@ -71,6 +71,7 @@ sh "$ROOT/scripts/ci-trigger-check.sh" >/dev/null
 sh "$ROOT/scripts/release-checklist-check.sh" >/dev/null
 sh "$ROOT/scripts/release-metadata-check.sh" >/dev/null
 sh "$ROOT/scripts/release-publication-verify-check.sh" >/dev/null
+sh "$ROOT/scripts/release-publication-verify-test.sh" >/dev/null
 compatibility_status="$(sh "$ROOT/scripts/compatibility-status-summary.sh")"
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_total_count="
 printf '%s\n' "$compatibility_status" | grep -q "compatibility_planned_count=0"
@@ -136,6 +137,7 @@ grep -q "ci-workflow-manual-intervention-transition-status=scripts/manual-interv
 grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RELEASE_GATE"
 grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RELEASE_GATE"
 grep -q "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "$RELEASE_GATE"
+grep -q "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" "$RELEASE_GATE"
 
 sh "$ROOT/scripts/security-claim-check.sh" >/dev/null
 sh "$ROOT/scripts/script-runtime-security-gate.sh" >/dev/null

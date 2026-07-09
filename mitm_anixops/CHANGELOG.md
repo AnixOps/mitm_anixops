@@ -9,6 +9,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.3.1` offline fixture test for the release publication verifier
+  so CI exercises public-asset metadata success and checksum-mismatch failure
+  paths without relying on GitHub network calls.
 - Added a `v1.3.0` release publication verifier that downloads public GitHub
   Release assets and checks the target commit, asset count, manifest fields,
   checksum sidecars, release notes, release workflow run evidence, CI run

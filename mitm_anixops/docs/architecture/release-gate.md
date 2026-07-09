@@ -119,6 +119,7 @@ release-workflow-metadata=checksums-manifest-notes-summary
 release-checklist-static-check=scripts/release-checklist-check.sh
 release-publication-verify-script=scripts/release-publication-verify.sh
 release-publication-verify-static-check=scripts/release-publication-verify-check.sh
+release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh
 release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms
 repository-governance-status=confirmed-for-v1-publication
 release-rollback-policy=accepted
@@ -211,6 +212,11 @@ evidence, artifact count, artifact platforms, release notes, and checksum
 sidecars. The static verifier check keeps that post-publication command wired
 into CI, release dry-run, release readiness, and the v1 acceptance evidence
 path.
+
+The verifier fixture test builds a temporary release asset set and a fake `gh`
+command so CI can exercise the post-publication verifier without network
+access. It covers the passing path and a checksum-mismatch failure path before
+any tag-triggered release reaches publication.
 
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).

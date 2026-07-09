@@ -5,6 +5,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/.." && pwd)
 
 VERIFY_SCRIPT="$ROOT/scripts/release-publication-verify.sh"
+TEST_SCRIPT="$ROOT/scripts/release-publication-verify-test.sh"
 CHECK_SCRIPT="$ROOT/scripts/check.sh"
 V1_ACCEPTANCE="$ROOT/scripts/v1-acceptance-check.sh"
 RELEASE_CHECKLIST="$ROOT/docs/release_checklist.md"
@@ -15,6 +16,7 @@ RELEASE_WORKFLOW="$REPO/.github/workflows/release.yml"
 
 for file in \
 	"$VERIFY_SCRIPT" \
+	"$TEST_SCRIPT" \
 	"$CHECK_SCRIPT" \
 	"$V1_ACCEPTANCE" \
 	"$RELEASE_CHECKLIST" \
@@ -51,16 +53,27 @@ require_pattern "$VERIFY_SCRIPT" "linux-x64" "publication verifier missing Linux
 require_pattern "$VERIFY_SCRIPT" "windows-x64" "publication verifier missing Windows platform"
 require_pattern "$VERIFY_SCRIPT" "release_publication_verify_status=passed" "publication verifier missing passed status output"
 
+require_pattern "$TEST_SCRIPT" "RELEASE_PUBLICATION_VERIFY_FIXTURE_ASSETS" "publication verifier test missing fixture asset source"
+require_pattern "$TEST_SCRIPT" "release_publication_verify_test_status=passed" "publication verifier test missing passed status output"
+require_pattern "$TEST_SCRIPT" "sha256 mismatch for linux artifact" "publication verifier test missing checksum negative case"
+
 require_pattern "$RELEASE_GATE" "release-publication-verify-script=scripts/release-publication-verify.sh" "release gate missing publication verifier script marker"
 require_pattern "$RELEASE_GATE" "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "release gate missing publication verifier static check marker"
+require_pattern "$RELEASE_GATE" "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" "release gate missing publication verifier fixture test marker"
 require_pattern "$RELEASE_GATE" "release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms" "release gate missing publication verifier evidence marker"
 
 require_pattern "$RELEASE_CHECKLIST" "scripts/release-publication-verify.sh v1.0.0 <commit> <release-run-id> <ci-run-id>" "release checklist missing publication verifier command"
 require_pattern "$CHECK_SCRIPT" "sh scripts/release-publication-verify-check.sh" "local full check missing publication verifier static check"
+require_pattern "$CHECK_SCRIPT" "sh scripts/release-publication-verify-test.sh" "local full check missing publication verifier fixture test"
 require_pattern "$V1_ACCEPTANCE" "release-publication-verify-check.sh" "v1 acceptance missing publication verifier static check"
+require_pattern "$V1_ACCEPTANCE" "release-publication-verify-test.sh" "v1 acceptance missing publication verifier fixture test"
 require_pattern "$BUILD_WORKFLOW" "mitm_anixops/scripts/release-publication-verify.sh" "build workflow missing publication verifier script requirement"
+require_pattern "$BUILD_WORKFLOW" "mitm_anixops/scripts/release-publication-verify-test.sh" "build workflow missing publication verifier test requirement"
 require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/release-publication-verify-check.sh" "build workflow missing publication verifier static check"
+require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/release-publication-verify-test.sh" "build workflow missing publication verifier fixture test"
 require_pattern "$DRY_RUN_WORKFLOW" "sh scripts/release-publication-verify-check.sh" "release dry-run missing publication verifier static check"
+require_pattern "$DRY_RUN_WORKFLOW" "sh scripts/release-publication-verify-test.sh" "release dry-run missing publication verifier fixture test"
 require_pattern "$RELEASE_WORKFLOW" "sh scripts/release-publication-verify-check.sh" "release workflow missing publication verifier static check"
+require_pattern "$RELEASE_WORKFLOW" "sh scripts/release-publication-verify-test.sh" "release workflow missing publication verifier fixture test"
 
 printf '%s\n' "release publication verify check passed"

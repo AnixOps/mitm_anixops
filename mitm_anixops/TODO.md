@@ -343,6 +343,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a release publication verifier for public GitHub Release assets,
   manifest fields, checksum sidecars, release notes, release workflow run
   evidence, CI run evidence, artifact count, and artifact platforms.
+- [x] Add an offline fixture test for the release publication verifier covering
+  public-asset metadata success and checksum-mismatch failure paths.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
