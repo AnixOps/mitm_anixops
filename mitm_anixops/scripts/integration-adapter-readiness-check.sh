@@ -64,13 +64,16 @@ require_pattern "$NETWORKCORE" "integration-adapter-readiness-gate=scripts/integ
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-self-test=scripts/integration-adapter-readiness-check-test.sh" "missing integration adapter readiness self-test marker"
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-status=ci-gated-alpha-boundary" "missing integration adapter readiness status marker"
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-release-artifact=policy-core-runner-proxy-shim-bindings-docs" "missing integration adapter release artifact marker"
+require_pattern "$NETWORKCORE" "integration-adapter-readiness-release-manifest=adapter-readiness-fields-required" "missing integration adapter release manifest marker"
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-production-claim=not-production-networkcore-adapter" "missing integration adapter production-claim boundary"
 
 require_pattern "$OVERVIEW" "Integration Adapter Readiness Gate" "architecture overview must mention the integration adapter readiness gate"
 require_pattern "$REPOSITORY_AUDIT" "integration-adapter-readiness-check.sh" "repository audit must mention the integration adapter readiness gate"
 require_pattern "$RELEASE_GATE" "ci-workflow-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh" "release gate missing CI integration adapter readiness marker"
 require_pattern "$RELEASE_GATE" "release-workflow-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh" "release gate missing release integration adapter readiness marker"
+require_pattern "$RELEASE_GATE" "release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields" "release gate missing adapter readiness manifest marker"
 require_pattern "$RELEASE_DRY_RUN" "release-dry-run-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh" "release dry-run missing integration adapter readiness marker"
+require_pattern "$RELEASE_DRY_RUN" "release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields" "release dry-run missing adapter readiness manifest marker"
 
 for target in \
 	proxy-shim-check \
@@ -121,6 +124,8 @@ require_pattern "$BUILD_WORKFLOW" "integration adapter readiness check passed" "
 require_pattern "$BUILD_WORKFLOW" "integration adapter readiness check test passed" "build workflow must statically prove the readiness self-test success marker"
 require_pattern "$DRY_RUN_WORKFLOW" "sh scripts/integration-adapter-readiness-check.sh" "release dry-run must run integration adapter readiness gate"
 require_pattern "$RELEASE_WORKFLOW" "sh scripts/integration-adapter-readiness-check.sh" "release workflow must run integration adapter readiness gate"
+require_pattern "$DRY_RUN_WORKFLOW" "adapter_readiness_status" "release dry-run missing adapter readiness metadata"
+require_pattern "$RELEASE_WORKFLOW" "adapter_readiness_status" "release workflow missing adapter readiness metadata"
 
 scan_list=$(mktemp)
 trap 'rm -f "$scan_list"' EXIT HUP INT TERM

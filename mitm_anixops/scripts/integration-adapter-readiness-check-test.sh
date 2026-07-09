@@ -35,6 +35,7 @@ integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.s
 integration-adapter-readiness-self-test=scripts/integration-adapter-readiness-check-test.sh
 integration-adapter-readiness-status=ci-gated-alpha-boundary
 integration-adapter-readiness-release-artifact=policy-core-runner-proxy-shim-bindings-docs
+integration-adapter-readiness-release-manifest=adapter-readiness-fields-required
 integration-adapter-readiness-production-claim=not-production-networkcore-adapter
 ```
 EOF
@@ -59,12 +60,14 @@ EOF
 
 ci-workflow-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
 release-workflow-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
+release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 EOF
 
 	cat > "$RELEASE_DRY_RUN" <<'EOF'
 # Release Dry-Run Source Contract
 
 release-dry-run-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
+release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 EOF
 
 	cat > "$MAKEFILE" <<'EOF'
@@ -119,12 +122,14 @@ EOF
 name: release
 
 sh scripts/integration-adapter-readiness-check.sh
+adapter_readiness_status
 EOF
 
 	cat > "$DRY_RUN_WORKFLOW" <<'EOF'
 name: release-dry-run
 
 sh scripts/integration-adapter-readiness-check.sh
+adapter_readiness_status
 EOF
 
 	printf '%s\n' "integration adapter fixture" > "$README"

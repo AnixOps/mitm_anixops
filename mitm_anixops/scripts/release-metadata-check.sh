@@ -134,6 +134,10 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "\"release_commit\"" "$label manifest missing release commit"
 	require_pattern "$file" "\"release_readiness_status\"" "$label manifest missing readiness status"
 	require_pattern "$file" "\"release_readiness_blocking_reason\"" "$label manifest missing readiness reason"
+	require_pattern "$file" "\"adapter_readiness_status\"" "$label manifest missing adapter readiness status"
+	require_pattern "$file" "\"adapter_readiness_gate\"" "$label manifest missing adapter readiness gate"
+	require_pattern "$file" "\"adapter_readiness_scope\"" "$label manifest missing adapter readiness scope"
+	require_pattern "$file" "\"adapter_readiness_production_claim\"" "$label manifest missing adapter readiness production claim"
 	require_pattern "$file" "\"compatibility_scope\"" "$label manifest missing compatibility scope"
 	require_pattern "$file" "\"artifacts\"" "$label manifest missing artifact list"
 	require_pattern "$file" "\"platform\": \"linux-x64\"" "$label manifest missing Linux platform"
@@ -143,6 +147,8 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "manifest_sha256_file" "$label missing manifest checksum sidecar"
 	require_pattern "$file" "release_notes_path" "$label missing release notes output"
 	require_pattern "$file" "Compatibility matrix status counts:" "$label notes missing compatibility counts"
+	require_pattern "$file" "Adapter readiness:" "$label notes missing adapter readiness status"
+	require_pattern "$file" "Adapter readiness scope:" "$label notes missing adapter readiness scope"
 	require_pattern "$file" "Compatibility scope:" "$label notes missing compatibility scope"
 	require_pattern "$file" "Known gaps:" "$label notes missing known gaps"
 	require_pattern "$file" "Rollback path:" "$label notes missing rollback path"
@@ -175,6 +181,15 @@ check_common_workflow_metadata() {
 		require_pattern "$file" "$key" "$label missing artifact metadata output"
 	done
 
+	for key in \
+		adapter_readiness_status \
+		adapter_readiness_gate \
+		adapter_readiness_scope \
+		adapter_readiness_production_claim
+	do
+		require_pattern "$file" "$key" "$label missing adapter readiness output"
+	done
+
 	require_regex "$file" 'grep -Eq "\^\[0-9a-f\]\{64\}  .*\$"' "$label missing SHA-256 sidecar validation"
 }
 
@@ -202,6 +217,7 @@ require_pattern "$RELEASE_WORKFLOW" "Release artifacts:" "release notes missing 
 require_pattern "$RELEASE_WORKFLOW" "source_mode" "release workflow missing source mode metadata"
 
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary" "dry-run contract missing compatibility summary marker"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields" "dry-run contract missing adapter readiness manifest marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "dry-run contract missing compatibility summary static check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh" "dry-run contract missing manual intervention static check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh" "dry-run contract missing manual intervention transition check marker"
@@ -209,15 +225,22 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-release-checklist-static
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "dry-run contract missing sensitive material gate marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manual_intervention_status" "dry-run contract missing manual intervention output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "publish_eligibility_status" "dry-run contract missing publish eligibility output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_status" "dry-run contract missing adapter readiness status output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_gate" "dry-run contract missing adapter readiness gate output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_scope" "dry-run contract missing adapter readiness scope output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_production_claim" "dry-run contract missing adapter readiness production output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit compatibility status counts" "dry-run contract missing metadata failure rule"
+require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary" "dry-run contract missing adapter readiness metadata failure rule"
 
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "release gate missing compatibility summary marker"
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields" "release gate missing adapter readiness manifest marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "release gate missing compatibility summary static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh" "release gate missing manual intervention static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh" "release gate missing manual intervention transition check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-release-checklist-static-check=scripts/release-checklist-check.sh" "release gate missing release checklist static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "release gate missing sensitive material gate marker"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits compatibility status counts" "release gate missing metadata blocking condition"
+require_pattern "$RELEASE_GATE_DOC" "release metadata omits adapter readiness status, gate, scope, or production boundary" "release gate missing adapter readiness metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release notes omit compatibility scope, known gaps, or rollback path" "release gate missing notes blocking condition"
 
 printf '%s\n' "release metadata check passed"

@@ -23,6 +23,7 @@ integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.s
 integration-adapter-readiness-self-test=scripts/integration-adapter-readiness-check-test.sh
 integration-adapter-readiness-status=ci-gated-alpha-boundary
 integration-adapter-readiness-release-artifact=policy-core-runner-proxy-shim-bindings-docs
+integration-adapter-readiness-release-manifest=adapter-readiness-fields-required
 integration-adapter-readiness-production-claim=not-production-networkcore-adapter
 ```
 
@@ -138,6 +139,10 @@ GitHub Actions release gates into one CI-verifiable adapter readiness contract.
 `scripts/integration-adapter-readiness-check-test.sh` proves that the gate fails
 when NetworkCore boundary evidence, proxy shim packaging evidence, or
 production adapter claim boundaries are missing.
+
+For v1.2.1, release and release-dry-run manifests, notes, and summaries must
+carry the same adapter readiness status, gate, scope, and production-boundary
+evidence before metadata validation passes.
 
 The gate means `mitm_anixops` is packaged and CI-gated as a policy-core adapter
 surface for NetworkCore-style hosts. It does not mean live NetworkCore HTTP/TLS
