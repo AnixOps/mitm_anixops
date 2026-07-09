@@ -93,6 +93,7 @@ release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
 release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment
 release-workflow-publication-gate-evidence=publication-gate-in-manifest-notes-summary
+release-workflow-source-mode-evidence=source-mode-in-manifest-notes-summary
 release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows
 release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh
 release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
@@ -173,6 +174,10 @@ GitHub Step Summaries repeat that field so release evidence readers can see
 whether public assets were produced by a tag run protected by same-commit CI,
 metadata validation, and the `github-release-publication` environment gate.
 
+The release manifest also carries source mode. Release notes and GitHub Step
+Summaries repeat that field so evidence readers can distinguish tag-triggered
+publication from manual validation and dry-run paths.
+
 The release manifest, release notes, and GitHub Step Summary also include
 adapter readiness status, gate, scope, and production-boundary fields. The
 current value is the CI-gated alpha adapter boundary: policy core, runner,
@@ -213,6 +218,7 @@ Publication must be blocked when:
 - release metadata omits compatibility status counts;
 - release metadata omits manifest schema version;
 - release metadata omits artifact digest algorithm or checksum sidecar format;
+- release metadata omits source mode;
 - release metadata omits release workflow run ID or URL;
 - release metadata omits publication gate;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;

@@ -215,6 +215,7 @@ jobs:
       manifest_schema_version: ${{ steps.build_package.outputs.manifest_schema_version }}
       artifact_digest_algorithm: ${{ steps.build_package.outputs.artifact_digest_algorithm }}
       checksum_sidecar_format: ${{ steps.build_package.outputs.checksum_sidecar_format }}
+      source_mode: ${{ steps.build_package.outputs.source_mode }}
       release_workflow_run_id: ${{ steps.build_package.outputs.release_workflow_run_id }}
       release_workflow_run_url: ${{ steps.build_package.outputs.release_workflow_run_url }}
       publication_gate: ${{ steps.build_package.outputs.publication_gate }}
@@ -684,6 +685,7 @@ jobs:
           grep -q "\"artifact_digest_algorithm\": \"${{ needs.package.outputs.artifact_digest_algorithm }}\"" "${manifest}"
           grep -q "\"checksum_sidecar_format\": \"${{ needs.package.outputs.checksum_sidecar_format }}\"" "${manifest}"
           grep -q "\"release_commit\": \"${RELEASE_COMMIT}\"" "${manifest}"
+          grep -q "\"source_mode\": \"${{ needs.package.outputs.source_mode }}\"" "${manifest}"
           grep -q "\"release_workflow_run_id\": \"${{ needs.package.outputs.release_workflow_run_id }}\"" "${manifest}"
           grep -q "\"release_workflow_run_url\": \"${{ needs.package.outputs.release_workflow_run_url }}\"" "${manifest}"
           grep -q "\"publication\": \"github-release-assets\"" "${manifest}"
@@ -696,6 +698,7 @@ jobs:
           grep -q "\"adapter_readiness_production_claim\": \"${{ needs.package.outputs.adapter_readiness_production_claim }}\"" "${manifest}"
           grep -q "\"compatibility_total_count\":" "${manifest}"
           grep -q "\"platform\": \"windows-x64\"" "${manifest}"
+          grep -q "Source mode:" "${notes}"
           grep -q "Publication gate:" "${notes}"
           grep -q "Release workflow run:" "${notes}"
           grep -q "Manifest schema:" "${notes}"
@@ -740,6 +743,7 @@ jobs:
             printf '| manifest_schema_version | `%s` |\n' "${{ needs.package.outputs.manifest_schema_version }}"
             printf '| artifact_digest_algorithm | `%s` |\n' "${{ needs.package.outputs.artifact_digest_algorithm }}"
             printf '| checksum_sidecar_format | `%s` |\n' "${{ needs.package.outputs.checksum_sidecar_format }}"
+            printf '| source_mode | `%s` |\n' "${{ needs.package.outputs.source_mode }}"
             printf '| release_workflow_run_id | `%s` |\n' "${{ needs.package.outputs.release_workflow_run_id }}"
             printf '| release_workflow_run_url | `%s` |\n' "${{ needs.package.outputs.release_workflow_run_url }}"
             printf '| publication_gate | `%s` |\n' "${{ needs.package.outputs.publication_gate }}"

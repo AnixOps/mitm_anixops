@@ -11,6 +11,7 @@ release-dry-run-workflow=.github/workflows/release-dry-run.yml
 release-dry-run-trigger-scope=workflow-dispatch-pull-request-main-push-main
 release-dry-run-trigger-static-check=scripts/ci-trigger-check.sh
 release-dry-run-publication=blocked
+release-dry-run-source-mode=manual-main-push-or-pr-dry-run
 release-dry-run-publication-gate=dry-run-nonpublishing-policy-and-workflow-artifacts-only
 release-dry-run-ci-gate=equivalent-full-check-in-workflow
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
@@ -117,6 +118,7 @@ release_notes_path
 manifest_schema_version
 artifact_digest_algorithm
 checksum_sidecar_format
+source_mode
 release_workflow_run_id
 release_workflow_run_url
 publication_gate
@@ -152,6 +154,7 @@ The dry-run must fail when:
 - manifest, notes, or summary omit compatibility status counts;
 - manifest, notes, or summary omit manifest schema version;
 - manifest, notes, or summary omit artifact digest algorithm or checksum sidecar format;
+- manifest, notes, or summary omit source mode;
 - manifest, notes, or summary omit release workflow run ID or URL;
 - manifest, notes, or summary omit publication gate;
 - manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary;
