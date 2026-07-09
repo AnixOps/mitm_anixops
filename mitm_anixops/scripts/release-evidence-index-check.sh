@@ -5,7 +5,8 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/.." && pwd)
 NEXT_RELEASE_VERSION=${1:-${RELEASE_VERSION:-}}
 
-INDEX="$ROOT/docs/release_evidence_index.json"
+DEFAULT_INDEX="$ROOT/docs/release_evidence_index.json"
+INDEX=${RELEASE_EVIDENCE_INDEX_PATH:-$DEFAULT_INDEX}
 RELEASE_GATE="$ROOT/docs/architecture/release-gate.md"
 RELEASE_CHECKLIST="$ROOT/docs/release_checklist.md"
 CHECK_SCRIPT="$ROOT/scripts/check.sh"
@@ -67,12 +68,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.4.2",
-  targetCommit: "5ebb043444cc9910fe06044075ac90a0e7ca4c47",
-  ciRunId: "29048841102",
-  releaseWorkflowRunId: "29049129968",
+  version: "v1.4.3",
+  targetCommit: "004c6290317d58cfb5c7c652b9238193d52a06a5",
+  ciRunId: "29050024563",
+  releaseWorkflowRunId: "29050300416",
   freshnessStatus: "enforced-for-stable-patch-and-declared-boundary-releases",
-  nextStableRelease: "v1.4.3",
+  nextStableRelease: "v1.4.4",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
@@ -178,8 +179,8 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(versions.has("v1.4.0"), "missing retained v1.4.0 release evidence entry");
 assert(versions.has("v1.4.1"), "missing retained v1.4.1 release evidence entry");
+assert(versions.has("v1.4.2"), "missing retained v1.4.2 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);
