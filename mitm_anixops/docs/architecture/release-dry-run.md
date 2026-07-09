@@ -23,6 +23,7 @@ release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
 release-dry-run-manifest-schema=release-manifest-v1
 release-dry-run-digest-format=sha256-sidecars
+release-dry-run-workflow-run-evidence=run-id-url-in-manifest-notes-summary
 release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-dry-run-metadata-static-check=scripts/release-metadata-check.sh
 release-dry-run-sensitive-material-gate=scripts/release-sensitive-material-check.sh
@@ -115,6 +116,8 @@ release_notes_path
 manifest_schema_version
 artifact_digest_algorithm
 checksum_sidecar_format
+release_workflow_run_id
+release_workflow_run_url
 manual_intervention_status
 release_readiness_status
 release_readiness_blocking_reason
@@ -147,6 +150,7 @@ The dry-run must fail when:
 - manifest, notes, or summary omit compatibility status counts;
 - manifest, notes, or summary omit manifest schema version;
 - manifest, notes, or summary omit artifact digest algorithm or checksum sidecar format;
+- manifest, notes, or summary omit release workflow run ID or URL;
 - manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary;
 - release notes omit known gaps, rollback path, or manual-intervention status;
 - Linux tarballs or Windows zip artifacts contain private keys,
