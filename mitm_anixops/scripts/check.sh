@@ -20,6 +20,7 @@ sh scripts/integration-adapter-readiness-check.sh
 sh scripts/ci-trigger-check.sh
 sh scripts/release-checklist-check.sh
 sh scripts/release-metadata-check.sh
+sh scripts/release-evidence-index-check.sh
 sh scripts/release-publication-verify-check.sh
 sh scripts/release-publication-verify-test.sh
 sh scripts/v1-acceptance-check.sh

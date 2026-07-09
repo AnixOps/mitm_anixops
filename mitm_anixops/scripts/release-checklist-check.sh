@@ -56,6 +56,7 @@ require_pattern "$CHECKLIST" "release-environment-approval" "release checklist m
 require_pattern "$CHECKLIST" "anixops-mitm-release-package" "release checklist missing release package artifact"
 require_pattern "$CHECKLIST" "anixops-mitm-release-dry-run" "release checklist missing dry-run package artifact"
 require_pattern "$CHECKLIST" "anixops-mitm-release-publication-evidence" "release checklist missing publication evidence artifact"
+require_pattern "$CHECKLIST" "docs/release_evidence_index.json" "release checklist missing release evidence index"
 require_pattern "$CHECKLIST" "manifest.json" "release checklist missing manifest evidence"
 require_pattern "$CHECKLIST" ".sha256" "release checklist missing checksum evidence"
 require_pattern "$CHECKLIST" "release-notes.md" "release checklist missing release notes evidence"
@@ -72,6 +73,8 @@ done
 
 require_pattern "$RELEASE_GATE" "release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows" "release gate missing v1 readiness marker"
 require_pattern "$RELEASE_GATE" "release-checklist-static-check=scripts/release-checklist-check.sh" "release gate missing release checklist static check marker"
+require_pattern "$RELEASE_GATE" "release-evidence-index=docs/release_evidence_index.json" "release gate missing release evidence index marker"
+require_pattern "$RELEASE_GATE" "release-evidence-index-static-check=scripts/release-evidence-index-check.sh" "release gate missing release evidence index static check marker"
 require_pattern "$RELEASE_GATE" "release-publication-verify-script=scripts/release-publication-verify.sh" "release gate missing publication verifier script marker"
 require_pattern "$RELEASE_GATE" "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "release gate missing publication verifier static check marker"
 require_pattern "$RELEASE_GATE" "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" "release gate missing publication verifier fixture test marker"

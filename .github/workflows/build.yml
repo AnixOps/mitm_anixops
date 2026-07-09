@@ -66,6 +66,7 @@ jobs:
             mitm_anixops/docs/compatibility/cron-task-trigger.md
             mitm_anixops/docs/compatibility/matrix.md
             mitm_anixops/docs/manual-intervention.md
+            mitm_anixops/docs/release_evidence_index.json
             mitm_anixops/tests/fixtures/Loon.CommonFields.plugin
             mitm_anixops/tests/fixtures/Loon.CommonFields.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.PluginMetadata.plugin
@@ -193,6 +194,7 @@ jobs:
             mitm_anixops/scripts/release-sensitive-material-check.sh
             mitm_anixops/scripts/release-sensitive-material-check-test.sh
             mitm_anixops/scripts/release-metadata-check.sh
+            mitm_anixops/scripts/release-evidence-index-check.sh
             mitm_anixops/scripts/release-publication-verify.sh
             mitm_anixops/scripts/release-publication-verify-check.sh
             mitm_anixops/scripts/release-publication-verify-test.sh
@@ -226,6 +228,7 @@ jobs:
           sh mitm_anixops/scripts/ci-trigger-check.sh
           sh mitm_anixops/scripts/release-checklist-check.sh
           sh mitm_anixops/scripts/release-metadata-check.sh
+          sh mitm_anixops/scripts/release-evidence-index-check.sh
           sh mitm_anixops/scripts/release-publication-verify-check.sh
           sh mitm_anixops/scripts/release-publication-verify-test.sh
           sh mitm_anixops/scripts/repository-governance-check.sh > /tmp/repository-governance.env
@@ -253,6 +256,7 @@ jobs:
           grep -q "ci trigger check passed" mitm_anixops/scripts/ci-trigger-check.sh
           grep -q "release checklist check passed" mitm_anixops/scripts/release-checklist-check.sh
           grep -q "release metadata check passed" mitm_anixops/scripts/release-metadata-check.sh
+          grep -q "release evidence index check passed" mitm_anixops/scripts/release-evidence-index-check.sh
           grep -q "release publication verify check passed" mitm_anixops/scripts/release-publication-verify-check.sh
           grep -q "release_publication_verify_status=passed" mitm_anixops/scripts/release-publication-verify.sh
           grep -q "release_publication_verify_test_status=passed" mitm_anixops/scripts/release-publication-verify-test.sh
@@ -739,6 +743,7 @@ jobs:
           grep -q "release-workflow-windows-artifact=windows-x64-zip-with-checksum" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-evidence-index-static-check=scripts/release-evidence-index-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-script=scripts/release-publication-verify.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" mitm_anixops/docs/architecture/release-gate.md
@@ -774,6 +779,7 @@ jobs:
           grep -q "Compatibility matrix status counts:" .github/workflows/release-dry-run.yml
           grep -q "GitHub Actions \`release-dry-run\` workflow" mitm_anixops/docs/release_checklist.md
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
+          grep -q "release-evidence-index-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "release-publication-verify-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "release-publication-verify-test.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "release_readiness_status" .github/workflows/release-dry-run.yml
@@ -836,6 +842,7 @@ jobs:
           grep -q "release-checklist-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "repository_governance_status" mitm_anixops/scripts/repository-governance-check.sh
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/check.sh
+          grep -q "release-evidence-index-check.sh" mitm_anixops/scripts/check.sh
           grep -q "release-publication-verify-check.sh" mitm_anixops/scripts/check.sh
           grep -q "release-publication-verify-test.sh" mitm_anixops/scripts/check.sh
           grep -q "release-sensitive-material-check-test.sh" mitm_anixops/scripts/check.sh
