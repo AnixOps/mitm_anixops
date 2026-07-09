@@ -9,6 +9,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.8` CI run evidence field set so release and dry-run metadata
+  record CI run ID, URL, and conclusion consistently in manifests, release
+  notes, GitHub Step Summaries, and metadata gates.
 - Added a `v1.2.7` production MITM roadmap gate that fixes `v2.0.0` as the
   production adapter contract freeze, `v2.8.0` as beta, `v2.9.0` as RC, and
   `v3.0.0` as the first production-ready MITM claim while blocking earlier
