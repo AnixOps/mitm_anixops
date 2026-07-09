@@ -5730,6 +5730,151 @@ static void shadowrocket_rule_final_reject_malformed_fixture_rejects_missing_act
 	free(fixture);
 }
 
+static void shadowrocket_header_mutation_fixture_maps_header_rewrites(void)
+{
+	static const char *expected_names[] = {
+		"X-Shadowrocket-Trace",
+		"X-Shadowrocket-Mode",
+		"X-Shadowrocket-Drop",
+		"X-Shadowrocket-Token",
+		"X-Shadowrocket-Trace",
+		"X-Shadowrocket-Mode",
+		"Set-Cookie",
+		"X-Shadowrocket-Mode"};
+	static const char *expected_values[] = {
+		"trace-fast",
+		"mode-blue",
+		"",
+		"new=Alpha",
+		"resp-cache",
+		"resp-green",
+		"",
+		"resp=Beta"};
+	static const char *urls[] = {
+		"https://header.shadowrocket.test/request-add/fast",
+		"https://header.shadowrocket.test/request-replace/blue",
+		"https://header.shadowrocket.test/request-drop",
+		"https://header.shadowrocket.test/request-regex",
+		"https://header.shadowrocket.test/response-add/cache",
+		"https://header.shadowrocket.test/response-replace/green",
+		"https://header.shadowrocket.test/response-drop",
+		"https://header.shadowrocket.test/response-regex"};
+	static const anixops_phase_t phases[] = {
+		ANIXOPS_PHASE_REQUEST,
+		ANIXOPS_PHASE_REQUEST,
+		ANIXOPS_PHASE_REQUEST,
+		ANIXOPS_PHASE_REQUEST,
+		ANIXOPS_PHASE_RESPONSE,
+		ANIXOPS_PHASE_RESPONSE,
+		ANIXOPS_PHASE_RESPONSE,
+		ANIXOPS_PHASE_RESPONSE};
+	static const anixops_rewrite_action_t actions[] = {
+		ANIXOPS_REWRITE_HEADER_ADD,
+		ANIXOPS_REWRITE_HEADER_REPLACE,
+		ANIXOPS_REWRITE_HEADER_DEL,
+		ANIXOPS_REWRITE_HEADER_REPLACE_REGEX,
+		ANIXOPS_REWRITE_RESPONSE_HEADER_ADD,
+		ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE,
+		ANIXOPS_REWRITE_RESPONSE_HEADER_DEL,
+		ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX};
+	static const char *current_values[] = {
+		NULL,
+		NULL,
+		NULL,
+		"old=Alpha",
+		NULL,
+		NULL,
+		NULL,
+		"old=Beta"};
+	char *fixture = read_fixture("tests/fixtures/Shadowrocket.HeaderMutation.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_header_rewrite_result_t header;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 8);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 8);
+
+	for (i = 0; i < 8; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "rewrite rule accepted");
+	}
+
+	for (i = 0; i < 8; i++) {
+		anixops_phase_t opposite =
+			phases[i] == ANIXOPS_PHASE_REQUEST ? ANIXOPS_PHASE_RESPONSE : ANIXOPS_PHASE_REQUEST;
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_evaluate_header(engine, urls[i], opposite, 0, current_values[i], &header),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(header.action, ANIXOPS_REWRITE_NONE);
+		ANIXOPS_EXPECT_EQ_INT(header.rule_index, -1);
+
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_evaluate_header(engine, urls[i], phases[i], 0, current_values[i], &header),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(header.action, actions[i]);
+		ANIXOPS_EXPECT_EQ_INT(header.rule_index, (int)i);
+		ANIXOPS_EXPECT_EQ_INT(header.phase, phases[i]);
+		ANIXOPS_EXPECT_STREQ(header.header_name, expected_names[i]);
+		ANIXOPS_EXPECT_STREQ(header.value, expected_values[i]);
+		if (actions[i] == ANIXOPS_REWRITE_HEADER_REPLACE_REGEX ||
+			actions[i] == ANIXOPS_REWRITE_RESPONSE_HEADER_REPLACE_REGEX) {
+			ANIXOPS_EXPECT_STREQ(header.message, "header rewritten");
+		}
+		else {
+			ANIXOPS_EXPECT_STREQ(header.message, "header rewrite matched");
+		}
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void shadowrocket_header_mutation_malformed_fixture_rejects_invalid_header_regex(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Shadowrocket.HeaderMutation.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "rewrite header regex") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_REGEX);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "rewrite header regex") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void shadowrocket_common_config_fixture_is_supported(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Shadowrocket.CommonConfig.conf");
@@ -9431,6 +9576,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/shadowrocket_request_rewrite_malformed_fixture_rejects_invalid_url_regex",
 		shadowrocket_request_rewrite_malformed_fixture_rejects_invalid_url_regex);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/shadowrocket_header_mutation_fixture_maps_header_rewrites",
+		shadowrocket_header_mutation_fixture_maps_header_rewrites);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/shadowrocket_header_mutation_malformed_fixture_rejects_invalid_header_regex",
+		shadowrocket_header_mutation_malformed_fixture_rejects_invalid_header_regex);
 	add_test(
 		tests,
 		count,

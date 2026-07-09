@@ -184,6 +184,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   and CI-covered tests while keeping direct/proxy route selection adapter-owned.
 - Added a header mutation source contract plus positive and negative parser
   fixtures for the second P2 rule-matching milestone.
+- Added Shadowrocket `[URL Rewrite]` header mutation parser fixtures and
+  CI-covered tests while keeping platform header maps and HTTP serialization
+  adapter-owned.
 - Added a response rewrite source contract plus positive and negative parser
   fixtures for the third P2 rule-matching milestone.
 - Added Loon `[URL Rewrite]` response echo/body-regex parser fixtures and

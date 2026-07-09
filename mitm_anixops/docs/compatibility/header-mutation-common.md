@@ -2,7 +2,7 @@
 
 Capability: request and response header mutation.
 
-Ecosystem: `portable`, `loon`, `quantumultx`, `surge`.
+Ecosystem: `portable`, `loon`, `quantumultx`, `surge`, `shadowrocket`.
 
 Status: `partial`.
 
@@ -18,7 +18,8 @@ serialization behavior.
 The current common subset accepts:
 
 - `[Header Rewrite]`, `[Remote Header Rewrite]`, `[Rewrite]`, and
-  `[URL Rewrite]` section aliases;
+  `[URL Rewrite]` section aliases, including Shadowrocket-style
+  `[URL Rewrite]` header mutation lines;
 - request header actions: `header-add`, `header-replace`, `header-del`, and
   `header-replace-regex`;
 - response header actions: `response-header-add`, `response-header-replace`,
@@ -53,6 +54,7 @@ tests/fixtures/QuantumultX.HeaderMutation.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.snippet
 tests/fixtures/QuantumultX.HeaderDelete.snippet
 tests/fixtures/Surge.HeaderMutation.sgmodule
+tests/fixtures/Shadowrocket.HeaderMutation.conf
 ```
 
 Expected behavior:
@@ -87,6 +89,8 @@ Expected behavior:
   `anixops_rewrite_evaluate_header`;
 - Surge `[URL Rewrite]` request and response header mutation actions are
   observable through `anixops_rewrite_evaluate_header`;
+- Shadowrocket `[URL Rewrite]` request and response header mutation actions
+  are observable through `anixops_rewrite_evaluate_header`;
 - phase separation prevents request header rules from matching response phase
   evaluation.
 
@@ -108,6 +112,7 @@ tests/fixtures/QuantumultX.HeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.RequestHeaderMutation.Malformed.snippet
 tests/fixtures/QuantumultX.HeaderDelete.Malformed.snippet
 tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
+tests/fixtures/Shadowrocket.HeaderMutation.Malformed.conf
 ```
 
 Expected behavior:
@@ -134,6 +139,8 @@ Expected behavior:
 - the malformed Quantumult X `url header-del` rule without a header name is
   rejected under `ANIXOPS_COMPAT_QUANTUMULTX_STRICT`;
 - the invalid Surge `[URL Rewrite]` response header regex rejects config load;
+- the invalid Shadowrocket `[URL Rewrite]` response header regex rejects
+  config load;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -209,6 +216,10 @@ Required CI evidence:
   `config/surge_header_mutation_fixture_maps_header_rewrites`;
 - `tests/test_config.c` registers
   `config/surge_header_mutation_malformed_fixture_rejects_invalid_header_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_header_mutation_fixture_maps_header_rewrites`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_header_mutation_malformed_fixture_rejects_invalid_header_regex`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
