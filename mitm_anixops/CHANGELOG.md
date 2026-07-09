@@ -13,6 +13,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   and dry-run metadata record the two package artifacts and their target
   platforms consistently in manifests, release notes, GitHub Step Summaries,
   and metadata gates.
+- Added checksum-before-commit retry handling for BiliUniverse E2E fixture
+  downloads so transient external responses cannot be cached as test fixtures.
 - Added a `v1.2.8` CI run evidence field set so release and dry-run metadata
   record CI run ID, URL, and conclusion consistently in manifests, release
   notes, GitHub Step Summaries, and metadata gates.
