@@ -26,7 +26,7 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.2.3`. The `v1.1.x` train is
+The latest published stable artifact is `v1.2.4`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
@@ -38,8 +38,8 @@ part of a CI-verifiable readiness gate without claiming production
 NetworkCore data-plane support. The `v1.2.x` train then hardens release
 metadata so generated manifests, release notes, and summaries carry a stable
 manifest schema identity plus the same adapter readiness status, gate, scope,
-production-boundary evidence, SHA-256 digest/sidecar format semantics, and
-release workflow run traceability.
+production-boundary evidence, SHA-256 digest/sidecar format semantics, release
+workflow run traceability, and explicit publication-gate evidence.
 
 ## Operating Rules
 

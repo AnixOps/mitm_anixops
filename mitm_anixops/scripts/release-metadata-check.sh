@@ -137,6 +137,7 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "\"release_commit\"" "$label manifest missing release commit"
 	require_pattern "$file" "\"release_workflow_run_id\"" "$label manifest missing release workflow run id"
 	require_pattern "$file" "\"release_workflow_run_url\"" "$label manifest missing release workflow run url"
+	require_pattern "$file" "\"publication_gate\"" "$label manifest missing publication gate"
 	require_pattern "$file" "\"release_readiness_status\"" "$label manifest missing readiness status"
 	require_pattern "$file" "\"release_readiness_blocking_reason\"" "$label manifest missing readiness reason"
 	require_pattern "$file" "\"adapter_readiness_status\"" "$label manifest missing adapter readiness status"
@@ -151,6 +152,7 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "\"sha256_file\"" "$label manifest missing checksum file values"
 	require_pattern "$file" "manifest_sha256_file" "$label missing manifest checksum sidecar"
 	require_pattern "$file" "release_notes_path" "$label missing release notes output"
+	require_pattern "$file" "Publication gate:" "$label notes missing publication gate"
 	require_pattern "$file" "Release workflow run:" "$label notes missing release workflow run"
 	require_pattern "$file" "Manifest schema:" "$label notes missing manifest schema"
 	require_pattern "$file" "Artifact digest algorithm:" "$label notes missing artifact digest algorithm"
@@ -189,7 +191,8 @@ check_common_workflow_metadata() {
 		artifact_digest_algorithm \
 		checksum_sidecar_format \
 		release_workflow_run_id \
-		release_workflow_run_url
+		release_workflow_run_url \
+		publication_gate
 	do
 		require_pattern "$file" "$key" "$label missing artifact metadata output"
 	done
@@ -210,6 +213,7 @@ check_common_workflow_metadata "$DRY_RUN_WORKFLOW" "release dry-run workflow"
 check_common_workflow_metadata "$RELEASE_WORKFLOW" "release workflow"
 
 require_pattern "$DRY_RUN_WORKFLOW" "publication=blocked" "dry-run workflow must remain non-publishing"
+require_pattern "$DRY_RUN_WORKFLOW" "publication_gate=dry-run-nonpublishing-policy-and-workflow-artifacts-only" "dry-run workflow missing publication gate"
 require_pattern "$DRY_RUN_WORKFLOW" "publish_eligibility_status=blocked" "dry-run workflow must report blocked publication"
 require_pattern "$DRY_RUN_WORKFLOW" "publish_blocking_reason=dry-run-does-not-publish" "dry-run workflow missing dry-run publish blocker"
 require_pattern "$DRY_RUN_WORKFLOW" "manual_intervention_status=pending-items-block-publication" "dry-run workflow missing manual intervention status"
@@ -218,6 +222,7 @@ require_pattern "$DRY_RUN_WORKFLOW" "Manual intervention:" "dry-run notes missin
 require_absent "$DRY_RUN_WORKFLOW" "gh release create" "release dry-run must not publish GitHub releases"
 
 require_pattern "$RELEASE_WORKFLOW" "same-commit-main-build-success" "release workflow missing same-commit CI gate"
+require_pattern "$RELEASE_WORKFLOW" "publication_gate=same-commit-ci-release-metadata-and-github-release-publication-environment" "release workflow missing tag publication gate"
 require_pattern "$RELEASE_WORKFLOW" "publish_eligibility_status=\"eligible\"" "release workflow missing tag publish eligibility"
 require_pattern "$RELEASE_WORKFLOW" "publish_blocking_reason=\"same-commit-ci-and-release-metadata-gates-passed\"" "release workflow missing publish gate reason"
 require_pattern "$RELEASE_WORKFLOW" "environment: github-release-publication" "release workflow missing protected publication environment"
@@ -229,6 +234,8 @@ require_pattern "$RELEASE_WORKFLOW" "supersedes the tag-only v1.0.0 publication 
 require_pattern "$RELEASE_WORKFLOW" "Release artifacts:" "release notes missing artifact section"
 require_pattern "$RELEASE_WORKFLOW" "source_mode" "release workflow missing source mode metadata"
 
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-publication=blocked" "dry-run contract missing blocked publication marker"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-publication-gate=dry-run-nonpublishing-policy-and-workflow-artifacts-only" "dry-run contract missing publication gate marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary" "dry-run contract missing compatibility summary marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manifest-schema=release-manifest-v1" "dry-run contract missing manifest schema marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-digest-format=sha256-sidecars" "dry-run contract missing digest format marker"
@@ -246,6 +253,7 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "artifact_digest_algorithm" "dry-run cont
 require_pattern "$RELEASE_DRY_RUN_DOC" "checksum_sidecar_format" "dry-run contract missing checksum sidecar format output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release_workflow_run_id" "dry-run contract missing release workflow run id output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release_workflow_run_url" "dry-run contract missing release workflow run url output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "publication_gate" "dry-run contract missing publication gate output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_status" "dry-run contract missing adapter readiness status output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_gate" "dry-run contract missing adapter readiness gate output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_scope" "dry-run contract missing adapter readiness scope output"
@@ -254,8 +262,11 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit compati
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit manifest schema version" "dry-run contract missing manifest schema metadata failure rule"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit artifact digest algorithm or checksum sidecar format" "dry-run contract missing digest format metadata failure rule"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit release workflow run ID or URL" "dry-run contract missing workflow run metadata failure rule"
+require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit publication gate" "dry-run contract missing publication gate metadata failure rule"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary" "dry-run contract missing adapter readiness metadata failure rule"
 
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment" "release gate missing publication gate marker"
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-publication-gate-evidence=publication-gate-in-manifest-notes-summary" "release gate missing publication gate evidence marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "release gate missing compatibility summary marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manifest-schema=release-manifest-v1" "release gate missing manifest schema marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-digest-format=sha256-sidecars" "release gate missing digest format marker"
@@ -270,6 +281,7 @@ require_pattern "$RELEASE_GATE_DOC" "release metadata omits compatibility status
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits manifest schema version" "release gate missing manifest schema metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits artifact digest algorithm or checksum sidecar format" "release gate missing digest format metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits release workflow run ID or URL" "release gate missing workflow run metadata blocking condition"
+require_pattern "$RELEASE_GATE_DOC" "release metadata omits publication gate" "release gate missing publication gate metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits adapter readiness status, gate, scope, or production boundary" "release gate missing adapter readiness metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release notes omit compatibility scope, known gaps, or rollback path" "release gate missing notes blocking condition"
 
