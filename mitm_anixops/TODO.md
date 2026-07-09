@@ -368,6 +368,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   public stable tag after `v1.4.0` publication.
 - [x] Roll the release evidence index freshness policy forward to the latest
   public stable tag after `v1.4.1` publication.
+- [x] Require release evidence index entries to stay sorted newest-to-oldest.
+- [x] Roll the release evidence index freshness policy forward to the latest
+  public stable tag after `v1.4.2` publication.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and

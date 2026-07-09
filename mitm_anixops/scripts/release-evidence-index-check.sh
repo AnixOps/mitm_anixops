@@ -67,12 +67,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.4.1",
-  targetCommit: "883704b8f17bc5b992945f8c21311d3d506bbfd6",
-  ciRunId: "29047667035",
-  releaseWorkflowRunId: "29047950642",
+  version: "v1.4.2",
+  targetCommit: "5ebb043444cc9910fe06044075ac90a0e7ca4c47",
+  ciRunId: "29048841102",
+  releaseWorkflowRunId: "29049129968",
   freshnessStatus: "enforced-for-stable-patch-and-declared-boundary-releases",
-  nextStableRelease: "v1.4.2",
+  nextStableRelease: "v1.4.3",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
@@ -145,9 +145,17 @@ if (expectedLatestForNext) {
 }
 
 const versions = new Set();
+let previousEntryVersion = "";
 for (const entry of index.entries) {
   assert(/^v[0-9]+\.[0-9]+\.[0-9]+$/.test(entry.version), `invalid version: ${entry.version}`);
   assert(!versions.has(entry.version), `duplicate release evidence entry: ${entry.version}`);
+  if (previousEntryVersion) {
+    assert(
+      compareStableVersions(previousEntryVersion, entry.version) > 0,
+      `release evidence entries must be sorted newest-to-oldest: ${previousEntryVersion} before ${entry.version}`,
+    );
+  }
+  previousEntryVersion = entry.version;
   versions.add(entry.version);
   assert(entry.releaseUrl === `https://github.com/AnixOps/mitm_anixops/releases/tag/${entry.version}`, `invalid releaseUrl for ${entry.version}`);
   assert(/^[0-9a-f]{40}$/.test(entry.targetCommit), `invalid targetCommit for ${entry.version}`);
@@ -170,8 +178,8 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(versions.has("v1.3.7"), "missing retained v1.3.7 release evidence entry");
 assert(versions.has("v1.4.0"), "missing retained v1.4.0 release evidence entry");
+assert(versions.has("v1.4.1"), "missing retained v1.4.1 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);
