@@ -68,12 +68,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.4.3",
-  targetCommit: "004c6290317d58cfb5c7c652b9238193d52a06a5",
-  ciRunId: "29050024563",
-  releaseWorkflowRunId: "29050300416",
+  version: "v1.4.4",
+  targetCommit: "0ddfb39d2a156548bb04fe988d8d1f242e47b237",
+  ciRunId: "29051173722",
+  releaseWorkflowRunId: "29051425702",
   freshnessStatus: "enforced-for-stable-patch-and-declared-boundary-releases",
-  nextStableRelease: "v1.4.4",
+  nextStableRelease: "v1.4.5",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
@@ -155,6 +155,13 @@ for (const entry of index.entries) {
       compareStableVersions(previousEntryVersion, entry.version) > 0,
       `release evidence entries must be sorted newest-to-oldest: ${previousEntryVersion} before ${entry.version}`,
     );
+    const expectedPreviousPatch = previousPatchVersion(previousEntryVersion);
+    if (expectedPreviousPatch) {
+      assert(
+        entry.version === expectedPreviousPatch,
+        `release evidence entries must be contiguous newest-to-oldest: expected ${expectedPreviousPatch} after ${previousEntryVersion}, got ${entry.version}`,
+      );
+    }
   }
   previousEntryVersion = entry.version;
   versions.add(entry.version);
@@ -179,8 +186,8 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(versions.has("v1.4.1"), "missing retained v1.4.1 release evidence entry");
 assert(versions.has("v1.4.2"), "missing retained v1.4.2 release evidence entry");
+assert(versions.has("v1.4.3"), "missing retained v1.4.3 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);
