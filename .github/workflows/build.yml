@@ -70,6 +70,7 @@ jobs:
             mitm_anixops/tests/fixtures/Loon.CommonFields.Malformed.plugin
             mitm_anixops/tests/fixtures/Loon.PluginMetadata.plugin
             mitm_anixops/tests/fixtures/Loon.PluginMetadata.Unsupported.plugin
+            mitm_anixops/tests/fixtures/Loon.MetadataDescriptor.plugin
             mitm_anixops/tests/fixtures/Loon.HashbangMetadata.plugin
             mitm_anixops/tests/fixtures/Loon.HashbangMetadata.Unsupported.plugin
             mitm_anixops/tests/fixtures/Loon.ArgumentSection.plugin

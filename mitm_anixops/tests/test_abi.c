@@ -36,6 +36,7 @@ static void null_arguments_are_rejected(void)
 	anixops_script_result_t script;
 	anixops_rewrite_plan_t plan;
 	anixops_rule_diagnostic_t diagnostic;
+	anixops_plugin_metadata_descriptor_t metadata;
 	char body[16];
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
 
@@ -183,6 +184,8 @@ static void null_arguments_are_rejected(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(NULL, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_plugin_metadata_descriptor(NULL, &metadata), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_plugin_metadata_descriptor(engine, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
 
 	anixops_engine_free(engine);
 }

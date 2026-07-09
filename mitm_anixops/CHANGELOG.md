@@ -9,6 +9,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.0.2` Loon metadata descriptor parser path that exposes
+  `#!`/`[Plugin]` `name`, `desc`, `author`, `icon`, and `homepage` through a
+  read-only C ABI without creating policy behavior or platform UI claims.
 - Confirmed repository-level `main` branch protection, `v*` tag ruleset, and
   `github-release-publication` environment approval evidence required before
   `v1.0.0` publication.

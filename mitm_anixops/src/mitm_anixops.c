@@ -142,6 +142,8 @@ struct anixops_engine {
 	size_t argument_len;
 	size_t argument_cap;
 
+	anixops_plugin_metadata_descriptor_t plugin_metadata;
+
 	anixops_rule_diagnostic_t *rule_diagnostics;
 	size_t rule_diagnostic_len;
 	size_t rule_diagnostic_cap;
@@ -205,6 +207,19 @@ static int anixops_yaml_extract_mapping_scalar(const char *line, const char *key
 static int anixops_yaml_extract_list_scalar(const char *line, char *out, size_t out_cap);
 static int anixops_yaml_extract_list_text(const char *line, char *out, size_t out_cap);
 static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, size_t out_key_cap);
+static int anixops_parse_metadata_key_value(
+	const char *line,
+	const char *prefix,
+	char *out_key,
+	size_t out_key_cap,
+	char *out_value,
+	size_t out_value_cap);
+static int anixops_hashbang_metadata_key_is_tolerated(const char *key);
+static int anixops_plugin_metadata_key_is_descriptor_field(const char *key);
+static int anixops_set_plugin_metadata_descriptor_field(
+	anixops_engine_t *engine,
+	const char *key,
+	const char *value);
 static int anixops_is_rewrite_section(const char *key);
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap);
 static int anixops_next_csv_field(const char **cursor, char *out, size_t out_cap);
@@ -595,6 +610,8 @@ ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine)
 	engine->argument_len = 0;
 	engine->argument_cap = 0;
 
+	memset(&engine->plugin_metadata, 0, sizeof(engine->plugin_metadata));
+
 	anixops_clear_rule_diagnostics(engine);
 	engine->mitm_enabled = 0;
 	engine->h2_mitm_enabled = 1;
@@ -725,6 +742,17 @@ ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
 	*out_diagnostic = engine->rule_diagnostics[index];
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_engine_copy_plugin_metadata_descriptor(
+	const anixops_engine_t *engine,
+	anixops_plugin_metadata_descriptor_t *out_descriptor)
+{
+	if (engine == NULL || out_descriptor == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	*out_descriptor = engine->plugin_metadata;
 	return ANIXOPS_OK;
 }
 
@@ -1095,7 +1123,17 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 		}
 		{
 			char metadata_key[ANIXOPS_PATTERN_CAP];
+			char metadata_value[ANIXOPS_VALUE_CAP];
 			if (anixops_parse_hashbang_metadata_key(line, metadata_key, sizeof(metadata_key))) {
+				if (anixops_parse_metadata_key_value(
+						line,
+						"#!",
+						metadata_key,
+						sizeof(metadata_key),
+						metadata_value,
+						sizeof(metadata_value))) {
+					(void)anixops_set_plugin_metadata_descriptor_field(engine, metadata_key, metadata_value);
+				}
 				if (anixops_add_rule_diagnostic(
 						engine,
 						ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
@@ -1405,6 +1443,19 @@ ANIXOPS_API int anixops_engine_load_config(anixops_engine_t *engine, const char 
 		if (section != ANIXOPS_SECTION_MITM) {
 			const char *message =
 				section == ANIXOPS_SECTION_PLUGIN ? "plugin metadata ignored" : "line ignored outside supported section";
+			if (section == ANIXOPS_SECTION_PLUGIN) {
+				char metadata_key[ANIXOPS_PATTERN_CAP];
+				char metadata_value[ANIXOPS_VALUE_CAP];
+				if (anixops_parse_metadata_key_value(
+						line,
+						NULL,
+						metadata_key,
+						sizeof(metadata_key),
+						metadata_value,
+						sizeof(metadata_value))) {
+					(void)anixops_set_plugin_metadata_descriptor_field(engine, metadata_key, metadata_value);
+				}
+			}
 			if (anixops_add_rule_diagnostic(
 					engine,
 					ANIXOPS_RULE_DIAGNOSTIC_IGNORED,
@@ -4432,7 +4483,60 @@ static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, 
 	if (key[0] == '\0' || strcasecmp(key, "arguments") == 0) {
 		return 0;
 	}
-	if (!(strcasecmp(key, "name") == 0 ||
+	if (!anixops_hashbang_metadata_key_is_tolerated(key)) {
+		return 0;
+	}
+	anixops_copy_text(out_key, out_key_cap, key);
+	return 1;
+}
+
+static int anixops_parse_metadata_key_value(
+	const char *line,
+	const char *prefix,
+	char *out_key,
+	size_t out_key_cap,
+	char *out_value,
+	size_t out_value_cap)
+{
+	const char *p;
+	const char *eq;
+	size_t key_len = 0;
+	char key[ANIXOPS_PATTERN_CAP];
+
+	if (line == NULL || out_key == NULL || out_key_cap == 0 || out_value == NULL || out_value_cap == 0) {
+		return 0;
+	}
+	p = line;
+	if (prefix != NULL) {
+		size_t prefix_len = strlen(prefix);
+		if (strncmp(line, prefix, prefix_len) != 0) {
+			return 0;
+		}
+		p += prefix_len;
+	}
+	while (*p != '\0' && *p != '=' && !isspace((unsigned char)*p) && key_len + 1 < sizeof(key)) {
+		key[key_len++] = *p++;
+	}
+	key[key_len] = '\0';
+	if (key[0] == '\0') {
+		return 0;
+	}
+	eq = strchr(p, '=');
+	if (eq == NULL) {
+		return 0;
+	}
+	anixops_copy_text(out_key, out_key_cap, key);
+	anixops_copy_text(out_value, out_value_cap, eq + 1);
+	anixops_trim_inplace(out_value);
+	anixops_unquote_inplace(out_value);
+	anixops_trim_inplace(out_value);
+	return 1;
+}
+
+static int anixops_hashbang_metadata_key_is_tolerated(const char *key)
+{
+	return key != NULL &&
+		(strcasecmp(key, "name") == 0 ||
 			strcasecmp(key, "desc") == 0 ||
 			strcasecmp(key, "description") == 0 ||
 			strcasecmp(key, "author") == 0 ||
@@ -4442,11 +4546,52 @@ static int anixops_parse_hashbang_metadata_key(const char *line, char *out_key, 
 			strcasecmp(key, "date") == 0 ||
 			strcasecmp(key, "system") == 0 ||
 			strcasecmp(key, "requirement") == 0 ||
-			strcasecmp(key, "arguments-desc") == 0)) {
-		return 0;
+			strcasecmp(key, "arguments-desc") == 0);
+}
+
+static int anixops_plugin_metadata_key_is_descriptor_field(const char *key)
+{
+	return key != NULL &&
+		(strcasecmp(key, "name") == 0 ||
+			strcasecmp(key, "desc") == 0 ||
+			strcasecmp(key, "description") == 0 ||
+			strcasecmp(key, "author") == 0 ||
+			strcasecmp(key, "icon") == 0 ||
+			strcasecmp(key, "homepage") == 0);
+}
+
+static int anixops_set_plugin_metadata_descriptor_field(
+	anixops_engine_t *engine,
+	const char *key,
+	const char *value)
+{
+	if (engine == NULL || key == NULL || value == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
-	anixops_copy_text(out_key, out_key_cap, key);
-	return 1;
+	if (!anixops_plugin_metadata_key_is_descriptor_field(key)) {
+		return ANIXOPS_OK;
+	}
+	if (strcasecmp(key, "name") == 0) {
+		engine->plugin_metadata.has_name = 1;
+		anixops_copy_text(engine->plugin_metadata.name, sizeof(engine->plugin_metadata.name), value);
+	}
+	else if (strcasecmp(key, "desc") == 0 || strcasecmp(key, "description") == 0) {
+		engine->plugin_metadata.has_desc = 1;
+		anixops_copy_text(engine->plugin_metadata.desc, sizeof(engine->plugin_metadata.desc), value);
+	}
+	else if (strcasecmp(key, "author") == 0) {
+		engine->plugin_metadata.has_author = 1;
+		anixops_copy_text(engine->plugin_metadata.author, sizeof(engine->plugin_metadata.author), value);
+	}
+	else if (strcasecmp(key, "icon") == 0) {
+		engine->plugin_metadata.has_icon = 1;
+		anixops_copy_text(engine->plugin_metadata.icon, sizeof(engine->plugin_metadata.icon), value);
+	}
+	else if (strcasecmp(key, "homepage") == 0) {
+		engine->plugin_metadata.has_homepage = 1;
+		anixops_copy_text(engine->plugin_metadata.homepage, sizeof(engine->plugin_metadata.homepage), value);
+	}
+	return ANIXOPS_OK;
 }
 
 static int anixops_next_token(const char **cursor, char *out, size_t out_cap)

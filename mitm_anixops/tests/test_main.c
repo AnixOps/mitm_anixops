@@ -11,7 +11,7 @@ static void add_group(anixops_test_case_t *tests, size_t *count, size_t cap, voi
 
 int main(void)
 {
-	anixops_test_case_t tests[192];
+	anixops_test_case_t tests[384];
 	size_t count = 0;
 	size_t i;
 	size_t failed = 0;
@@ -21,6 +21,9 @@ int main(void)
 	add_group(tests, &count, sizeof(tests) / sizeof(tests[0]), anixops_register_mitm_tests);
 	add_group(tests, &count, sizeof(tests) / sizeof(tests[0]), anixops_register_rewrite_tests);
 	add_group(tests, &count, sizeof(tests) / sizeof(tests[0]), anixops_register_script_tests);
+	if (anixops_test_failures != 0) {
+		return 1;
+	}
 
 	for (i = 0; i < count; i++) {
 		int before = anixops_test_failures;

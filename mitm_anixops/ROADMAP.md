@@ -10,7 +10,7 @@ GitHub Actions.
 
 ## Current Phase
 
-Current track: v1.0.0 evidence hardening and compatibility expansion.
+Current track: v1.0.x patch hardening and compatibility expansion.
 
 roadmap-current-track=v1.0.0-evidence-hardening
 roadmap-p0-baseline-status=complete
@@ -25,9 +25,9 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published artifact is `v0.45.10-alpha`. It proves an embeddable C ABI
-policy core, representative fixtures, an Alpha runner, an Alpha proxy shim, and
-Linux/Windows Alpha artifacts. It does not prove v1.0.0 readiness.
+The latest published stable artifact is `v1.0.1`. The `v1.0.2` patch train is
+reserved for Loon parser hardening, starting with read-only plugin metadata
+descriptor extraction for common `#!` and `[Plugin]` display fields.
 
 ## Operating Rules
 

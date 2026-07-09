@@ -230,6 +230,19 @@ typedef struct anixops_rule_diagnostic {
 	char message[ANIXOPS_MESSAGE_CAP];
 } anixops_rule_diagnostic_t;
 
+typedef struct anixops_plugin_metadata_descriptor {
+	int has_name;
+	int has_desc;
+	int has_author;
+	int has_icon;
+	int has_homepage;
+	char name[ANIXOPS_VALUE_CAP];
+	char desc[ANIXOPS_VALUE_CAP];
+	char author[ANIXOPS_VALUE_CAP];
+	char icon[ANIXOPS_VALUE_CAP];
+	char homepage[ANIXOPS_VALUE_CAP];
+} anixops_plugin_metadata_descriptor_t;
+
 ANIXOPS_API const char *anixops_version(void);
 ANIXOPS_API const char *anixops_status_message(int status);
 ANIXOPS_API anixops_engine_t *anixops_engine_new(void);
@@ -255,6 +268,9 @@ ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
 	const anixops_engine_t *engine,
 	size_t index,
 	anixops_rule_diagnostic_t *out_diagnostic);
+ANIXOPS_API int anixops_engine_copy_plugin_metadata_descriptor(
+	const anixops_engine_t *engine,
+	anixops_plugin_metadata_descriptor_t *out_descriptor);
 ANIXOPS_API size_t anixops_engine_task_descriptor_count(const anixops_engine_t *engine);
 ANIXOPS_API int anixops_engine_copy_task_descriptor(
 	const anixops_engine_t *engine,
