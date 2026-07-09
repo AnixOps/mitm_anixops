@@ -10,7 +10,7 @@ GitHub Actions.
 
 ## Current Phase
 
-Current track: v1.3.x post-publication evidence hardening on the path to v3.0.0
+Current track: v1.4.x release evidence boundary hardening on the path to v3.0.0
 production MITM readiness.
 
 roadmap-current-track=v1.0.0-evidence-hardening
@@ -26,7 +26,7 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.3.6`. The `v1.1.x` train is
+The latest published stable artifact is `v1.3.7`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
@@ -65,7 +65,10 @@ a versioned freshness gate: stable patch releases must prove `latestStable`
 matches the previous stable patch before publication. The `v1.3.7` follow-up
 rolls that machine-readable freshness policy forward by recording `v1.3.6` as
 the latest public stable release and making `v1.3.7` the next stable patch
-target.
+target. The `v1.4.0` milestone records `v1.3.7` as the latest public stable
+release and extends the freshness gate across minor-boundary targets, so a
+declared next stable release such as `v1.4.0` must also match the recorded
+required latest stable evidence before publication.
 
 ## Production MITM Version Line
 
