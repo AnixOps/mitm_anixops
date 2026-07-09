@@ -188,9 +188,11 @@ require_pattern "$RELEASE_WORKFLOW" "same-commit-main-build-success" "release wo
 require_pattern "$RELEASE_WORKFLOW" "publish_eligibility_status=\"eligible\"" "release workflow missing tag publish eligibility"
 require_pattern "$RELEASE_WORKFLOW" "publish_blocking_reason=\"same-commit-ci-and-release-metadata-gates-passed\"" "release workflow missing publish gate reason"
 require_pattern "$RELEASE_WORKFLOW" "environment: github-release-publication" "release workflow missing protected publication environment"
+require_pattern "$RELEASE_WORKFLOW" "GH_REPO: \${{ github.repository }}" "release workflow missing explicit gh repository context"
 require_pattern "$RELEASE_WORKFLOW" "gh release view" "release workflow missing immutable-release existence check"
 require_pattern "$RELEASE_WORKFLOW" "gh release create" "release workflow missing GitHub Release publication"
 require_pattern "$RELEASE_WORKFLOW" "stable release readiness did not pass" "release workflow missing stable readiness publication guard"
+require_pattern "$RELEASE_WORKFLOW" "supersedes the tag-only v1.0.0 publication attempt" "release workflow missing replacement release note"
 require_pattern "$RELEASE_WORKFLOW" "Release artifacts:" "release notes missing artifact section"
 require_pattern "$RELEASE_WORKFLOW" "source_mode" "release workflow missing source mode metadata"
 
