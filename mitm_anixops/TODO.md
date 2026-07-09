@@ -237,6 +237,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a CI/CD script trigger evidence gate requiring every registered
   `script/...` C test to be recorded in the compatibility matrix and source
   contract evidence.
+- [x] Add a cron/task compatibility guard proving quoted attr-list task
+  `type` values register as task descriptors and do not become HTTP script
+  triggers.
 
 ## P4 MITM Policy And Certificate Lifecycle
 

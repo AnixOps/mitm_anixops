@@ -1593,12 +1593,15 @@ Input form:
 - direct `[Script]` cron task declarations;
 - `[Script]` attr-list rules with `type=cron`, `type=interval`, or
   `type=task` plus a concrete cron expression or interval;
+- quoted `[Script]` attr-list task type values such as `type="cron"`,
+  `type='interval'`, and `type="task"`;
 - Quantumult X `event-network` and `event-interaction` descriptor lines;
 - Surge `type=event` descriptor lines for `network-changed` and
   `notification`;
 - `script-path`, `tag`, `argument`, `timeout`, `max-size`, and `enabled`
   metadata;
 - positive parser fixture `tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf`;
+- quoted type parser fixture `tests/fixtures/CronTaskTrigger.QuotedTypes.conf`;
 - unsupported parser fixture `tests/fixtures/CronTaskTrigger.Unsupported.conf`;
 - Loon unsupported parser fixture
   `tests/fixtures/Loon.TaskUnsupported.plugin`;
@@ -1614,6 +1617,9 @@ Current CI evidence:
 
 - `config/cron_task_trigger_common_fixture_emits_task_descriptors` proves HTTP
   script triggers stay separate from cron and interval task descriptors;
+- `config/cron_task_trigger_quoted_attr_types_stay_task_descriptors` proves
+  quoted attr-list task types register as task descriptors and do not dispatch
+  as HTTP script triggers;
 - `config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors`
   proves unsupported scheduler-like lines do not register as HTTP scripts or
   task descriptors;

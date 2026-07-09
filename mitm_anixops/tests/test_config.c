@@ -4523,6 +4523,89 @@ static void cron_task_trigger_common_fixture_emits_task_descriptors(void)
 	free(fixture);
 }
 
+static void cron_task_trigger_quoted_attr_types_stay_task_descriptors(void)
+{
+	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.QuotedTypes.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	anixops_task_descriptor_t task;
+	size_t diagnostic_count;
+	size_t accepted_scripts = 0;
+	size_t accepted_tasks = 0;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 3);
+
+	diagnostic_count = anixops_engine_rule_diagnostic_count(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic_count, 4);
+	for (i = 0; i < diagnostic_count; i++) {
+		anixops_rule_diagnostic_t diagnostic;
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Script");
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+		if (diagnostic.status == ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED) {
+			if (strcmp(diagnostic.action, "script") == 0) {
+				accepted_scripts++;
+				ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+			}
+			else if (strcmp(diagnostic.action, "task") == 0) {
+				accepted_tasks++;
+				ANIXOPS_EXPECT_TRUE(diagnostic.line == 3 || diagnostic.line == 4 || diagnostic.line == 5);
+			}
+		}
+	}
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_scripts, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(accepted_tasks, 3);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://cron.task.test/quoted-http", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.test/quoted-http.js");
+	ANIXOPS_EXPECT_STREQ(script.tag, "cron.task.quoted.http");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://cron.task.test/quoted-cron", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://cron.task.test/quoted-interval", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.rule_index, -1);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 0, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "30 7 * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.test/quoted-cron.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "quoted cron");
+	ANIXOPS_EXPECT_STREQ(task.origin, "script-section-attr-list");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 1, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_INTERVAL);
+	ANIXOPS_EXPECT_EQ_SIZE(task.interval_seconds, 900);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "900");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.test/quoted-interval.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "quoted interval");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_task_descriptor(engine, 2, &task), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(task.kind, ANIXOPS_TASK_CRON);
+	ANIXOPS_EXPECT_EQ_INT(task.enabled, 1);
+	ANIXOPS_EXPECT_STREQ(task.schedule, "15 6 * * *");
+	ANIXOPS_EXPECT_STREQ(task.script_path, "https://scripts.test/quoted-task.js");
+	ANIXOPS_EXPECT_STREQ(task.tag, "quoted task");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void cron_task_trigger_unsupported_fixture_does_not_register_descriptors(void)
 {
 	char *fixture = read_fixture("tests/fixtures/CronTaskTrigger.Unsupported.conf");
@@ -9983,6 +10066,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/cron_task_trigger_common_fixture_emits_task_descriptors",
 		cron_task_trigger_common_fixture_emits_task_descriptors);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/cron_task_trigger_quoted_attr_types_stay_task_descriptors",
+		cron_task_trigger_quoted_attr_types_stay_task_descriptors);
 	add_test(
 		tests,
 		count,

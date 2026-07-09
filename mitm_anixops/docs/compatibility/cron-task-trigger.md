@@ -20,10 +20,11 @@ sections after HTTP request/response script triggers have had the first chance
 to parse:
 
 - `cron "0 * * * *" script-path=..., tag=...`;
-- attr-list rules with `type=cron` and `cronexp=...`;
-- attr-list rules with `type=interval` and `interval=...`;
+- attr-list rules with `type=cron` or quoted `type="cron"` and `cronexp=...`;
+- attr-list rules with `type=interval` or quoted `type='interval'` and
+  `interval=...`;
 - attr-list `type=task` when `cronexp` or `interval` identifies the concrete
-  scheduler kind;
+  scheduler kind, including quoted `type="task"` values;
 - Quantumult X `[task_local]` `event-network` and `event-interaction`
   descriptor lines;
 - Surge `[Script]` `type=event` descriptor lines for `network-changed` and
@@ -64,6 +65,7 @@ Parser case:
 
 ```text
 tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
+tests/fixtures/CronTaskTrigger.QuotedTypes.conf
 tests/fixtures/Loon.TaskMetadata.plugin
 tests/fixtures/QuantumultX.TaskMetadata.snippet
 tests/fixtures/Surge.TaskEvent.sgmodule
@@ -75,6 +77,8 @@ Expected behavior:
 - config load succeeds;
 - one HTTP request script trigger is registered;
 - three task descriptors are registered;
+- quoted task `type` values register task descriptors rather than HTTP script
+  URL triggers;
 - the HTTP request script trigger remains matchable by
   `anixops_script_evaluate_url`;
 - cron and interval task descriptors are observable through the public ABI;
@@ -152,6 +156,7 @@ Current diagnostics cover:
 - accepted HTTP script rule beside task descriptors;
 - accepted cron task descriptor;
 - accepted interval task descriptor;
+- accepted quoted attr-list task descriptor types;
 - accepted Quantumult X event task descriptor;
 - accepted Surge event task descriptor;
 - ignored unsupported scheduler type;
@@ -183,6 +188,8 @@ Current evidence:
 - GitHub Actions `linux-test` runs `sh scripts/check.sh`.
 - `tests/test_config.c` registers
   `config/cron_task_trigger_common_fixture_emits_task_descriptors`;
+- `tests/test_config.c` registers
+  `config/cron_task_trigger_quoted_attr_types_stay_task_descriptors`;
 - `tests/test_config.c` registers
   `config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors`;
 - `tests/test_config.c` registers
