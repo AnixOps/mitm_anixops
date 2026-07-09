@@ -41,6 +41,7 @@ release-dry-run-publication=blocked
 release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
 release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
+release-dry-run-artifact-evidence=artifact-count-and-platforms-in-manifest-notes-summary
 ```
 
 Current CI workflow status:
@@ -111,6 +112,7 @@ release-workflow-manifest-schema=release-manifest-v1
 release-workflow-digest-format=sha256-sidecars
 release-workflow-run-evidence=run-id-url-in-manifest-notes-summary
 release-workflow-ci-run-evidence=ci-run-id-url-conclusion-in-manifest-notes-summary
+release-workflow-artifact-evidence=artifact-count-and-platforms-in-manifest-notes-summary
 release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
@@ -179,6 +181,11 @@ the release gate. Release notes and GitHub Step Summaries repeat those fields
 so dry-runs and tag publications expose the exact build evidence that validated
 the released commit.
 
+The release manifest also carries artifact count and platform evidence.
+Release notes and GitHub Step Summaries repeat those fields so release
+evidence readers can distinguish the two package artifacts from checksum,
+manifest, and notes sidecar assets.
+
 The release manifest also carries the publication gate. Release notes and
 GitHub Step Summaries repeat that field so release evidence readers can see
 whether public assets were produced by a tag run protected by same-commit CI,
@@ -231,6 +238,7 @@ Publication must be blocked when:
 - release metadata omits source mode;
 - release metadata omits release workflow run ID or URL;
 - release metadata omits CI run ID, URL, or conclusion;
+- release metadata omits artifact count or platforms;
 - release metadata omits publication gate;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
 - release notes omit compatibility scope, known gaps, or rollback path;

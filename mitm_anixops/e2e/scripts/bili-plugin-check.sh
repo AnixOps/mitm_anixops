@@ -51,9 +51,26 @@ ensure_sha_file() {
 	url=$2
 	expected_sha=$3
 	label=$4
+	attempt=1
+
 	if [ ! -f "$path" ]; then
 		mkdir -p "$(dirname "$path")"
-		curl -L -o "$path" "$url"
+		while [ "$attempt" -le 3 ]; do
+			tmp_file="$TMP/download-$(basename "$path").$attempt"
+			if curl -fsSL --retry 3 --retry-all-errors --retry-delay 2 -o "$tmp_file" "$url"; then
+				actual_sha=$(sha256sum "$tmp_file" | awk '{print $1}')
+				if [ "$actual_sha" = "$expected_sha" ]; then
+					mv "$tmp_file" "$path"
+					return
+				fi
+				echo "unexpected downloaded $label sha256 on attempt $attempt: $actual_sha" >&2
+				echo "expected: $expected_sha" >&2
+			fi
+			rm -f "$tmp_file"
+			attempt=$((attempt + 1))
+		done
+		echo "failed to download verified $label from $url" >&2
+		exit 1
 	fi
 	verify_sha_file "$path" "$expected_sha" "$label"
 }

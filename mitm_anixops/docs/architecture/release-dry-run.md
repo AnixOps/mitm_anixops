@@ -28,6 +28,7 @@ release-dry-run-manifest-schema=release-manifest-v1
 release-dry-run-digest-format=sha256-sidecars
 release-dry-run-workflow-run-evidence=run-id-url-in-manifest-notes-summary
 release-dry-run-ci-run-evidence=ci-run-id-url-conclusion-in-manifest-notes-summary
+release-dry-run-artifact-evidence=artifact-count-and-platforms-in-manifest-notes-summary
 release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-dry-run-metadata-static-check=scripts/release-metadata-check.sh
 release-dry-run-sensitive-material-gate=scripts/release-sensitive-material-check.sh
@@ -80,8 +81,9 @@ The dry-run workflow includes these logical gates:
    reserved for `v3.0.0`, with `v2.8.0` as beta and `v2.9.0` as RC.
 9. `compatibility-summary`: summarize compatibility matrix status counts for
    `supported`, `partial`, `planned`, and `unsupported` rows.
-10. `artifact-contract`: output artifact names, target platforms, staging paths,
-   checksum algorithm, manifest path, and release-note path.
+10. `artifact-contract`: output artifact names, artifact count, target
+   platforms, staging paths, checksum algorithm, manifest path, and
+   release-note path.
 11. `package-*`: build the dry-run artifact in GitHub Actions.
 12. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
 13. `manifest-*`: generate JSON manifest and manifest checksum.
@@ -110,6 +112,8 @@ artifact_name
 artifact_path
 artifact_sha256
 artifact_sha256_file
+artifact_count
+artifact_platforms
 windows_artifact_name
 windows_artifact_path
 windows_artifact_sha256
@@ -161,6 +165,7 @@ The dry-run must fail when:
 - manifest, notes, or summary omit source mode;
 - manifest, notes, or summary omit release workflow run ID or URL;
 - manifest, notes, or summary omit CI run ID, URL, or conclusion;
+- manifest, notes, or summary omit artifact count or platforms;
 - manifest, notes, or summary omit publication gate;
 - manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary;
 - release notes omit known gaps, rollback path, or manual-intervention status;
