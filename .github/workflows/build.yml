@@ -195,6 +195,7 @@ jobs:
             mitm_anixops/scripts/release-metadata-check.sh
             mitm_anixops/scripts/release-publication-verify.sh
             mitm_anixops/scripts/release-publication-verify-check.sh
+            mitm_anixops/scripts/release-publication-verify-test.sh
             mitm_anixops/scripts/release-readiness-check.sh
             mitm_anixops/scripts/repository-governance-check.sh
             mitm_anixops/scripts/static-format-check.sh
@@ -226,6 +227,7 @@ jobs:
           sh mitm_anixops/scripts/release-checklist-check.sh
           sh mitm_anixops/scripts/release-metadata-check.sh
           sh mitm_anixops/scripts/release-publication-verify-check.sh
+          sh mitm_anixops/scripts/release-publication-verify-test.sh
           sh mitm_anixops/scripts/repository-governance-check.sh > /tmp/repository-governance.env
           sh mitm_anixops/scripts/v1-acceptance-check.sh > /tmp/v1-acceptance.env
           sh mitm_anixops/scripts/compatibility-status-summary.sh > /tmp/compatibility-status-summary.env
@@ -253,6 +255,7 @@ jobs:
           grep -q "release metadata check passed" mitm_anixops/scripts/release-metadata-check.sh
           grep -q "release publication verify check passed" mitm_anixops/scripts/release-publication-verify-check.sh
           grep -q "release_publication_verify_status=passed" mitm_anixops/scripts/release-publication-verify.sh
+          grep -q "release_publication_verify_test_status=passed" mitm_anixops/scripts/release-publication-verify-test.sh
           grep -q "release sensitive material check passed" mitm_anixops/scripts/release-sensitive-material-check.sh
           grep -q "release sensitive material check test passed" mitm_anixops/scripts/release-sensitive-material-check-test.sh
           grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
@@ -738,6 +741,7 @@ jobs:
           grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-script=scripts/release-publication-verify.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-dry-run-linux-artifact=linux-x64-tarball-with-checksum" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-dry-run-windows-artifact=windows-x64-zip-with-checksum" mitm_anixops/docs/architecture/release-gate.md
@@ -771,6 +775,7 @@ jobs:
           grep -q "GitHub Actions \`release-dry-run\` workflow" mitm_anixops/docs/release_checklist.md
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "release-publication-verify-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
+          grep -q "release-publication-verify-test.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "release_readiness_status" .github/workflows/release-dry-run.yml
           grep -q "publish_eligibility_status=blocked" .github/workflows/release-dry-run.yml
           grep -q "gh release create" .github/workflows/release-dry-run.yml && exit 1 || true
@@ -832,6 +837,7 @@ jobs:
           grep -q "repository_governance_status" mitm_anixops/scripts/repository-governance-check.sh
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/check.sh
           grep -q "release-publication-verify-check.sh" mitm_anixops/scripts/check.sh
+          grep -q "release-publication-verify-test.sh" mitm_anixops/scripts/check.sh
           grep -q "release-sensitive-material-check-test.sh" mitm_anixops/scripts/check.sh
           grep -q "script-runtime-security-gate-test.sh" mitm_anixops/scripts/check.sh
           grep -q "script-runtime-security-gate.sh" mitm_anixops/scripts/check.sh

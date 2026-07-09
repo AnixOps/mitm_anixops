@@ -73,6 +73,7 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    scripts/release-checklist-check.sh
    scripts/release-metadata-check.sh
    scripts/release-publication-verify-check.sh
+   scripts/release-publication-verify-test.sh
    scripts/release-sensitive-material-check.sh
    scripts/compatibility-status-summary-check.sh
    ```
