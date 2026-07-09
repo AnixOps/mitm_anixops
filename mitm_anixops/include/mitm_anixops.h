@@ -120,7 +120,8 @@ typedef enum anixops_rewrite_action {
 	ANIXOPS_REWRITE_REDIRECT_308 = 24,
 	ANIXOPS_REWRITE_HEADER_DEL = 25,
 	ANIXOPS_REWRITE_REQUEST_BODY_JQ = 26,
-	ANIXOPS_REWRITE_RESPONSE_BODY_JQ = 27
+	ANIXOPS_REWRITE_RESPONSE_BODY_JQ = 27,
+	ANIXOPS_REWRITE_URL_REWRITE_200 = 28
 } anixops_rewrite_action_t;
 
 typedef enum anixops_script_kind {

@@ -45,6 +45,7 @@ import (
 
 const (
 	rewriteNone                       = C.ANIXOPS_REWRITE_NONE
+	rewriteURLRewrite200              = C.ANIXOPS_REWRITE_URL_REWRITE_200
 	rewriteRedirect301                = C.ANIXOPS_REWRITE_REDIRECT_301
 	rewriteRedirect302                = C.ANIXOPS_REWRITE_REDIRECT_302
 	rewriteRedirect303                = C.ANIXOPS_REWRITE_REDIRECT_303

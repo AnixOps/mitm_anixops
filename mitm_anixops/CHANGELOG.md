@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.0.3` request rewrite action for portable `200` URL rewrites,
+  exposing bounded policy-core internal rewrite decisions through
+  `ANIXOPS_REWRITE_URL_REWRITE_200` without claiming adapter forwarding
+  behavior.
 - Added a `v1.0.2` Loon metadata descriptor parser path that exposes
   `#!`/`[Plugin]` `name`, `desc`, `author`, `icon`, and `homepage` through a
   read-only C ABI without creating policy behavior or platform UI claims.

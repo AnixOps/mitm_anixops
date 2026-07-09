@@ -316,6 +316,7 @@ static int anixops_regex_closes_interval_quantifier(const char *pattern, size_t 
 static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_action_t *action, int *status_code);
 static int anixops_rewrite_action_is_reject(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action);
+static int anixops_rewrite_action_expands_url_value(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_regex(anixops_rewrite_action_t action);
 static int anixops_rewrite_action_replaces_body_json(anixops_rewrite_action_t action);
@@ -3077,10 +3078,10 @@ ANIXOPS_API int anixops_rewrite_evaluate_url(
 		out_result->status_code = rule->status_code;
 		out_result->rule_index = (int)i;
 		anixops_copy_text(out_result->matched_pattern, sizeof(out_result->matched_pattern), rule->pattern);
-			if (anixops_rewrite_action_redirects(rule->action) ||
-				rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
-				rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
-				int expand_rc = anixops_expand_replacement(
+		if (anixops_rewrite_action_expands_url_value(rule->action) ||
+			rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+			rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
+			int expand_rc = anixops_expand_replacement(
 				url,
 				rule->replacement,
 				matches,
@@ -3089,19 +3090,19 @@ ANIXOPS_API int anixops_rewrite_evaluate_url(
 				ANIXOPS_MATCH_CAP,
 				&rule->capture_names,
 				out_result->value,
-					sizeof(out_result->value));
-				if (expand_rc != ANIXOPS_OK) {
-					anixops_copy_text(out_result->message, sizeof(out_result->message), "replacement truncated");
-				}
-				else {
-					anixops_copy_text(out_result->message, sizeof(out_result->message), "rewrite matched");
-				}
+				sizeof(out_result->value));
+			if (expand_rc != ANIXOPS_OK) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "replacement truncated");
 			}
 			else {
-				out_result->value[0] = '\0';
 				anixops_copy_text(out_result->message, sizeof(out_result->message), "rewrite matched");
 			}
-			return ANIXOPS_OK;
+		}
+		else {
+			out_result->value[0] = '\0';
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "rewrite matched");
+		}
+		return ANIXOPS_OK;
 	}
 
 	return ANIXOPS_OK;
@@ -5513,6 +5514,11 @@ static int anixops_parse_rewrite_action(const char *token, anixops_rewrite_actio
 	if (token == NULL || action == NULL || status_code == NULL) {
 		return 0;
 	}
+	if (strcmp(token, "200") == 0) {
+		*action = ANIXOPS_REWRITE_URL_REWRITE_200;
+		*status_code = 200;
+		return 1;
+	}
 	if (strcmp(token, "301") == 0) {
 		*action = ANIXOPS_REWRITE_REDIRECT_301;
 		*status_code = 301;
@@ -5690,6 +5696,11 @@ static int anixops_rewrite_action_redirects(anixops_rewrite_action_t action)
 		action == ANIXOPS_REWRITE_REDIRECT_303 ||
 		action == ANIXOPS_REWRITE_REDIRECT_307 ||
 		action == ANIXOPS_REWRITE_REDIRECT_308;
+}
+
+static int anixops_rewrite_action_expands_url_value(anixops_rewrite_action_t action)
+{
+	return anixops_rewrite_action_redirects(action) || action == ANIXOPS_REWRITE_URL_REWRITE_200;
 }
 
 static int anixops_rewrite_action_replaces_body(anixops_rewrite_action_t action)

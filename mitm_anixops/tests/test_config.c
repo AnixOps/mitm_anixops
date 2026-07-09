@@ -3829,6 +3829,72 @@ static void request_rewrite_redirect_status_common_fixture_maps_portable_statuse
 	free(fixture);
 }
 
+static void request_rewrite_url_rewrite_200_common_fixture_maps_internal_rewrites(void)
+{
+	char *fixture = read_fixture("tests/fixtures/RequestRewrite.UrlRewrite200.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_rewrite_result_t rewrite;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	for (i = 0; i < 2; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "rewrite rule accepted");
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://rewrite200.request.rewrite.test/direct/item",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_URL_REWRITE_200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://origin.request.rewrite.test/item");
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "rewrite matched");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://rewrite200.request.rewrite.test/url/item",
+			ANIXOPS_PHASE_REQUEST,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_URL_REWRITE_200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, "https://origin-url.request.rewrite.test/item");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(
+			engine,
+			"https://rewrite200.request.rewrite.test/direct/item",
+			ANIXOPS_PHASE_RESPONSE,
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, -1);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void request_rewrite_redirect_status_strict_fixture_rejects_unsupported_status(void)
 {
 	char *fixture = read_fixture("tests/fixtures/RequestRewrite.RedirectStatus.Malformed.conf");
@@ -9803,6 +9869,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/request_rewrite_redirect_status_common_fixture_maps_portable_statuses",
 		request_rewrite_redirect_status_common_fixture_maps_portable_statuses);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/request_rewrite_url_rewrite_200_common_fixture_maps_internal_rewrites",
+		request_rewrite_url_rewrite_200_common_fixture_maps_internal_rewrites);
 	add_test(
 		tests,
 		count,

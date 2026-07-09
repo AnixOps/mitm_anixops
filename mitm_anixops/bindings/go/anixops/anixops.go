@@ -28,6 +28,7 @@ type RewriteAction int
 
 const (
 	RewriteNone                       RewriteAction = C.ANIXOPS_REWRITE_NONE
+	RewriteURLRewrite200              RewriteAction = C.ANIXOPS_REWRITE_URL_REWRITE_200
 	RewriteRedirect302                RewriteAction = C.ANIXOPS_REWRITE_REDIRECT_302
 	RewriteRequestBodyReplaceRegex    RewriteAction = C.ANIXOPS_REWRITE_REQUEST_BODY_REPLACE_REGEX
 	RewriteResponseBodyReplaceRegex   RewriteAction = C.ANIXOPS_REWRITE_RESPONSE_BODY_REPLACE_REGEX

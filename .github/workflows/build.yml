@@ -143,6 +143,7 @@ jobs:
             mitm_anixops/tests/fixtures/Shadowrocket.RuleFinalReject.Malformed.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.conf
             mitm_anixops/tests/fixtures/RequestRewrite.Common.Malformed.conf
+            mitm_anixops/tests/fixtures/RequestRewrite.UrlRewrite200.Common.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Common.conf
             mitm_anixops/tests/fixtures/PolicyIntent.Unsupported.conf
             mitm_anixops/tests/fixtures/CronTaskTrigger.HttpScriptGuard.conf
