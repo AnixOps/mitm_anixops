@@ -26,7 +26,7 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.2.5`. The `v1.1.x` train is
+The latest published stable artifact is `v1.2.6`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
@@ -42,6 +42,36 @@ production-boundary evidence, SHA-256 digest/sidecar format semantics, release
 workflow run traceability, explicit publication-gate evidence, and source-mode
 evidence that distinguishes tag publication, manual validation, main-push
 dry-run, and pull-request dry-run paths.
+
+## Production MITM Version Line
+
+production-grade MITM正式声明只允许从 `v3.0.0` 开始。Earlier releases
+may build evidence, adapter contracts, beta packages, and RC candidates, but
+they must keep release notes and manifests clear about alpha, beta, or RC
+scope.
+
+```text
+roadmap-production-mitm-gate=scripts/production-mitm-roadmap-check.sh
+roadmap-production-mitm-contract-freeze-version=v2.0.0
+roadmap-production-mitm-beta-version=v2.8.0
+roadmap-production-mitm-rc-version=v2.9.0
+roadmap-production-mitm-ga-version=v3.0.0
+roadmap-production-mitm-pre-v3-claim=not-production-ready
+```
+
+- `v2.0.0` freezes the production adapter contract: C ABI, runner/proxy shim
+  surfaces, adapter-owned network/TLS responsibilities, manifest fields, and
+  release evidence vocabulary are stable enough for real adapter work, but it
+  carries no production-ready MITM claim.
+- `v2.1.x` through `v2.7.x` build the production path: real adapter skeleton,
+  certificate lifecycle handoff, MITM rule policy, observable interception
+  traces, configuration rollback, stability gates, and security defaults.
+- `v2.8.0 beta` is the first production-grade MITM beta. It may be used for
+  controlled real-world validation, but release metadata must still say beta.
+- `v2.9.0 RC` is the release-candidate line. New feature scope is frozen; only
+  blocker fixes and evidence corrections are allowed.
+- `v3.0.0 production-ready` is the first GA production MITM release and the
+  first version allowed to remove alpha/beta/RC production-readiness limits.
 
 ## Operating Rules
 

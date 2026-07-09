@@ -20,6 +20,7 @@ release-dry-run-manual-intervention-static-check=scripts/manual-intervention-che
 release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
 release-dry-run-script-runtime-security-gate=scripts/script-runtime-security-gate.sh
 release-dry-run-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
+release-dry-run-production-mitm-roadmap-gate=scripts/production-mitm-roadmap-check.sh
 release-dry-run-release-checklist-static-check=scripts/release-checklist-check.sh
 release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
@@ -74,21 +75,23 @@ The dry-run workflow includes these logical gates:
 7. `integration-adapter-readiness`: verify NetworkCore boundary markers,
    alpha artifact adapter contents, runner/proxy shim targets, binding/package
    checks, E2E entrypoints, and workflow registration.
-8. `compatibility-summary`: summarize compatibility matrix status counts for
+8. `production-mitm-roadmap`: verify that production-ready MITM claims remain
+   reserved for `v3.0.0`, with `v2.8.0` as beta and `v2.9.0` as RC.
+9. `compatibility-summary`: summarize compatibility matrix status counts for
    `supported`, `partial`, `planned`, and `unsupported` rows.
-9. `artifact-contract`: output artifact names, target platforms, staging paths,
+10. `artifact-contract`: output artifact names, target platforms, staging paths,
    checksum algorithm, manifest path, and release-note path.
-10. `package-*`: build the dry-run artifact in GitHub Actions.
-11. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
-12. `manifest-*`: generate JSON manifest and manifest checksum.
-13. `sensitive-material-scan`: scan Linux tarballs and Windows zip artifacts
+11. `package-*`: build the dry-run artifact in GitHub Actions.
+12. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
+13. `manifest-*`: generate JSON manifest and manifest checksum.
+14. `sensitive-material-scan`: scan Linux tarballs and Windows zip artifacts
     for private keys, credential-like filenames, and common token patterns.
-14. `release-notes-dry-run`: generate notes containing compatibility scope,
+15. `release-notes-dry-run`: generate notes containing compatibility scope,
    compatibility status counts, known gaps, manual-intervention status, and
    rollback path.
-15. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
+16. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
    publication would be eligible.
-16. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
+17. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
    CI, compatibility, and manual-intervention fields.
 
 ## Required Outputs

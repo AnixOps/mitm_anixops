@@ -137,6 +137,8 @@ grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RE
 
 sh "$ROOT/scripts/security-claim-check.sh" >/dev/null
 sh "$ROOT/scripts/script-runtime-security-gate.sh" >/dev/null
+sh "$ROOT/scripts/production-mitm-roadmap-check-test.sh" >/dev/null
+sh "$ROOT/scripts/production-mitm-roadmap-check.sh" >/dev/null
 sh "$ROOT/scripts/integration-adapter-readiness-check-test.sh" >/dev/null
 sh "$ROOT/scripts/integration-adapter-readiness-check.sh" >/dev/null
 

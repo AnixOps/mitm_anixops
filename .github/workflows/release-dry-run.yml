@@ -128,6 +128,7 @@ jobs:
           sh scripts/release-metadata-check.sh
           sh scripts/compatibility-status-summary-check.sh
           sh scripts/script-runtime-security-gate.sh
+          sh scripts/production-mitm-roadmap-check.sh
           sh scripts/integration-adapter-readiness-check.sh
 
           readiness_output="${RUNNER_TEMP}/release-readiness.env"
