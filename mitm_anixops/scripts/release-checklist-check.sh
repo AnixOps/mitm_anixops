@@ -45,6 +45,7 @@ require_pattern "$CHECKLIST" "scripts/manual-intervention-check.sh" "release che
 require_pattern "$CHECKLIST" "scripts/manual-intervention-transition-check.sh" "release checklist missing manual intervention transition check command"
 require_pattern "$CHECKLIST" "scripts/release-checklist-check.sh" "release checklist missing release checklist check command"
 require_pattern "$CHECKLIST" "scripts/release-metadata-check.sh" "release checklist missing release metadata check command"
+require_pattern "$CHECKLIST" "scripts/release-publication-verify.sh v1.0.0 <commit> <release-run-id> <ci-run-id>" "release checklist missing release publication verifier command"
 require_pattern "$CHECKLIST" "scripts/release-sensitive-material-check.sh" "release checklist missing release sensitive material check command"
 require_pattern "$CHECKLIST" "scripts/compatibility-status-summary-check.sh" "release checklist missing compatibility status summary check command"
 require_pattern "$CHECKLIST" "release_readiness_status=passed" "release checklist missing readiness pass evidence"
@@ -69,6 +70,9 @@ done
 
 require_pattern "$RELEASE_GATE" "release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows" "release gate missing v1 readiness marker"
 require_pattern "$RELEASE_GATE" "release-checklist-static-check=scripts/release-checklist-check.sh" "release gate missing release checklist static check marker"
+require_pattern "$RELEASE_GATE" "release-publication-verify-script=scripts/release-publication-verify.sh" "release gate missing publication verifier script marker"
+require_pattern "$RELEASE_GATE" "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "release gate missing publication verifier static check marker"
+require_pattern "$RELEASE_GATE" "release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms" "release gate missing publication verifier evidence marker"
 require_pattern "$RELEASE_GATE" "release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "release gate missing compatibility status summary static check marker"
 require_pattern "$RELEASE_GATE" "release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "release gate missing sensitive material marker"
 

@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.3.0` release publication verifier that downloads public GitHub
+  Release assets and checks the target commit, asset count, manifest fields,
+  checksum sidecars, release notes, release workflow run evidence, CI run
+  evidence, artifact count, and artifact platforms.
 - Added a `v1.2.9` artifact count and platform evidence field set so release
   and dry-run metadata record the two package artifacts and their target
   platforms consistently in manifests, release notes, GitHub Step Summaries,

@@ -20,6 +20,7 @@ sh scripts/integration-adapter-readiness-check.sh
 sh scripts/ci-trigger-check.sh
 sh scripts/release-checklist-check.sh
 sh scripts/release-metadata-check.sh
+sh scripts/release-publication-verify-check.sh
 sh scripts/v1-acceptance-check.sh
 sh scripts/alpha-fixture-package-check.sh
 make clean
