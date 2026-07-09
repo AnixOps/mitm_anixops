@@ -1,7 +1,30 @@
 {
   "schemaVersion": "release-evidence-index-v1",
-  "latestStable": "v1.3.3",
+  "latestStable": "v1.3.4",
   "entries": [
+    {
+      "version": "v1.3.4",
+      "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.4",
+      "targetCommit": "4fe71799f6574cee6852fa89373dc85aaf544cb2",
+      "ciRunId": "29041074816",
+      "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29041074816",
+      "releaseWorkflowRunId": "29041354115",
+      "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29041354115",
+      "assetCount": 7,
+      "artifactCount": 2,
+      "artifactPlatforms": [
+        "linux-x64",
+        "windows-x64"
+      ],
+      "publicationVerifyStatus": "passed",
+      "releaseNotesChangeSummary": {
+        "featureAdditionsSection": "Feature additions:",
+        "bugFixesSection": "BUG fixes:",
+        "verifiedSince": "v1.3.4"
+      },
+      "publicationEvidenceArtifact": "anixops-mitm-release-publication-evidence",
+      "publicationEvidenceFile": "release-publication-verify.env"
+    },
     {
       "version": "v1.3.3",
       "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.3",

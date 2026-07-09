@@ -63,10 +63,13 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.3.3",
-  targetCommit: "5bf7ee5b791a5982361bca4a29624d3a79714853",
-  ciRunId: "29039127942",
-  releaseWorkflowRunId: "29039516986",
+  version: "v1.3.4",
+  targetCommit: "4fe71799f6574cee6852fa89373dc85aaf544cb2",
+  ciRunId: "29041074816",
+  releaseWorkflowRunId: "29041354115",
+  releaseNotesFeatureAdditionsSection: "Feature additions:",
+  releaseNotesBugFixesSection: "BUG fixes:",
+  releaseNotesVerifiedSince: "v1.3.4",
   publicationEvidenceArtifact: "anixops-mitm-release-publication-evidence",
   publicationEvidenceFile: "release-publication-verify.env",
 };
@@ -74,7 +77,7 @@ const expectedLatestStable = {
 assert(index.schemaVersion === "release-evidence-index-v1", "invalid release evidence index schemaVersion");
 assert(index.latestStable === expectedLatestStable.version, `latestStable must be ${expectedLatestStable.version}`);
 assert(Array.isArray(index.entries), "entries must be an array");
-assert(index.entries.length >= 2, "entries must include latest and historical release evidence");
+assert(index.entries.length >= 3, "entries must include latest and retained historical release evidence");
 assert(index.entries[0].version === index.latestStable, "first release evidence entry must match latestStable");
 
 const versions = new Set();
@@ -97,10 +100,15 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
+assert(versions.has("v1.3.3"), "missing retained v1.3.3 release evidence entry");
 assert(versions.has("v1.3.2"), "missing retained v1.3.2 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);
+assert(latest.releaseNotesChangeSummary && typeof latest.releaseNotesChangeSummary === "object", `${expectedLatestStable.version} release notes change summary missing`);
+assert(latest.releaseNotesChangeSummary.featureAdditionsSection === expectedLatestStable.releaseNotesFeatureAdditionsSection, `${expectedLatestStable.version} feature additions section mismatch`);
+assert(latest.releaseNotesChangeSummary.bugFixesSection === expectedLatestStable.releaseNotesBugFixesSection, `${expectedLatestStable.version} BUG fixes section mismatch`);
+assert(latest.releaseNotesChangeSummary.verifiedSince === expectedLatestStable.releaseNotesVerifiedSince, `${expectedLatestStable.version} release notes verifiedSince mismatch`);
 assert(latest.publicationEvidenceArtifact === expectedLatestStable.publicationEvidenceArtifact, `${expectedLatestStable.version} evidence artifact mismatch`);
 assert(latest.publicationEvidenceFile === expectedLatestStable.publicationEvidenceFile, `${expectedLatestStable.version} evidence file mismatch`);
 NODE
