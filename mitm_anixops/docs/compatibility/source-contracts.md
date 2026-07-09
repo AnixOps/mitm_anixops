@@ -68,8 +68,8 @@ Unimplemented items:
 
 Detailed contract: [Loon Hashbang Metadata Source Contract](loon-hashbang-metadata.md).
 
-Capability: tolerate common Loon `#!` metadata without claiming runtime or
-platform UI behavior.
+Capability: tolerate common Loon `#!` metadata and expose common descriptor
+fields without claiming runtime or platform UI behavior.
 
 Input form:
 
@@ -81,15 +81,19 @@ Parser output:
 
 - ignored diagnostics with section `Plugin` and action equal to the metadata
   key;
+- typed descriptor values for `name`, `desc`/`description`, `author`, `icon`,
+  and `homepage`;
 - no MITM, rewrite, script, body, header, routing, certificate, or UI behavior
   from metadata.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/Loon.HashbangMetadata.plugin`;
+- descriptor fixture `tests/fixtures/Loon.MetadataDescriptor.plugin`;
 - negative fixture `tests/fixtures/Loon.HashbangMetadata.Unsupported.plugin`;
 - `config/loon_hashbang_metadata_fixture_records_tolerated_keys`;
-- `config/loon_hashbang_metadata_unsupported_keys_are_not_claimed`.
+- `config/loon_hashbang_metadata_unsupported_keys_are_not_claimed`;
+- `config/loon_metadata_descriptor_fixture_exposes_typed_metadata`.
 
 Unimplemented items:
 
@@ -102,8 +106,8 @@ Unimplemented items:
 
 Detailed contract: [Loon Plugin Metadata Source Contract](loon-plugin-metadata.md).
 
-Capability: tolerate Loon `[Plugin]` metadata without claiming runtime,
-policy, or platform UI behavior.
+Capability: tolerate Loon `[Plugin]` metadata and expose common descriptor
+fields without claiming runtime, policy, or platform UI behavior.
 
 Input form:
 
@@ -116,20 +120,25 @@ Parser output:
 
 - ignored diagnostics with section `Plugin`, action `line`, and message
   `plugin metadata ignored`;
+- typed descriptor values for `name`, `desc`/`description`, `author`, `icon`,
+  and `homepage`;
 - no MITM, rewrite, script, argument, task, routing, certificate, or UI
   behavior from metadata.
 
 Current CI evidence:
 
 - positive fixture `tests/fixtures/Loon.PluginMetadata.plugin`;
+- descriptor fixture `tests/fixtures/Loon.MetadataDescriptor.plugin`;
 - negative fixture `tests/fixtures/Loon.PluginMetadata.Unsupported.plugin`;
 - `config/loon_plugin_metadata_fixture_records_ignored_lines`;
-- `config/loon_plugin_metadata_unsupported_keys_are_not_claimed`.
+- `config/loon_plugin_metadata_unsupported_keys_are_not_claimed`;
+- `config/loon_metadata_descriptor_fixture_exposes_typed_metadata`;
+- `config/loon_metadata_descriptor_unsupported_keys_do_not_populate_descriptor`.
 
 Unimplemented items:
 
 - platform UI behavior for names, icons, homepages, or install prompts;
-- validation or typed extraction of individual plugin metadata keys;
+- descriptor validation beyond bounded string copying;
 - broader Loon plugin metadata corpus.
 
 ### Loon Argument Section

@@ -9073,6 +9073,69 @@ static void plugin_metadata_section_is_tolerated_with_diagnostics(void)
 	anixops_engine_free(engine);
 }
 
+static void loon_metadata_descriptor_fixture_exposes_typed_metadata(void)
+{
+	const char *hashbang_only_config =
+		"#!name = Hashbang Only Name\n"
+		"#!description = Hashbang only description.\n"
+		"#!author = Hashbang Only Author\n"
+		"#!icon = https://assets.example/hashbang-only.png\n"
+		"#!homepage = https://docs.example/hashbang-only\n";
+	char *fixture = read_fixture("tests/fixtures/Loon.MetadataDescriptor.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_plugin_metadata_descriptor_t metadata;
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 10);
+	for (i = 0; i < anixops_engine_rule_diagnostic_count(engine); i++) {
+		anixops_rule_diagnostic_t diagnostic;
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_IGNORED);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Plugin");
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_plugin_metadata_descriptor(engine, &metadata), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_name, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_desc, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_author, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_icon, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_homepage, 1);
+	ANIXOPS_EXPECT_STREQ(metadata.name, "Plugin Descriptor Name");
+	ANIXOPS_EXPECT_STREQ(metadata.desc, "Plugin descriptor description.");
+	ANIXOPS_EXPECT_STREQ(metadata.author, "Plugin Author");
+	ANIXOPS_EXPECT_STREQ(metadata.icon, "https://assets.example/plugin-descriptor.png");
+	ANIXOPS_EXPECT_STREQ(metadata.homepage, "https://docs.example/plugin-descriptor");
+
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_plugin_metadata_descriptor(engine, &metadata), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_name, 0);
+	ANIXOPS_EXPECT_STREQ(metadata.name, "");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, hashbang_only_config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_plugin_metadata_descriptor(engine, &metadata), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_name, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_desc, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_author, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_icon, 1);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_homepage, 1);
+	ANIXOPS_EXPECT_STREQ(metadata.name, "Hashbang Only Name");
+	ANIXOPS_EXPECT_STREQ(metadata.desc, "Hashbang only description.");
+	ANIXOPS_EXPECT_STREQ(metadata.author, "Hashbang Only Author");
+	ANIXOPS_EXPECT_STREQ(metadata.icon, "https://assets.example/hashbang-only.png");
+	ANIXOPS_EXPECT_STREQ(metadata.homepage, "https://docs.example/hashbang-only");
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void loon_plugin_metadata_fixture_records_ignored_lines(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Loon.PluginMetadata.plugin");
@@ -9136,6 +9199,36 @@ static void loon_plugin_metadata_unsupported_keys_are_not_claimed(void)
 		ANIXOPS_EXPECT_STREQ(diagnostic.action, "line");
 		ANIXOPS_EXPECT_STREQ(diagnostic.message, "plugin metadata ignored");
 	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void loon_metadata_descriptor_unsupported_keys_do_not_populate_descriptor(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Loon.PluginMetadata.Unsupported.plugin");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_plugin_metadata_descriptor_t metadata;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_plugin_metadata_descriptor(engine, &metadata), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_name, 0);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_desc, 0);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_author, 0);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_icon, 0);
+	ANIXOPS_EXPECT_EQ_INT(metadata.has_homepage, 0);
+	ANIXOPS_EXPECT_STREQ(metadata.name, "");
+	ANIXOPS_EXPECT_STREQ(metadata.desc, "");
+	ANIXOPS_EXPECT_STREQ(metadata.author, "");
+	ANIXOPS_EXPECT_STREQ(metadata.icon, "");
+	ANIXOPS_EXPECT_STREQ(metadata.homepage, "");
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
 
 	anixops_engine_free(engine);
 	free(fixture);
@@ -10300,6 +10393,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		tests,
 		count,
 		cap,
+		"config/loon_metadata_descriptor_fixture_exposes_typed_metadata",
+		loon_metadata_descriptor_fixture_exposes_typed_metadata);
+	add_test(
+		tests,
+		count,
+		cap,
 		"config/loon_plugin_metadata_fixture_records_ignored_lines",
 		loon_plugin_metadata_fixture_records_ignored_lines);
 	add_test(
@@ -10308,6 +10407,12 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/loon_plugin_metadata_unsupported_keys_are_not_claimed",
 		loon_plugin_metadata_unsupported_keys_are_not_claimed);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/loon_metadata_descriptor_unsupported_keys_do_not_populate_descriptor",
+		loon_metadata_descriptor_unsupported_keys_do_not_populate_descriptor);
 	add_test(
 		tests,
 		count,

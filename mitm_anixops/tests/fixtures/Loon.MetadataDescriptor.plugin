@@ -1,0 +1,12 @@
+#!name = Hashbang Descriptor Name
+#!desc = Hashbang descriptor description.
+#!author = Hashbang Author
+#!icon = https://assets.example/hashbang-descriptor.png
+#!homepage = https://docs.example/hashbang-descriptor
+
+[Plugin]
+name = Plugin Descriptor Name
+desc = Plugin descriptor description.
+author = Plugin Author
+icon = https://assets.example/plugin-descriptor.png
+homepage = https://docs.example/plugin-descriptor
