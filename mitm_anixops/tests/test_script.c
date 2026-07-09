@@ -510,6 +510,50 @@ static void body_script_trigger_tokens_force_requires_body(void)
 	anixops_engine_free(engine);
 }
 
+static void direct_script_attribute_boundaries_accept_commas_quotes_and_aliases(void)
+{
+	const char *config =
+		"[rewrite_local]\n"
+		"^https://attr\\.script\\.test/request url script-request-header https://scripts.example.test/request.js,requires_body "
+		"= \"yes\", timeout_ms = \"432\", max-size = \"2048\", tag = \"request attr\", argument = \"Mode=request\"\n"
+		"^https://attr\\.script\\.test/response url script-response-header https://scripts.example.test/response.js, "
+		"timeout-ms = \"765\", max_size = \"4096\", requires-body = \"on\", tag = \"response attr\", "
+		"argument = \"Mode=response\"\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://attr.script.test/request", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example.test/request.js");
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 432);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 2048);
+	ANIXOPS_EXPECT_STREQ(script.tag, "request attr");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=request");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://attr.script.test/response", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_RESPONSE);
+	ANIXOPS_EXPECT_STREQ(script.script_path, "https://scripts.example.test/response.js");
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 765);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 4096);
+	ANIXOPS_EXPECT_STREQ(script.tag, "response attr");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=response");
+
+	anixops_engine_free(engine);
+}
+
 static void script_scheduling_attributes_are_exposed(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -720,6 +764,12 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"script/body_script_trigger_tokens_force_requires_body",
 		body_script_trigger_tokens_force_requires_body);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/direct_script_attribute_boundaries_accept_commas_quotes_and_aliases",
+		direct_script_attribute_boundaries_accept_commas_quotes_and_aliases);
 	add_test(tests, count, cap, "script/script_scheduling_attributes_are_exposed", script_scheduling_attributes_are_exposed);
 	add_test(tests, count, cap, "script/disabled_script_rules_do_not_dispatch", disabled_script_rules_do_not_dispatch);
 	add_test(tests, count, cap, "script/sgmodule_inline_arguments_are_supported", sgmodule_inline_arguments_are_supported);

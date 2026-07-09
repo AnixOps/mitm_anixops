@@ -9,6 +9,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.1.1` script trigger attribute-boundary compatibility guard so
+  direct url-prefixed script paths may be followed immediately by comma-delimited
+  `requires_body`/`requires-body`, `timeout_ms`/`timeout-ms`, and
+  `max_size`/`max-size` attributes with quoted or spaced values without leaking
+  the comma into `script_path`.
 - Added a `v1.1.0` script trigger compatibility guard so Quantumult X
   `script-request-body` and `script-response-body` tokens always expose
   `requires_body=1` in dispatch metadata, even when a later attr-list segment

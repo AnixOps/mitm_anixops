@@ -1529,6 +1529,10 @@ Input form:
   `--script-bundle`;
 - rule-level `argument`, `timeout`, `max-size`, `requires-body`, and `tag`
   metadata.
+- direct url-prefixed script triggers may separate the script path from
+  attr-list metadata with a comma, including quoted and spaced
+  `requires_body`/`requires-body`, `timeout_ms`/`timeout-ms`, and
+  `max_size`/`max-size` values without including the comma in `script_path`.
 - body trigger tokens such as `script-request-body` and
   `script-response-body` force `requires_body=1` in dispatch metadata; header
   trigger tokens keep body access optional by default.
@@ -1537,6 +1541,7 @@ Current CI evidence:
 
 - runner replay with the Alpha Node contract runner;
 - `script/body_script_trigger_tokens_force_requires_body`;
+- `script/direct_script_attribute_boundaries_accept_commas_quotes_and_aliases`;
 - `$request`, `$response`, `$argument`, `$persistentStore`, and `$done.body`
   replay evidence;
 - double `$done` first-wins fixture
