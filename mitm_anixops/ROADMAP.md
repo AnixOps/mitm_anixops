@@ -10,7 +10,7 @@ GitHub Actions.
 
 ## Current Phase
 
-Current track: v1.2.x adapter evidence hardening on the path to v3.0.0
+Current track: v1.3.x post-publication evidence hardening on the path to v3.0.0
 production MITM readiness.
 
 roadmap-current-track=v1.0.0-evidence-hardening
@@ -26,7 +26,7 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.3.2`. The `v1.1.x` train is
+The latest published stable artifact is `v1.3.3`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
@@ -54,7 +54,10 @@ follow-up archives the post-publication verifier output as a workflow artifact
 so released tags keep downloadable verification evidence. The `v1.3.3`
 follow-up records that evidence in a machine-readable release evidence index
 that points to the public release, commit, CI run, release run, artifact
-counts, platforms, and publication evidence artifact.
+counts, platforms, and publication evidence artifact. The `v1.3.4` follow-up
+refreshes that index to the latest published stable tag, preserves the previous
+stable release evidence entry, and requires release notes to carry explicit
+feature additions and BUG fixes sections.
 
 ## Production MITM Version Line
 

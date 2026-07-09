@@ -450,6 +450,8 @@ jobs:
             printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
             printf 'Adapter readiness: %s via %s.\n\n' "${adapter_readiness_status}" "${adapter_readiness_gate}"
             printf 'Adapter readiness scope: %s; production claim: %s.\n\n' "${adapter_readiness_scope}" "${adapter_readiness_production_claim}"
+            printf 'Feature additions: see CHANGELOG.md for release-specific Added entries; this release note keeps the shipped feature scope tied to the published artifact evidence below.\n\n'
+            printf 'BUG fixes: see CHANGELOG.md for release-specific Fixed entries; if no Fixed entry exists for this version, no user-visible bug fix is declared by this release.\n\n'
             printf 'Release artifacts: Linux x64 policy-core tarball and Windows x64 shim zip.\n\n'
             printf 'Artifact count: %s; platforms: %s.\n\n' "${artifact_count}" "${artifact_platforms}"
             printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
@@ -570,6 +572,8 @@ jobs:
           grep -q "Release readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Adapter readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Adapter readiness scope:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Feature additions:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "BUG fixes:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Release artifacts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Artifact count:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility matrix status counts:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -731,6 +735,8 @@ jobs:
           grep -q "Artifact digest algorithm:" "${notes}"
           grep -q "Adapter readiness:" "${notes}"
           grep -q "Adapter readiness scope:" "${notes}"
+          grep -q "Feature additions:" "${notes}"
+          grep -q "BUG fixes:" "${notes}"
           grep -q "Compatibility matrix status counts:" "${notes}"
           grep -q "Release artifacts:" "${notes}"
           grep -q "Artifact count:" "${notes}"

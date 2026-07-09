@@ -61,9 +61,9 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    the release commit and uploaded the `anixops-mitm-release-dry-run` workflow
    artifact with Linux x64 and Windows x64 packages.
 3. Confirm the dry-run artifact contains `.sha256` sidecars, `manifest.json`
-   metadata, and `release-notes.md` content with compatibility counts, known
-   gaps, manual-intervention status, rollback path, and no private keys,
-   credential-like filenames, or common token patterns.
+   metadata, and `release-notes.md` content with feature additions, BUG fixes,
+   compatibility counts, known gaps, manual-intervention status, rollback path,
+   and no private keys, credential-like filenames, or common token patterns.
 4. Confirm the GitHub Actions `release-dry-run` and `release` workflow logs run
    the manual-intervention and release contract gates before release readiness:
 
@@ -115,10 +115,12 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    `anixops-mitm-release-publication-evidence` with
    `release-publication-verify.env` containing
    `release_publication_verify_status=passed`.
-12. Update and validate `docs/release_evidence_index.json` for the newly
+12. Confirm the published `release-notes.md` includes `Feature additions:` and
+   `BUG fixes:` sections for the released version.
+13. Update and validate `docs/release_evidence_index.json` for the newly
    published stable tag so the public release URL, commit, CI run, release run,
    asset count, artifact platforms, and publication evidence artifact are
    recorded in machine-readable form.
-13. If publication fails after a public tag exists, follow
+14. If publication fails after a public tag exists, follow
    `docs/architecture/release-rollback-policy.md`; do not overwrite public
    tags or mutate published assets in place.

@@ -100,6 +100,8 @@ Publication gate: same-commit-ci-release-metadata-and-github-release-publication
 Artifact count: 2; platforms: linux-x64,windows-x64.
 Compatibility matrix status counts:
 Adapter readiness: ci-gated-alpha-boundary
+Feature additions: fixture release feature section.
+BUG fixes: fixture release bug fix section.
 Rollback path: follow release rollback policy.
 EOF
 

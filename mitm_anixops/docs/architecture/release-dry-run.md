@@ -30,6 +30,7 @@ release-dry-run-workflow-run-evidence=run-id-url-in-manifest-notes-summary
 release-dry-run-ci-run-evidence=ci-run-id-url-conclusion-in-manifest-notes-summary
 release-dry-run-artifact-evidence=artifact-count-and-platforms-in-manifest-notes-summary
 release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
+release-dry-run-notes-change-summary=feature-additions-and-bug-fixes
 release-dry-run-metadata-static-check=scripts/release-metadata-check.sh
 release-dry-run-sensitive-material-gate=scripts/release-sensitive-material-check.sh
 release-dry-run-next-action=keep-dry-run-non-publishing-while-tag-release-workflow-publishes-after-gates
@@ -168,7 +169,8 @@ The dry-run must fail when:
 - manifest, notes, or summary omit artifact count or platforms;
 - manifest, notes, or summary omit publication gate;
 - manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary;
-- release notes omit known gaps, rollback path, or manual-intervention status;
+- release notes omit feature additions, BUG fixes, known gaps, rollback path,
+  or manual-intervention status;
 - Linux tarballs or Windows zip artifacts contain private keys,
   credential-like filenames, or common token patterns;
 - a pending manual-intervention marker is required for the requested target;
