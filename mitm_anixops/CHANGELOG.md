@@ -9,6 +9,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.0.4` release sensitive-material gate that scans generated Linux
+  tarballs and Windows zip artifacts for private keys, credential-like
+  filenames, and common token patterns before publication.
 - Added a `v1.0.3` request rewrite action for portable `200` URL rewrites,
   exposing bounded policy-core internal rewrite decisions through
   `ANIXOPS_REWRITE_URL_REWRITE_200` without claiming adapter forwarding

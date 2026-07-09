@@ -62,7 +62,8 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    artifact with Linux x64 and Windows x64 packages.
 3. Confirm the dry-run artifact contains `.sha256` sidecars, `manifest.json`
    metadata, and `release-notes.md` content with compatibility counts, known
-   gaps, manual-intervention status, and rollback path.
+   gaps, manual-intervention status, rollback path, and no private keys,
+   credential-like filenames, or common token patterns.
 4. Confirm the GitHub Actions `release-dry-run` and `release` workflow logs run
    the manual-intervention and release contract gates before release readiness:
 
@@ -71,6 +72,7 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    scripts/manual-intervention-transition-check.sh
    scripts/release-checklist-check.sh
    scripts/release-metadata-check.sh
+   scripts/release-sensitive-material-check.sh
    scripts/compatibility-status-summary-check.sh
    ```
 

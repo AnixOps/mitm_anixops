@@ -246,7 +246,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev zip unzip
       - name: Validate stable release readiness
         id: readiness
         shell: bash
@@ -338,6 +338,8 @@ jobs:
           windows_artifact_sha256_file="build/${windows_artifact_name}.sha256"
           windows_artifact_sha256="$(awk '{print $1}' "${windows_artifact_sha256_file}")"
           test -n "${windows_artifact_sha256}"
+
+          sh scripts/release-sensitive-material-check.sh "${artifact_path}" "${windows_artifact_path}"
 
           publish_eligibility_status="blocked"
           publish_blocking_reason="manual-release-validation-does-not-publish"
@@ -471,6 +473,9 @@ jobs:
           test -s "${{ steps.build_package.outputs.manifest_path }}"
           test -s "${{ steps.build_package.outputs.manifest_sha256_file }}"
           test -s "${{ steps.build_package.outputs.release_notes_path }}"
+          sh scripts/release-sensitive-material-check.sh \
+            "${{ steps.build_package.outputs.artifact_path }}" \
+            "${{ steps.build_package.outputs.windows_artifact_path }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.artifact_name }}$" "${{ steps.build_package.outputs.artifact_sha256_file }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.windows_artifact_name }}$" "${{ steps.build_package.outputs.windows_artifact_sha256_file }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.build_package.outputs.manifest_name }}$" "${{ steps.build_package.outputs.manifest_sha256_file }}"
@@ -556,6 +561,7 @@ jobs:
       PUBLISH_ELIGIBILITY_STATUS: ${{ needs.package.outputs.publish_eligibility_status }}
       RELEASE_READINESS_STATUS: ${{ needs.package.outputs.release_readiness_status }}
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
           name: anixops-mitm-release-package
@@ -600,6 +606,7 @@ jobs:
           test -s "${manifest}"
           test -s "${manifest_sha256}"
           test -s "${notes}"
+          sh mitm_anixops/scripts/release-sensitive-material-check.sh "${artifact}" "${windows_artifact}"
           grep -Eq "^[0-9a-f]{64}  $(basename "${artifact}")$" "${artifact_sha256}"
           grep -Eq "^[0-9a-f]{64}  $(basename "${windows_artifact}")$" "${windows_artifact_sha256}"
           grep -Eq "^[0-9a-f]{64}  $(basename "${manifest}")$" "${manifest_sha256}"

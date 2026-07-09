@@ -99,7 +99,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev zip unzip
       - name: Validate dry-run release readiness
         id: readiness
         shell: bash
@@ -185,6 +185,8 @@ jobs:
           windows_artifact_sha256_file="build/${windows_artifact_name}.sha256"
           windows_artifact_sha256="$(awk '{print $1}' "${windows_artifact_sha256_file}")"
           test -n "${windows_artifact_sha256}"
+
+          sh scripts/release-sensitive-material-check.sh "${artifact_path}" "${windows_artifact_path}"
 
           manifest_name="anixops-mitm-release-dry-run-${version_no_v}-manifest.json"
           manifest_path="build/${manifest_name}"
@@ -294,6 +296,9 @@ jobs:
           test -s "${{ steps.metadata.outputs.manifest_path }}"
           test -s "${{ steps.metadata.outputs.manifest_sha256_file }}"
           test -s "${{ steps.metadata.outputs.release_notes_path }}"
+          sh scripts/release-sensitive-material-check.sh \
+            "${{ steps.metadata.outputs.artifact_path }}" \
+            "${{ steps.metadata.outputs.windows_artifact_path }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.metadata.outputs.artifact_name }}$" "${{ steps.metadata.outputs.artifact_sha256_file }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.metadata.outputs.windows_artifact_name }}$" "${{ steps.metadata.outputs.windows_artifact_sha256_file }}"
           grep -Eq "^[0-9a-f]{64}  ${{ steps.metadata.outputs.manifest_name }}$" "${{ steps.metadata.outputs.manifest_sha256_file }}"

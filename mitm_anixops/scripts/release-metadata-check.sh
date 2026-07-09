@@ -8,12 +8,16 @@ DRY_RUN_WORKFLOW="$REPO/.github/workflows/release-dry-run.yml"
 RELEASE_WORKFLOW="$REPO/.github/workflows/release.yml"
 RELEASE_DRY_RUN_DOC="$ROOT/docs/architecture/release-dry-run.md"
 RELEASE_GATE_DOC="$ROOT/docs/architecture/release-gate.md"
+SENSITIVE_MATERIAL_CHECK="$ROOT/scripts/release-sensitive-material-check.sh"
+SENSITIVE_MATERIAL_TEST="$ROOT/scripts/release-sensitive-material-check-test.sh"
 
 for file in \
 	"$DRY_RUN_WORKFLOW" \
 	"$RELEASE_WORKFLOW" \
 	"$RELEASE_DRY_RUN_DOC" \
-	"$RELEASE_GATE_DOC"
+	"$RELEASE_GATE_DOC" \
+	"$SENSITIVE_MATERIAL_CHECK" \
+	"$SENSITIVE_MATERIAL_TEST"
 do
 	test -s "$file"
 done
@@ -123,6 +127,7 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "scripts/manual-intervention-transition-check.sh" "$label missing manual-intervention transition gate"
 	require_pattern "$file" "scripts/release-checklist-check.sh" "$label missing release checklist gate"
 	require_pattern "$file" "scripts/release-metadata-check.sh" "$label missing release metadata gate"
+	require_pattern "$file" "scripts/release-sensitive-material-check.sh" "$label missing release sensitive material gate"
 	require_pattern "$file" "release-readiness-check.sh" "$label missing release readiness gate"
 	require_pattern "$file" "sha256sum" "$label missing SHA-256 generation"
 	require_pattern "$file" "\"release_version\"" "$label manifest missing release version"
@@ -201,6 +206,7 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary-st
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh" "dry-run contract missing manual intervention static check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh" "dry-run contract missing manual intervention transition check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-release-checklist-static-check=scripts/release-checklist-check.sh" "dry-run contract missing release checklist static check marker"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "dry-run contract missing sensitive material gate marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manual_intervention_status" "dry-run contract missing manual intervention output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "publish_eligibility_status" "dry-run contract missing publish eligibility output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit compatibility status counts" "dry-run contract missing metadata failure rule"
@@ -210,6 +216,7 @@ require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary-stat
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh" "release gate missing manual intervention static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh" "release gate missing manual intervention transition check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-release-checklist-static-check=scripts/release-checklist-check.sh" "release gate missing release checklist static check marker"
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "release gate missing sensitive material gate marker"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits compatibility status counts" "release gate missing metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release notes omit compatibility scope, known gaps, or rollback path" "release gate missing notes blocking condition"
 
