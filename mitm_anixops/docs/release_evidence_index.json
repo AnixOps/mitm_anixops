@@ -1,12 +1,35 @@
 {
   "schemaVersion": "release-evidence-index-v1",
-  "latestStable": "v1.3.7",
+  "latestStable": "v1.4.0",
   "freshnessPolicy": {
     "status": "enforced-for-stable-patch-and-declared-boundary-releases",
-    "nextStableRelease": "v1.4.0",
-    "requiredLatestStableBeforeNext": "v1.3.7"
+    "nextStableRelease": "v1.4.1",
+    "requiredLatestStableBeforeNext": "v1.4.0"
   },
   "entries": [
+    {
+      "version": "v1.4.0",
+      "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.4.0",
+      "targetCommit": "907b5136502a2454c0da40dabcbe65936d60af42",
+      "ciRunId": "29046409328",
+      "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29046409328",
+      "releaseWorkflowRunId": "29046727232",
+      "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29046727232",
+      "assetCount": 7,
+      "artifactCount": 2,
+      "artifactPlatforms": [
+        "linux-x64",
+        "windows-x64"
+      ],
+      "publicationVerifyStatus": "passed",
+      "releaseNotesChangeSummary": {
+        "featureAdditionsSection": "Feature additions:",
+        "bugFixesSection": "BUG fixes:",
+        "verifiedSince": "v1.3.4"
+      },
+      "publicationEvidenceArtifact": "anixops-mitm-release-publication-evidence",
+      "publicationEvidenceFile": "release-publication-verify.env"
+    },
     {
       "version": "v1.3.7",
       "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.7",
@@ -38,29 +61,6 @@
       "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29043833613",
       "releaseWorkflowRunId": "29044114252",
       "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29044114252",
-      "assetCount": 7,
-      "artifactCount": 2,
-      "artifactPlatforms": [
-        "linux-x64",
-        "windows-x64"
-      ],
-      "publicationVerifyStatus": "passed",
-      "releaseNotesChangeSummary": {
-        "featureAdditionsSection": "Feature additions:",
-        "bugFixesSection": "BUG fixes:",
-        "verifiedSince": "v1.3.4"
-      },
-      "publicationEvidenceArtifact": "anixops-mitm-release-publication-evidence",
-      "publicationEvidenceFile": "release-publication-verify.env"
-    },
-    {
-      "version": "v1.3.5",
-      "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.5",
-      "targetCommit": "6b03dc08764665aed49128de7a191ad99096f0ab",
-      "ciRunId": "29042205659",
-      "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29042205659",
-      "releaseWorkflowRunId": "29042493837",
-      "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29042493837",
       "assetCount": 7,
       "artifactCount": 2,
       "artifactPlatforms": [
