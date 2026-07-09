@@ -1,7 +1,35 @@
 {
   "schemaVersion": "release-evidence-index-v1",
-  "latestStable": "v1.3.4",
+  "latestStable": "v1.3.5",
+  "freshnessPolicy": {
+    "status": "enforced-for-stable-patch-releases",
+    "nextStableRelease": "v1.3.6",
+    "requiredLatestStableBeforeNext": "v1.3.5"
+  },
   "entries": [
+    {
+      "version": "v1.3.5",
+      "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.5",
+      "targetCommit": "6b03dc08764665aed49128de7a191ad99096f0ab",
+      "ciRunId": "29042205659",
+      "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29042205659",
+      "releaseWorkflowRunId": "29042493837",
+      "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29042493837",
+      "assetCount": 7,
+      "artifactCount": 2,
+      "artifactPlatforms": [
+        "linux-x64",
+        "windows-x64"
+      ],
+      "publicationVerifyStatus": "passed",
+      "releaseNotesChangeSummary": {
+        "featureAdditionsSection": "Feature additions:",
+        "bugFixesSection": "BUG fixes:",
+        "verifiedSince": "v1.3.4"
+      },
+      "publicationEvidenceArtifact": "anixops-mitm-release-publication-evidence",
+      "publicationEvidenceFile": "release-publication-verify.env"
+    },
     {
       "version": "v1.3.4",
       "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.4",
@@ -33,24 +61,6 @@
       "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29039127942",
       "releaseWorkflowRunId": "29039516986",
       "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29039516986",
-      "assetCount": 7,
-      "artifactCount": 2,
-      "artifactPlatforms": [
-        "linux-x64",
-        "windows-x64"
-      ],
-      "publicationVerifyStatus": "passed",
-      "publicationEvidenceArtifact": "anixops-mitm-release-publication-evidence",
-      "publicationEvidenceFile": "release-publication-verify.env"
-    },
-    {
-      "version": "v1.3.2",
-      "releaseUrl": "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.3.2",
-      "targetCommit": "eace97324bac36a46f9da6d6f879f0279dbb55c0",
-      "ciRunId": "29037899743",
-      "ciRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29037899743",
-      "releaseWorkflowRunId": "29038156353",
-      "releaseWorkflowRunUrl": "https://github.com/AnixOps/mitm_anixops/actions/runs/29038156353",
       "assetCount": 7,
       "artifactCount": 2,
       "artifactPlatforms": [

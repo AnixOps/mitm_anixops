@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.3.6` release evidence index freshness gate that records `v1.3.5`
+  as the latest public stable Release and requires stable patch releases to
+  prove `latestStable` matches the previous stable patch for the target
+  version before publication.
 - Added a `v1.3.5` release evidence index refresh that records `v1.3.4` as
   the latest public stable Release and captures release notes change-summary
   evidence for the required feature additions and BUG fixes sections.

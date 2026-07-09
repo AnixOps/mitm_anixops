@@ -270,7 +270,7 @@ jobs:
           sh scripts/manual-intervention-transition-check.sh
           sh scripts/release-checklist-check.sh
           sh scripts/release-metadata-check.sh
-          sh scripts/release-evidence-index-check.sh
+          sh scripts/release-evidence-index-check.sh "${RELEASE_VERSION}"
           sh scripts/release-publication-verify-check.sh
           sh scripts/release-publication-verify-test.sh
           sh scripts/compatibility-status-summary-check.sh
