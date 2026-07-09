@@ -138,6 +138,7 @@ grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RE
 grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RELEASE_GATE"
 grep -q "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "$RELEASE_GATE"
 grep -q "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" "$RELEASE_GATE"
+grep -q "release-publication-post-publish-evidence-artifact=anixops-mitm-release-publication-evidence" "$RELEASE_GATE"
 
 sh "$ROOT/scripts/security-claim-check.sh" >/dev/null
 sh "$ROOT/scripts/script-runtime-security-gate.sh" >/dev/null

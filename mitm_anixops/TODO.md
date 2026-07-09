@@ -345,6 +345,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   evidence, CI run evidence, artifact count, and artifact platforms.
 - [x] Add an offline fixture test for the release publication verifier covering
   public-asset metadata success and checksum-mismatch failure paths.
+- [x] Add a post-publication release verifier evidence artifact so tag
+  workflows archive `release-publication-verify.env` after public asset
+  validation passes.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and

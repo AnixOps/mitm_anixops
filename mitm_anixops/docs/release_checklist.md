@@ -111,6 +111,10 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    scripts/release-publication-verify.sh v1.0.0 <commit> <release-run-id> <ci-run-id>
    ```
 
-11. If publication fails after a public tag exists, follow
+11. Confirm the release workflow uploaded
+   `anixops-mitm-release-publication-evidence` with
+   `release-publication-verify.env` containing
+   `release_publication_verify_status=passed`.
+12. If publication fails after a public tag exists, follow
    `docs/architecture/release-rollback-policy.md`; do not overwrite public
    tags or mutate published assets in place.

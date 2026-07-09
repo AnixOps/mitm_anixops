@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.3.2` post-publication evidence artifact so tag-triggered
+  release workflows run the public release verifier after publication and
+  upload `release-publication-verify.env` as
+  `anixops-mitm-release-publication-evidence`.
 - Added a `v1.3.1` offline fixture test for the release publication verifier
   so CI exercises public-asset metadata success and checksum-mismatch failure
   paths without relying on GitHub network calls.

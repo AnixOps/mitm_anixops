@@ -55,6 +55,7 @@ require_pattern "$CHECKLIST" "protected-tags" "release checklist missing protect
 require_pattern "$CHECKLIST" "release-environment-approval" "release checklist missing release environment blocker"
 require_pattern "$CHECKLIST" "anixops-mitm-release-package" "release checklist missing release package artifact"
 require_pattern "$CHECKLIST" "anixops-mitm-release-dry-run" "release checklist missing dry-run package artifact"
+require_pattern "$CHECKLIST" "anixops-mitm-release-publication-evidence" "release checklist missing publication evidence artifact"
 require_pattern "$CHECKLIST" "manifest.json" "release checklist missing manifest evidence"
 require_pattern "$CHECKLIST" ".sha256" "release checklist missing checksum evidence"
 require_pattern "$CHECKLIST" "release-notes.md" "release checklist missing release notes evidence"
@@ -75,6 +76,7 @@ require_pattern "$RELEASE_GATE" "release-publication-verify-script=scripts/relea
 require_pattern "$RELEASE_GATE" "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "release gate missing publication verifier static check marker"
 require_pattern "$RELEASE_GATE" "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" "release gate missing publication verifier fixture test marker"
 require_pattern "$RELEASE_GATE" "release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms" "release gate missing publication verifier evidence marker"
+require_pattern "$RELEASE_GATE" "release-publication-post-publish-evidence-artifact=anixops-mitm-release-publication-evidence" "release gate missing publication evidence artifact marker"
 require_pattern "$RELEASE_GATE" "release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "release gate missing compatibility status summary static check marker"
 require_pattern "$RELEASE_GATE" "release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "release gate missing sensitive material marker"
 

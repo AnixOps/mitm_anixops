@@ -756,6 +756,40 @@ jobs:
             --notes-file "${notes}" \
             "${prerelease_args[@]}"
 
+      - name: Verify published release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p release-publication-evidence
+          verify_output="release-publication-evidence/release-publication-verify.env"
+          for attempt in 1 2 3 4 5; do
+            if sh mitm_anixops/scripts/release-publication-verify.sh \
+              "${RELEASE_VERSION}" \
+              "${RELEASE_COMMIT}" \
+              "${{ needs.package.outputs.release_workflow_run_id }}" \
+              "${{ needs.same-commit-ci.outputs.ci_run_id }}" > "${verify_output}"; then
+              cat "${verify_output}"
+              break
+            fi
+            status=$?
+            if [[ "${attempt}" == "5" ]]; then
+              cat "${verify_output}" || true
+              exit "${status}"
+            fi
+            sleep 5
+          done
+
+          grep -Fx "release_publication_verify_status=passed" "${verify_output}"
+          grep -Fx "release_version=${RELEASE_VERSION}" "${verify_output}"
+          grep -Fx "target_commit=${RELEASE_COMMIT}" "${verify_output}"
+          grep -Fx "release_workflow_run_id=${{ needs.package.outputs.release_workflow_run_id }}" "${verify_output}"
+          grep -Fx "ci_run_id=${{ needs.same-commit-ci.outputs.ci_run_id }}" "${verify_output}"
+          grep -Fx "artifact_platforms=linux-x64,windows-x64" "${verify_output}"
+
       - name: Write release publication summary
         shell: bash
         run: |
@@ -788,4 +822,11 @@ jobs:
             printf '| compatibility_unsupported_count | `%s` |\n' "${{ needs.package.outputs.compatibility_unsupported_count }}"
             printf '| compatibility_total_count | `%s` |\n' "${{ needs.package.outputs.compatibility_total_count }}"
             printf '| release_url | `%s/%s/releases/tag/%s` |\n' "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${RELEASE_VERSION}"
+            printf '| publication_verify_artifact | `anixops-mitm-release-publication-evidence` |\n'
+            printf '| publication_verify_output | `release-publication-verify.env` |\n'
           } >> "${GITHUB_STEP_SUMMARY}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: anixops-mitm-release-publication-evidence
+          path: release-publication-evidence/release-publication-verify.env
