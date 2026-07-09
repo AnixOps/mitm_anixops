@@ -25,9 +25,9 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.0.1`. The `v1.0.2` patch train is
-reserved for Loon parser hardening, starting with read-only plugin metadata
-descriptor extraction for common `#!` and `[Plugin]` display fields.
+The latest published stable artifact is `v1.0.2`. The `v1.0.3` patch train is
+reserved for rewrite engine hardening, starting with bounded policy-core
+internal URL rewrite decisions for portable `200` rules.
 
 ## Operating Rules
 

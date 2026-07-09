@@ -23,6 +23,8 @@ The current common subset accepts:
 - direct redirect lines such as `pattern replacement 301`;
 - URL-prefixed redirect lines such as `pattern url 303 replacement`;
 - portable redirect status codes `301`, `302`, `303`, `307`, and `308`;
+- direct internal URL rewrite lines such as `pattern replacement 200`;
+- URL-prefixed internal URL rewrite lines such as `pattern url 200 replacement`;
 - reject lines such as `pattern reject-200`;
 - regex capture expansion through `$1`, `${1}`, and compatible replacement
   forms already covered by the rewrite tests.
@@ -44,6 +46,7 @@ Parser case:
 ```text
 tests/fixtures/RequestRewrite.Common.conf
 tests/fixtures/RequestRewrite.RedirectStatus.Common.conf
+tests/fixtures/RequestRewrite.UrlRewrite200.Common.conf
 tests/fixtures/Loon.RequestRewrite.plugin
 tests/fixtures/QuantumultX.RequestRewrite.snippet
 tests/fixtures/Surge.RequestRewrite.sgmodule
@@ -55,6 +58,7 @@ Expected behavior:
 - config load succeeds;
 - the common fixture registers three rewrite rules;
 - the common redirect status fixture registers three rewrite rules;
+- the common URL rewrite 200 fixture registers two rewrite rules;
 - the Loon fixture registers two rewrite rules;
 - the Quantumult X fixture registers two rewrite rules;
 - the Surge fixture registers two rewrite rules;
@@ -63,6 +67,9 @@ Expected behavior:
   through `anixops_rewrite_evaluate_url`;
 - portable `301`, `307`, and `308` redirect behavior is observable through
   `anixops_rewrite_evaluate_url`;
+- portable `200` internal URL rewrite behavior is observable through
+  `anixops_rewrite_evaluate_url` as `ANIXOPS_REWRITE_URL_REWRITE_200`
+  with capture expansion, without claiming adapter network forwarding;
 - Loon `[URL Rewrite]` redirect and reject behavior is observable through
   `anixops_rewrite_evaluate_url`;
 - Quantumult X `url` redirect and reject behavior is observable through
@@ -108,6 +115,7 @@ It does not implement:
 - HTTP parsing, request serialization, or network I/O;
 - upstream proxy, direct, or route selection;
 - response rewrite behavior;
+- adapter-applied internal URL rewrite forwarding;
 - header or body mutation behavior;
 - remote rule download;
 - JavaScript execution;
@@ -126,7 +134,11 @@ Required CI evidence:
 - `tests/test_config.c` registers
   `config/request_rewrite_redirect_status_common_fixture_maps_portable_statuses`;
 - `tests/test_config.c` registers
+  `config/request_rewrite_url_rewrite_200_common_fixture_maps_internal_rewrites`;
+- `tests/test_config.c` registers
   `config/request_rewrite_redirect_status_strict_fixture_rejects_unsupported_status`;
+- `tests/test_rewrite.c` registers
+  `rewrite/url_rewrite_200_maps_internal_rewrite_value`;
 - `tests/test_config.c` registers
   `config/loon_request_rewrite_fixture_maps_redirect_and_reject`;
 - `tests/test_config.c` registers

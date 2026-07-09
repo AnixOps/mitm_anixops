@@ -155,6 +155,63 @@ static void standard_redirect_status_variants_are_supported(void)
 	anixops_engine_free(engine);
 }
 
+static void url_rewrite_200_maps_internal_rewrite_value(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://internal\\.test/direct/(.*) https://origin.internal.test/$1 200"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://internal\\.test/url/(.*) url 200 https://origin-url.internal.test/$1"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://internal.test/direct/item", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_URL_REWRITE_200);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(result.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://origin.internal.test/item");
+	ANIXOPS_EXPECT_STREQ(result.message, "rewrite matched");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://internal.test/url/item", ANIXOPS_PHASE_REQUEST, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_URL_REWRITE_200);
+	ANIXOPS_EXPECT_EQ_INT(result.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(result.rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(result.value, "https://origin-url.internal.test/item");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://internal.test/direct/item",
+			ANIXOPS_PHASE_REQUEST,
+			"payload=1",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_URL_REWRITE_200);
+	ANIXOPS_EXPECT_STREQ(body, "payload=1");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_evaluate_url(engine, "https://internal.test/direct/item", ANIXOPS_PHASE_RESPONSE, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_NONE);
+
+	anixops_engine_free(engine);
+}
+
 static void reject_variants_map_to_expected_actions(void)
 {
 	struct reject_case {
@@ -3161,6 +3218,12 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/standard_redirect_status_variants_are_supported",
 		standard_redirect_status_variants_are_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/url_rewrite_200_maps_internal_rewrite_value",
+		url_rewrite_200_maps_internal_rewrite_value);
 	add_test(tests, count, cap, "rewrite/reject_variants_map_to_expected_actions", reject_variants_map_to_expected_actions);
 	add_test(tests, count, cap, "rewrite/numeric_reject_status_variants_are_supported", numeric_reject_status_variants_are_supported);
 	add_test(
