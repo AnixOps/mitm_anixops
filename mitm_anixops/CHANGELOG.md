@@ -9,6 +9,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.5` publication-gate evidence field so tag-triggered releases
+  and release dry-runs record the publication gate in generated manifests,
+  release notes, GitHub Step Summaries, and metadata gates.
 - Added a `v1.2.4` release workflow run evidence field set so
   tag-triggered releases and release dry-runs record the producing workflow run
   ID and URL in generated manifests, release notes, GitHub Step Summaries, and

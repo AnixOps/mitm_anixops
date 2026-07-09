@@ -92,6 +92,7 @@ release-workflow-trigger-static-check=scripts/ci-trigger-check.sh
 release-workflow-publication=tag-publish-enabled
 release-workflow-ci-gate=same-commit-main-build-success
 release-workflow-publication-gate=same-commit-ci-release-metadata-and-github-release-publication-environment
+release-workflow-publication-gate-evidence=publication-gate-in-manifest-notes-summary
 release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows
 release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh
 release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
@@ -167,6 +168,11 @@ notes and GitHub Step Summaries repeat those fields so each public artifact set
 can be traced back to the exact GitHub Actions release run that produced and
 published it.
 
+The release manifest also carries the publication gate. Release notes and
+GitHub Step Summaries repeat that field so release evidence readers can see
+whether public assets were produced by a tag run protected by same-commit CI,
+metadata validation, and the `github-release-publication` environment gate.
+
 The release manifest, release notes, and GitHub Step Summary also include
 adapter readiness status, gate, scope, and production-boundary fields. The
 current value is the CI-gated alpha adapter boundary: policy core, runner,
@@ -208,6 +214,7 @@ Publication must be blocked when:
 - release metadata omits manifest schema version;
 - release metadata omits artifact digest algorithm or checksum sidecar format;
 - release metadata omits release workflow run ID or URL;
+- release metadata omits publication gate;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
 - release notes omit compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;
