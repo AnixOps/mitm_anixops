@@ -92,6 +92,11 @@ case "$version" in
 esac
 
 version_no_v=${version#v}
+numeric_version=${version_no_v%%-*}
+major=${numeric_version%%.*}
+minor_patch=${numeric_version#*.}
+minor=${minor_patch%%.*}
+patch=${minor_patch#*.}
 manifest_name="anixops-mitm-release-${version_no_v}-manifest.json"
 notes_name="release-notes.md"
 
@@ -177,6 +182,10 @@ grep -F 'Publication gate:' "$notes" >/dev/null
 grep -F 'Artifact count: 2; platforms: linux-x64,windows-x64.' "$notes" >/dev/null
 grep -F 'Compatibility matrix status counts:' "$notes" >/dev/null
 grep -F 'Adapter readiness:' "$notes" >/dev/null
+if [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -gt 3 ]; } || { [ "$major" -eq 1 ] && [ "$minor" -eq 3 ] && [ "$patch" -ge 4 ]; }; then
+	grep -F 'Feature additions:' "$notes" >/dev/null
+	grep -F 'BUG fixes:' "$notes" >/dev/null
+fi
 grep -F 'Rollback path:' "$notes" >/dev/null
 
 printf 'release_publication_verify_status=passed\n'

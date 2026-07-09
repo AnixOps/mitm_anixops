@@ -60,6 +60,8 @@ require_pattern "$CHECKLIST" "docs/release_evidence_index.json" "release checkli
 require_pattern "$CHECKLIST" "manifest.json" "release checklist missing manifest evidence"
 require_pattern "$CHECKLIST" ".sha256" "release checklist missing checksum evidence"
 require_pattern "$CHECKLIST" "release-notes.md" "release checklist missing release notes evidence"
+require_pattern "$CHECKLIST" "Feature additions:" "release checklist missing release notes feature additions evidence"
+require_pattern "$CHECKLIST" "BUG fixes:" "release checklist missing release notes BUG fixes evidence"
 require_pattern "$CHECKLIST" "docs/compatibility/matrix.md" "release checklist missing v1 compatibility matrix"
 require_pattern "$CHECKLIST" "docs/manual-intervention.md" "release checklist missing manual intervention register"
 require_pattern "$CHECKLIST" "Do not use local build or test output as release acceptance evidence." "release checklist must reject local acceptance evidence"

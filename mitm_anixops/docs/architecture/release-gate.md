@@ -114,6 +114,7 @@ release-workflow-run-evidence=run-id-url-in-manifest-notes-summary
 release-workflow-ci-run-evidence=ci-run-id-url-conclusion-in-manifest-notes-summary
 release-workflow-artifact-evidence=artifact-count-and-platforms-in-manifest-notes-summary
 release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
+release-workflow-notes-change-summary=feature-additions-and-bug-fixes
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
 release-checklist-static-check=scripts/release-checklist-check.sh
@@ -208,6 +209,11 @@ current value is the CI-gated alpha adapter boundary: policy core, runner,
 proxy shim, bindings, and docs are release-packaged, while production
 NetworkCore data-plane support remains explicitly unclaimed.
 
+Release notes must also include explicit `Feature additions:` and `BUG fixes:`
+sections. These sections point readers to the release-specific changelog
+entries and keep each GitHub Release page from omitting user-visible feature
+and bug-fix summaries.
+
 After a public GitHub Release is created, the release publication verifier
 downloads the published assets and validates the GitHub Release target commit,
 asset count, manifest fields, release workflow run evidence, same-commit CI run
@@ -226,7 +232,8 @@ latest public stable release URL, target commit, same-commit CI run, release
 workflow run, asset count, artifact count, artifact platforms, and publication
 evidence artifact/file. The release evidence index static check keeps that
 machine-readable record wired into CI, release dry-run, release readiness, and
-v1 acceptance checks.
+v1 acceptance checks, requires the first entry to match the latest stable
+release, and preserves prior public release evidence entries.
 
 The verifier fixture test builds a temporary release asset set and a fake `gh`
 command so CI can exercise the post-publication verifier without network
@@ -275,7 +282,7 @@ Publication must be blocked when:
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
 - release publication verification is not wired into CI and the release
   checklist;
-- release notes omit compatibility scope, known gaps, or rollback path;
+- release notes omit feature additions, BUG fixes, compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;
 - release artifacts contain private keys, credential-like filenames, or common
   token patterns;

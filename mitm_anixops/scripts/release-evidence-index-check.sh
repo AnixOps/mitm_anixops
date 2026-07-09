@@ -62,10 +62,20 @@ function assert(condition, message) {
   }
 }
 
+const expectedLatestStable = {
+  version: "v1.3.3",
+  targetCommit: "5bf7ee5b791a5982361bca4a29624d3a79714853",
+  ciRunId: "29039127942",
+  releaseWorkflowRunId: "29039516986",
+  publicationEvidenceArtifact: "anixops-mitm-release-publication-evidence",
+  publicationEvidenceFile: "release-publication-verify.env",
+};
+
 assert(index.schemaVersion === "release-evidence-index-v1", "invalid release evidence index schemaVersion");
-assert(index.latestStable === "v1.3.2", "latestStable must be v1.3.2");
+assert(index.latestStable === expectedLatestStable.version, `latestStable must be ${expectedLatestStable.version}`);
 assert(Array.isArray(index.entries), "entries must be an array");
-assert(index.entries.length >= 1, "entries must not be empty");
+assert(index.entries.length >= 2, "entries must include latest and historical release evidence");
+assert(index.entries[0].version === index.latestStable, "first release evidence entry must match latestStable");
 
 const versions = new Set();
 for (const entry of index.entries) {
@@ -87,11 +97,12 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(latest.targetCommit === "eace97324bac36a46f9da6d6f879f0279dbb55c0", "v1.3.2 targetCommit mismatch");
-assert(latest.ciRunId === "29037899743", "v1.3.2 ciRunId mismatch");
-assert(latest.releaseWorkflowRunId === "29038156353", "v1.3.2 releaseWorkflowRunId mismatch");
-assert(latest.publicationEvidenceArtifact === "anixops-mitm-release-publication-evidence", "v1.3.2 evidence artifact mismatch");
-assert(latest.publicationEvidenceFile === "release-publication-verify.env", "v1.3.2 evidence file mismatch");
+assert(versions.has("v1.3.2"), "missing retained v1.3.2 release evidence entry");
+assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
+assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
+assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);
+assert(latest.publicationEvidenceArtifact === expectedLatestStable.publicationEvidenceArtifact, `${expectedLatestStable.version} evidence artifact mismatch`);
+assert(latest.publicationEvidenceFile === expectedLatestStable.publicationEvidenceFile, `${expectedLatestStable.version} evidence file mismatch`);
 NODE
 
 require_pattern "$RELEASE_GATE" "release-evidence-index=docs/release_evidence_index.json" "release gate missing release evidence index marker"

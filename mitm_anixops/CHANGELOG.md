@@ -9,6 +9,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.3.4` release evidence index refresh that records `v1.3.3` as
+  the latest public stable Release while retaining `v1.3.2` as historical
+  release evidence.
+- Added a release-notes change-summary gate so every future release and
+  release dry-run includes explicit feature additions and BUG fixes sections.
 - Added a `v1.3.3` release evidence index that records the latest public
   stable Release URL, target commit, CI run, release workflow run, asset count,
   artifact platforms, and publication evidence artifact in
