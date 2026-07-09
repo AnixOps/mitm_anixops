@@ -357,6 +357,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   BUG fixes sections in release and release-dry-run artifacts.
 - [x] Record release notes change-summary evidence in the machine-readable
   release evidence index for the latest public stable tag.
+- [x] Add a release evidence index freshness gate so stable patch releases
+  require `latestStable` to match the previous stable patch for the target
+  version.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and

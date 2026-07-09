@@ -71,6 +71,7 @@ sh "$ROOT/scripts/ci-trigger-check.sh" >/dev/null
 sh "$ROOT/scripts/release-checklist-check.sh" >/dev/null
 sh "$ROOT/scripts/release-metadata-check.sh" >/dev/null
 sh "$ROOT/scripts/release-evidence-index-check.sh" >/dev/null
+sh "$ROOT/scripts/release-evidence-index-check-test.sh" >/dev/null
 sh "$ROOT/scripts/release-publication-verify-check.sh" >/dev/null
 sh "$ROOT/scripts/release-publication-verify-test.sh" >/dev/null
 compatibility_status="$(sh "$ROOT/scripts/compatibility-status-summary.sh")"
@@ -138,6 +139,7 @@ grep -q "ci-workflow-manual-intervention-transition-status=scripts/manual-interv
 grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RELEASE_GATE"
 grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RELEASE_GATE"
 grep -q "release-evidence-index-static-check=scripts/release-evidence-index-check.sh" "$RELEASE_GATE"
+grep -q "release-evidence-index-freshness-policy=stable-patch-release-requires-previous-patch-as-latestStable" "$RELEASE_GATE"
 grep -q "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" "$RELEASE_GATE"
 grep -q "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" "$RELEASE_GATE"
 grep -q "release-publication-post-publish-evidence-artifact=anixops-mitm-release-publication-evidence" "$RELEASE_GATE"

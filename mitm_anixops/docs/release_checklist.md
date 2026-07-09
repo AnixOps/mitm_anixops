@@ -72,6 +72,8 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    scripts/manual-intervention-transition-check.sh
    scripts/release-checklist-check.sh
    scripts/release-metadata-check.sh
+   scripts/release-evidence-index-check.sh v1.0.0
+   scripts/release-evidence-index-check-test.sh
    scripts/release-publication-verify-check.sh
    scripts/release-publication-verify-test.sh
    scripts/release-sensitive-material-check.sh
@@ -117,10 +119,14 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    `release_publication_verify_status=passed`.
 12. Confirm the published `release-notes.md` includes `Feature additions:` and
    `BUG fixes:` sections for the released version.
-13. Update and validate `docs/release_evidence_index.json` for the newly
+13. For stable patch releases, confirm the release evidence index is fresh
+   before publication: `latestStable` must equal the previous stable patch for
+   the target release, and `freshnessPolicy.requiredLatestStableBeforeNext`
+   must match that same value.
+14. Update and validate `docs/release_evidence_index.json` for the newly
    published stable tag so the public release URL, commit, CI run, release run,
-   asset count, artifact platforms, and publication evidence artifact are
-   recorded in machine-readable form.
-14. If publication fails after a public tag exists, follow
+   asset count, artifact platforms, release notes summary evidence, and
+   publication evidence artifact are recorded in machine-readable form.
+15. If publication fails after a public tag exists, follow
    `docs/architecture/release-rollback-policy.md`; do not overwrite public
    tags or mutate published assets in place.
