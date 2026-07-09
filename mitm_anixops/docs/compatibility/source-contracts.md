@@ -775,8 +775,8 @@ Input form:
 - top-level YAML `http:` mapping;
 - nested `mitm:` list;
 - list scalar host patterns;
-- exact, wildcard, deny, and `host:*` port-wildcard host patterns accepted by
-  the policy core;
+- exact, child-subdomain wildcard, deny, and `host:*` port-wildcard host
+  patterns accepted by the policy core;
 - unsupported certificate-material keys `ca` and `ca-passphrase`.
 
 Parser output:

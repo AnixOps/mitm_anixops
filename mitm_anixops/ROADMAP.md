@@ -25,9 +25,9 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.0.3`. The `v1.0.4` patch train is
-reserved for release security hardening, starting with sensitive-material
-scanning for generated release tarballs and Windows zip artifacts.
+The latest published stable artifact is `v1.0.4`. The `v1.0.5` patch train is
+reserved for MITM hostname policy hardening, starting with exact host,
+child-subdomain wildcard, trailing-dot, and port-normalization boundaries.
 
 ## Operating Rules
 

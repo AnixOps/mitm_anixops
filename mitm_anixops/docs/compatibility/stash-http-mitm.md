@@ -48,7 +48,7 @@ Supported forms:
 - nested `mitm:`;
 - list scalar host patterns below `mitm`;
 - exact host patterns;
-- wildcard host patterns already accepted by the policy core;
+- child-subdomain wildcard host patterns already accepted by the policy core;
 - deny host patterns using the existing `-host` marker after the YAML list
   marker;
 - Stash `host:*` port-wildcard suffixes, normalized to host-only policy-core
@@ -76,8 +76,8 @@ For valid `http.mitm` list entries, the parser must:
   (`ANIXOPS_MITM_REJECT_QUIC`) for matched, trusted MITM hosts;
 - emit ignored diagnostics with section `MITM` for unsupported `ca` and
   `ca-passphrase` certificate material;
-- preserve existing exact, wildcard, deny-host, and normalized `host:*` MITM
-  evaluation behavior;
+- preserve existing exact, child-subdomain wildcard, deny-host, and normalized
+  `host:*` MITM evaluation behavior;
 - avoid registering rewrite rules, script rules, task descriptors, arguments,
   route policies, proxy nodes, DNS settings, or certificate lifecycle behavior.
 
