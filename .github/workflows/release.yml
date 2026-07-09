@@ -416,6 +416,9 @@ jobs:
               printf 'Compatibility scope: prerelease policy core, runner, bindings, and docs.\n\n'
               printf 'Known gaps: no v1.0.0 stable release claim, no signing/notarization, no platform certificate lifecycle, no production embedded JavaScript runtime, and no platform app-store release assets.\n\n'
             fi
+            if [[ "${RELEASE_VERSION}" == "v1.0.1" ]]; then
+              printf 'Replacement note: this release supersedes the tag-only v1.0.0 publication attempt. The v1.0.0 release workflow failed before creating public GitHub Release assets because the publish job lacked explicit GH_REPO context; the v1.0.0 tag remains immutable and no v1.0.0 public release assets were published.\n\n'
+            fi
             printf 'Rollback path: delete the untrusted workflow artifact and create a new\n'
             printf 'tag only after the release gate passes on the replacement commit. Public\n'
             printf 'tags and release assets are immutable by default; use a successor tag for\n'
@@ -561,6 +564,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -614,6 +618,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 

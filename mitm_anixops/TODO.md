@@ -294,3 +294,5 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   generated.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
   `github-release-publication` environment approval evidence for `v1.0.0`.
+- [x] Fix tag-triggered release publication so `gh release create` has explicit
+  repository context outside a checkout-backed Git working tree.

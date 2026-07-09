@@ -12,6 +12,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Confirmed repository-level `main` branch protection, `v*` tag ruleset, and
   `github-release-publication` environment approval evidence required before
   `v1.0.0` publication.
+- Fixed the tag-triggered release publish job to provide explicit GitHub
+  repository context and document the `v1.0.0` tag-only failed publication
+  attempt in replacement release notes.
 - Started the v1.0.0 governance track with repository audit, roadmap,
   compatibility documentation skeleton, contribution rules, and manual
   intervention register.
