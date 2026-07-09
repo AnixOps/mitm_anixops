@@ -1529,10 +1529,14 @@ Input form:
   `--script-bundle`;
 - rule-level `argument`, `timeout`, `max-size`, `requires-body`, and `tag`
   metadata.
+- body trigger tokens such as `script-request-body` and
+  `script-response-body` force `requires_body=1` in dispatch metadata; header
+  trigger tokens keep body access optional by default.
 
 Current CI evidence:
 
 - runner replay with the Alpha Node contract runner;
+- `script/body_script_trigger_tokens_force_requires_body`;
 - `$request`, `$response`, `$argument`, `$persistentStore`, and `$done.body`
   replay evidence;
 - double `$done` first-wins fixture
