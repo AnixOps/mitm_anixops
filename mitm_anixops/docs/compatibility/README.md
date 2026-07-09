@@ -35,6 +35,13 @@ reference registered C test IDs such as `config/...`, `script/...`,
 `tests/test_*.c` file references, Make targets, CI-covered script paths, and
 Go/Rust binding test names used as compatibility evidence.
 
+`scripts/script-trigger-evidence-check.sh` adds a reverse gate for script
+trigger compatibility: every `script/...` test registered in
+`tests/test_script.c` must appear in the script trigger compatibility matrix row
+and in `source-contracts.md` evidence. Its companion
+`scripts/script-trigger-evidence-check-test.sh` proves the gate rejects missing
+matrix and source-contract evidence.
+
 ## Files
 
 - [source-contracts.md](source-contracts.md): source contract rules and current

@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.1.2` CI/CD script trigger evidence gate that scans registered
+  `tests/test_script.c` `script/...` tests and requires each one to be recorded
+  in both the script trigger compatibility matrix row and source-contract
+  evidence before CI can pass.
 - Added a `v1.1.1` script trigger attribute-boundary compatibility guard so
   direct url-prefixed script paths may be followed immediately by comma-delimited
   `requires_body`/`requires-body`, `timeout_ms`/`timeout-ms`, and

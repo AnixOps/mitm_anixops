@@ -65,6 +65,7 @@ grep -q "partial" "$MATRIX"
 grep -q "unsupported" "$MATRIX"
 sh "$ROOT/scripts/compatibility-matrix-check.sh" >/dev/null
 sh "$ROOT/scripts/compatibility-evidence-check.sh" >/dev/null
+sh "$ROOT/scripts/script-trigger-evidence-check.sh" >/dev/null
 sh "$ROOT/scripts/compatibility-status-summary-check.sh" >/dev/null
 sh "$ROOT/scripts/ci-trigger-check.sh" >/dev/null
 sh "$ROOT/scripts/release-checklist-check.sh" >/dev/null

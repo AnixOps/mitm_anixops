@@ -234,6 +234,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a script trigger attribute-boundary guard proving comma-delimited
   direct script path attributes preserve `script_path`, quoted values, and
   hyphen/underscore field aliases.
+- [x] Add a CI/CD script trigger evidence gate requiring every registered
+  `script/...` C test to be recorded in the compatibility matrix and source
+  contract evidence.
 
 ## P4 MITM Policy And Certificate Lifecycle
 
