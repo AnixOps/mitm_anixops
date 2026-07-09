@@ -68,12 +68,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.4.4",
-  targetCommit: "0ddfb39d2a156548bb04fe988d8d1f242e47b237",
-  ciRunId: "29051173722",
-  releaseWorkflowRunId: "29051425702",
+  version: "v1.4.5",
+  targetCommit: "bf6dcd10468755ad3dc6d3760868753c370af65e",
+  ciRunId: "29052285955",
+  releaseWorkflowRunId: "29052528936",
   freshnessStatus: "enforced-for-stable-patch-and-declared-boundary-releases",
-  nextStableRelease: "v1.4.5",
+  nextStableRelease: "v1.4.6",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
@@ -176,6 +176,8 @@ for (const entry of index.entries) {
   assert(Array.isArray(entry.artifactPlatforms), `artifactPlatforms must be an array for ${entry.version}`);
   assert(entry.artifactPlatforms.join(",") === "linux-x64,windows-x64", `invalid artifactPlatforms for ${entry.version}`);
   assert(entry.publicationVerifyStatus === "passed", `publication verifier must pass for ${entry.version}`);
+  assert(entry.publicationEvidenceArtifact === expectedLatestStable.publicationEvidenceArtifact, `publication evidence artifact mismatch for ${entry.version}`);
+  assert(entry.publicationEvidenceFile === expectedLatestStable.publicationEvidenceFile, `publication evidence file mismatch for ${entry.version}`);
   if (compareStableVersions(entry.version, "v1.3.4") >= 0) {
     assert(entry.releaseNotesChangeSummary && typeof entry.releaseNotesChangeSummary === "object", `${entry.version} release notes change summary missing`);
     assert(entry.releaseNotesChangeSummary.featureAdditionsSection === expectedLatestStable.releaseNotesFeatureAdditionsSection, `${entry.version} feature additions section mismatch`);
@@ -186,8 +188,8 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(versions.has("v1.4.2"), "missing retained v1.4.2 release evidence entry");
 assert(versions.has("v1.4.3"), "missing retained v1.4.3 release evidence entry");
+assert(versions.has("v1.4.4"), "missing retained v1.4.4 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);

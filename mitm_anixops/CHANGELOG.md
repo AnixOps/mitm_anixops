@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.4.6` release evidence index rollover that records `v1.4.5` as
+  the latest public stable Release, makes `v1.4.6` the next stable patch
+  target, and requires every retained evidence entry to carry publication
+  evidence artifact and file fields.
 - Added a `v1.4.5` release evidence index rollover that records `v1.4.4` as
   the latest public stable Release, makes `v1.4.5` the next stable patch
   target, and requires retained evidence entries to remain contiguous across

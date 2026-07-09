@@ -378,6 +378,10 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Require retained release evidence index patch entries to stay contiguous.
 - [x] Roll the release evidence index freshness policy forward to the latest
   public stable tag after `v1.4.4` publication.
+- [x] Require every retained release evidence entry to carry publication
+  evidence artifact and file fields.
+- [x] Roll the release evidence index freshness policy forward to the latest
+  public stable tag after `v1.4.5` publication.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
