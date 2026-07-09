@@ -338,6 +338,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   blocking earlier production-ready claims.
 - [x] Add CI run ID, URL, and conclusion evidence to release and dry-run
   manifests, release notes, summaries, and metadata gates.
+- [x] Add artifact count and platform evidence to release and dry-run
+  manifests, release notes, summaries, and metadata gates.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and

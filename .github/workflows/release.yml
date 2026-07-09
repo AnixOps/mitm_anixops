@@ -205,6 +205,8 @@ jobs:
       artifact_name: ${{ steps.build_package.outputs.artifact_name }}
       artifact_path: ${{ steps.build_package.outputs.artifact_path }}
       artifact_sha256_file: ${{ steps.build_package.outputs.artifact_sha256_file }}
+      artifact_count: ${{ steps.build_package.outputs.artifact_count }}
+      artifact_platforms: ${{ steps.build_package.outputs.artifact_platforms }}
       windows_artifact_name: ${{ steps.build_package.outputs.windows_artifact_name }}
       windows_artifact_path: ${{ steps.build_package.outputs.windows_artifact_path }}
       windows_artifact_sha256_file: ${{ steps.build_package.outputs.windows_artifact_sha256_file }}
@@ -328,6 +330,8 @@ jobs:
           manifest_schema_version="release-manifest-v1"
           artifact_digest_algorithm="sha256"
           checksum_sidecar_format="sha256sum-two-space-filename"
+          artifact_count="2"
+          artifact_platforms="linux-x64,windows-x64"
           release_workflow_run_id="${GITHUB_RUN_ID}"
           release_workflow_run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           adapter_readiness_status="ci-gated-alpha-boundary"
@@ -403,6 +407,8 @@ jobs:
             printf '  "compatibility_planned_count": %s,\n' "${compatibility_planned_count}"
             printf '  "compatibility_unsupported_count": %s,\n' "${compatibility_unsupported_count}"
             printf '  "compatibility_total_count": %s,\n' "${compatibility_total_count}"
+            printf '  "artifact_count": %s,\n' "${artifact_count}"
+            printf '  "artifact_platforms": ["linux-x64", "windows-x64"],\n'
             printf '  "artifacts": [\n'
             printf '    {\n'
             printf '      "platform": "linux-x64",\n'
@@ -442,6 +448,7 @@ jobs:
             printf 'Adapter readiness: %s via %s.\n\n' "${adapter_readiness_status}" "${adapter_readiness_gate}"
             printf 'Adapter readiness scope: %s; production claim: %s.\n\n' "${adapter_readiness_scope}" "${adapter_readiness_production_claim}"
             printf 'Release artifacts: Linux x64 policy-core tarball and Windows x64 shim zip.\n\n'
+            printf 'Artifact count: %s; platforms: %s.\n\n' "${artifact_count}" "${artifact_platforms}"
             printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
               "${compatibility_supported_count}" \
               "${compatibility_partial_count}" \
@@ -477,6 +484,8 @@ jobs:
             printf 'artifact_path=%s\n' "${artifact_path}"
             printf 'artifact_sha256=%s\n' "${artifact_sha256}"
             printf 'artifact_sha256_file=%s\n' "${artifact_sha256_file}"
+            printf 'artifact_count=%s\n' "${artifact_count}"
+            printf 'artifact_platforms=%s\n' "${artifact_platforms}"
             printf 'windows_artifact_name=%s\n' "${windows_artifact_name}"
             printf 'windows_artifact_path=%s\n' "${windows_artifact_path}"
             printf 'windows_artifact_sha256=%s\n' "${windows_artifact_sha256}"
@@ -545,6 +554,8 @@ jobs:
           grep -q "\"adapter_readiness_scope\": \"${{ steps.build_package.outputs.adapter_readiness_scope }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"adapter_readiness_production_claim\": \"${{ steps.build_package.outputs.adapter_readiness_production_claim }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"compatibility_total_count\": ${{ steps.compatibility.outputs.compatibility_total_count }}" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"artifact_count\": ${{ steps.build_package.outputs.artifact_count }}" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"artifact_platforms\": \\[\"linux-x64\", \"windows-x64\"\\]" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"platform\": \"linux-x64\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"platform\": \"windows-x64\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -557,6 +568,7 @@ jobs:
           grep -q "Adapter readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Adapter readiness scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Release artifacts:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Artifact count:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility matrix status counts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Known gaps:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -579,6 +591,8 @@ jobs:
             printf '| ci_run_conclusion | `%s` |\n' "${{ steps.build_package.outputs.ci_run_conclusion }}"
             printf '| artifact_name | `%s` |\n' "${{ steps.build_package.outputs.artifact_name }}"
             printf '| artifact_sha256 | `%s` |\n' "${{ steps.build_package.outputs.artifact_sha256 }}"
+            printf '| artifact_count | `%s` |\n' "${{ steps.build_package.outputs.artifact_count }}"
+            printf '| artifact_platforms | `%s` |\n' "${{ steps.build_package.outputs.artifact_platforms }}"
             printf '| windows_artifact_name | `%s` |\n' "${{ steps.build_package.outputs.windows_artifact_name }}"
             printf '| windows_artifact_sha256 | `%s` |\n' "${{ steps.build_package.outputs.windows_artifact_sha256 }}"
             printf '| manifest_name | `%s` |\n' "${{ steps.build_package.outputs.manifest_name }}"
@@ -703,6 +717,9 @@ jobs:
           grep -q "\"adapter_readiness_scope\": \"${{ needs.package.outputs.adapter_readiness_scope }}\"" "${manifest}"
           grep -q "\"adapter_readiness_production_claim\": \"${{ needs.package.outputs.adapter_readiness_production_claim }}\"" "${manifest}"
           grep -q "\"compatibility_total_count\":" "${manifest}"
+          grep -q "\"artifact_count\": ${{ needs.package.outputs.artifact_count }}" "${manifest}"
+          grep -q "\"artifact_platforms\": \\[\"linux-x64\", \"windows-x64\"\\]" "${manifest}"
+          grep -q "\"platform\": \"linux-x64\"" "${manifest}"
           grep -q "\"platform\": \"windows-x64\"" "${manifest}"
           grep -q "Source mode:" "${notes}"
           grep -q "Publication gate:" "${notes}"
@@ -713,6 +730,7 @@ jobs:
           grep -q "Adapter readiness scope:" "${notes}"
           grep -q "Compatibility matrix status counts:" "${notes}"
           grep -q "Release artifacts:" "${notes}"
+          grep -q "Artifact count:" "${notes}"
           grep -q "Rollback path:" "${notes}"
 
       - name: Publish GitHub Release assets
@@ -755,6 +773,8 @@ jobs:
             printf '| publication_gate | `%s` |\n' "${{ needs.package.outputs.publication_gate }}"
             printf '| ci_gate | `%s` |\n' "${RELEASE_CI_GATE}"
             printf '| publish_eligibility_status | `%s` |\n' "${PUBLISH_ELIGIBILITY_STATUS}"
+            printf '| artifact_count | `%s` |\n' "${{ needs.package.outputs.artifact_count }}"
+            printf '| artifact_platforms | `%s` |\n' "${{ needs.package.outputs.artifact_platforms }}"
             printf '| windows_artifact_name | `%s` |\n' "${{ needs.package.outputs.windows_artifact_name }}"
             printf '| adapter_readiness_status | `%s` |\n' "${{ needs.package.outputs.adapter_readiness_status }}"
             printf '| adapter_readiness_gate | `%s` |\n' "${{ needs.package.outputs.adapter_readiness_gate }}"

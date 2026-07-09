@@ -26,7 +26,7 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.2.7`. The `v1.1.x` train is
+The latest published stable artifact is `v1.2.8`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
@@ -41,8 +41,9 @@ manifest schema identity plus the same adapter readiness status, gate, scope,
 production-boundary evidence, SHA-256 digest/sidecar format semantics, release
 workflow run traceability, explicit publication-gate evidence, and source-mode
 evidence that distinguishes tag publication, manual validation, main-push
-dry-run, and pull-request dry-run paths, then aligns CI run ID, URL, and
-conclusion evidence across release and dry-run manifests, notes, and summaries.
+dry-run, and pull-request dry-run paths, then aligns CI run ID, URL,
+conclusion, artifact count, and artifact platform evidence across release and
+dry-run manifests, notes, and summaries.
 
 ## Production MITM Version Line
 

@@ -182,6 +182,8 @@ jobs:
           manifest_schema_version="release-manifest-v1"
           artifact_digest_algorithm="sha256"
           checksum_sidecar_format="sha256sum-two-space-filename"
+          artifact_count="2"
+          artifact_platforms="linux-x64,windows-x64"
           release_workflow_run_id="${GITHUB_RUN_ID}"
           release_workflow_run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           ci_run_id="${GITHUB_RUN_ID}"
@@ -251,6 +253,8 @@ jobs:
             printf '  "compatibility_planned_count": %s,\n' "${compatibility_planned_count}"
             printf '  "compatibility_unsupported_count": %s,\n' "${compatibility_unsupported_count}"
             printf '  "compatibility_total_count": %s,\n' "${compatibility_total_count}"
+            printf '  "artifact_count": %s,\n' "${artifact_count}"
+            printf '  "artifact_platforms": ["linux-x64", "windows-x64"],\n'
             printf '  "artifacts": [\n'
             printf '    {\n'
             printf '      "platform": "linux-x64",\n'
@@ -290,6 +294,7 @@ jobs:
             printf 'Adapter readiness: %s via %s.\n\n' "${adapter_readiness_status}" "${adapter_readiness_gate}"
             printf 'Adapter readiness scope: %s; production claim: %s.\n\n' "${adapter_readiness_scope}" "${adapter_readiness_production_claim}"
             printf 'Dry-run artifacts: Linux x64 policy-core tarball and Windows x64 shim zip.\n\n'
+            printf 'Artifact count: %s; platforms: %s.\n\n' "${artifact_count}" "${artifact_platforms}"
             printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
               "${compatibility_supported_count}" \
               "${compatibility_partial_count}" \
@@ -319,6 +324,8 @@ jobs:
             printf 'artifact_path=%s\n' "${artifact_path}"
             printf 'artifact_sha256=%s\n' "${artifact_sha256}"
             printf 'artifact_sha256_file=%s\n' "${artifact_sha256_file}"
+            printf 'artifact_count=%s\n' "${artifact_count}"
+            printf 'artifact_platforms=%s\n' "${artifact_platforms}"
             printf 'windows_artifact_name=%s\n' "${windows_artifact_name}"
             printf 'windows_artifact_path=%s\n' "${windows_artifact_path}"
             printf 'windows_artifact_sha256=%s\n' "${windows_artifact_sha256}"
@@ -386,6 +393,8 @@ jobs:
           grep -q "\"adapter_readiness_scope\": \"${{ steps.metadata.outputs.adapter_readiness_scope }}\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"adapter_readiness_production_claim\": \"${{ steps.metadata.outputs.adapter_readiness_production_claim }}\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"compatibility_total_count\": ${{ steps.compatibility.outputs.compatibility_total_count }}" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "\"artifact_count\": ${{ steps.metadata.outputs.artifact_count }}" "${{ steps.metadata.outputs.manifest_path }}"
+          grep -q "\"artifact_platforms\": \\[\"linux-x64\", \"windows-x64\"\\]" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"platform\": \"linux-x64\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "\"platform\": \"windows-x64\"" "${{ steps.metadata.outputs.manifest_path }}"
           grep -q "Source mode:" "${{ steps.metadata.outputs.release_notes_path }}"
@@ -399,6 +408,7 @@ jobs:
           grep -q "Adapter readiness:" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Adapter readiness scope:" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Dry-run artifacts:" "${{ steps.metadata.outputs.release_notes_path }}"
+          grep -q "Artifact count:" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Compatibility matrix status counts:" "${{ steps.metadata.outputs.release_notes_path }}"
           grep -q "Rollback path:" "${{ steps.metadata.outputs.release_notes_path }}"
 
@@ -419,6 +429,8 @@ jobs:
             printf '| ci_run_conclusion | `%s` |\n' "${{ steps.metadata.outputs.ci_run_conclusion }}"
             printf '| artifact_name | `%s` |\n' "${{ steps.metadata.outputs.artifact_name }}"
             printf '| artifact_sha256 | `%s` |\n' "${{ steps.metadata.outputs.artifact_sha256 }}"
+            printf '| artifact_count | `%s` |\n' "${{ steps.metadata.outputs.artifact_count }}"
+            printf '| artifact_platforms | `%s` |\n' "${{ steps.metadata.outputs.artifact_platforms }}"
             printf '| windows_artifact_name | `%s` |\n' "${{ steps.metadata.outputs.windows_artifact_name }}"
             printf '| windows_artifact_sha256 | `%s` |\n' "${{ steps.metadata.outputs.windows_artifact_sha256 }}"
             printf '| manifest_name | `%s` |\n' "${{ steps.metadata.outputs.manifest_name }}"
