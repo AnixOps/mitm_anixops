@@ -235,7 +235,7 @@ jobs:
           grep -q "P6 Release Hardening" mitm_anixops/ROADMAP.md
           grep -q "roadmap-current-track=v1.0.0-evidence-hardening" mitm_anixops/ROADMAP.md
           grep -q "roadmap-p0-baseline-status=complete" mitm_anixops/ROADMAP.md
-          grep -q "roadmap-v1-release-status=not-ready" mitm_anixops/ROADMAP.md
+          grep -q "roadmap-v1-release-status=ready-for-tag-after-ci" mitm_anixops/ROADMAP.md
           grep -q "GitHub Actions" mitm_anixops/CONTRIBUTING.md
           grep -q "^- \\[x\\] Add a dedicated compatibility matrix CI job" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add a compatibility evidence check" mitm_anixops/TODO.md
@@ -688,7 +688,7 @@ jobs:
           grep -q "ci-workflow-manual-intervention-transition-status=scripts/manual-intervention-transition-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-v1-acceptance-status=static-evidence-check" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-repository-governance-status=static-contract-check" mitm_anixops/docs/architecture/release-gate.md
-          grep -q "repository-governance-status=blocked-until-branch-tag-and-environment-confirmation" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "repository-governance-status=confirmed-for-v1-publication" mitm_anixops/docs/architecture/release-gate.md
           grep -q "ci-workflow-macos-status=policy-core-smoke" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-current-mode=tag-triggered-build-and-publish" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-workflow-publication=tag-publish-enabled" mitm_anixops/docs/architecture/release-gate.md
@@ -705,7 +705,7 @@ jobs:
           grep -q "release-workflow-publication-status=tag-publish-enabled-after-gates" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "release-publication-environment=github-release-publication" mitm_anixops/docs/architecture/release-rollback-policy.md
           grep -q "repository-governance-contract-status=accepted" mitm_anixops/docs/architecture/repository-governance.md
-          grep -q "repository-governance-v1-publication-status=blocked-until-manual-confirmation" mitm_anixops/docs/architecture/repository-governance.md
+          grep -q "repository-governance-v1-publication-status=ready-after-release-readiness-and-environment-approval" mitm_anixops/docs/architecture/repository-governance.md
           grep -q "branch-protection-confirmation-evidence=" mitm_anixops/docs/manual-intervention.md
           grep -q "protected-tags-confirmation-evidence=" mitm_anixops/docs/manual-intervention.md
           grep -q "release-environment-approval-confirmation-evidence=" mitm_anixops/docs/manual-intervention.md
