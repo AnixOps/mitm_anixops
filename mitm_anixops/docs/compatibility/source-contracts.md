@@ -1566,6 +1566,8 @@ Current CI evidence:
   replay evidence;
 - double `$done` first-wins fixture
   `tests/fixtures/runner_double_done_script.js`;
+- structured replay error reporting for exceptions and timeouts, including
+  timeout fixture `tests/fixtures/runner_timeout_script.js`;
 - timeout and exception fail-open coverage in `script-contract-e2e`;
 - script bundle sha256 match fixture `tests/fixtures/ScriptBundle.json`;
 - script bundle digest mismatch fixture

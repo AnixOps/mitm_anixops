@@ -172,7 +172,14 @@ runner-check: $(RUNNER_BIN)
 	grep -F '"runner.count": "1"' $(BUILD_DIR)/runner-script-store.json >/dev/null
 	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-map https://scripts.example/loon-request.js=tests/fixtures/runner_replay_script.js --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_throw_script.js > $(BUILD_DIR)/runner-replay-script-error.out
 	grep -F '"message":"script execution failed"' $(BUILD_DIR)/runner-replay-script-error.out >/dev/null
+	grep -F '"errorKind":"exception"' $(BUILD_DIR)/runner-replay-script-error.out >/dev/null
+	grep -F '"errorMessage":"runner fixture script failed"' $(BUILD_DIR)/runner-replay-script-error.out >/dev/null
 	grep -F '"body":"{\"from\":\"response\"}"' $(BUILD_DIR)/runner-replay-script-error.out >/dev/null
+	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --timeout-ms 10 --script-map https://scripts.example/loon-request.js=tests/fixtures/runner_replay_script.js --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_timeout_script.js > $(BUILD_DIR)/runner-replay-script-timeout.out
+	grep -F '"message":"script execution failed"' $(BUILD_DIR)/runner-replay-script-timeout.out >/dev/null
+	grep -F '"errorKind":"timeout"' $(BUILD_DIR)/runner-replay-script-timeout.out >/dev/null
+	grep -F '"errorMessage":"$$done timeout"' $(BUILD_DIR)/runner-replay-script-timeout.out >/dev/null
+	grep -F '"body":"{\"from\":\"response\"}"' $(BUILD_DIR)/runner-replay-script-timeout.out >/dev/null
 	$(RUNNER_BIN) replay --plugin tests/fixtures/Representative.Loon.plugin --fixture tests/fixtures/RunnerReplay.tsv --script-runner e2e/script_runtime/anixops_runner.js --script-map https://scripts.example/loon-request.js=tests/fixtures/runner_replay_script.js --script-map https://scripts.example/loon-response.js=tests/fixtures/runner_double_done_script.js > $(BUILD_DIR)/runner-replay-double-done.out
 	grep -F '"message":"script executed"' $(BUILD_DIR)/runner-replay-double-done.out >/dev/null
 	grep -F '"body":"{\"doubleDone\":\"first\",\"phase\":\"response\"' $(BUILD_DIR)/runner-replay-double-done.out >/dev/null

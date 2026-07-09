@@ -240,6 +240,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a cron/task compatibility guard proving quoted attr-list task
   `type` values register as task descriptors and do not become HTTP script
   triggers.
+- [x] Add script runtime error reporting evidence for exception and timeout
+  fail-open replay paths.
 
 ## P4 MITM Policy And Certificate Lifecycle
 

@@ -9,6 +9,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.1.4` script runtime error reporting guard so Alpha replay
+  `scriptRuntime` output exposes stable `errorKind` and `errorMessage` fields
+  for exception and timeout fail-open paths.
 - Added a `v1.1.3` cron/task compatibility guard so quoted attr-list task
   `type` values such as `type="cron"`, `type='interval'`, and `type="task"`
   register as task descriptors while remaining outside HTTP script URL

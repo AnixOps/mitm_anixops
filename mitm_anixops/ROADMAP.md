@@ -25,10 +25,11 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.1.2`. The `v1.1.x` train is
+The latest published stable artifact is `v1.1.3`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
-evidence gates, and parser boundary hardening for task descriptor metadata.
+evidence gates, parser boundary hardening for task descriptor metadata, and
+structured script runtime error reporting.
 
 ## Operating Rules
 

@@ -148,6 +148,10 @@ async function main() {
 }
 
 main().catch((error) => {
+  const message =
+    error && typeof error.message === "string" && error.message.length > 0 ? error.message : String(error);
+  const kind = message === "$done timeout" ? "timeout" : "exception";
+  process.stdout.write(`${JSON.stringify({ errorKind: kind, errorMessage: message })}\n`);
   console.error(error && error.stack ? error.stack : String(error));
   process.exit(1);
 });

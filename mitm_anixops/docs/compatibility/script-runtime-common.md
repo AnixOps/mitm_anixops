@@ -131,7 +131,8 @@ Runtime traces must distinguish at least:
 - script digest mismatch;
 - body unavailable;
 - body exceeds script max-size;
-- script execution failed.
+- script execution failed with structured `errorKind` and `errorMessage`
+  fields for exception and timeout failures.
 
 ## Security Boundary
 
@@ -145,6 +146,7 @@ network APIs are exposed to JavaScript.
 - `make runner-check` covers request and response script replay,
   `$persistentStore`, `$argument`, `$done.body`, bundle sha256 match,
   digest-mismatch fail-open, cache-miss fail-open, throwing script fail-open,
+  timeout fail-open, structured `errorKind` / `errorMessage` replay evidence,
   and double `$done` first-wins replay evidence.
 - `make script-contract-e2e` covers the Alpha proxy path for request/response
   script mutation, static rewrite ordering, `$persistentStore`,

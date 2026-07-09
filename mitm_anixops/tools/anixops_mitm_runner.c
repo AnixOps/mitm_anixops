@@ -1435,6 +1435,27 @@ static void print_script_asset(
 	putchar('}');
 }
 
+static void set_runtime_error(
+	char *runtime_message,
+	size_t runtime_message_cap,
+	char *runtime_error_kind,
+	size_t runtime_error_kind_cap,
+	char *runtime_error_message,
+	size_t runtime_error_message_cap,
+	const char *message,
+	const char *kind)
+{
+	if (runtime_message != NULL && runtime_message_cap > 0) {
+		(void)copy_text(runtime_message, runtime_message_cap, message);
+	}
+	if (runtime_error_kind != NULL && runtime_error_kind_cap > 0) {
+		(void)copy_text(runtime_error_kind, runtime_error_kind_cap, kind);
+	}
+	if (runtime_error_message != NULL && runtime_error_message_cap > 0) {
+		(void)copy_text(runtime_error_message, runtime_error_message_cap, message);
+	}
+}
+
 static int cmd_replay(int argc, char **argv)
 {
 	const char *plugin = NULL;
@@ -1517,6 +1538,8 @@ static int cmd_replay(int argc, char **argv)
 		char final_body[8192];
 		char runtime_done[8192];
 		char runtime_message[ANIXOPS_MESSAGE_CAP];
+		char runtime_error_kind[64];
+		char runtime_error_message[ANIXOPS_MESSAGE_CAP];
 		char runtime_actual_sha256[65];
 		script_asset_t runtime_asset;
 		anixops_phase_t phase;
@@ -1565,6 +1588,8 @@ static int cmd_replay(int argc, char **argv)
 		}
 		runtime_done[0] = '\0';
 		runtime_message[0] = '\0';
+		runtime_error_kind[0] = '\0';
+		runtime_error_message[0] = '\0';
 		runtime_actual_sha256[0] = '\0';
 		memset(&runtime_asset, 0, sizeof(runtime_asset));
 		if (script.kind != ANIXOPS_SCRIPT_NONE) {
@@ -1578,26 +1603,74 @@ static int cmd_replay(int argc, char **argv)
 				script_asset_count,
 				&runtime_asset);
 			if (script_runner == NULL) {
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "script runner not configured");
+				set_runtime_error(
+					runtime_message,
+					sizeof(runtime_message),
+					runtime_error_kind,
+					sizeof(runtime_error_kind),
+					runtime_error_message,
+					sizeof(runtime_error_message),
+					"script runner not configured",
+					"runner-not-configured");
 			}
 			else if (!runtime_asset_present || runtime_asset.path[0] == '\0') {
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "script cache miss");
+				set_runtime_error(
+					runtime_message,
+					sizeof(runtime_message),
+					runtime_error_kind,
+					sizeof(runtime_error_kind),
+					runtime_error_message,
+					sizeof(runtime_error_message),
+					"script cache miss",
+					"cache-miss");
 			}
 			else if (runtime_asset.sha256[0] != '\0' &&
 				!sha256_file_hex(runtime_asset.path, runtime_actual_sha256)) {
 				runtime_sha256_checked = 1;
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "script digest unavailable");
+				set_runtime_error(
+					runtime_message,
+					sizeof(runtime_message),
+					runtime_error_kind,
+					sizeof(runtime_error_kind),
+					runtime_error_message,
+					sizeof(runtime_error_message),
+					"script digest unavailable",
+					"digest-unavailable");
 			}
 			else if (runtime_asset.sha256[0] != '\0' &&
 				strcmp(runtime_actual_sha256, runtime_asset.sha256) != 0) {
 				runtime_sha256_checked = 1;
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "script digest mismatch");
+				set_runtime_error(
+					runtime_message,
+					sizeof(runtime_message),
+					runtime_error_kind,
+					sizeof(runtime_error_kind),
+					runtime_error_message,
+					sizeof(runtime_error_message),
+					"script digest mismatch",
+					"digest-mismatch");
 			}
 			else if (!has_body) {
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "body unavailable");
+				set_runtime_error(
+					runtime_message,
+					sizeof(runtime_message),
+					runtime_error_kind,
+					sizeof(runtime_error_kind),
+					runtime_error_message,
+					sizeof(runtime_error_message),
+					"body unavailable",
+					"body-unavailable");
 			}
 			else if (script.max_size > 0 && strlen(out_body) > script.max_size) {
-				snprintf(runtime_message, sizeof(runtime_message), "%s", "body exceeds script max-size");
+				set_runtime_error(
+					runtime_message,
+					sizeof(runtime_message),
+					runtime_error_kind,
+					sizeof(runtime_error_kind),
+					runtime_error_message,
+					sizeof(runtime_error_message),
+					"body exceeds script max-size",
+					"max-size-exceeded");
 			}
 			else {
 				if (runtime_asset.sha256[0] != '\0') {
@@ -1629,7 +1702,28 @@ static int cmd_replay(int argc, char **argv)
 					}
 				}
 				else {
+					char reported_kind[64];
+					char reported_message[ANIXOPS_MESSAGE_CAP];
 					snprintf(runtime_message, sizeof(runtime_message), "%s", "script execution failed");
+					if (json_extract_string_field(runtime_done, "errorKind", reported_kind, sizeof(reported_kind))) {
+						(void)copy_text(runtime_error_kind, sizeof(runtime_error_kind), reported_kind);
+					}
+					else {
+						(void)copy_text(runtime_error_kind, sizeof(runtime_error_kind), "execution");
+					}
+					if (json_extract_string_field(
+							runtime_done,
+							"errorMessage",
+							reported_message,
+							sizeof(reported_message))) {
+						(void)copy_text(runtime_error_message, sizeof(runtime_error_message), reported_message);
+					}
+					else {
+						(void)copy_text(
+							runtime_error_message,
+							sizeof(runtime_error_message),
+							"script runner exited non-zero");
+					}
 				}
 			}
 		}
@@ -1650,6 +1744,20 @@ static int cmd_replay(int argc, char **argv)
 		if (runtime_present) {
 			printf("{\"status\":%d,\"message\":", runtime_status);
 			json_string(runtime_message);
+			printf(",\"errorKind\":");
+			if (runtime_error_kind[0] != '\0') {
+				json_string(runtime_error_kind);
+			}
+			else {
+				fputs("null", stdout);
+			}
+			printf(",\"errorMessage\":");
+			if (runtime_error_message[0] != '\0') {
+				json_string(runtime_error_message);
+			}
+			else {
+				fputs("null", stdout);
+			}
 			printf(",\"asset\":");
 			print_script_asset(
 				runtime_asset_present ? &runtime_asset : NULL,
