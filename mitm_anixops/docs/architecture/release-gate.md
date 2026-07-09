@@ -230,10 +230,12 @@ the downloadable post-publication evidence record for the released tag.
 The release evidence index in `docs/release_evidence_index.json` records the
 latest public stable release URL, target commit, same-commit CI run, release
 workflow run, asset count, artifact count, artifact platforms, and publication
-evidence artifact/file. The release evidence index static check keeps that
-machine-readable record wired into CI, release dry-run, release readiness, and
-v1 acceptance checks, requires the first entry to match the latest stable
-release, and preserves prior public release evidence entries.
+evidence artifact/file. For releases that carry notes change-summary evidence,
+it also records the required `Feature additions:` and `BUG fixes:` sections.
+The release evidence index static check keeps that machine-readable record
+wired into CI, release dry-run, release readiness, and v1 acceptance checks,
+requires the first entry to match the latest stable release, and preserves
+prior public release evidence entries.
 
 The verifier fixture test builds a temporary release asset set and a fake `gh`
 command so CI can exercise the post-publication verifier without network
