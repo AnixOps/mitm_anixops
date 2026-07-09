@@ -10,7 +10,8 @@ GitHub Actions.
 
 ## Current Phase
 
-Current track: v1.0.x patch hardening and compatibility expansion.
+Current track: v1.2.0 integration adapter readiness on top of the v1.0.0
+evidence baseline.
 
 roadmap-current-track=v1.0.0-evidence-hardening
 roadmap-p0-baseline-status=complete
@@ -25,12 +26,16 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.1.4`. The `v1.1.x` train is
+The latest published stable artifact is `v1.1.5`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
 structured script runtime error reporting plus script runtime security review
-gates.
+gates. The `v1.2.0` milestone closes the integration adapter usability loop by
+making NetworkCore boundary notes, alpha package contents, runner/proxy shim
+targets, binding/package checks, E2E entrypoints, and release registrations
+part of a CI-verifiable readiness gate without claiming production
+NetworkCore data-plane support.
 
 ## Operating Rules
 

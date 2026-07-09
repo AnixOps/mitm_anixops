@@ -54,6 +54,7 @@ ci-workflow-compatibility-summary-static-check=scripts/compatibility-status-summ
 ci-workflow-manual-intervention-status=static-schema-check
 ci-workflow-manual-intervention-transition-status=scripts/manual-intervention-transition-check.sh
 ci-workflow-script-runtime-security-gate=scripts/script-runtime-security-gate.sh
+ci-workflow-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
 ci-workflow-v1-acceptance-status=static-evidence-check
 ci-workflow-repository-governance-status=static-contract-check
 ci-workflow-macos-status=policy-core-smoke
@@ -97,6 +98,7 @@ release-workflow-manual-intervention-transition-check=scripts/manual-interventio
 release-workflow-release-checklist-static-check=scripts/release-checklist-check.sh
 release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh
 release-workflow-script-runtime-security-gate=scripts/script-runtime-security-gate.sh
+release-workflow-integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
 release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh
 release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
@@ -115,8 +117,11 @@ packaging, it verifies that the same commit has a successful `build.yml` run on
 `main`, that the release rollback/replacement policy exists, that manual
 intervention markers have valid schema and confirmation evidence, that release
 checklist and metadata static gates pass, that script runtime security markers
-still match the no-embedded-engine and pending production runtime decisions, and
-that stable release readiness has passed. Generated Linux tarballs and Windows
+still match the no-embedded-engine and pending production runtime decisions,
+that integration adapter readiness markers, alpha package contents,
+runner/proxy shim targets, binding package checks, E2E entrypoints, and release
+registrations remain connected, and that stable release readiness has passed.
+Generated Linux tarballs and Windows
 zip artifacts are scanned for
 private keys, credential-like filenames, and common token patterns before
 metadata validation and again before GitHub Release publication. The stable

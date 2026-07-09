@@ -85,6 +85,20 @@ model and HTTP/TLS data plane.
 This repository should therefore expose stable policy and trace outputs, not
 take over NetworkCore's platform or network responsibilities.
 
+## Integration Adapter Readiness Gate
+
+The v1.2.0 integration adapter readiness gate is
+`scripts/integration-adapter-readiness-check.sh`. It verifies that NetworkCore
+boundary markers, alpha package contents, runner/proxy shim targets,
+Go/Rust/CMake/pkg-config package checks, E2E entrypoints, and release workflow
+registrations stay aligned. The paired self-test
+`scripts/integration-adapter-readiness-check-test.sh` proves missing evidence
+or production NetworkCore adapter overclaims fail the gate.
+
+This gate is an embeddability and release-readiness contract for the
+policy-core adapter surface. It is not a production NetworkCore data-plane,
+certificate lifecycle, or platform runtime support claim.
+
 ## Security Defaults
 
 v1.0.0 work must keep these defaults:

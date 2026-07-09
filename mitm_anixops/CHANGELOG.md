@@ -9,6 +9,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.0` integration adapter readiness gate that ties NetworkCore
+  boundary markers, alpha package contents, runner/proxy shim targets,
+  Go/Rust/CMake/pkg-config package checks, E2E entrypoints, and release workflow
+  registration into a CI-verifiable adapter-readiness contract without claiming
+  production NetworkCore data-plane support.
 - Added a `v1.1.5` script runtime security review gate that requires the
   no-embedded-engine decision, pending production runtime/redaction markers,
   script runtime security boundary markers, and matrix/source-contract evidence

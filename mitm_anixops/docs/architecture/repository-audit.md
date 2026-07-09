@@ -97,6 +97,13 @@ Current jobs:
   those workflow-generated assets to a GitHub Release after the release gates
   and `github-release-publication` environment gate pass.
 
+The integration adapter readiness gate,
+`scripts/integration-adapter-readiness-check.sh`, verifies that NetworkCore
+boundary markers, alpha package contents, runner/proxy shim targets,
+Go/Rust/CMake/pkg-config package checks, E2E entrypoints, local full-check
+registration, and release workflow readiness gates remain connected before
+adapter-readiness claims are made.
+
 Known CI/CD gaps for v1.0.0:
 
 - GitHub Release upload exists only for gated `v*` tag runs; release

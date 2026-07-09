@@ -263,6 +263,10 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 
 - [x] Update NetworkCore integration notes for the latest `v0.45.10-alpha`
   baseline and future v1.0.0 adapter boundary.
+- [x] Add an integration adapter readiness gate that verifies NetworkCore
+  boundary markers, alpha artifact contents, runner/proxy shim targets,
+  binding/package checks, E2E entrypoints, workflow registration, and forbidden
+  production adapter overclaims.
 - [x] Add binding parity fixtures for C runner, Go wrapper, and Rust wrapper.
 - [x] Add named-header current-value parity checks for Go and Rust wrappers.
 - [x] Add runner golden JSON trace fixtures for binding parity.
@@ -315,6 +319,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a compatibility status summary static check so release count outputs
   must be unique, numeric, and total-consistent before publication metadata is
   generated.
+- [x] Run integration adapter readiness directly in CI, release dry-run, and
+  tag-triggered release readiness gates.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
