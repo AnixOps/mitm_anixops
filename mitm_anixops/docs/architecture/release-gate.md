@@ -110,6 +110,7 @@ release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-manifest-schema=release-manifest-v1
 release-workflow-digest-format=sha256-sidecars
 release-workflow-run-evidence=run-id-url-in-manifest-notes-summary
+release-workflow-ci-run-evidence=ci-run-id-url-conclusion-in-manifest-notes-summary
 release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
@@ -173,6 +174,11 @@ notes and GitHub Step Summaries repeat those fields so each public artifact set
 can be traced back to the exact GitHub Actions release run that produced and
 published it.
 
+The release manifest also carries the CI run ID, URL, and conclusion used for
+the release gate. Release notes and GitHub Step Summaries repeat those fields
+so dry-runs and tag publications expose the exact build evidence that validated
+the released commit.
+
 The release manifest also carries the publication gate. Release notes and
 GitHub Step Summaries repeat that field so release evidence readers can see
 whether public assets were produced by a tag run protected by same-commit CI,
@@ -224,6 +230,7 @@ Publication must be blocked when:
 - release metadata omits artifact digest algorithm or checksum sidecar format;
 - release metadata omits source mode;
 - release metadata omits release workflow run ID or URL;
+- release metadata omits CI run ID, URL, or conclusion;
 - release metadata omits publication gate;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
 - release notes omit compatibility scope, known gaps, or rollback path;
