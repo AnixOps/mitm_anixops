@@ -74,6 +74,12 @@ require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/script-trigger-eviden
 require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/script-trigger-evidence-check.sh" "build workflow missing script trigger evidence gate"
 require_pattern "$CHECK_SCRIPT" "sh scripts/script-trigger-evidence-check-test.sh" "local full check missing script trigger evidence gate self-test"
 require_pattern "$CHECK_SCRIPT" "sh scripts/script-trigger-evidence-check.sh" "local full check missing script trigger evidence gate"
+require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/script-runtime-security-gate-test.sh" "build workflow missing script runtime security gate self-test"
+require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/script-runtime-security-gate.sh" "build workflow missing script runtime security gate"
+require_pattern "$DRY_RUN_WORKFLOW" "sh scripts/script-runtime-security-gate.sh" "release dry-run missing script runtime security gate"
+require_pattern "$RELEASE_WORKFLOW" "sh scripts/script-runtime-security-gate.sh" "release workflow missing script runtime security gate"
+require_pattern "$CHECK_SCRIPT" "sh scripts/script-runtime-security-gate-test.sh" "local full check missing script runtime security gate self-test"
+require_pattern "$CHECK_SCRIPT" "sh scripts/script-runtime-security-gate.sh" "local full check missing script runtime security gate"
 
 require_pattern "$DRY_RUN_WORKFLOW" "name: release-dry-run" "release dry-run workflow missing name"
 require_regex "$DRY_RUN_WORKFLOW" '^  workflow_dispatch:$' "release dry-run must allow manual validation"
@@ -107,7 +113,10 @@ require_pattern "$RELEASE_WORKFLOW" "contents: write" "release workflow publish 
 require_pattern "$RELEASE_WORKFLOW" "gh release create" "release workflow missing GitHub Release publication step"
 
 require_pattern "$RELEASE_GATE_DOC" "ci-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "release gate missing CI trigger static check marker"
+require_pattern "$RELEASE_GATE_DOC" "ci-workflow-script-runtime-security-gate=scripts/script-runtime-security-gate.sh" "release gate missing CI script runtime security marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "release gate missing release trigger static check marker"
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-script-runtime-security-gate=scripts/script-runtime-security-gate.sh" "release gate missing release script runtime security marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-trigger-static-check=scripts/ci-trigger-check.sh" "release dry-run contract missing trigger static check marker"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-script-runtime-security-gate=scripts/script-runtime-security-gate.sh" "release dry-run contract missing script runtime security marker"
 
 printf '%s\n' "ci trigger check passed"

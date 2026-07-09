@@ -111,6 +111,7 @@ jobs:
           sh scripts/release-checklist-check.sh
           sh scripts/release-metadata-check.sh
           sh scripts/compatibility-status-summary-check.sh
+          sh scripts/script-runtime-security-gate.sh
 
           readiness_output="${RUNNER_TEMP}/release-readiness.env"
           sh scripts/release-readiness-check.sh "${RELEASE_VERSION}" | tee "${readiness_output}"

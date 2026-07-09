@@ -136,6 +136,7 @@ grep -q "release-workflow-trigger-static-check=scripts/ci-trigger-check.sh" "$RE
 grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" "$RELEASE_GATE"
 
 sh "$ROOT/scripts/security-claim-check.sh" >/dev/null
+sh "$ROOT/scripts/script-runtime-security-gate.sh" >/dev/null
 
 alpha_readiness="$(sh "$ROOT/scripts/release-readiness-check.sh" v0.45.10-alpha.1)"
 printf '%s\n' "$alpha_readiness" | grep -q "release_readiness_status=not-required-prerelease"

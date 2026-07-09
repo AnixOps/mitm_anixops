@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.1.5` script runtime security review gate that requires the
+  no-embedded-engine decision, pending production runtime/redaction markers,
+  script runtime security boundary markers, and matrix/source-contract evidence
+  before CI or release readiness can pass.
 - Added a `v1.1.4` script runtime error reporting guard so Alpha replay
   `scriptRuntime` output exposes stable `errorKind` and `errorMessage` fields
   for exception and timeout fail-open paths.

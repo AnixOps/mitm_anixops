@@ -11,6 +11,8 @@ sh scripts/release-sensitive-material-check-test.sh
 sh scripts/compatibility-evidence-check.sh
 sh scripts/script-trigger-evidence-check-test.sh
 sh scripts/script-trigger-evidence-check.sh
+sh scripts/script-runtime-security-gate-test.sh
+sh scripts/script-runtime-security-gate.sh
 sh scripts/ci-trigger-check.sh
 sh scripts/release-checklist-check.sh
 sh scripts/release-metadata-check.sh

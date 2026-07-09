@@ -1573,6 +1573,13 @@ Current CI evidence:
 - script bundle digest mismatch fixture
   `tests/fixtures/ScriptBundleBadDigest.json`;
 - script bundle cache miss fixture `tests/fixtures/ScriptBundlePartial.json`.
+- `scripts/script-runtime-security-gate.sh` verifies script runtime security
+  markers, pending production runtime/redaction manual-intervention markers,
+  the no-embedded-engine dependency decision, and compatibility evidence before
+  CI or release readiness can pass;
+- `scripts/script-runtime-security-gate-test.sh` proves the security gate fails
+  when required runtime safety markers, matrix evidence, or claim guards are
+  missing.
 
 Unimplemented items:
 

@@ -178,6 +178,8 @@ jobs:
             mitm_anixops/scripts/compatibility-evidence-check.sh
             mitm_anixops/scripts/script-trigger-evidence-check.sh
             mitm_anixops/scripts/script-trigger-evidence-check-test.sh
+            mitm_anixops/scripts/script-runtime-security-gate.sh
+            mitm_anixops/scripts/script-runtime-security-gate-test.sh
             mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/compatibility-status-summary.sh
             mitm_anixops/scripts/compatibility-status-summary-check.sh
@@ -207,6 +209,8 @@ jobs:
           sh mitm_anixops/scripts/compatibility-evidence-check.sh
           sh mitm_anixops/scripts/script-trigger-evidence-check-test.sh
           sh mitm_anixops/scripts/script-trigger-evidence-check.sh
+          sh mitm_anixops/scripts/script-runtime-security-gate-test.sh
+          sh mitm_anixops/scripts/script-runtime-security-gate.sh
           sh mitm_anixops/scripts/compatibility-status-summary-check.sh
           sh mitm_anixops/scripts/ci-trigger-check.sh
           sh mitm_anixops/scripts/release-checklist-check.sh
@@ -226,6 +230,8 @@ jobs:
           grep -q "compatibility evidence check passed" mitm_anixops/scripts/compatibility-evidence-check.sh
           grep -q "script trigger evidence check passed" mitm_anixops/scripts/script-trigger-evidence-check.sh
           grep -q "script trigger evidence check test passed" mitm_anixops/scripts/script-trigger-evidence-check-test.sh
+          grep -q "script runtime security gate passed" mitm_anixops/scripts/script-runtime-security-gate.sh
+          grep -q "script runtime security gate test passed" mitm_anixops/scripts/script-runtime-security-gate-test.sh
           grep -q "compatibility status summary check passed" mitm_anixops/scripts/compatibility-status-summary-check.sh
           grep -q "ci trigger check passed" mitm_anixops/scripts/ci-trigger-check.sh
           grep -q "release checklist check passed" mitm_anixops/scripts/release-checklist-check.sh
@@ -631,6 +637,9 @@ jobs:
           grep -q "^- \\[x\\] Add cron/task descriptor parser fixtures, public ABI, and" mitm_anixops/TODO.md
           grep -q "script-runtime-policy-core-dependency=none" mitm_anixops/docs/architecture/script-runtime-dependency.md
           grep -q "script-runtime-engine-selection-status=pending" mitm_anixops/docs/manual-intervention.md
+          grep -q "script-runtime-security-boundary-policy-core-download-remote-scripts=forbidden" mitm_anixops/docs/compatibility/script-runtime-common.md
+          grep -q "script-runtime-security-gate.sh" mitm_anixops/docs/compatibility/matrix.md
+          grep -q "script-runtime-security-gate-test.sh" mitm_anixops/docs/compatibility/source-contracts.md
           grep -q "^- \\[x\\] Record any QuickJS, JavaScriptCore, or new runtime dependency decision" mitm_anixops/TODO.md
           grep -q "certificate-lifecycle-policy-core-ca-trust=adapter-supplied" mitm_anixops/docs/architecture/certificate-lifecycle.md
           grep -q "certificate lifecycle and trust gate" mitm_anixops/docs/compatibility/matrix.md
@@ -802,6 +811,8 @@ jobs:
           grep -q "repository_governance_status" mitm_anixops/scripts/repository-governance-check.sh
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/check.sh
           grep -q "release-sensitive-material-check-test.sh" mitm_anixops/scripts/check.sh
+          grep -q "script-runtime-security-gate-test.sh" mitm_anixops/scripts/check.sh
+          grep -q "script-runtime-security-gate.sh" mitm_anixops/scripts/check.sh
           grep -q "manual-intervention-transition-check.sh" mitm_anixops/scripts/check.sh
           grep -q "ci-trigger-check.sh" mitm_anixops/scripts/check.sh
           grep -q "release-checklist-check.sh" mitm_anixops/scripts/check.sh
@@ -820,6 +831,7 @@ jobs:
           sh mitm_anixops/scripts/compatibility-matrix-check.sh
           sh mitm_anixops/scripts/compatibility-evidence-check.sh
           sh mitm_anixops/scripts/script-trigger-evidence-check.sh
+          sh mitm_anixops/scripts/script-runtime-security-gate.sh
           sh mitm_anixops/scripts/compatibility-status-summary-check.sh
 
   format-check:
