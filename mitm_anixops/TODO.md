@@ -340,6 +340,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   manifests, release notes, summaries, and metadata gates.
 - [x] Add artifact count and platform evidence to release and dry-run
   manifests, release notes, summaries, and metadata gates.
+- [x] Add a release publication verifier for public GitHub Release assets,
+  manifest fields, checksum sidecars, release notes, release workflow run
+  evidence, CI run evidence, artifact count, and artifact platforms.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and

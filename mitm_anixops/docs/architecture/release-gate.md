@@ -117,6 +117,9 @@ release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
 release-checklist-static-check=scripts/release-checklist-check.sh
+release-publication-verify-script=scripts/release-publication-verify.sh
+release-publication-verify-static-check=scripts/release-publication-verify-check.sh
+release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms
 repository-governance-status=confirmed-for-v1-publication
 release-rollback-policy=accepted
 ```
@@ -201,6 +204,14 @@ current value is the CI-gated alpha adapter boundary: policy core, runner,
 proxy shim, bindings, and docs are release-packaged, while production
 NetworkCore data-plane support remains explicitly unclaimed.
 
+After a public GitHub Release is created, the release publication verifier
+downloads the published assets and validates the GitHub Release target commit,
+asset count, manifest fields, release workflow run evidence, same-commit CI run
+evidence, artifact count, artifact platforms, release notes, and checksum
+sidecars. The static verifier check keeps that post-publication command wired
+into CI, release dry-run, release readiness, and the v1 acceptance evidence
+path.
+
 The dry-run boundary that must precede release automation is defined in
 [Release Dry-Run Source Contract](release-dry-run.md).
 
@@ -241,6 +252,8 @@ Publication must be blocked when:
 - release metadata omits artifact count or platforms;
 - release metadata omits publication gate;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
+- release publication verification is not wired into CI and the release
+  checklist;
 - release notes omit compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;
 - release artifacts contain private keys, credential-like filenames, or common
