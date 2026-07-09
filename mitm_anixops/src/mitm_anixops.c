@@ -465,7 +465,6 @@ static const char *anixops_json_skip_number(const char *cursor, const char *end)
 static const char *anixops_json_skip_value(const char *cursor, const char *end);
 static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const char *start, size_t len);
 static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char value);
-static int anixops_wildcard_match(const char *pattern, const char *text);
 static void anixops_normalize_host(const char *input, char *out, size_t out_cap);
 static int anixops_normalized_host_is_valid(const char *host, int allow_wildcard);
 static int anixops_host_label_range_is_valid(const char *start, size_t len);
@@ -7452,33 +7451,6 @@ static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char valu
 	return ANIXOPS_OK;
 }
 
-static int anixops_wildcard_match(const char *pattern, const char *text)
-{
-	const char *star = NULL;
-	const char *retry = NULL;
-	while (*text != '\0') {
-		if (*pattern == '*') {
-			star = pattern++;
-			retry = text;
-		}
-		else if (*pattern == *text) {
-			pattern++;
-			text++;
-		}
-		else if (star != NULL) {
-			pattern = star + 1;
-			text = ++retry;
-		}
-		else {
-			return 0;
-		}
-	}
-	while (*pattern == '*') {
-		pattern++;
-	}
-	return *pattern == '\0';
-}
-
 static void anixops_normalize_host(const char *input, char *out, size_t out_cap)
 {
 	size_t len;
@@ -7528,6 +7500,9 @@ static void anixops_normalize_host(const char *input, char *out, size_t out_cap)
 		if (all_digits) {
 			end = last_colon;
 		}
+	}
+	while (end > start && *(end - 1) == '.') {
+		end--;
 	}
 	len = (size_t)(end - start);
 	if (len >= out_cap) {
@@ -7612,16 +7587,32 @@ static int anixops_host_label_range_is_valid(const char *start, size_t len)
 
 static int anixops_host_pattern_matches(const char *pattern, const char *host)
 {
+	size_t pattern_len;
+	size_t host_len;
+	const char *suffix;
+
 	if (pattern == NULL || host == NULL || pattern[0] == '\0' || host[0] == '\0') {
 		return 0;
 	}
 	if (strcmp(pattern, "*") == 0) {
 		return 1;
 	}
-	if (anixops_starts_with_ci(pattern, "*.") && strcmp(pattern + 2, host) == 0) {
+	if (strcmp(pattern, host) == 0) {
 		return 1;
 	}
-	return anixops_wildcard_match(pattern, host);
+	if (!anixops_starts_with_ci(pattern, "*.")) {
+		return 0;
+	}
+	suffix = pattern + 2;
+	pattern_len = strlen(suffix);
+	host_len = strlen(host);
+	if (host_len <= pattern_len) {
+		return 0;
+	}
+	if (strcmp(host + host_len - pattern_len, suffix) != 0) {
+		return 0;
+	}
+	return host[host_len - pattern_len - 1] == '.';
 }
 
 static void anixops_set_mitm_result(

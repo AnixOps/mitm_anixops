@@ -239,6 +239,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   non-target hostname decryption.
 - [x] Add adapter redaction policy contract and CI checks preventing default raw
   payload logging claims.
+- [x] Tighten MITM hostname policy normalization and wildcard boundary tests so
+  `*.` patterns match child subdomains without also matching the bare base
+  domain.
 
 ## P5 Integration Adapter
 

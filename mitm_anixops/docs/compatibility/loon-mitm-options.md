@@ -29,8 +29,8 @@ disable-quic = false
 Supported fields:
 
 - `enable` and `enabled`;
-- `hostname` with exact hosts, wildcard hosts, deny-prefixed hosts, comma
-  separation, and optional `%APPEND%` / `%INSERT%` prefixes;
+- `hostname` with exact hosts, child-subdomain wildcard hosts, deny-prefixed
+  hosts, comma separation, and optional `%APPEND%` / `%INSERT%` prefixes;
 - `skip-server-cert-verify` and `skip_server_cert_verify` as adapter-readable
   boolean or host-list intent;
 - `h2`, `h2-enable`, and `h2_enable` as adapter-readable HTTP/2 policy

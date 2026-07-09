@@ -90,7 +90,8 @@ target hostname.
 Current CI evidence for the policy-core trust gate:
 
 - `mitm/certificate_state_matrix_blocks_untrusted_states`;
-- `mitm/wildcard_matches_subdomain_and_base_domain`;
+- `mitm/wildcard_matches_subdomains_without_base_domain`;
+- `mitm/hostname_policy_normalizes_trailing_dot_port_and_deny_wildcard_boundary`;
 - `config/loon_mitm_options_fixture_exposes_adapter_flags`;
 - `config/config_accepts_quantumultx_mitm_host_options`;
 - `config/config_exposes_skip_server_cert_verify`.

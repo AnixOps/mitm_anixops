@@ -93,7 +93,7 @@ static void deny_pattern_wins_over_allow_pattern(void)
 	anixops_engine_free(engine);
 }
 
-static void wildcard_matches_subdomain_and_base_domain(void)
+static void wildcard_matches_subdomains_without_base_domain(void)
 {
 	anixops_engine_t *engine = trusted_mitm_engine();
 	anixops_mitm_decision_t decision;
@@ -104,9 +104,57 @@ static void wildcard_matches_subdomain_and_base_domain(void)
 	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
 	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "*.example.com");
 
-	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "example.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "deep.api.example.com", 0, &decision), ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
 	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "*.example.com");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "example.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_NO_HOST_MATCH);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "badexample.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_NO_HOST_MATCH);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "");
+
+	anixops_engine_free(engine);
+}
+
+static void hostname_policy_normalizes_trailing_dot_port_and_deny_wildcard_boundary(void)
+{
+	anixops_engine_t *engine = trusted_mitm_engine();
+	anixops_mitm_decision_t decision;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_mitm_hostname(
+			engine,
+			"example.com., blocked.example.com., *.example.com., -*.blocked.example.com."),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 4);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, " EXAMPLE.COM.:443 ", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "example.com");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "API.EXAMPLE.COM.", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "*.example.com");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "badexample.com.", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_NO_HOST_MATCH);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "blocked.example.com.", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "blocked.example.com");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.blocked.example.com:443", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_DENY_HOST);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "*.blocked.example.com");
 
 	anixops_engine_free(engine);
 }
@@ -212,7 +260,18 @@ void anixops_register_mitm_tests(anixops_test_case_t *tests, size_t *count, size
 	add_test(tests, count, cap, "mitm/empty_host_is_rejected_after_enabled_check", empty_host_is_rejected_after_enabled_check);
 	add_test(tests, count, cap, "mitm/certificate_state_matrix_blocks_untrusted_states", certificate_state_matrix_blocks_untrusted_states);
 	add_test(tests, count, cap, "mitm/deny_pattern_wins_over_allow_pattern", deny_pattern_wins_over_allow_pattern);
-	add_test(tests, count, cap, "mitm/wildcard_matches_subdomain_and_base_domain", wildcard_matches_subdomain_and_base_domain);
+	add_test(
+		tests,
+		count,
+		cap,
+		"mitm/wildcard_matches_subdomains_without_base_domain",
+		wildcard_matches_subdomains_without_base_domain);
+	add_test(
+		tests,
+		count,
+		cap,
+		"mitm/hostname_policy_normalizes_trailing_dot_port_and_deny_wildcard_boundary",
+		hostname_policy_normalizes_trailing_dot_port_and_deny_wildcard_boundary);
 	add_test(tests, count, cap, "mitm/host_normalization_handles_case_port_and_ipv6_literal", host_normalization_handles_case_port_and_ipv6_literal);
 	add_test(tests, count, cap, "mitm/no_host_match_bypasses", no_host_match_bypasses);
 	add_test(

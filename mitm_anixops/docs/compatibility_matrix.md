@@ -50,7 +50,7 @@ features it understands.
 | `hostname = host1, host2` | Supported | `anixops_engine_add_mitm_hostname`, `anixops_mitm_evaluate` |
 | Quantumult X `force-http-engine-hosts = host1, host2` | Supported as MITM host-list alias | representative Quantumult X corpus fixture and `config_accepts_quantumultx_mitm_host_options` |
 | `%APPEND%` / `%INSERT%` prefixes | Supported | `module_patch_markers_are_ignored_in_mitm_hostname` |
-| Allow host patterns | Supported | exact, wildcard, `*.` suffix tests |
+| Allow host patterns | Supported | exact host, child-subdomain wildcard, trailing-dot normalization, and wildcard boundary tests |
 | Deny host patterns | Supported | `-host` and `!host` tests |
 | Certificate trust gate | Supported as adapter input | `anixops_engine_set_cert_state` |
 | Certificate lifecycle | Adapter-owned partial contract | `docs/architecture/certificate-lifecycle.md` records no automatic root trust, no non-target hostname decryption, and pending manual-intervention markers for CA stores, signing materials, protected environments, and trust UX |

@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.0.5` MITM hostname policy hardening test and matcher update:
+  hostnames now normalize trailing dots, exact hosts remain explicit, and
+  `*.` wildcard host patterns match child subdomains without also matching the
+  bare base domain.
 - Added a `v1.0.4` release sensitive-material gate that scans generated Linux
   tarballs and Windows zip artifacts for private keys, credential-like
   filenames, and common token patterns before publication.
