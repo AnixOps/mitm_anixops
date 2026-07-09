@@ -180,6 +180,8 @@ jobs:
             mitm_anixops/scripts/script-trigger-evidence-check-test.sh
             mitm_anixops/scripts/script-runtime-security-gate.sh
             mitm_anixops/scripts/script-runtime-security-gate-test.sh
+            mitm_anixops/scripts/integration-adapter-readiness-check.sh
+            mitm_anixops/scripts/integration-adapter-readiness-check-test.sh
             mitm_anixops/scripts/compatibility-matrix-check.sh
             mitm_anixops/scripts/compatibility-status-summary.sh
             mitm_anixops/scripts/compatibility-status-summary-check.sh
@@ -211,6 +213,8 @@ jobs:
           sh mitm_anixops/scripts/script-trigger-evidence-check.sh
           sh mitm_anixops/scripts/script-runtime-security-gate-test.sh
           sh mitm_anixops/scripts/script-runtime-security-gate.sh
+          sh mitm_anixops/scripts/integration-adapter-readiness-check-test.sh
+          sh mitm_anixops/scripts/integration-adapter-readiness-check.sh
           sh mitm_anixops/scripts/compatibility-status-summary-check.sh
           sh mitm_anixops/scripts/ci-trigger-check.sh
           sh mitm_anixops/scripts/release-checklist-check.sh
@@ -232,6 +236,8 @@ jobs:
           grep -q "script trigger evidence check test passed" mitm_anixops/scripts/script-trigger-evidence-check-test.sh
           grep -q "script runtime security gate passed" mitm_anixops/scripts/script-runtime-security-gate.sh
           grep -q "script runtime security gate test passed" mitm_anixops/scripts/script-runtime-security-gate-test.sh
+          grep -q "integration adapter readiness check passed" mitm_anixops/scripts/integration-adapter-readiness-check.sh
+          grep -q "integration adapter readiness check test passed" mitm_anixops/scripts/integration-adapter-readiness-check-test.sh
           grep -q "compatibility status summary check passed" mitm_anixops/scripts/compatibility-status-summary-check.sh
           grep -q "ci trigger check passed" mitm_anixops/scripts/ci-trigger-check.sh
           grep -q "release checklist check passed" mitm_anixops/scripts/release-checklist-check.sh
