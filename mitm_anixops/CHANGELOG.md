@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.3.3` release evidence index that records the latest public
+  stable Release URL, target commit, CI run, release workflow run, asset count,
+  artifact platforms, and publication evidence artifact in
+  `docs/release_evidence_index.json`.
 - Added a `v1.3.2` post-publication evidence artifact so tag-triggered
   release workflows run the public release verifier after publication and
   upload `release-publication-verify.env` as

@@ -348,6 +348,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
 - [x] Add a post-publication release verifier evidence artifact so tag
   workflows archive `release-publication-verify.env` after public asset
   validation passes.
+- [x] Add a machine-readable release evidence index for the latest public
+  stable release URL, commit, CI run, release run, asset count, artifact
+  platforms, and publication evidence artifact.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
