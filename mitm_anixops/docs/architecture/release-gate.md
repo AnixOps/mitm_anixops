@@ -105,6 +105,7 @@ release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
 release-workflow-manifest-schema=release-manifest-v1
 release-workflow-digest-format=sha256-sidecars
+release-workflow-run-evidence=run-id-url-in-manifest-notes-summary
 release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
@@ -161,6 +162,11 @@ The release manifest also carries `artifact_digest_algorithm=sha256` and
 GitHub Step Summaries repeat those values so release evidence readers can
 validate checksum semantics before consuming artifact digest fields.
 
+The release manifest also carries the release workflow run ID and URL. Release
+notes and GitHub Step Summaries repeat those fields so each public artifact set
+can be traced back to the exact GitHub Actions release run that produced and
+published it.
+
 The release manifest, release notes, and GitHub Step Summary also include
 adapter readiness status, gate, scope, and production-boundary fields. The
 current value is the CI-gated alpha adapter boundary: policy core, runner,
@@ -201,6 +207,7 @@ Publication must be blocked when:
 - release metadata omits compatibility status counts;
 - release metadata omits manifest schema version;
 - release metadata omits artifact digest algorithm or checksum sidecar format;
+- release metadata omits release workflow run ID or URL;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
 - release notes omit compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;

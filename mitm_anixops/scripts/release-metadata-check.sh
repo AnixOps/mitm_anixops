@@ -135,6 +135,8 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "\"artifact_digest_algorithm\"" "$label manifest missing artifact digest algorithm"
 	require_pattern "$file" "\"checksum_sidecar_format\"" "$label manifest missing checksum sidecar format"
 	require_pattern "$file" "\"release_commit\"" "$label manifest missing release commit"
+	require_pattern "$file" "\"release_workflow_run_id\"" "$label manifest missing release workflow run id"
+	require_pattern "$file" "\"release_workflow_run_url\"" "$label manifest missing release workflow run url"
 	require_pattern "$file" "\"release_readiness_status\"" "$label manifest missing readiness status"
 	require_pattern "$file" "\"release_readiness_blocking_reason\"" "$label manifest missing readiness reason"
 	require_pattern "$file" "\"adapter_readiness_status\"" "$label manifest missing adapter readiness status"
@@ -149,6 +151,7 @@ check_common_workflow_metadata() {
 	require_pattern "$file" "\"sha256_file\"" "$label manifest missing checksum file values"
 	require_pattern "$file" "manifest_sha256_file" "$label missing manifest checksum sidecar"
 	require_pattern "$file" "release_notes_path" "$label missing release notes output"
+	require_pattern "$file" "Release workflow run:" "$label notes missing release workflow run"
 	require_pattern "$file" "Manifest schema:" "$label notes missing manifest schema"
 	require_pattern "$file" "Artifact digest algorithm:" "$label notes missing artifact digest algorithm"
 	require_pattern "$file" "Compatibility matrix status counts:" "$label notes missing compatibility counts"
@@ -184,7 +187,9 @@ check_common_workflow_metadata() {
 		manifest_sha256_file \
 		manifest_schema_version \
 		artifact_digest_algorithm \
-		checksum_sidecar_format
+		checksum_sidecar_format \
+		release_workflow_run_id \
+		release_workflow_run_url
 	do
 		require_pattern "$file" "$key" "$label missing artifact metadata output"
 	done
@@ -227,6 +232,7 @@ require_pattern "$RELEASE_WORKFLOW" "source_mode" "release workflow missing sour
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary" "dry-run contract missing compatibility summary marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manifest-schema=release-manifest-v1" "dry-run contract missing manifest schema marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-digest-format=sha256-sidecars" "dry-run contract missing digest format marker"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-workflow-run-evidence=run-id-url-in-manifest-notes-summary" "dry-run contract missing workflow run evidence marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-adapter-readiness-manifest=ci-gated-alpha-boundary-fields" "dry-run contract missing adapter readiness manifest marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "dry-run contract missing compatibility summary static check marker"
 require_pattern "$RELEASE_DRY_RUN_DOC" "release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh" "dry-run contract missing manual intervention static check marker"
@@ -238,6 +244,8 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "publish_eligibility_status" "dry-run con
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest_schema_version" "dry-run contract missing manifest schema output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "artifact_digest_algorithm" "dry-run contract missing artifact digest algorithm output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "checksum_sidecar_format" "dry-run contract missing checksum sidecar format output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release_workflow_run_id" "dry-run contract missing release workflow run id output"
+require_pattern "$RELEASE_DRY_RUN_DOC" "release_workflow_run_url" "dry-run contract missing release workflow run url output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_status" "dry-run contract missing adapter readiness status output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_gate" "dry-run contract missing adapter readiness gate output"
 require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_scope" "dry-run contract missing adapter readiness scope output"
@@ -245,11 +253,13 @@ require_pattern "$RELEASE_DRY_RUN_DOC" "adapter_readiness_production_claim" "dry
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit compatibility status counts" "dry-run contract missing metadata failure rule"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit manifest schema version" "dry-run contract missing manifest schema metadata failure rule"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit artifact digest algorithm or checksum sidecar format" "dry-run contract missing digest format metadata failure rule"
+require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit release workflow run ID or URL" "dry-run contract missing workflow run metadata failure rule"
 require_pattern "$RELEASE_DRY_RUN_DOC" "manifest, notes, or summary omit adapter readiness status, gate, scope, or production boundary" "dry-run contract missing adapter readiness metadata failure rule"
 
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" "release gate missing compatibility summary marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manifest-schema=release-manifest-v1" "release gate missing manifest schema marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-digest-format=sha256-sidecars" "release gate missing digest format marker"
+require_pattern "$RELEASE_GATE_DOC" "release-workflow-run-evidence=run-id-url-in-manifest-notes-summary" "release gate missing workflow run evidence marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields" "release gate missing adapter readiness manifest marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "release gate missing compatibility summary static check marker"
 require_pattern "$RELEASE_GATE_DOC" "release-workflow-manual-intervention-static-check=scripts/manual-intervention-check.sh" "release gate missing manual intervention static check marker"
@@ -259,6 +269,7 @@ require_pattern "$RELEASE_GATE_DOC" "release-workflow-sensitive-material-gate=sc
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits compatibility status counts" "release gate missing metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits manifest schema version" "release gate missing manifest schema metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits artifact digest algorithm or checksum sidecar format" "release gate missing digest format metadata blocking condition"
+require_pattern "$RELEASE_GATE_DOC" "release metadata omits release workflow run ID or URL" "release gate missing workflow run metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release metadata omits adapter readiness status, gate, scope, or production boundary" "release gate missing adapter readiness metadata blocking condition"
 require_pattern "$RELEASE_GATE_DOC" "release notes omit compatibility scope, known gaps, or rollback path" "release gate missing notes blocking condition"
 
