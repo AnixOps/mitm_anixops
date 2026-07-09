@@ -67,12 +67,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.3.6",
-  targetCommit: "01d552cfbe3f4314edfa85ab473f2dc0f7d46145",
-  ciRunId: "29043833613",
-  releaseWorkflowRunId: "29044114252",
-  freshnessStatus: "enforced-for-stable-patch-releases",
-  nextStableRelease: "v1.3.7",
+  version: "v1.3.7",
+  targetCommit: "7428d0dd23e2c601a9e4c72392d8f5c27fc76922",
+  ciRunId: "29045091248",
+  releaseWorkflowRunId: "29045367900",
+  freshnessStatus: "enforced-for-stable-patch-and-declared-boundary-releases",
+  nextStableRelease: "v1.4.0",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
@@ -137,6 +137,11 @@ if (expectedLatestForNext) {
     index.latestStable === expectedLatestForNext,
     `latestStable must be ${expectedLatestForNext} for release ${nextReleaseVersion}`,
   );
+} else if (nextReleaseVersion && nextReleaseVersion === index.freshnessPolicy.nextStableRelease) {
+  assert(
+    index.latestStable === index.freshnessPolicy.requiredLatestStableBeforeNext,
+    `latestStable must be ${index.freshnessPolicy.requiredLatestStableBeforeNext} for release ${nextReleaseVersion}`,
+  );
 }
 
 const versions = new Set();
@@ -165,8 +170,8 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(versions.has("v1.3.4"), "missing retained v1.3.4 release evidence entry");
 assert(versions.has("v1.3.5"), "missing retained v1.3.5 release evidence entry");
+assert(versions.has("v1.3.6"), "missing retained v1.3.6 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);
@@ -180,7 +185,7 @@ NODE
 
 require_pattern "$RELEASE_GATE" "release-evidence-index=docs/release_evidence_index.json" "release gate missing release evidence index marker"
 require_pattern "$RELEASE_GATE" "release-evidence-index-static-check=scripts/release-evidence-index-check.sh" "release gate missing release evidence index static check marker"
-require_pattern "$RELEASE_GATE" "release-evidence-index-freshness-policy=stable-patch-release-requires-previous-patch-as-latestStable" "release gate missing release evidence index freshness policy marker"
+require_pattern "$RELEASE_GATE" "release-evidence-index-freshness-policy=stable-patch-or-declared-boundary-release-requires-latestStable-evidence" "release gate missing release evidence index freshness policy marker"
 require_pattern "$RELEASE_CHECKLIST" "docs/release_evidence_index.json" "release checklist missing release evidence index"
 require_pattern "$RELEASE_CHECKLIST" "freshnessPolicy.requiredLatestStableBeforeNext" "release checklist missing release evidence index freshness policy"
 require_pattern "$CHECK_SCRIPT" "sh scripts/release-evidence-index-check.sh" "local full check missing release evidence index check"

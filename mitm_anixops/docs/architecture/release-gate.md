@@ -120,7 +120,7 @@ release-workflow-metadata=checksums-manifest-notes-summary
 release-checklist-static-check=scripts/release-checklist-check.sh
 release-evidence-index=docs/release_evidence_index.json
 release-evidence-index-static-check=scripts/release-evidence-index-check.sh
-release-evidence-index-freshness-policy=stable-patch-release-requires-previous-patch-as-latestStable
+release-evidence-index-freshness-policy=stable-patch-or-declared-boundary-release-requires-latestStable-evidence
 release-publication-verify-script=scripts/release-publication-verify.sh
 release-publication-verify-static-check=scripts/release-publication-verify-check.sh
 release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh
@@ -237,9 +237,11 @@ The release evidence index static check keeps that machine-readable record
 wired into CI, release dry-run, release readiness, and v1 acceptance checks,
 requires the first entry to match the latest stable release, and preserves
 prior public release evidence entries. When a release or release dry-run passes
-a stable patch target such as `v1.3.7`, the same check also requires
-`latestStable` to equal the previous stable patch (`v1.3.6` for `v1.3.7`), so
-stable patch publication cannot proceed with a stale evidence index.
+a stable patch target such as `v1.4.1`, the same check also requires
+`latestStable` to equal the previous stable patch (`v1.4.0` for `v1.4.1`).
+For declared boundary targets such as `v1.4.0`, the check requires
+`latestStable` to match `freshnessPolicy.requiredLatestStableBeforeNext`, so
+minor-boundary publication cannot proceed with a stale evidence index.
 
 The verifier fixture test builds a temporary release asset set and a fake `gh`
 command so CI can exercise the post-publication verifier without network

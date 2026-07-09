@@ -747,7 +747,7 @@ jobs:
           grep -q "release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-checklist-static-check=scripts/release-checklist-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-evidence-index-static-check=scripts/release-evidence-index-check.sh" mitm_anixops/docs/architecture/release-gate.md
-          grep -q "release-evidence-index-freshness-policy=stable-patch-release-requires-previous-patch-as-latestStable" mitm_anixops/docs/architecture/release-gate.md
+          grep -q "release-evidence-index-freshness-policy=stable-patch-or-declared-boundary-release-requires-latestStable-evidence" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-script=scripts/release-publication-verify.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-static-check=scripts/release-publication-verify-check.sh" mitm_anixops/docs/architecture/release-gate.md
           grep -q "release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh" mitm_anixops/docs/architecture/release-gate.md

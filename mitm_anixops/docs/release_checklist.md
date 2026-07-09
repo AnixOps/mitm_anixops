@@ -119,10 +119,11 @@ Use GitHub Actions evidence for stable release acceptance. Do not use local buil
    `release_publication_verify_status=passed`.
 12. Confirm the published `release-notes.md` includes `Feature additions:` and
    `BUG fixes:` sections for the released version.
-13. For stable patch releases, confirm the release evidence index is fresh
-   before publication: `latestStable` must equal the previous stable patch for
-   the target release, and `freshnessPolicy.requiredLatestStableBeforeNext`
-   must match that same value.
+13. For stable patch or declared boundary releases, confirm the release
+   evidence index is fresh before publication: `latestStable` must equal the
+   previous stable patch for stable patch targets, or
+   `freshnessPolicy.requiredLatestStableBeforeNext` for declared boundary
+   targets such as `v1.4.0`.
 14. Update and validate `docs/release_evidence_index.json` for the newly
    published stable tag so the public release URL, commit, CI run, release run,
    asset count, artifact platforms, release notes summary evidence, and
