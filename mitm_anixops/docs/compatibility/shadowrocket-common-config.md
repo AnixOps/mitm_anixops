@@ -16,8 +16,8 @@ does not claim full Shadowrocket profile compatibility.
 
 The current common-config subset accepts:
 
-- `[URL Rewrite]` URL redirect, reject, and request/response header mutation
-  rules;
+- `[URL Rewrite]` URL redirect, reject, request/response header mutation, and
+  response body regex mutation rules;
 - `[Script]` attr-list rules with `type`, `pattern`, `requires-body`,
   `timeout`, `timeout-ms`, `max-size`, `max_size`, `script-path`, and
   `argument`;
@@ -34,8 +34,9 @@ The parser must produce:
 - accepted diagnostics for supported rewrite, script, and MITM lines;
 - ignored diagnostics for unsupported certificate-material MITM lines;
 - rejected diagnostics for malformed supported-section regex rules;
-- URL rewrite rules, header mutation rules, script trigger metadata, MITM host
-  patterns, and MITM options observable through the public ABI.
+- URL rewrite rules, header mutation rules, body mutation rules, script trigger
+  metadata, MITM host patterns, and MITM options observable through the public
+  ABI.
 
 ## Positive Case
 
@@ -45,6 +46,7 @@ Parser case:
 tests/fixtures/Shadowrocket.CommonConfig.conf
 tests/fixtures/Shadowrocket.RequestRewrite.conf
 tests/fixtures/Shadowrocket.HeaderMutation.conf
+tests/fixtures/Shadowrocket.BodyMutation.conf
 ```
 
 Expected behavior:
@@ -55,12 +57,14 @@ Expected behavior:
   rules;
 - the dedicated header mutation fixture registers eight request/response
   header mutation rules;
+- the dedicated body mutation fixture registers one response body regex
+  mutation rule;
 - two script rules are registered;
 - three MITM host patterns are registered;
 - `skip-server-cert-verify` and `h2` options are exposed to adapters;
-- redirect, reject, request header mutation, response header mutation, request
-  script, response script, and MITM allow/deny behavior are observable through
-  public ABI calls.
+- redirect, reject, request header mutation, response header mutation, response
+  body mutation, request script, response script, and MITM allow/deny behavior
+  are observable through public ABI calls.
 
 ## Negative Case
 
@@ -70,6 +74,7 @@ Parser cases:
 tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
 tests/fixtures/Shadowrocket.RequestRewrite.Malformed.conf
 tests/fixtures/Shadowrocket.HeaderMutation.Malformed.conf
+tests/fixtures/Shadowrocket.BodyMutation.Malformed.conf
 tests/fixtures/Shadowrocket.MitmCertificateUnsupported.conf
 ```
 
@@ -80,6 +85,7 @@ Expected behavior:
   `ANIXOPS_ERR_REGEX`;
 - malformed dedicated header mutation config load fails with
   `ANIXOPS_ERR_REGEX`;
+- malformed dedicated body mutation config load fails with `ANIXOPS_ERR_REGEX`;
 - malformed URL rewrite config records a rejected rule diagnostic with section
   `Rewrite` and action `rewrite`;
 - malformed URL rewrite config last error reports regex failure at the
@@ -141,6 +147,10 @@ Required CI evidence:
   `config/shadowrocket_header_mutation_fixture_maps_header_rewrites`;
 - `tests/test_config.c` registers
   `config/shadowrocket_header_mutation_malformed_fixture_rejects_invalid_header_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_body_mutation_fixture_maps_response_body_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `tests/test_config.c` registers
   `config/shadowrocket_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
