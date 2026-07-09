@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.1.0` script trigger compatibility guard so Quantumult X
+  `script-request-body` and `script-response-body` tokens always expose
+  `requires_body=1` in dispatch metadata, even when a later attr-list segment
+  tries to override the body requirement.
 - Added a `v1.0.5` MITM hostname policy hardening test and matcher update:
   hostnames now normalize trailing dots, exact hosts remain explicit, and
   `*.` wildcard host patterns match child subdomains without also matching the

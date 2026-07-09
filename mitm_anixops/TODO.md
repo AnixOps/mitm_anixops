@@ -229,6 +229,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   positive/negative tests.
 - [x] Record any QuickJS, JavaScriptCore, or new runtime dependency decision
   before implementation.
+- [x] Add a script trigger compatibility guard proving body trigger tokens keep
+  `requires_body=1` in dispatch metadata.
 
 ## P4 MITM Policy And Certificate Lifecycle
 

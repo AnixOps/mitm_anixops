@@ -2644,6 +2644,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	anixops_phase_t phase = ANIXOPS_PHASE_REQUEST;
 	const char *attrs = NULL;
 	int direct_script_path = 0;
+	int direct_body_trigger = 0;
 	anixops_script_rule_t *rule;
 
 	if (engine == NULL || line == NULL) {
@@ -2708,6 +2709,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 		if (parsed_direct_script) {
 			if (anixops_script_kind_requires_body_token(rewrite_type)) {
 				anixops_copy_text(requires_body, sizeof(requires_body), "1");
+				direct_body_trigger = 1;
 			}
 			direct_script_path = 1;
 			attrs = rewrite_cursor;
@@ -2774,6 +2776,9 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	anixops_unquote_inplace(timeout);
 	anixops_unquote_inplace(max_size);
 	anixops_unquote_inplace(enable);
+	if (direct_body_trigger) {
+		anixops_copy_text(requires_body, sizeof(requires_body), "1");
+	}
 	if (timeout_ms[0] != '\0') {
 		(void)anixops_parse_size_value(timeout_ms, &parsed_timeout_ms);
 	}

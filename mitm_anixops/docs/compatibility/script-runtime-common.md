@@ -33,6 +33,9 @@ script rules.
 - Script metadata parsed from Quantumult X url-prefixed script rules.
 - Rule-level `argument`, `timeout`, `max-size`, `requires-body`, `tag`, and
   script-path fields when the grammar exposes them.
+- Quantumult X `script-request-body` and `script-response-body` trigger tokens
+  are body triggers by definition and must expose `requires_body=1` even if a
+  later attr-list segment tries to override that body requirement.
 - Local script assets supplied by `--script-map` or `--script-bundle` in the
   Alpha no-network replay runner.
 
@@ -74,6 +77,9 @@ execution, body decoding, header map mutation, and HTTP writeback.
   `$done`.
 - Response scripts receive `$request`, `$response`, `$argument`,
   `$persistentStore`, and `$done`.
+- Body trigger tokens expose request or response phase metadata with
+  `requires_body=1`; header trigger tokens expose the matching phase without
+  requiring a body by default.
 - `$done.body` writes back to the no-network replay trace body.
 - `$persistentStore` state is shared across request and response script
   invocations when a store file is configured.

@@ -469,6 +469,47 @@ static void quantumultx_url_prefixed_response_header_scripts_are_supported(void)
 	anixops_engine_free(engine);
 }
 
+static void body_script_trigger_tokens_force_requires_body(void)
+{
+	const char *config =
+		"[rewrite_local]\n"
+		"^https://api\\.example\\.test/request-body url script-request-body https://scripts.example.test/qx-request-body.js "
+		"requires-body=0, timeout-ms=321, max-size=654, tag=request.body, argument=Mode=request\n"
+		"^https://api\\.example\\.test/response-body url script-response-body https://scripts.example.test/qx-response-body.js "
+		"requires_body=0, timeout=2, max_size=987, tag=response.body, argument=Mode=response\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/request-body", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 321);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 654);
+	ANIXOPS_EXPECT_STREQ(script.tag, "request.body");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=request");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/response-body", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.phase, ANIXOPS_PHASE_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(script.timeout_ms, 2000);
+	ANIXOPS_EXPECT_EQ_SIZE(script.max_size, 987);
+	ANIXOPS_EXPECT_STREQ(script.tag, "response.body");
+	ANIXOPS_EXPECT_STREQ(script.argument, "Mode=response");
+
+	anixops_engine_free(engine);
+}
+
 static void script_scheduling_attributes_are_exposed(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -673,6 +714,12 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"script/quantumultx_url_prefixed_response_header_scripts_are_supported",
 		quantumultx_url_prefixed_response_header_scripts_are_supported);
+	add_test(
+		tests,
+		count,
+		cap,
+		"script/body_script_trigger_tokens_force_requires_body",
+		body_script_trigger_tokens_force_requires_body);
 	add_test(tests, count, cap, "script/script_scheduling_attributes_are_exposed", script_scheduling_attributes_are_exposed);
 	add_test(tests, count, cap, "script/disabled_script_rules_do_not_dispatch", disabled_script_rules_do_not_dispatch);
 	add_test(tests, count, cap, "script/sgmodule_inline_arguments_are_supported", sgmodule_inline_arguments_are_supported);
