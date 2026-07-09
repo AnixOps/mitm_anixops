@@ -75,5 +75,13 @@ require_pattern "$DRY_RUN_WORKFLOW" "sh scripts/release-publication-verify-check
 require_pattern "$DRY_RUN_WORKFLOW" "sh scripts/release-publication-verify-test.sh" "release dry-run missing publication verifier fixture test"
 require_pattern "$RELEASE_WORKFLOW" "sh scripts/release-publication-verify-check.sh" "release workflow missing publication verifier static check"
 require_pattern "$RELEASE_WORKFLOW" "sh scripts/release-publication-verify-test.sh" "release workflow missing publication verifier fixture test"
+require_pattern "$RELEASE_WORKFLOW" "Verify published release assets" "release workflow missing post-publication verifier step"
+require_pattern "$RELEASE_WORKFLOW" "sh mitm_anixops/scripts/release-publication-verify.sh" "release workflow missing post-publication verifier invocation"
+require_pattern "$RELEASE_WORKFLOW" "release-publication-evidence/release-publication-verify.env" "release workflow missing publication evidence output file"
+require_pattern "$RELEASE_WORKFLOW" "anixops-mitm-release-publication-evidence" "release workflow missing publication evidence artifact"
+require_pattern "$RELEASE_WORKFLOW" "release_publication_verify_status=passed" "release workflow missing publication verifier status assertion"
+require_pattern "$RELEASE_WORKFLOW" "needs.same-commit-ci.outputs.ci_run_id" "release workflow missing same-commit CI id verifier input"
+require_pattern "$RELEASE_WORKFLOW" "publication_verify_artifact" "release workflow missing publication verifier summary artifact"
+require_pattern "$RELEASE_WORKFLOW" "publication_verify_output" "release workflow missing publication verifier summary output"
 
 printf '%s\n' "release publication verify check passed"

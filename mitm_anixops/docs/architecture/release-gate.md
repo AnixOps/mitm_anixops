@@ -121,6 +121,7 @@ release-publication-verify-script=scripts/release-publication-verify.sh
 release-publication-verify-static-check=scripts/release-publication-verify-check.sh
 release-publication-verify-fixture-test=scripts/release-publication-verify-test.sh
 release-publication-post-publish-evidence=assets-manifest-notes-checksums-ci-run-release-run-artifact-platforms
+release-publication-post-publish-evidence-artifact=anixops-mitm-release-publication-evidence
 repository-governance-status=confirmed-for-v1-publication
 release-rollback-policy=accepted
 ```
@@ -212,6 +213,11 @@ evidence, artifact count, artifact platforms, release notes, and checksum
 sidecars. The static verifier check keeps that post-publication command wired
 into CI, release dry-run, release readiness, and the v1 acceptance evidence
 path.
+
+For tag-triggered publications, the release workflow also runs that verifier
+after `gh release create` and uploads `release-publication-verify.env` as the
+`anixops-mitm-release-publication-evidence` workflow artifact. That artifact is
+the downloadable post-publication evidence record for the released tag.
 
 The verifier fixture test builds a temporary release asset set and a fake `gh`
 command so CI can exercise the post-publication verifier without network
