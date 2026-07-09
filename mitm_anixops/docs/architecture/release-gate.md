@@ -103,6 +103,7 @@ release-workflow-sensitive-material-gate=scripts/release-sensitive-material-chec
 release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
+release-workflow-manifest-schema=release-manifest-v1
 release-workflow-adapter-readiness-manifest=ci-gated-alpha-boundary-fields
 release-workflow-metadata-static-check=scripts/release-metadata-check.sh
 release-workflow-metadata=checksums-manifest-notes-summary
@@ -149,6 +150,11 @@ The compatibility summary static check requires each count key to appear
 exactly once, use a non-negative integer value, and sum to the total row count
 before those values are written into release metadata.
 
+The release manifest also carries `manifest_schema_version=release-manifest-v1`.
+The same schema version is repeated in release notes and the GitHub Step
+Summary so downstream release evidence readers can reject unknown or drifting
+manifest shapes before trusting artifact metadata.
+
 The release manifest, release notes, and GitHub Step Summary also include
 adapter readiness status, gate, scope, and production-boundary fields. The
 current value is the CI-gated alpha adapter boundary: policy core, runner,
@@ -187,6 +193,7 @@ Publication must be blocked when:
 - manual-intervention marker is pending for a required release gate;
 - checksum or manifest generation fails;
 - release metadata omits compatibility status counts;
+- release metadata omits manifest schema version;
 - release metadata omits adapter readiness status, gate, scope, or production boundary;
 - release notes omit compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;
