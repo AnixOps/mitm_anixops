@@ -2236,8 +2236,12 @@ static int anixops_engine_add_task_rule(anixops_engine_t *engine, const char *li
 		attrs = eq + 1;
 		anixops_trim_inplace(left);
 		anixops_copy_text(left_tag, sizeof(left_tag), left);
-		if (!anixops_extract_attr(attrs, "type", type, sizeof(type)) ||
-			!anixops_parse_task_kind_token(type, &kind)) {
+		if (!anixops_extract_attr(attrs, "type", type, sizeof(type))) {
+			free(copy);
+			return ANIXOPS_OK;
+		}
+		anixops_unquote_inplace(type);
+		if (!anixops_parse_task_kind_token(type, &kind)) {
 			free(copy);
 			return ANIXOPS_OK;
 		}

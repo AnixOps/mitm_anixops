@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.1.3` cron/task compatibility guard so quoted attr-list task
+  `type` values such as `type="cron"`, `type='interval'`, and `type="task"`
+  register as task descriptors while remaining outside HTTP script URL
+  dispatch.
 - Added a `v1.1.2` CI/CD script trigger evidence gate that scans registered
   `tests/test_script.c` `script/...` tests and requires each one to be recorded
   in both the script trigger compatibility matrix row and source-contract
