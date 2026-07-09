@@ -177,6 +177,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   positive/negative tests for the response-rewrite contract.
 - [x] Add Surge `[URL Rewrite]` response body-regex parser fixtures and
   positive/negative tests for the response-rewrite contract.
+- [x] Add Shadowrocket `[URL Rewrite]` response mock body parser fixtures and
+  positive/negative tests for the response-rewrite contract.
 - [x] Define body mutation source contract with parser fixtures and CI-covered
   positive/negative tests.
 - [x] Add Loon `[Body Rewrite]` body mutation parser fixtures and

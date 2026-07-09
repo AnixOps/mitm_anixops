@@ -2,7 +2,7 @@
 
 Capability: response rewrite.
 
-Ecosystem: `portable`, `loon`, `quantumultx`, `surge`.
+Ecosystem: `portable`, `loon`, `quantumultx`, `surge`, `shadowrocket`.
 
 Status: `partial`.
 
@@ -18,7 +18,8 @@ compression, or platform network behavior.
 The current common subset accepts:
 
 - `[Rewrite]`, `[URL Rewrite]`, `[Remote Rewrite]`, and Quantumult X
-  `[rewrite_local]` / `#[rewrite_local]` section aliases;
+  `[rewrite_local]` / `#[rewrite_local]` section aliases, including
+  Shadowrocket-style `[URL Rewrite]` response mock lines;
 - response mock body actions such as `mock-response-body`;
 - Quantumult X style `url echo-response content-type body` forms;
 - response body regex replacement actions such as
@@ -44,6 +45,7 @@ tests/fixtures/ResponseEchoRewrite.Common.conf
 tests/fixtures/Loon.ResponseRewrite.plugin
 tests/fixtures/QuantumultX.ResponseRewrite.snippet
 tests/fixtures/Surge.ResponseRewrite.sgmodule
+tests/fixtures/Shadowrocket.ResponseRewrite.conf
 ```
 
 Expected behavior:
@@ -66,6 +68,8 @@ Expected behavior:
   observable through `anixops_rewrite_apply_body`.
 - Surge `[URL Rewrite]` response body regex rules are observable through
   `anixops_rewrite_apply_body`.
+- Shadowrocket `[URL Rewrite]` response mock body rules are observable through
+  `anixops_rewrite_apply_body`.
 
 ## Negative Case
 
@@ -77,6 +81,7 @@ tests/fixtures/ResponseEchoRewrite.Common.Malformed.conf
 tests/fixtures/Loon.ResponseRewrite.Malformed.plugin
 tests/fixtures/QuantumultX.ResponseRewrite.Malformed.snippet
 tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule
+tests/fixtures/Shadowrocket.ResponseRewrite.Malformed.conf
 ```
 
 Expected behavior:
@@ -87,6 +92,8 @@ Expected behavior:
 - the invalid Loon `[URL Rewrite]` response body regex rejects config load;
 - the invalid Quantumult X `url` response body regex rejects config load;
 - the invalid Surge `[URL Rewrite]` response body regex rejects config load;
+- the malformed Shadowrocket `[URL Rewrite]` echo-response line without a
+  response body is rejected under a strict compatibility profile;
 - a rejected rule diagnostic is recorded with section `Rewrite` and action
   `rewrite`;
 - last error reports parse failure at the malformed line.
@@ -130,6 +137,10 @@ Required CI evidence:
   `config/surge_response_rewrite_fixture_maps_response_body_regex`;
 - `tests/test_config.c` registers
   `config/surge_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_response_rewrite_fixture_maps_mock_response_body`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_response_rewrite_malformed_fixture_rejects_missing_body`;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

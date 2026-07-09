@@ -198,6 +198,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 - Added Surge `[URL Rewrite]` response body-regex parser fixtures and
   CI-covered tests for the response-rewrite contract while keeping streaming,
   compression, and HTTP serialization adapter-owned.
+- Added Shadowrocket `[URL Rewrite]` response mock body parser fixtures and
+  CI-covered tests while keeping streaming, compression, and HTTP serialization
+  adapter-owned.
 - Aligned the Surge common source-contract evidence with the dedicated request
   rewrite parser fixtures and CI-covered tests.
 - Added a body mutation source contract plus positive and negative parser

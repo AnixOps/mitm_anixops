@@ -16,8 +16,8 @@ does not claim full Shadowrocket profile compatibility.
 
 The current common-config subset accepts:
 
-- `[URL Rewrite]` URL redirect, reject, request/response header mutation, and
-  response body regex mutation rules;
+- `[URL Rewrite]` URL redirect, reject, response mock body, request/response
+  header mutation, and response body regex mutation rules;
 - `[Script]` attr-list rules with `type`, `pattern`, `requires-body`,
   `timeout`, `timeout-ms`, `max-size`, `max_size`, `script-path`, and
   `argument`;
@@ -45,6 +45,7 @@ Parser case:
 ```text
 tests/fixtures/Shadowrocket.CommonConfig.conf
 tests/fixtures/Shadowrocket.RequestRewrite.conf
+tests/fixtures/Shadowrocket.ResponseRewrite.conf
 tests/fixtures/Shadowrocket.HeaderMutation.conf
 tests/fixtures/Shadowrocket.BodyMutation.conf
 ```
@@ -55,6 +56,7 @@ Expected behavior:
 - two rewrite rules are registered;
 - the dedicated request rewrite fixture registers two URL redirect/reject
   rules;
+- the dedicated response rewrite fixture registers one response mock body rule;
 - the dedicated header mutation fixture registers eight request/response
   header mutation rules;
 - the dedicated body mutation fixture registers one response body regex
@@ -62,9 +64,9 @@ Expected behavior:
 - two script rules are registered;
 - three MITM host patterns are registered;
 - `skip-server-cert-verify` and `h2` options are exposed to adapters;
-- redirect, reject, request header mutation, response header mutation, response
-  body mutation, request script, response script, and MITM allow/deny behavior
-  are observable through public ABI calls.
+- redirect, reject, response mock body, request header mutation, response header
+  mutation, response body mutation, request script, response script, and MITM
+  allow/deny behavior are observable through public ABI calls.
 
 ## Negative Case
 
@@ -73,6 +75,7 @@ Parser cases:
 ```text
 tests/fixtures/Shadowrocket.CommonConfig.Malformed.conf
 tests/fixtures/Shadowrocket.RequestRewrite.Malformed.conf
+tests/fixtures/Shadowrocket.ResponseRewrite.Malformed.conf
 tests/fixtures/Shadowrocket.HeaderMutation.Malformed.conf
 tests/fixtures/Shadowrocket.BodyMutation.Malformed.conf
 tests/fixtures/Shadowrocket.MitmCertificateUnsupported.conf
@@ -83,6 +86,8 @@ Expected behavior:
 - malformed URL rewrite config load fails with `ANIXOPS_ERR_REGEX`;
 - malformed dedicated request rewrite config load fails with
   `ANIXOPS_ERR_REGEX`;
+- malformed dedicated response rewrite config load fails with
+  `ANIXOPS_ERR_PARSE` under a strict compatibility profile;
 - malformed dedicated header mutation config load fails with
   `ANIXOPS_ERR_REGEX`;
 - malformed dedicated body mutation config load fails with `ANIXOPS_ERR_REGEX`;
@@ -143,6 +148,10 @@ Required CI evidence:
   `config/shadowrocket_request_rewrite_fixture_maps_redirect_and_reject`;
 - `tests/test_config.c` registers
   `config/shadowrocket_request_rewrite_malformed_fixture_rejects_invalid_url_regex`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_response_rewrite_fixture_maps_mock_response_body`;
+- `tests/test_config.c` registers
+  `config/shadowrocket_response_rewrite_malformed_fixture_rejects_missing_body`;
 - `tests/test_config.c` registers
   `config/shadowrocket_header_mutation_fixture_maps_header_rewrites`;
 - `tests/test_config.c` registers
