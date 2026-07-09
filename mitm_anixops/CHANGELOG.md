@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.1` release manifest adapter-readiness evidence set so
+  tag-triggered releases and release dry-runs record adapter readiness status,
+  gate, scope, and production-boundary fields in generated manifests, release
+  notes, and GitHub Step Summaries.
 - Added a `v1.2.0` integration adapter readiness gate that ties NetworkCore
   boundary markers, alpha package contents, runner/proxy shim targets,
   Go/Rust/CMake/pkg-config package checks, E2E entrypoints, and release workflow

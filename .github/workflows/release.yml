@@ -215,6 +215,10 @@ jobs:
       publish_eligibility_status: ${{ steps.build_package.outputs.publish_eligibility_status }}
       release_readiness_status: ${{ steps.readiness.outputs.release_readiness_status }}
       release_readiness_blocking_reason: ${{ steps.readiness.outputs.release_readiness_blocking_reason }}
+      adapter_readiness_status: ${{ steps.build_package.outputs.adapter_readiness_status }}
+      adapter_readiness_gate: ${{ steps.build_package.outputs.adapter_readiness_gate }}
+      adapter_readiness_scope: ${{ steps.build_package.outputs.adapter_readiness_scope }}
+      adapter_readiness_production_claim: ${{ steps.build_package.outputs.adapter_readiness_production_claim }}
       compatibility_supported_count: ${{ steps.build_package.outputs.compatibility_supported_count }}
       compatibility_partial_count: ${{ steps.build_package.outputs.compatibility_partial_count }}
       compatibility_planned_count: ${{ steps.build_package.outputs.compatibility_planned_count }}
@@ -313,6 +317,10 @@ jobs:
           version_no_v="${RELEASE_VERSION#v}"
           release_readiness_status="${{ steps.readiness.outputs.release_readiness_status }}"
           release_readiness_blocking_reason="${{ steps.readiness.outputs.release_readiness_blocking_reason }}"
+          adapter_readiness_status="ci-gated-alpha-boundary"
+          adapter_readiness_gate="scripts/integration-adapter-readiness-check.sh"
+          adapter_readiness_scope="policy-core-runner-proxy-shim-bindings-docs"
+          adapter_readiness_production_claim="not-production-networkcore-adapter"
           compatibility_supported_count="${{ steps.compatibility.outputs.compatibility_supported_count }}"
           compatibility_partial_count="${{ steps.compatibility.outputs.compatibility_partial_count }}"
           compatibility_planned_count="${{ steps.compatibility.outputs.compatibility_planned_count }}"
@@ -367,6 +375,10 @@ jobs:
             printf '  "publish_eligibility_status": "%s",\n' "${publish_eligibility_status}"
             printf '  "release_readiness_status": "%s",\n' "${release_readiness_status}"
             printf '  "release_readiness_blocking_reason": "%s",\n' "${release_readiness_blocking_reason}"
+            printf '  "adapter_readiness_status": "%s",\n' "${adapter_readiness_status}"
+            printf '  "adapter_readiness_gate": "%s",\n' "${adapter_readiness_gate}"
+            printf '  "adapter_readiness_scope": "%s",\n' "${adapter_readiness_scope}"
+            printf '  "adapter_readiness_production_claim": "%s",\n' "${adapter_readiness_production_claim}"
             printf '  "compatibility_scope": "alpha policy-core release artifact",\n'
             printf '  "compatibility_supported_count": %s,\n' "${compatibility_supported_count}"
             printf '  "compatibility_partial_count": %s,\n' "${compatibility_partial_count}"
@@ -406,6 +418,8 @@ jobs:
             printf 'Publication: %s.\n\n' "${RELEASE_PUBLICATION}"
             printf 'Publication gate: %s.\n\n' "${RELEASE_PUBLICATION_GATE}"
             printf 'Release readiness: %s (%s).\n\n' "${release_readiness_status}" "${release_readiness_blocking_reason}"
+            printf 'Adapter readiness: %s via %s.\n\n' "${adapter_readiness_status}" "${adapter_readiness_gate}"
+            printf 'Adapter readiness scope: %s; production claim: %s.\n\n' "${adapter_readiness_scope}" "${adapter_readiness_production_claim}"
             printf 'Release artifacts: Linux x64 policy-core tarball and Windows x64 shim zip.\n\n'
             printf 'Compatibility matrix status counts: supported=%s, partial=%s, planned=%s, unsupported=%s, total=%s.\n\n' \
               "${compatibility_supported_count}" \
@@ -457,6 +471,10 @@ jobs:
             printf 'publish_blocking_reason=%s\n' "${publish_blocking_reason}"
             printf 'release_readiness_status=%s\n' "${release_readiness_status}"
             printf 'release_readiness_blocking_reason=%s\n' "${release_readiness_blocking_reason}"
+            printf 'adapter_readiness_status=%s\n' "${adapter_readiness_status}"
+            printf 'adapter_readiness_gate=%s\n' "${adapter_readiness_gate}"
+            printf 'adapter_readiness_scope=%s\n' "${adapter_readiness_scope}"
+            printf 'adapter_readiness_production_claim=%s\n' "${adapter_readiness_production_claim}"
             printf 'compatibility_supported_count=%s\n' "${compatibility_supported_count}"
             printf 'compatibility_partial_count=%s\n' "${compatibility_partial_count}"
             printf 'compatibility_planned_count=%s\n' "${compatibility_planned_count}"
@@ -487,11 +505,17 @@ jobs:
           grep -q "\"publication\": \"${RELEASE_PUBLICATION}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"publish_eligibility_status\": \"${{ steps.build_package.outputs.publish_eligibility_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"release_readiness_status\": \"${{ steps.readiness.outputs.release_readiness_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"adapter_readiness_status\": \"${{ steps.build_package.outputs.adapter_readiness_status }}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"adapter_readiness_gate\": \"${{ steps.build_package.outputs.adapter_readiness_gate }}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"adapter_readiness_scope\": \"${{ steps.build_package.outputs.adapter_readiness_scope }}\"" "${{ steps.build_package.outputs.manifest_path }}"
+          grep -q "\"adapter_readiness_production_claim\": \"${{ steps.build_package.outputs.adapter_readiness_production_claim }}\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"compatibility_total_count\": ${{ steps.compatibility.outputs.compatibility_total_count }}" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"platform\": \"linux-x64\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "\"platform\": \"windows-x64\"" "${{ steps.build_package.outputs.manifest_path }}"
           grep -q "CI gate:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Release readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Adapter readiness:" "${{ steps.build_package.outputs.release_notes_path }}"
+          grep -q "Adapter readiness scope:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Release artifacts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility matrix status counts:" "${{ steps.build_package.outputs.release_notes_path }}"
           grep -q "Compatibility scope:" "${{ steps.build_package.outputs.release_notes_path }}"
@@ -525,6 +549,10 @@ jobs:
             printf '| publish_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.publish_blocking_reason }}"
             printf '| release_readiness_status | `%s` |\n' "${{ steps.build_package.outputs.release_readiness_status }}"
             printf '| release_readiness_blocking_reason | `%s` |\n' "${{ steps.build_package.outputs.release_readiness_blocking_reason }}"
+            printf '| adapter_readiness_status | `%s` |\n' "${{ steps.build_package.outputs.adapter_readiness_status }}"
+            printf '| adapter_readiness_gate | `%s` |\n' "${{ steps.build_package.outputs.adapter_readiness_gate }}"
+            printf '| adapter_readiness_scope | `%s` |\n' "${{ steps.build_package.outputs.adapter_readiness_scope }}"
+            printf '| adapter_readiness_production_claim | `%s` |\n' "${{ steps.build_package.outputs.adapter_readiness_production_claim }}"
             printf '| compatibility_supported_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_supported_count }}"
             printf '| compatibility_partial_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_partial_count }}"
             printf '| compatibility_planned_count | `%s` |\n' "${{ steps.build_package.outputs.compatibility_planned_count }}"
@@ -617,8 +645,14 @@ jobs:
           grep -q "\"publication\": \"github-release-assets\"" "${manifest}"
           grep -q "\"publish_eligibility_status\": \"eligible\"" "${manifest}"
           grep -q "\"release_readiness_status\": \"${RELEASE_READINESS_STATUS}\"" "${manifest}"
+          grep -q "\"adapter_readiness_status\": \"${{ needs.package.outputs.adapter_readiness_status }}\"" "${manifest}"
+          grep -q "\"adapter_readiness_gate\": \"${{ needs.package.outputs.adapter_readiness_gate }}\"" "${manifest}"
+          grep -q "\"adapter_readiness_scope\": \"${{ needs.package.outputs.adapter_readiness_scope }}\"" "${manifest}"
+          grep -q "\"adapter_readiness_production_claim\": \"${{ needs.package.outputs.adapter_readiness_production_claim }}\"" "${manifest}"
           grep -q "\"compatibility_total_count\":" "${manifest}"
           grep -q "\"platform\": \"windows-x64\"" "${manifest}"
+          grep -q "Adapter readiness:" "${notes}"
+          grep -q "Adapter readiness scope:" "${notes}"
           grep -q "Compatibility matrix status counts:" "${notes}"
           grep -q "Release artifacts:" "${notes}"
           grep -q "Rollback path:" "${notes}"
@@ -657,6 +691,10 @@ jobs:
             printf '| ci_gate | `%s` |\n' "${RELEASE_CI_GATE}"
             printf '| publish_eligibility_status | `%s` |\n' "${PUBLISH_ELIGIBILITY_STATUS}"
             printf '| windows_artifact_name | `%s` |\n' "${{ needs.package.outputs.windows_artifact_name }}"
+            printf '| adapter_readiness_status | `%s` |\n' "${{ needs.package.outputs.adapter_readiness_status }}"
+            printf '| adapter_readiness_gate | `%s` |\n' "${{ needs.package.outputs.adapter_readiness_gate }}"
+            printf '| adapter_readiness_scope | `%s` |\n' "${{ needs.package.outputs.adapter_readiness_scope }}"
+            printf '| adapter_readiness_production_claim | `%s` |\n' "${{ needs.package.outputs.adapter_readiness_production_claim }}"
             printf '| compatibility_supported_count | `%s` |\n' "${{ needs.package.outputs.compatibility_supported_count }}"
             printf '| compatibility_partial_count | `%s` |\n' "${{ needs.package.outputs.compatibility_partial_count }}"
             printf '| compatibility_planned_count | `%s` |\n' "${{ needs.package.outputs.compatibility_planned_count }}"

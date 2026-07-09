@@ -321,6 +321,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   generated.
 - [x] Run integration adapter readiness directly in CI, release dry-run, and
   tag-triggered release readiness gates.
+- [x] Add adapter readiness evidence fields to release and dry-run manifests,
+  release notes, summaries, and metadata gates.
 - [x] Add a release sensitive-material gate for generated Linux tarballs and
   Windows zip artifacts before publication.
 - [x] Confirm repository-level `main` branch protection, `v*` tag ruleset, and
