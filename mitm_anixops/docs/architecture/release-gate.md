@@ -237,8 +237,8 @@ The release evidence index static check keeps that machine-readable record
 wired into CI, release dry-run, release readiness, and v1 acceptance checks,
 requires the first entry to match the latest stable release, and preserves
 prior public release evidence entries. When a release or release dry-run passes
-a stable patch target such as `v1.3.6`, the same check also requires
-`latestStable` to equal the previous stable patch (`v1.3.5` for `v1.3.6`), so
+a stable patch target such as `v1.3.7`, the same check also requires
+`latestStable` to equal the previous stable patch (`v1.3.6` for `v1.3.7`), so
 stable patch publication cannot proceed with a stale evidence index.
 
 The verifier fixture test builds a temporary release asset set and a fake `gh`
