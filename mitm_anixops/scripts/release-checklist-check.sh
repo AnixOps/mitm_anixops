@@ -45,6 +45,7 @@ require_pattern "$CHECKLIST" "scripts/manual-intervention-check.sh" "release che
 require_pattern "$CHECKLIST" "scripts/manual-intervention-transition-check.sh" "release checklist missing manual intervention transition check command"
 require_pattern "$CHECKLIST" "scripts/release-checklist-check.sh" "release checklist missing release checklist check command"
 require_pattern "$CHECKLIST" "scripts/release-metadata-check.sh" "release checklist missing release metadata check command"
+require_pattern "$CHECKLIST" "scripts/release-sensitive-material-check.sh" "release checklist missing release sensitive material check command"
 require_pattern "$CHECKLIST" "scripts/compatibility-status-summary-check.sh" "release checklist missing compatibility status summary check command"
 require_pattern "$CHECKLIST" "release_readiness_status=passed" "release checklist missing readiness pass evidence"
 require_pattern "$CHECKLIST" "branch-protection" "release checklist missing branch protection blocker"
@@ -69,5 +70,6 @@ done
 require_pattern "$RELEASE_GATE" "release-workflow-v1-readiness-gate=required-before-v1-manual-markers-and-no-planned-matrix-rows" "release gate missing v1 readiness marker"
 require_pattern "$RELEASE_GATE" "release-checklist-static-check=scripts/release-checklist-check.sh" "release gate missing release checklist static check marker"
 require_pattern "$RELEASE_GATE" "release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh" "release gate missing compatibility status summary static check marker"
+require_pattern "$RELEASE_GATE" "release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh" "release gate missing sensitive material marker"
 
 printf '%s\n' "release checklist check passed"

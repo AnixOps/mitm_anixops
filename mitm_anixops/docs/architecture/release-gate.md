@@ -95,6 +95,7 @@ release-workflow-manual-intervention-static-check=scripts/manual-intervention-ch
 release-workflow-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
 release-workflow-release-checklist-static-check=scripts/release-checklist-check.sh
 release-workflow-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh
+release-workflow-sensitive-material-gate=scripts/release-sensitive-material-check.sh
 release-workflow-linux-artifact=linux-x64-tarball-with-checksum
 release-workflow-windows-artifact=windows-x64-zip-with-checksum
 release-workflow-compatibility-summary=status-counts-in-manifest-notes-summary
@@ -112,7 +113,10 @@ packaging, it verifies that the same commit has a successful `build.yml` run on
 `main`, that the release rollback/replacement policy exists, that manual
 intervention markers have valid schema and confirmation evidence, that release
 checklist and metadata static gates pass, and that stable release readiness has
-passed. The stable readiness gate blocks `v1.0.0` while
+passed. Generated Linux tarballs and Windows zip artifacts are scanned for
+private keys, credential-like filenames, and common token patterns before
+metadata validation and again before GitHub Release publication. The stable
+readiness gate blocks `v1.0.0` while
 manual-intervention markers required before `v1.0.0` or `v1.0.0-release` remain
 pending, or while the compatibility matrix contains `planned` rows. For `v*`
 tag runs only, it publishes workflow-generated Linux x64 tarball and Windows
@@ -169,4 +173,6 @@ Publication must be blocked when:
 - release metadata omits compatibility status counts;
 - release notes omit compatibility scope, known gaps, or rollback path;
 - stable release readiness is blocked for the requested version;
+- release artifacts contain private keys, credential-like filenames, or common
+  token patterns;
 - artifact was not created by the release workflow.

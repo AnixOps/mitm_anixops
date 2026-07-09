@@ -25,9 +25,9 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.0.2`. The `v1.0.3` patch train is
-reserved for rewrite engine hardening, starting with bounded policy-core
-internal URL rewrite decisions for portable `200` rules.
+The latest published stable artifact is `v1.0.3`. The `v1.0.4` patch train is
+reserved for release security hardening, starting with sensitive-material
+scanning for generated release tarballs and Windows zip artifacts.
 
 ## Operating Rules
 

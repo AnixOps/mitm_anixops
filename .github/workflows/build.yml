@@ -182,6 +182,8 @@ jobs:
             mitm_anixops/scripts/ci-trigger-check.sh
             mitm_anixops/scripts/release-checklist-check.sh
             mitm_anixops/scripts/security-claim-check.sh
+            mitm_anixops/scripts/release-sensitive-material-check.sh
+            mitm_anixops/scripts/release-sensitive-material-check-test.sh
             mitm_anixops/scripts/release-metadata-check.sh
             mitm_anixops/scripts/release-readiness-check.sh
             mitm_anixops/scripts/repository-governance-check.sh
@@ -198,6 +200,7 @@ jobs:
           sh mitm_anixops/scripts/manual-intervention-check.sh
           sh mitm_anixops/scripts/manual-intervention-transition-check.sh
           sh mitm_anixops/scripts/security-claim-check.sh
+          sh mitm_anixops/scripts/release-sensitive-material-check-test.sh
           sh mitm_anixops/scripts/alpha-fixture-package-check.sh
           sh mitm_anixops/scripts/compatibility-evidence-check.sh
           sh mitm_anixops/scripts/compatibility-status-summary-check.sh
@@ -221,6 +224,8 @@ jobs:
           grep -q "ci trigger check passed" mitm_anixops/scripts/ci-trigger-check.sh
           grep -q "release checklist check passed" mitm_anixops/scripts/release-checklist-check.sh
           grep -q "release metadata check passed" mitm_anixops/scripts/release-metadata-check.sh
+          grep -q "release sensitive material check passed" mitm_anixops/scripts/release-sensitive-material-check.sh
+          grep -q "release sensitive material check test passed" mitm_anixops/scripts/release-sensitive-material-check-test.sh
           grep -q "compatibility matrix check passed" mitm_anixops/scripts/compatibility-matrix-check.sh
           grep -q "compatibility-matrix:" .github/workflows/build.yml
           grep -q "static format check passed" mitm_anixops/scripts/static-format-check.sh
@@ -724,6 +729,7 @@ jobs:
           grep -q "\"platform\": \"windows-x64\"" .github/workflows/release-dry-run.yml
           grep -q "Dry-run artifacts:" .github/workflows/release-dry-run.yml
           grep -q "release-readiness-check.sh" .github/workflows/release-dry-run.yml
+          grep -q "release-sensitive-material-check.sh" .github/workflows/release-dry-run.yml
           grep -q "compatibility-status-summary.sh" .github/workflows/release-dry-run.yml
           grep -q "compatibility_total_count" .github/workflows/release-dry-run.yml
           grep -q "Compatibility matrix status counts:" .github/workflows/release-dry-run.yml
@@ -757,6 +763,7 @@ jobs:
           grep -q "gh release view" .github/workflows/release.yml
           grep -q "gh release create" .github/workflows/release.yml
           grep -q "release-readiness-check.sh" .github/workflows/release.yml
+          grep -q "release-sensitive-material-check.sh" .github/workflows/release.yml
           grep -q "compatibility-status-summary.sh" .github/workflows/release.yml
           grep -q "compatibility_total_count" .github/workflows/release.yml
           grep -q "Compatibility matrix status counts:" .github/workflows/release.yml
@@ -788,6 +795,7 @@ jobs:
           grep -q "release-checklist-check.sh" mitm_anixops/scripts/v1-acceptance-check.sh
           grep -q "repository_governance_status" mitm_anixops/scripts/repository-governance-check.sh
           grep -q "release-metadata-check.sh" mitm_anixops/scripts/check.sh
+          grep -q "release-sensitive-material-check-test.sh" mitm_anixops/scripts/check.sh
           grep -q "manual-intervention-transition-check.sh" mitm_anixops/scripts/check.sh
           grep -q "ci-trigger-check.sh" mitm_anixops/scripts/check.sh
           grep -q "release-checklist-check.sh" mitm_anixops/scripts/check.sh
@@ -872,7 +880,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev
+          sudo apt-get install -y build-essential cmake pkg-config libpcre2-dev libjq-dev zip unzip
       - name: Install mihomo fixture binary
         run: sh scripts/ensure-mihomo.sh
       - name: Run full project check

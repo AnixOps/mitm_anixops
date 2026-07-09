@@ -20,6 +20,7 @@ release-dry-run-release-checklist-static-check=scripts/release-checklist-check.s
 release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
 release-dry-run-metadata-static-check=scripts/release-metadata-check.sh
+release-dry-run-sensitive-material-gate=scripts/release-sensitive-material-check.sh
 release-dry-run-next-action=keep-dry-run-non-publishing-while-tag-release-workflow-publishes-after-gates
 ```
 
@@ -67,12 +68,14 @@ The dry-run workflow includes these logical gates:
 8. `package-*`: build the dry-run artifact in GitHub Actions.
 9. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
 10. `manifest-*`: generate JSON manifest and manifest checksum.
-11. `release-notes-dry-run`: generate notes containing compatibility scope,
+11. `sensitive-material-scan`: scan Linux tarballs and Windows zip artifacts
+    for private keys, credential-like filenames, and common token patterns.
+12. `release-notes-dry-run`: generate notes containing compatibility scope,
    compatibility status counts, known gaps, manual-intervention status, and
    rollback path.
-12. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
+13. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
    publication would be eligible.
-13. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
+14. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
    CI, compatibility, and manual-intervention fields.
 
 ## Required Outputs
@@ -126,6 +129,8 @@ The dry-run must fail when:
   inconsistent count fields;
 - manifest, notes, or summary omit compatibility status counts;
 - release notes omit known gaps, rollback path, or manual-intervention status;
+- Linux tarballs or Windows zip artifacts contain private keys,
+  credential-like filenames, or common token patterns;
 - a pending manual-intervention marker is required for the requested target;
 - stable release readiness is blocked for the requested version.
 
