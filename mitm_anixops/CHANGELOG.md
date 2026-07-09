@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.7` production MITM roadmap gate that fixes `v2.0.0` as the
+  production adapter contract freeze, `v2.8.0` as beta, `v2.9.0` as RC, and
+  `v3.0.0` as the first production-ready MITM claim while blocking earlier
+  production-ready claims.
 - Added a `v1.2.6` source-mode evidence field so release and dry-run metadata
   distinguish tag publication, manual validation, main-push dry-run, and
   pull-request dry-run paths.
