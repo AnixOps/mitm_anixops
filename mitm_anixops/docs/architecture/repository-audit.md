@@ -76,8 +76,8 @@ Current jobs:
   compatibility evidence hooks, release gate markers, and the manual
   intervention register schema.
 - `compatibility-matrix`: validates the v1.0.0 compatibility matrix row
-  structure, allowed status values, source contract links, and required evidence
-  fields without running a build.
+  structure, allowed status values, source contract links, required evidence
+  fields, and script trigger evidence registration without running a build.
 - `format-check`: validates tracked text files for trailing whitespace, CRLF,
   final newlines, and POSIX shell syntax without running a build.
 - `lint`: runs `shellcheck` against repository shell scripts at error severity.

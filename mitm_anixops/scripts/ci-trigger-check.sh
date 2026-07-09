@@ -9,13 +9,15 @@ DRY_RUN_WORKFLOW="$REPO/.github/workflows/release-dry-run.yml"
 RELEASE_WORKFLOW="$REPO/.github/workflows/release.yml"
 RELEASE_GATE_DOC="$ROOT/docs/architecture/release-gate.md"
 RELEASE_DRY_RUN_DOC="$ROOT/docs/architecture/release-dry-run.md"
+CHECK_SCRIPT="$ROOT/scripts/check.sh"
 
 for file in \
 	"$BUILD_WORKFLOW" \
 	"$DRY_RUN_WORKFLOW" \
 	"$RELEASE_WORKFLOW" \
 	"$RELEASE_GATE_DOC" \
-	"$RELEASE_DRY_RUN_DOC"
+	"$RELEASE_DRY_RUN_DOC" \
+	"$CHECK_SCRIPT"
 do
 	test -s "$file"
 done
@@ -68,6 +70,10 @@ for job in \
 do
 	require_regex "$BUILD_WORKFLOW" "^  ${job}:" "build workflow missing required job"
 done
+require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/script-trigger-evidence-check-test.sh" "build workflow missing script trigger evidence gate self-test"
+require_pattern "$BUILD_WORKFLOW" "sh mitm_anixops/scripts/script-trigger-evidence-check.sh" "build workflow missing script trigger evidence gate"
+require_pattern "$CHECK_SCRIPT" "sh scripts/script-trigger-evidence-check-test.sh" "local full check missing script trigger evidence gate self-test"
+require_pattern "$CHECK_SCRIPT" "sh scripts/script-trigger-evidence-check.sh" "local full check missing script trigger evidence gate"
 
 require_pattern "$DRY_RUN_WORKFLOW" "name: release-dry-run" "release dry-run workflow missing name"
 require_regex "$DRY_RUN_WORKFLOW" '^  workflow_dispatch:$' "release dry-run must allow manual validation"

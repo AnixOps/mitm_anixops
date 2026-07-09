@@ -1539,9 +1539,29 @@ Input form:
 
 Current CI evidence:
 
+- `script/current_bili_enhanced_plugin_fixture_is_supported`;
+- `script/representative_loon_fixture_is_supported`;
+- `script/representative_surge_fixture_is_supported`;
+- `script/representative_quantumultx_fixture_is_supported`;
+- `script/plugin_style_script_matches_response_and_resolves_arguments`;
+- `script/surge_style_script_rule_template_is_supported`;
+- `script/anixops_snippet_rewrite_script_lines_are_supported`;
+- `script/quantumultx_rewrite_local_section_is_supported`;
+- `script/quantumultx_url_prefixed_request_scripts_are_supported`;
+- `script/quantumultx_url_prefixed_response_header_scripts_are_supported`;
 - runner replay with the Alpha Node contract runner;
 - `script/body_script_trigger_tokens_force_requires_body`;
 - `script/direct_script_attribute_boundaries_accept_commas_quotes_and_aliases`;
+- `script/script_scheduling_attributes_are_exposed`;
+- `script/sgmodule_inline_arguments_are_supported`;
+- `script/disabled_script_rules_do_not_dispatch`;
+- `script/malformed_and_non_http_script_rules_are_ignored_or_rejected`;
+- `script/no_script_match_returns_none`;
+- `scripts/script-trigger-evidence-check.sh` verifies every registered
+  `tests/test_script.c` `script/...` test is present in this source-contract
+  evidence and in the script trigger compatibility matrix row;
+- `scripts/script-trigger-evidence-check-test.sh` proves the evidence gate fails
+  when either matrix or source-contract evidence is missing;
 - `$request`, `$response`, `$argument`, `$persistentStore`, and `$done.body`
   replay evidence;
 - double `$done` first-wins fixture
