@@ -67,12 +67,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.3.5",
-  targetCommit: "6b03dc08764665aed49128de7a191ad99096f0ab",
-  ciRunId: "29042205659",
-  releaseWorkflowRunId: "29042493837",
+  version: "v1.3.6",
+  targetCommit: "01d552cfbe3f4314edfa85ab473f2dc0f7d46145",
+  ciRunId: "29043833613",
+  releaseWorkflowRunId: "29044114252",
   freshnessStatus: "enforced-for-stable-patch-releases",
-  nextStableRelease: "v1.3.6",
+  nextStableRelease: "v1.3.7",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
@@ -165,8 +165,8 @@ for (const entry of index.entries) {
 
 const latest = index.entries.find((entry) => entry.version === index.latestStable);
 assert(latest, "missing latest stable release evidence entry");
-assert(versions.has("v1.3.3"), "missing retained v1.3.3 release evidence entry");
 assert(versions.has("v1.3.4"), "missing retained v1.3.4 release evidence entry");
+assert(versions.has("v1.3.5"), "missing retained v1.3.5 release evidence entry");
 assert(latest.targetCommit === expectedLatestStable.targetCommit, `${expectedLatestStable.version} targetCommit mismatch`);
 assert(latest.ciRunId === expectedLatestStable.ciRunId, `${expectedLatestStable.version} ciRunId mismatch`);
 assert(latest.releaseWorkflowRunId === expectedLatestStable.releaseWorkflowRunId, `${expectedLatestStable.version} releaseWorkflowRunId mismatch`);

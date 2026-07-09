@@ -26,7 +26,7 @@ Compatibility matrix rows still include documented `partial` scope and
 `unsupported` guard rows; those are release notes scope limits, not hidden
 supported claims.
 
-The latest published stable artifact is `v1.3.5`. The `v1.1.x` train is
+The latest published stable artifact is `v1.3.6`. The `v1.1.x` train is
 reserved for script and cron/task trigger compatibility, covering deterministic
 body trigger dispatch metadata, direct trigger attribute-boundary parsing, CI
 evidence gates, parser boundary hardening for task descriptor metadata, and
@@ -62,7 +62,10 @@ feature additions and BUG fixes sections. The `v1.3.5` follow-up records the
 change-summary evidence introduced for future releases. The `v1.3.6` follow-up
 records the `v1.3.5` public release and turns the release evidence index into
 a versioned freshness gate: stable patch releases must prove `latestStable`
-matches the previous stable patch before publication.
+matches the previous stable patch before publication. The `v1.3.7` follow-up
+rolls that machine-readable freshness policy forward by recording `v1.3.6` as
+the latest public stable release and making `v1.3.7` the next stable patch
+target.
 
 ## Production MITM Version Line
 
