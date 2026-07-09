@@ -136,6 +136,17 @@ Runtime traces must distinguish at least:
 
 ## Security Boundary
 
+Stable markers:
+
+```text
+script-runtime-security-boundary-policy-core-download-remote-scripts=forbidden
+script-runtime-security-boundary-policy-core-expose-credentials=forbidden
+script-runtime-security-boundary-production-sandbox-policy=pending-adapter-owned
+script-runtime-security-boundary-production-network-apis=pending-adapter-owned
+script-runtime-security-boundary-log-redaction=pending-adapter-owned
+script-runtime-security-boundary-default-fail-open=required
+```
+
 The policy core must not download remote scripts, mutate platform trust stores,
 or expose credentials. A production adapter must decide cache refresh policy,
 script sandboxing, log redaction, persistent storage location, and whether
@@ -152,6 +163,12 @@ network APIs are exposed to JavaScript.
   script mutation, static rewrite ordering, `$persistentStore`,
   rule-level timeout fail-open, exception fail-open, and gzip/deflate response
   decode with identity writeback.
+- `scripts/script-runtime-security-gate.sh` requires this security boundary,
+  the pending production runtime/redaction manual-intervention markers, the
+  no-embedded-engine dependency decision, and matrix/source-contract evidence
+  before CI or release readiness can pass.
+- `scripts/script-runtime-security-gate-test.sh` proves the gate fails when
+  required runtime safety markers, matrix evidence, or claim guards are missing.
 - GitHub Actions `linux-test` runs `sh scripts/check.sh`, which invokes both
   checks.
 - GitHub Actions `governance` requires this source contract and the

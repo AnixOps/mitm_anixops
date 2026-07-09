@@ -16,6 +16,7 @@ release-dry-run-compatibility-summary=status-counts-in-manifest-notes-summary
 release-dry-run-compatibility-summary-static-check=scripts/compatibility-status-summary-check.sh
 release-dry-run-manual-intervention-static-check=scripts/manual-intervention-check.sh
 release-dry-run-manual-intervention-transition-check=scripts/manual-intervention-transition-check.sh
+release-dry-run-script-runtime-security-gate=scripts/script-runtime-security-gate.sh
 release-dry-run-release-checklist-static-check=scripts/release-checklist-check.sh
 release-dry-run-linux-artifact=linux-x64-tarball-with-checksum
 release-dry-run-windows-artifact=windows-x64-zip-with-checksum
@@ -61,21 +62,23 @@ The dry-run workflow includes these logical gates:
    gates before packaging.
 5. `release-readiness-dry-run`: run the same stable release-readiness check
    used by the tag release workflow.
-6. `compatibility-summary`: summarize compatibility matrix status counts for
+6. `script-runtime-security`: verify the no-embedded-engine decision, pending
+   production runtime/redaction markers, and script runtime security boundary.
+7. `compatibility-summary`: summarize compatibility matrix status counts for
    `supported`, `partial`, `planned`, and `unsupported` rows.
-7. `artifact-contract`: output artifact names, target platforms, staging paths,
+8. `artifact-contract`: output artifact names, target platforms, staging paths,
    checksum algorithm, manifest path, and release-note path.
-8. `package-*`: build the dry-run artifact in GitHub Actions.
-9. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
-10. `manifest-*`: generate JSON manifest and manifest checksum.
-11. `sensitive-material-scan`: scan Linux tarballs and Windows zip artifacts
+9. `package-*`: build the dry-run artifact in GitHub Actions.
+10. `checksum-*`: generate SHA-256 sidecars with two-space file-name records.
+11. `manifest-*`: generate JSON manifest and manifest checksum.
+12. `sensitive-material-scan`: scan Linux tarballs and Windows zip artifacts
     for private keys, credential-like filenames, and common token patterns.
-12. `release-notes-dry-run`: generate notes containing compatibility scope,
+13. `release-notes-dry-run`: generate notes containing compatibility scope,
    compatibility status counts, known gaps, manual-intervention status, and
    rollback path.
-13. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
+14. `publish-eligibility-dry-run`: aggregate gates and report whether a tag
    publication would be eligible.
-14. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
+15. `summary`: publish a GitHub Step Summary with artifact, checksum, manifest,
    CI, compatibility, and manual-intervention fields.
 
 ## Required Outputs

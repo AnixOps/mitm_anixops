@@ -242,6 +242,9 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   triggers.
 - [x] Add script runtime error reporting evidence for exception and timeout
   fail-open replay paths.
+- [x] Add a script runtime security review gate for no-embedded-engine,
+  pending production runtime/redaction markers, source-contract evidence, and
+  forbidden overclaim checks.
 
 ## P4 MITM Policy And Certificate Lifecycle
 
