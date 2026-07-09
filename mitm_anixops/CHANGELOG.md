@@ -9,6 +9,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a `v1.2.2` release manifest schema-version evidence field so
+  tag-triggered releases and release dry-runs record `release-manifest-v1` in
+  generated manifests, release notes, GitHub Step Summaries, and metadata
+  gates.
 - Added a `v1.2.1` release manifest adapter-readiness evidence set so
   tag-triggered releases and release dry-runs record adapter readiness status,
   gate, scope, and production-boundary fields in generated manifests, release
