@@ -135,6 +135,12 @@ The Alpha proxy shim implements the response-script subset for gzip and deflate 
 returning the mutated response as identity with corrected `Content-Length`. The Alpha Node contract runner also supports
 file-backed `$persistentStore` state shared across request and response script invocations.
 
+When a shim path emits byte-for-byte unchanged data, it retains the inbound `Content-Length` or chunked transfer
+framing and the live HTTP/1.1 trailer map. This includes header-only forwarding, bounded decode failure, no-op body
+rules, binary script bypass, fail-open script execution, and successful scripts that change only headers or status. A
+successful decode, content-encoding change, or body mutation emits an identity representation with corrected length and
+clears stale trailers rather than carrying integrity metadata for the old bytes into a new body.
+
 ## Error Behavior
 
 The adapter should enforce a timeout for `$done`. The Node contract runner defaults to 5 seconds, `anixops-mitm-runner

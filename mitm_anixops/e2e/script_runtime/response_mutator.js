@@ -44,7 +44,14 @@ if ($request.url.includes("/contract/binary-body")) {
     "X-AnixOps-Redaction-Secret",
   );
   throw new Error(`runner redaction body=${bodySecret} header=${headerSecret}`);
-} else if ($request.url.includes("throw=1")) {
+} else if ($request.url.includes("header-only=1")) {
+  $done({
+    headers: {
+      ...$response.headers,
+      "X-AnixOps-Script": "header-only",
+    },
+  });
+} else if ($request.url.includes("throw=1") || $request.url.includes("script-fail=1")) {
   throw new Error("contract response script failed");
 } else if ($request.url.includes("sync-loop=1")) {
   while (true) {}

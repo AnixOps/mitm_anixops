@@ -134,13 +134,20 @@ type proxyServer struct {
 	mutex              sync.Mutex
 }
 
-// forwardRelayMetadata is retained only when a raw body exceeded the bounded
-// mutation buffer. Trailer is intentionally shared with the inbound request:
-// net/http populates its values only after the streaming relay reaches EOF.
+// forwardRelayMetadata preserves inbound request framing when the emitted body
+// is byte-for-byte unchanged. Trailer is intentionally shared with the inbound
+// request: net/http populates its values only after the relay reaches EOF.
 type forwardRelayMetadata struct {
 	contentLength     int64
 	transferEncoding []string
 	trailer           http.Header
+}
+
+type responseFramingSnapshot struct {
+	contentLength     int64
+	transferEncoding []string
+	trailer           http.Header
+	uncompressed      bool
 }
 
 type scriptMatch struct {
@@ -1046,19 +1053,16 @@ func (ps *proxyServer) handlePlainHTTP(w http.ResponseWriter, r *http.Request) {
 		ps.debugf("#%d rewrite action=%d status=%d value=%s", id, int(action), status, value)
 		return
 	}
-	rawURL, host, header, body, rawBodyOverflow, err := ps.applyRequestScript(rawURL, r.Method, r.Host, r.Header, r.Body)
+	inboundFraming := snapshotRequestRelayMetadata(r)
+	rawURL, host, header, body, preserveInboundFraming, err := ps.applyRequestScript(rawURL, r.Method, r.Host, r.Header, r.Body)
 	if err != nil {
 		ps.debugf("#%d request_script_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 	var relayMetadata *forwardRelayMetadata
-	if rawBodyOverflow {
-		relayMetadata = &forwardRelayMetadata{
-			contentLength:     r.ContentLength,
-			transferEncoding: append([]string(nil), r.TransferEncoding...),
-			trailer:           r.Trailer,
-		}
+	if preserveInboundFraming {
+		relayMetadata = inboundFraming
 	}
 	resp, err := ps.forward(r.Context().Done(), r.Method, rawURL, host, header, body, relayMetadata)
 	if err != nil {
@@ -1152,19 +1156,16 @@ func (ps *proxyServer) handleMITMRequest(conn net.Conn, connectHost string, req 
 		return
 	}
 
-	rawURL, host, header, body, rawBodyOverflow, err := ps.applyRequestScript(rawURL, req.Method, host, req.Header, req.Body)
+	inboundFraming := snapshotRequestRelayMetadata(req)
+	rawURL, host, header, body, preserveInboundFraming, err := ps.applyRequestScript(rawURL, req.Method, host, req.Header, req.Body)
 	if err != nil {
 		ps.debugf("#%d request_script_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
 		return
 	}
 	var relayMetadata *forwardRelayMetadata
-	if rawBodyOverflow {
-		relayMetadata = &forwardRelayMetadata{
-			contentLength:     req.ContentLength,
-			transferEncoding: append([]string(nil), req.TransferEncoding...),
-			trailer:           req.Trailer,
-		}
+	if preserveInboundFraming {
+		relayMetadata = inboundFraming
 	}
 	resp, err := ps.forward(nil, req.Method, rawURL, host, header, body, relayMetadata)
 	if err != nil {
@@ -1208,10 +1209,11 @@ func (ps *proxyServer) applyRequestScript(
 	if err != nil {
 		return "", "", nil, nil, false, err
 	}
-	needsBufferedBody := needsBody || contentEncodingChanged(originalHeader, nextHeader) ||
+	encodingChanged := contentEncodingChanged(originalHeader, nextHeader)
+	needsBufferedBody := needsBody || encodingChanged ||
 		(match.kind != scriptNone && ps.scriptRunner != "")
 	if !needsBufferedBody {
-		return rawURL, host, nextHeader, body, false, nil
+		return rawURL, host, nextHeader, body, true, nil
 	}
 	bodyBytes, rawRelay, rawOverflow, err := readBodyForMutation(body, maxBodyRewriteBuffer)
 	if err != nil {
@@ -1221,17 +1223,19 @@ func (ps *proxyServer) applyRequestScript(
 		ps.debugf("request_body_raw_overflow_fail_open url=%s limit=%d", rawURL, maxBodyRewriteBuffer)
 		return rawURL, host, originalHeader, rawRelay, true, nil
 	}
-	bodyIsIdentity := false
-	if needsBody || contentEncodingChanged(originalHeader, nextHeader) {
+	bodyRepresentationChanged := false
+	if needsBody || encodingChanged {
 		decodedBody, decoded, decodeErr := decodeBodyForScript(originalEncoding, bodyBytes)
 		if decodeErr != nil {
-			restoreRawBodyHeader(nextHeader, originalHeader, len(bodyBytes))
+			restoreRawContentEncoding(nextHeader, originalHeader)
 			ps.debugf("request_body_decode_fail_open url=%s", rawURL)
-			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
+			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), true, nil
 		}
 		bodyBytes = decodedBody
-		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
-		bodyIsIdentity = true
+		if decoded || encodingChanged {
+			normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
+			bodyRepresentationChanged = true
+		}
 		if decoded {
 			ps.debugf("request_body_decoded url=%s bytes=%d", rawURL, len(bodyBytes))
 		}
@@ -1243,21 +1247,21 @@ func (ps *proxyServer) applyRequestScript(
 	if bodyChanged {
 		bodyBytes = rewrittenBody
 		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
-		bodyIsIdentity = true
+		bodyRepresentationChanged = true
 		ps.debugf("request_body_rewrite url=%s message=%s bytes=%d", rawURL, bodyMessage, len(bodyBytes))
 	}
 	if match.kind == scriptNone || ps.scriptRunner == "" {
-		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), !bodyRepresentationChanged, nil
 	}
 	if !isScriptTextBody(bodyBytes) {
 		ps.debugf("request_script_binary_bypass url=%s tag=%s bytes=%d", scriptURL, match.tag, len(bodyBytes))
-		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), !bodyRepresentationChanged, nil
 	}
 
 	done, err := ps.runScript("request", match, scriptURL, method, nextHeader, 0, nil, bodyBytes)
 	if err != nil {
 		ps.debugf("request_script_fail_open url=%s tag=%s err=%v", scriptURL, match.tag, err)
-		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), !bodyRepresentationChanged, nil
 	}
 	if done.URL != "" {
 		rawURL = done.URL
@@ -1273,26 +1277,27 @@ func (ps *proxyServer) applyRequestScript(
 	}
 	if done.Body != nil {
 		bodyBytes = []byte(*done.Body)
-		bodyIsIdentity = true
+		bodyRepresentationChanged = true
 	}
-	if !bodyIsIdentity && contentEncodingChanged(originalHeader, nextHeader) {
+	if !bodyRepresentationChanged && contentEncodingChanged(originalHeader, nextHeader) {
 		decodedBody, _, decodeErr := decodeBodyForScript(originalEncoding, bodyBytes)
 		if decodeErr != nil {
-			restoreRawBodyHeader(nextHeader, originalHeader, len(bodyBytes))
+			restoreRawContentEncoding(nextHeader, originalHeader)
 			ps.debugf("request_body_decode_fail_open url=%s", rawURL)
-			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
+			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), true, nil
 		}
 		bodyBytes = decodedBody
-		bodyIsIdentity = true
+		bodyRepresentationChanged = true
 	}
-	if bodyIsIdentity {
+	if bodyRepresentationChanged {
 		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
 	}
-	return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
+	return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), !bodyRepresentationChanged, nil
 }
 
 func (ps *proxyServer) applyResponseScript(rawURL string, method string, requestHeader http.Header, resp *http.Response) error {
 	originalHeader := cloneHeader(resp.Header)
+	originalFraming := snapshotResponseFraming(resp)
 	originalEncoding := contentEncodingForDecode(originalHeader)
 	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseResponse, originalHeader)
 	if err != nil {
@@ -1328,11 +1333,15 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 	resp.Header = nextHeader
 	scriptBody, decoded, decodeErr := decodeBodyForScript(originalEncoding, rawBody)
 	if decodeErr != nil {
-		replaceRawResponseBody(resp, rawBody, originalHeader)
+		restoreRawContentEncoding(nextHeader, originalHeader)
+		restoreUnchangedResponseBody(resp, rawBody, nextHeader, originalFraming)
 		ps.debugf("response_body_decode_fail_open url=%s", rawURL)
 		return nil
 	}
-	normalizeResponseBodyHeader(resp.Header, len(scriptBody))
+	bodyRepresentationChanged := decoded || encodingChanged
+	if bodyRepresentationChanged {
+		normalizeResponseBodyHeader(resp.Header, len(scriptBody))
+	}
 	bodyChanged := false
 	bodyMessage := ""
 	if hasBodyRewrite {
@@ -1344,16 +1353,28 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		if changed {
 			scriptBody = rewritten
 			bodyChanged = true
+			if !bodyRepresentationChanged {
+				normalizeResponseBodyHeader(resp.Header, len(scriptBody))
+			}
+			bodyRepresentationChanged = true
 			ps.debugf("response_body_rewrite url=%s message=%s bytes=%d", rawURL, bodyMessage, len(scriptBody))
 		}
 	}
 	if match.kind == scriptNone {
-		replaceResponseBody(resp, scriptBody)
+		if bodyRepresentationChanged {
+			replaceResponseBody(resp, scriptBody)
+		} else {
+			restoreUnchangedResponseBody(resp, rawBody, resp.Header, originalFraming)
+		}
 		return nil
 	}
 	if !isScriptTextBody(scriptBody) {
 		ps.debugf("response_script_binary_bypass url=%s tag=%s bytes=%d", scriptURL, match.tag, len(scriptBody))
-		replaceResponseBody(resp, scriptBody)
+		if bodyRepresentationChanged {
+			replaceResponseBody(resp, scriptBody)
+		} else {
+			restoreUnchangedResponseBody(resp, rawBody, resp.Header, originalFraming)
+		}
 		return nil
 	}
 	done, err := ps.runScript(
@@ -1368,24 +1389,34 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 	if err != nil {
 		ps.debugf("response_script_fail_open url=%s tag=%s err=%v", scriptURL, match.tag, err)
 		if decoded || encodingChanged {
-			replaceRawResponseBody(resp, rawBody, originalHeader)
+			restoreRawContentEncoding(nextHeader, originalHeader)
+			restoreUnchangedResponseBody(resp, rawBody, nextHeader, originalFraming)
 		} else if bodyChanged {
 			replaceResponseBody(resp, scriptBody)
 		} else {
-			replaceResponseBody(resp, rawBody)
+			restoreUnchangedResponseBody(resp, rawBody, resp.Header, originalFraming)
 		}
 		return nil
 	}
 	if done.Headers != nil {
-		resp.Header = make(http.Header)
+		nextScriptHeader := make(http.Header)
 		for key, value := range done.Headers {
-			resp.Header.Set(key, value)
+			nextScriptHeader.Set(key, value)
 		}
+		if contentEncodingChanged(resp.Header, nextScriptHeader) {
+			bodyRepresentationChanged = true
+		}
+		resp.Header = nextScriptHeader
 	}
 	if done.Body != nil {
 		scriptBody = []byte(*done.Body)
+		bodyRepresentationChanged = true
 	}
-	replaceResponseBody(resp, scriptBody)
+	if bodyRepresentationChanged {
+		replaceResponseBody(resp, scriptBody)
+	} else {
+		restoreUnchangedResponseBody(resp, rawBody, resp.Header, originalFraming)
+	}
 	if status, ok := numericStatus(done.Status); ok {
 		resp.StatusCode = status
 		resp.Status = fmt.Sprintf("%d %s", status, http.StatusText(status))
@@ -1409,6 +1440,23 @@ func asReadCloser(reader io.Reader) io.ReadCloser {
 		return readCloser
 	}
 	return io.NopCloser(reader)
+}
+
+func snapshotRequestRelayMetadata(req *http.Request) *forwardRelayMetadata {
+	return &forwardRelayMetadata{
+		contentLength:     req.ContentLength,
+		transferEncoding: append([]string(nil), req.TransferEncoding...),
+		trailer:           req.Trailer,
+	}
+}
+
+func snapshotResponseFraming(resp *http.Response) responseFramingSnapshot {
+	return responseFramingSnapshot{
+		contentLength:     resp.ContentLength,
+		transferEncoding: append([]string(nil), resp.TransferEncoding...),
+		trailer:           resp.Trailer,
+		uncompressed:      resp.Uncompressed,
+	}
 }
 
 func readBodyForMutation(body io.Reader, maxBytes int) ([]byte, io.Reader, bool, error) {
@@ -1481,13 +1529,11 @@ func decodeBodyForScript(encoding string, body []byte) ([]byte, bool, error) {
 	return decoded, true, nil
 }
 
-func restoreRawBodyHeader(header http.Header, originalHeader http.Header, bodyLen int) {
+func restoreRawContentEncoding(header http.Header, originalHeader http.Header) {
 	header.Del("Content-Encoding")
 	for _, value := range originalHeader.Values("Content-Encoding") {
 		header.Add("Content-Encoding", value)
 	}
-	header.Del("Transfer-Encoding")
-	header.Set("Content-Length", strconv.Itoa(bodyLen))
 }
 
 func normalizeRequestBodyHeader(header http.Header, bodyLen int) {
@@ -1511,13 +1557,20 @@ func replaceResponseBody(resp *http.Response, body []byte) {
 	normalizeResponseBodyHeader(resp.Header, len(body))
 }
 
-func replaceRawResponseBody(resp *http.Response, body []byte, originalHeader http.Header) {
+func restoreUnchangedResponseBody(resp *http.Response, body []byte, header http.Header, framing responseFramingSnapshot) {
+	resp.Header = header
+	if len(framing.transferEncoding) > 0 {
+		resp.Header.Del("Content-Length")
+	} else if framing.contentLength >= 0 {
+		resp.Header.Set("Content-Length", strconv.FormatInt(framing.contentLength, 10))
+	} else {
+		resp.Header.Del("Content-Length")
+	}
 	resp.Body = io.NopCloser(bytes.NewReader(body))
-	resp.ContentLength = int64(len(body))
-	resp.TransferEncoding = nil
-	resp.Uncompressed = false
-	resp.Trailer = nil
-	restoreRawBodyHeader(resp.Header, originalHeader, len(body))
+	resp.ContentLength = framing.contentLength
+	resp.TransferEncoding = append([]string(nil), framing.transferEncoding...)
+	resp.Trailer = framing.trailer
+	resp.Uncompressed = framing.uncompressed
 }
 
 func (ps *proxyServer) runScript(
@@ -2067,6 +2120,9 @@ func (ps *proxyServer) forward(done <-chan struct{}, method, rawURL, host string
 		// Trailer must remain the inbound map so EOF from the relay publishes
 		// the parsed values before the outbound transport emits them.
 		req.Trailer = relayMetadata.trailer
+		if req.ContentLength == 0 && len(req.TransferEncoding) == 0 {
+			req.Body = http.NoBody
+		}
 	}
 	req.Host = host
 	req.Header = cloneHeader(header)
@@ -2264,19 +2320,30 @@ func startOrigin(addr string, cache *certCache) error {
 				return
 			}
 			digest := sha256.Sum256(body)
+			responseTrailer := r.URL.Query().Get("response-trailer") == "1"
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("X-Origin-Body-Length", strconv.Itoa(len(body)))
+			w.Header().Set("X-Origin-Body-SHA256", fmt.Sprintf("%x", digest))
+			if r.URL.Query().Get("identity") == "1" {
+				if responseTrailer {
+					w.Header().Add("Trailer", "X-Origin-Relay-Trailer")
+				}
+				_, _ = w.Write(body)
+				if responseTrailer {
+					w.Header().Set(http.TrailerPrefix+"X-Origin-Relay-Trailer", "preserved")
+				}
+				return
+			}
 			var compressed bytes.Buffer
 			gzipWriter := gzip.NewWriter(&compressed)
 			_, _ = gzipWriter.Write(body)
 			_ = gzipWriter.Close()
-			w.Header().Set("Content-Type", "application/octet-stream")
 			w.Header().Set("Content-Encoding", "gzip")
 			w.Header().Set("Content-Length", strconv.Itoa(compressed.Len()))
-			w.Header().Set("X-Origin-Body-Length", strconv.Itoa(len(body)))
-			w.Header().Set("X-Origin-Body-SHA256", fmt.Sprintf("%x", digest))
 			_, _ = w.Write(compressed.Bytes())
 			return
 		}
-		if strings.HasPrefix(r.URL.Path, "/contract/request-response") {
+		if strings.HasPrefix(r.URL.Path, "/contract/request-response") || r.URL.Path == "/contract/framing" {
 			if r.URL.Query().Get("raw-response-overflow") == "1" {
 				const rawResponseBytes = maxBodyRewriteBuffer + 2
 				rawResponseTrailer := r.URL.Query().Get("raw-response-trailer") == "1"
@@ -2330,6 +2397,14 @@ func startOrigin(addr string, cache *certCache) error {
 			}
 			payload, _ := json.Marshal(payloadFields)
 			payload = append(payload, '\n')
+			responseTrailer := r.URL.Query().Get("response-trailer") == "1"
+			unsupportedResponseEncoding := r.URL.Query().Get("response-unsupported-encoding") == "1"
+			if responseTrailer && r.URL.Query().Get("compressed") == "" {
+				w.Header().Add("Trailer", "X-Origin-Relay-Trailer")
+			}
+			if unsupportedResponseEncoding {
+				w.Header().Set("Content-Encoding", "br")
+			}
 			switch r.URL.Query().Get("compressed") {
 			case "gzip":
 				var compressed bytes.Buffer
@@ -2351,6 +2426,9 @@ func startOrigin(addr string, cache *certCache) error {
 				_, _ = w.Write(compressed.Bytes())
 			default:
 				_, _ = w.Write(payload)
+			}
+			if responseTrailer && r.URL.Query().Get("compressed") == "" {
+				w.Header().Set(http.TrailerPrefix+"X-Origin-Relay-Trailer", "preserved")
 			}
 			return
 		}

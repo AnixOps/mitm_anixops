@@ -207,6 +207,115 @@ func TestForwardPreservesRawRelayFramingAndTrailers(t *testing.T) {
 	}
 }
 
+func TestForwardPreservesBufferedRequestFramingAndTrailers(t *testing.T) {
+	type observedRequest struct {
+		body             string
+		contentLength    int64
+		transferEncoding []string
+		trailer          string
+	}
+	received := make(chan observedRequest, 1)
+	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		received <- observedRequest{
+			body:             string(body),
+			contentLength:    req.ContentLength,
+			transferEncoding: append([]string(nil), req.TransferEncoding...),
+			trailer:          req.Trailer.Get("X-AnixOps-Request-Trailer"),
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer origin.Close()
+	originURL, err := url.Parse(origin.URL)
+	if err != nil {
+		t.Fatalf("parse origin URL: %v", err)
+	}
+
+	trailer := http.Header{"X-AnixOps-Request-Trailer": {"preserved"}}
+	inbound := &http.Request{
+		ContentLength:     -1,
+		TransferEncoding: []string{"chunked"},
+		Trailer:           trailer,
+	}
+
+	server := &proxyServer{httpClient: origin.Client()}
+
+	resp, err := server.forward(
+		nil,
+		http.MethodPost,
+		origin.URL+"/buffered",
+		originURL.Host,
+		http.Header{"Content-Type": {"application/octet-stream"}},
+		bytes.NewReader([]byte("buffered payload")),
+		snapshotRequestRelayMetadata(inbound),
+	)
+	if err != nil {
+		t.Fatalf("forward buffered request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	select {
+	case observed := <-received:
+		if observed.body != "buffered payload" {
+			t.Fatalf("forwarded body = %q", observed.body)
+		}
+		if observed.contentLength != -1 {
+			t.Fatalf("forwarded content length = %d, want -1", observed.contentLength)
+		}
+		if len(observed.transferEncoding) != 1 || observed.transferEncoding[0] != "chunked" {
+			t.Fatalf("forwarded transfer encoding = %v, want [chunked]", observed.transferEncoding)
+		}
+		if observed.trailer != "preserved" {
+			t.Fatalf("forwarded trailer = %q, want preserved", observed.trailer)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("origin did not receive buffered request")
+	}
+}
+
+func TestForwardPreservesKnownEmptyRequestBody(t *testing.T) {
+	inbound := &http.Request{ContentLength: 0}
+	var observed *http.Request
+	server := &proxyServer{
+		httpClient: &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			observed = req
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("")),
+				Header:     make(http.Header),
+			}, nil
+		})},
+	}
+
+	resp, err := server.forward(
+		nil,
+		http.MethodPost,
+		"http://origin.example.test/empty",
+		"origin.example.test",
+		make(http.Header),
+		io.NopCloser(strings.NewReader("")),
+		snapshotRequestRelayMetadata(inbound),
+	)
+	if err != nil {
+		t.Fatalf("forward known-empty request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if observed.ContentLength != 0 {
+		t.Fatalf("forwarded content length = %d, want 0", observed.ContentLength)
+	}
+	if len(observed.TransferEncoding) != 0 {
+		t.Fatalf("forwarded transfer encoding = %v, want none", observed.TransferEncoding)
+	}
+	if observed.Body != http.NoBody {
+		t.Fatalf("forwarded body = %T, want http.NoBody", observed.Body)
+	}
+}
+
 func TestForwardWritesRawRelayTrailers(t *testing.T) {
 	type observedRequest struct {
 		body             string
@@ -300,6 +409,44 @@ func TestCopyResponseForwardsRawRelayTrailers(t *testing.T) {
 	}
 	if got := result.Trailer.Get("X-AnixOps-Relay-Trailer"); got != "preserved" {
 		t.Fatalf("copied trailer = %q, want preserved", got)
+	}
+}
+
+func TestRestoreUnchangedResponseBodyPreservesFramingAndTrailers(t *testing.T) {
+	originalHeader := http.Header{
+		"Content-Encoding": {"br"},
+		"X-Origin":         {"preserved"},
+	}
+	trailer := http.Header{"X-Origin-Relay-Trailer": {"preserved"}}
+	response := &http.Response{
+		Header:           cloneHeader(originalHeader),
+		Body:             io.NopCloser(strings.NewReader("original body")),
+		ContentLength:    -1,
+		TransferEncoding: []string{"chunked"},
+		Trailer:          trailer,
+	}
+	nextHeader := cloneHeader(originalHeader)
+	nextHeader.Set("X-AnixOps-Static-Response", "retained")
+
+	restoreUnchangedResponseBody(response, []byte("original body"), nextHeader, snapshotResponseFraming(response))
+
+	if response.ContentLength != -1 {
+		t.Fatalf("content length = %d, want -1", response.ContentLength)
+	}
+	if len(response.TransferEncoding) != 1 || response.TransferEncoding[0] != "chunked" {
+		t.Fatalf("transfer encoding = %v, want [chunked]", response.TransferEncoding)
+	}
+	if got := response.Header.Get("Content-Length"); got != "" {
+		t.Fatalf("content length header = %q, want absent for chunked response", got)
+	}
+	if got := response.Trailer.Get("X-Origin-Relay-Trailer"); got != "preserved" {
+		t.Fatalf("trailer = %q, want preserved", got)
+	}
+	if got := response.Header.Get("Content-Encoding"); got != "br" {
+		t.Fatalf("content encoding = %q, want br", got)
+	}
+	if got := response.Header.Get("X-AnixOps-Static-Response"); got != "retained" {
+		t.Fatalf("static header = %q, want retained", got)
 	}
 }
 

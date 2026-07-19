@@ -86,12 +86,17 @@ Mode = input,contract
 ^https://google\\.com:${ORIGIN_PORT}/contract/binary-body response-body-replace-regex "__anixops_binary_no_match__" "replacement"
 ^https://google\\.com:${ORIGIN_PORT}/contract/binary-body request-body-replace-regex "^anixops$" "anixops"
 ^https://google\\.com:${ORIGIN_PORT}/contract/binary-body response-body-replace-regex "^anixops$" "anixops"
+^https://google\\.com:${ORIGIN_PORT}/contract/framing\\? header-add X-AnixOps-Static-Request static-request
+^https://google\\.com:${ORIGIN_PORT}/contract/framing\\? response-header-add X-AnixOps-Static-Response static-response
+^https://google\\.com:${ORIGIN_PORT}/contract/framing\\?no-op=1 response-body-replace-regex "__anixops_no_match__" "replacement"
 
 [Script]
 http-request ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.request, argument=[{Mode}]
 http-response ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.response, argument=[{Mode}]
 http-request ^https:\\/\\/google\\.com\\/contract\\/binary-body requires-body=1, script-path=${SCRIPT_URL}, tag=contract.binary.request, argument=[{Mode}]
 http-response ^https:\\/\\/google\\.com\\/contract\\/binary-body requires-body=1, script-path=${SCRIPT_URL}, tag=contract.binary.response, argument=[{Mode}]
+http-response ^https:\\/\\/google\\.com\\/contract\\/framing\\?script-fail=1 requires-body=1, script-path=${SCRIPT_URL}, tag=contract.framing.failure, argument=[{Mode}]
+http-response ^https:\\/\\/google\\.com\\/contract\\/framing\\?header-only=1 requires-body=1, script-path=${SCRIPT_URL}, tag=contract.framing.header-only, argument=[{Mode}]
 
 [MITM]
 hostname = google.com
@@ -248,10 +253,12 @@ curl --silent --show-error --max-time 12 --http1.1 \
 	--data '{"from":"throw"}' \
 	--dump-header "$TMP/throw-headers.out" \
 	--output "$TMP/throw-body.out" \
-	"https://google.com:${ORIGIN_PORT}/contract/request-response?throw=1"
+	"https://google.com:${ORIGIN_PORT}/contract/framing?script-fail=1&response-trailer=1"
 
 grep -F "HTTP/1.1 200 OK" "$TMP/throw-headers.out" >/dev/null
 grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/throw-headers.out" >/dev/null
+grep -i -F "Transfer-Encoding: chunked" "$TMP/throw-headers.out" >/dev/null
+grep -i -F "X-Origin-Relay-Trailer: preserved" "$TMP/throw-headers.out" >/dev/null
 if grep -i -F "X-AnixOps-Script:" "$TMP/throw-headers.out" >/dev/null; then
 	echo "failed response script unexpectedly applied response headers" >&2
 	sed -n '1,120p' "$TMP/throw-headers.out" >&2
@@ -261,11 +268,9 @@ fi
 node - "$TMP/throw-body.out" <<'JS'
 const fs = require("node:fs");
 const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-if (body.code !== 7) throw new Error(`response body rewrite did not survive script exception: ${body.code}`);
-if (body.requestScript !== "applied") throw new Error("request script header did not survive response exception");
-const upstream = JSON.parse(body.body);
-if (upstream.from !== "static-request") throw new Error("request body rewrite did not survive response exception");
-if (upstream.requestScript !== true) throw new Error("request script body mutation did not survive response exception");
+if (body.code !== 0) throw new Error("unchanged response body mismatch after script exception: " + body.code);
+if (body.requestScript !== "") throw new Error("framing failure route unexpectedly dispatched a request script");
+if (body.body !== "{\"from\":\"throw\"}") throw new Error("framing failure route changed the request body");
 JS
 
 curl --silent --show-error --max-time 12 --http1.1 \
@@ -597,6 +602,206 @@ if (body.original.requestAcceptEncoding !== "gzip") {
 JS
 }
 
+send_chunked_buffered_request() {
+	request_path=$1
+	content_encoding=$2
+	expected_status=$3
+	output_path=$4
+
+	python3 - "$TMP/ca.pem" "$SHIM_PORT" "$ORIGIN_PORT" "$request_path" "$content_encoding" "$expected_status" "$output_path" <<'PY'
+import socket
+import ssl
+import sys
+
+ca_path, shim_port, origin_port, request_path, content_encoding, expected_status, output_path = sys.argv[1:]
+timeout = 30
+target = f"google.com:{origin_port}"
+
+sock = socket.create_connection(("127.0.0.1", int(shim_port)), timeout=timeout)
+sock.settimeout(timeout)
+sock.sendall(
+    f"CONNECT {target} HTTP/1.1\r\nHost: {target}\r\nProxy-Connection: keep-alive\r\n\r\n".encode("ascii")
+)
+connect_response = bytearray()
+while b"\r\n\r\n" not in connect_response:
+    chunk = sock.recv(4096)
+    if not chunk:
+        raise SystemExit("proxy closed CONNECT before response")
+    connect_response.extend(chunk)
+if not connect_response.startswith(b"HTTP/1.1 200"):
+    raise SystemExit(f"unexpected CONNECT response: {connect_response!r}")
+
+context = ssl.create_default_context(cafile=ca_path)
+tls = context.wrap_socket(sock, server_hostname="google.com")
+tls.settimeout(timeout)
+headers = [
+    f"POST {request_path} HTTP/1.1",
+    f"Host: {target}",
+    "Content-Type: application/octet-stream",
+    "Transfer-Encoding: chunked",
+    "Trailer: X-AnixOps-Request-Trailer",
+]
+if content_encoding:
+    headers.append(f"Content-Encoding: {content_encoding}")
+tls.sendall(("\r\n".join(headers) + "\r\n\r\n").encode("ascii"))
+
+payload = b"framing payload"
+tls.sendall(f"{len(payload):x}\r\n".encode("ascii"))
+tls.sendall(payload)
+tls.sendall(b"\r\n0\r\nX-AnixOps-Request-Trailer: preserved\r\n\r\n")
+
+reader = tls.makefile("rb")
+status = reader.readline()
+if not status.startswith(f"HTTP/1.1 {expected_status}".encode("ascii")):
+    raise SystemExit(f"unexpected buffered framing response status: {status!r}")
+headers = {}
+while True:
+    line = reader.readline()
+    if line in (b"\r\n", b"\n", b""):
+        break
+    name, value = line.decode("iso-8859-1").split(":", 1)
+    headers[name.lower()] = value.strip()
+
+if "content-length" in headers:
+    body = reader.read(int(headers["content-length"]))
+elif headers.get("transfer-encoding", "").lower() == "chunked":
+    chunks = []
+    while True:
+        line = reader.readline()
+        size = int(line.split(b";", 1)[0], 16)
+        if size == 0:
+            while reader.readline() not in (b"\r\n", b"\n", b""):
+                pass
+            break
+        chunks.append(reader.read(size))
+        if reader.read(2) != b"\r\n":
+            raise SystemExit("malformed chunked response")
+    body = b"".join(chunks)
+else:
+    body = reader.read()
+
+with open(output_path, "wb") as output:
+    output.write(body)
+reader.close()
+tls.close()
+PY
+}
+
+run_chunked_header_only_request_case() {
+	send_chunked_buffered_request "/contract/framing?summary=1" "" "200" "$TMP/chunked-header-only-request-body.out"
+
+	node - "$TMP/chunked-header-only-request-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 0) throw new Error("header-only request code mismatch: " + body.code);
+if (body.requestByteCount !== Buffer.byteLength("framing payload")) {
+  throw new Error("header-only request byte count mismatch: " + body.requestByteCount);
+}
+if (body.requestContentLength !== -1) {
+  throw new Error("header-only request Content-Length mismatch: " + body.requestContentLength);
+}
+if (body.requestTransferEncoding !== "chunked") {
+  throw new Error("header-only request transfer encoding mismatch: " + body.requestTransferEncoding);
+}
+if (body.requestTrailer !== "preserved") {
+  throw new Error("header-only request trailer mismatch: " + body.requestTrailer);
+}
+if (body.requestStaticHeader !== "static-request") {
+  throw new Error("header-only static request header missing: " + body.requestStaticHeader);
+}
+JS
+}
+
+run_chunked_request_decode_failure_case() {
+	send_chunked_buffered_request "/contract/request-response?request-decode-fail=1&summary=1" "br" "201" "$TMP/chunked-request-decode-failure-body.out"
+
+	node - "$TMP/chunked-request-decode-failure-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.ok !== true || !body.original) {
+  throw new Error("request decode failure did not reach the origin through the response contract");
+}
+const origin = body.original;
+if (origin.requestEncoding !== "br") {
+  throw new Error("request decode failure lost Content-Encoding: " + origin.requestEncoding);
+}
+if (origin.requestByteCount !== Buffer.byteLength("framing payload")) {
+  throw new Error("request decode failure byte count mismatch: " + origin.requestByteCount);
+}
+if (origin.requestContentLength !== -1) {
+  throw new Error("request decode failure Content-Length mismatch: " + origin.requestContentLength);
+}
+if (origin.requestTransferEncoding !== "chunked") {
+  throw new Error("request decode failure transfer encoding mismatch: " + origin.requestTransferEncoding);
+}
+if (origin.requestTrailer !== "preserved") {
+  throw new Error("request decode failure trailer mismatch: " + origin.requestTrailer);
+}
+if (origin.requestStaticHeader !== "static-request") {
+  throw new Error("request decode failure static header missing: " + origin.requestStaticHeader);
+}
+JS
+}
+
+run_fixed_length_framing_case() {
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/json" \
+		--data '{"from":"fixed-framing"}' \
+		--dump-header "$TMP/fixed-request-framing-headers.out" \
+		--output "$TMP/fixed-request-framing-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/framing?summary=1"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/fixed-request-framing-headers.out" >/dev/null
+	if grep -i -F "Transfer-Encoding:" "$TMP/fixed-request-framing-headers.out" >/dev/null; then
+		echo "fixed-length framing response unexpectedly used transfer encoding" >&2
+		sed -n '1,120p' "$TMP/fixed-request-framing-headers.out" >&2
+		exit 1
+	fi
+
+	node - "$TMP/fixed-request-framing-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const source = '{"from":"fixed-framing"}';
+if (body.code !== 0) throw new Error("fixed-length request code mismatch: " + body.code);
+if (body.requestByteCount !== Buffer.byteLength(source)) {
+  throw new Error("fixed-length request byte count mismatch: " + body.requestByteCount);
+}
+if (body.requestContentLength !== Buffer.byteLength(source)) {
+  throw new Error("fixed-length request Content-Length mismatch: " + body.requestContentLength);
+}
+if (body.requestTransferEncoding !== "") {
+  throw new Error("fixed-length request transfer encoding mismatch: " + body.requestTransferEncoding);
+}
+if (body.requestStaticHeader !== "static-request") {
+  throw new Error("fixed-length static request header missing: " + body.requestStaticHeader);
+}
+JS
+
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--dump-header "$TMP/fixed-noop-response-headers.out" \
+		--output "$TMP/fixed-noop-response-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/framing?no-op=1"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/fixed-noop-response-headers.out" >/dev/null
+	grep -i -E '^Content-Length: [1-9][0-9]*' "$TMP/fixed-noop-response-headers.out" >/dev/null
+	if grep -i -F "Transfer-Encoding:" "$TMP/fixed-noop-response-headers.out" >/dev/null; then
+		echo "fixed-length no-op response unexpectedly used transfer encoding" >&2
+		sed -n '1,120p' "$TMP/fixed-noop-response-headers.out" >&2
+		exit 1
+	fi
+
+	node - "$TMP/fixed-noop-response-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 0) throw new Error("fixed-length no-op response body changed: " + body.code);
+JS
+}
+
 run_raw_response_overflow_case() {
 	curl --silent --show-error --max-time 30 --http1.1 \
 		--proxy "http://127.0.0.1:${SHIM_PORT}" \
@@ -637,6 +842,70 @@ if "x-origin-relay-trailer: preserved" not in headers:
 PY
 }
 
+run_response_decode_failure_framing_case() {
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/json" \
+		--data '{"from":"response-decode-failure"}' \
+		--dump-header "$TMP/response-decode-failure-headers.out" \
+		--output "$TMP/response-decode-failure-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/request-response?response-unsupported-encoding=1&response-trailer=1"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/response-decode-failure-headers.out" >/dev/null
+	grep -i -F "Content-Encoding: br" "$TMP/response-decode-failure-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/response-decode-failure-headers.out" >/dev/null
+	grep -i -F "Transfer-Encoding: chunked" "$TMP/response-decode-failure-headers.out" >/dev/null
+	grep -i -F "X-Origin-Relay-Trailer: preserved" "$TMP/response-decode-failure-headers.out" >/dev/null
+	if grep -i -F "X-AnixOps-Script:" "$TMP/response-decode-failure-headers.out" >/dev/null; then
+		echo "response decode failure unexpectedly applied response script headers" >&2
+		sed -n '1,120p' "$TMP/response-decode-failure-headers.out" >&2
+		exit 1
+	fi
+}
+
+run_noop_response_framing_case() {
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--dump-header "$TMP/noop-response-headers.out" \
+		--output "$TMP/noop-response-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/framing?no-op=1&response-trailer=1"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/noop-response-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/noop-response-headers.out" >/dev/null
+	grep -i -F "Transfer-Encoding: chunked" "$TMP/noop-response-headers.out" >/dev/null
+	grep -i -F "X-Origin-Relay-Trailer: preserved" "$TMP/noop-response-headers.out" >/dev/null
+
+	node - "$TMP/noop-response-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 0) throw new Error("no-op response body changed: " + body.code);
+JS
+}
+
+run_header_only_response_script_framing_case() {
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--dump-header "$TMP/header-only-script-response-headers.out" \
+		--output "$TMP/header-only-script-response-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/framing?header-only=1&response-trailer=1"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/header-only-script-response-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/header-only-script-response-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Script: header-only" "$TMP/header-only-script-response-headers.out" >/dev/null
+	grep -i -F "Transfer-Encoding: chunked" "$TMP/header-only-script-response-headers.out" >/dev/null
+	grep -i -F "X-Origin-Relay-Trailer: preserved" "$TMP/header-only-script-response-headers.out" >/dev/null
+
+	node - "$TMP/header-only-script-response-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 0) throw new Error("header-only response script changed the body: " + body.code);
+JS
+}
+
 run_binary_body_case() {
 	python3 - "$TMP/binary-body.raw" "$TMP/binary-body.gz" <<'PY'
 import gzip
@@ -657,9 +926,11 @@ PY
 		--data-binary "@${TMP}/binary-body.gz" \
 		--dump-header "$TMP/binary-body-headers.out" \
 		--output "$TMP/binary-body.out" \
-		"https://google.com:${ORIGIN_PORT}/contract/binary-body"
+		"https://google.com:${ORIGIN_PORT}/contract/binary-body?identity=1&response-trailer=1"
 
 	grep -F "HTTP/1.1 200 OK" "$TMP/binary-body-headers.out" >/dev/null
+	grep -i -F "Transfer-Encoding: chunked" "$TMP/binary-body-headers.out" >/dev/null
+	grep -i -F "X-Origin-Relay-Trailer: preserved" "$TMP/binary-body-headers.out" >/dev/null
 	if grep -i -F "Content-Encoding:" "$TMP/binary-body-headers.out" >/dev/null; then
 		echo "binary body response retained compressed representation" >&2
 		sed -n '1,120p' "$TMP/binary-body-headers.out" >&2
@@ -696,7 +967,13 @@ run_compressed_request_case deflate
 run_compressed_request_overflow_case
 run_raw_request_overflow_case
 run_chunked_raw_request_overflow_case
+run_chunked_header_only_request_case
+run_chunked_request_decode_failure_case
+run_fixed_length_framing_case
 run_raw_response_overflow_case
+run_response_decode_failure_framing_case
+run_noop_response_framing_case
+run_header_only_response_script_framing_case
 run_binary_body_case
 
 grep -F '"contract.argument": "Mode=contract"' "$TMP/script-store.json" >/dev/null
@@ -714,6 +991,10 @@ echo "script contract: content-encoding header rewrites preserve a matching body
 echo "script contract: decoded request overflow relays the raw compressed body fail-open"
 echo "script contract: raw request and response overflow relay original bytes and headers fail-open"
 echo "script contract: raw chunked request overflow relays transfer framing and trailers"
+echo "script contract: buffered header-only and decode-fail requests retain transfer framing and trailers"
+echo "script contract: fixed-length request and no-op response framing remain fixed-length"
+echo "script contract: response decode-fail, script-fail, no-op, and binary bypass retain trailers when bytes are unchanged"
+echo "script contract: successful header-only response scripts retain unchanged transfer framing and trailers"
 echo "script contract: binary bodies retain exact bytes through request/response policy dispatch"
 echo "script contract: binary bodies bypass request and response script dispatch"
 echo "script contract: runner failure logs use a redacted fixed classification"

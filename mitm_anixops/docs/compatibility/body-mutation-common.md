@@ -205,10 +205,14 @@ the adapter predeclares and publishes the received trailers after the relay
 reaches EOF. The transport disables implicit compression so it cannot invent a
 different upstream representation. Unsupported encoding, decode failure,
 stacked encoding, or decoded-byte overflow likewise relays the raw body with
-its original encoding and a correct content length. A later response-script
-failure after a compressed decode also restores that raw representation. This
-adapter behavior is bounded fail-open handling, not policy-core compression
-ownership.
+its original encoding and inbound fixed/chunked framing plus trailers. The
+same preservation applies to header-only forwarding, no-op body rules,
+identity binary bypass, and script failure when the emitted bytes are
+unchanged. A successful decode, encoding change, or body mutation instead
+writes a new identity representation and clears stale trailers. A later
+response-script failure after a compressed decode restores the raw
+representation. This adapter behavior is bounded fail-open handling, not
+policy-core compression ownership.
 
 It does not implement:
 
@@ -310,11 +314,12 @@ Required CI evidence:
   core mutex held for an entire call; `make proxy-shim-check` runs that test
   under the Go race detector;
 - `e2e/scripts/script-contract-check.sh` covers gzip/deflate request and
-  response header rewrites, identity normalization, and decoded request
-  overflow raw-relay behavior, raw request/response overflow relay without
-  header/body/script mutation, preserved client encoding negotiation, chunked
-  request trailers, response trailers, plus exact binary request/response body
-  passthrough through the explicit-length shim bridge;
+  response header rewrites, identity normalization, decoded request overflow
+  raw-relay behavior, raw request/response overflow relay without header/body/
+  script mutation, fixed-length plus header-only/decode-fail chunked request
+  framing, response decode/script fail-open, no-op/binary/header-only-script
+  trailer preservation, preserved client encoding negotiation, and exact binary
+  request/response body passthrough through the explicit-length shim bridge;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

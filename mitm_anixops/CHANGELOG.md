@@ -515,6 +515,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Fixed
 
+- Preserved Alpha shim inbound HTTP/1.1 fixed/chunked framing and trailers for
+  byte-for-byte unchanged header-only, decode-fail, no-op, binary-bypass, and
+  script-fail paths; mutated representations now clear stale trailers.
 - Bound Alpha shim Node script execution with a 30-second policy timeout plus
   bounded host grace, bounded runner stdout/stderr and `$done` output, and
   fixed redacted fail-open diagnostics for synchronous loops and output

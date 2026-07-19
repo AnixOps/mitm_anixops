@@ -108,6 +108,9 @@ execution, body decoding, header map mutation, and HTTP writeback.
   script.
 - Script exceptions fail open and preserve the static-rewritten object.
 - Script timeout fails open and preserves the static-rewritten object.
+- When a fail-open or bypass path leaves body bytes unchanged, the Alpha shim
+  retains original HTTP/1.1 fixed/chunked framing and trailers; changed body
+  representations clear trailers before writeback.
 - The Alpha proxy shim independently stops synchronous Node script loops at the
   bounded host deadline; runner stdout, stderr, and `$done` payloads have
   fixed budgets and overages fail open with a redacted classification.
@@ -178,9 +181,12 @@ network APIs are exposed to JavaScript.
   script mutation, static rewrite ordering, `$persistentStore`,
   rule-level and host-enforced synchronous timeout fail-open, exception
   fail-open, and gzip/deflate response decode plus gzip/deflate request decode,
-  each with identity writeback. It also proves binary request/response bodies
-  bypass Node script dispatch and runner failure logs retain only a fixed
-  redacted classification.
+  each with identity writeback. It also proves fixed-length and
+  header-only/decode-fail chunked requests plus decode-fail, script-fail,
+  no-op, binary-bypass, and successful header-only-script responses retain
+  their framing and trailers when bytes are unchanged, while binary
+  request/response bodies bypass Node script dispatch and runner failure logs
+  retain only a fixed redacted classification.
 - `scripts/script-runtime-security-gate.sh` requires this security boundary,
   the pending production runtime/redaction manual-intervention markers, the
   no-embedded-engine dependency decision, and matrix/source-contract evidence
