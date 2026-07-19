@@ -369,8 +369,9 @@ a config line.
 
 An engine is not internally locked. Treat each `anixops_engine_t` as single-writer and externally synchronized:
 
-- Build or mutate an engine on one thread at a time.
-- Concurrent read-only evaluation is allowed only when no thread is mutating or clearing the same engine.
+- Serialize every operation on one engine handle, including evaluation. Optional libjq body evaluation updates
+  per-engine compiled-filter cache and interpreter state, and diagnostic state may change while APIs return results.
+- Build, mutate, evaluate, clear, and free an engine through that same synchronization boundary.
 - Use separate engine instances, or an adapter-owned lock/snapshot scheme, when integrating with multi-threaded network
   stacks.
 

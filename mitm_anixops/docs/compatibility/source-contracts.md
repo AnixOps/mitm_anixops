@@ -1343,7 +1343,9 @@ Input form:
 - libjq-enabled engines use a bounded configurable 1–16-entry compiled-filter
   LRU cache (default 4); explicit invalidation plus cache count and hit metrics
   are exposed for adapter diagnostics, while production cache refresh/reuse
-  policy remains adapter-owned.
+  policy remains adapter-owned. Every operation on one engine, including
+  evaluation, requires host-owned external synchronization because cache,
+  interpreter, and diagnostic state are mutable.
 - advanced JQ fixture coverage includes predicate/slice/recursive/computed
   filters plus `del`, `map`, `with_entries`, `walk`, `test`, `capture`,
   assignment, and iterator pipes.
