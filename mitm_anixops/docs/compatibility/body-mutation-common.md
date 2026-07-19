@@ -104,7 +104,8 @@ Expected behavior:
   compiled-filter LRU cache (default 4); the cache can be explicitly
   invalidated through `anixops_engine_clear_jq_filter_cache` or
   `anixops_engine_clear`, and count/hit metrics are observable through the
-  public ABI;
+  public ABI; bounded POSIX isolation prewarms that cache in the parent before
+  fork, so parent cache count and hit metrics remain reusable and observable;
 - the generic already-buffered body ceiling is independently configurable
   through `anixops_engine_set_max_body_bytes`; it applies to single-body and
   body-chain mutation calls and preserves the original body when exceeded;
@@ -183,6 +184,18 @@ Expected behavior:
 ## Runtime And Security Boundary
 
 This contract covers bounded policy-core body mutation decisions.
+
+The Alpha proxy-shim adapter has a separate, bounded representation rule for
+managed gzip and deflate traffic. It decodes only from the original inbound
+`Content-Encoding`; a static header rewrite that deletes or replaces that
+header cannot select a different decoder. A successful decode writes an
+identity body, removes `Content-Encoding` and transfer encoding, and sets the
+matching content length. The decoder reads at most `32 MiB + 1` decoded bytes;
+unsupported encoding, decode failure, stacked encoding, or decoded-byte
+overflow relays the raw body with its original encoding and a correct content
+length. A later response-script failure after a compressed decode also restores
+that raw representation. This adapter behavior is bounded fail-open handling,
+not policy-core compression ownership.
 
 It does not implement:
 
@@ -279,6 +292,12 @@ Required CI evidence:
   `rewrite/jq_backend_handles_output_and_error_policy`, covering byte and
   output-value budget fail-open behavior for both single-body and body-chain
   application, plus POSIX timeout and memory-limit fail-open behavior;
+- `tests/test_rewrite.c` registers
+  `rewrite/jq_bounded_execution_reuses_parent_cache` for POSIX bounded
+  isolation cache count and hit reuse;
+- `e2e/scripts/script-contract-check.sh` covers gzip/deflate request and
+  response header rewrites, identity normalization, and decoded request
+  overflow raw-relay behavior;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

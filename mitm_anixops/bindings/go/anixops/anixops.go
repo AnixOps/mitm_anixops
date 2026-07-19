@@ -157,6 +157,10 @@ func (available PolicyCapability) Supports(required PolicyCapability) bool {
 	return required == 0 || (available&required) == required
 }
 
+func (available PolicyCapability) IsV1Compatible() bool {
+	return available&^PolicyCapabilityAllV1 == 0
+}
+
 func NewEngine() (*Engine, error) {
 	ptr := C.anixops_engine_new()
 	if ptr == nil {

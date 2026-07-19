@@ -514,6 +514,12 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   outputs to be unique, non-negative integers, and consistent with the total
   compatibility matrix row count.
 
+### Fixed
+
+- Hardened bounded body mutation representation handling: gzip/deflate decode
+  from inbound headers with raw fail-open overflow recovery, POSIX JQ isolation
+  reuses the parent cache, and Go/Rust capability helpers reject unknown V1 bits.
+
 ### Changed
 
 - Clarified that GitHub Actions is the acceptance source of truth for build,

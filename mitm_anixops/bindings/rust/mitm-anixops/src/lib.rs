@@ -254,8 +254,16 @@ pub enum Phase {
 pub struct PolicyCapabilitySet(u64);
 
 impl PolicyCapabilitySet {
+    pub fn bits(self) -> u64 {
+        self.0
+    }
+
     pub fn supports(self, required: u64) -> bool {
         required == 0 || (self.0 & required) == required
+    }
+
+    pub fn is_v1_compatible(self) -> bool {
+        self.0 & !POLICY_CAPABILITY_ALL_V1 == 0
     }
 }
 
@@ -1084,6 +1092,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
             POLICY_CAPABILITY_QUERY_ABI_VERSION
         );
         let capabilities = policy_capabilities();
+        assert_eq!(capabilities.bits(), POLICY_CAPABILITY_ALL_V1);
         assert!(capabilities.supports(POLICY_CAPABILITY_MITM_DECISION));
         assert!(capabilities.supports(POLICY_CAPABILITY_URL_REWRITE));
         assert!(capabilities.supports(POLICY_CAPABILITY_HEADER_MUTATION));
@@ -1094,6 +1103,10 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert!(capabilities.supports(POLICY_CAPABILITY_ALL_V1));
         assert!(capabilities.supports(0));
         assert!(!capabilities.supports(1_u64 << 63));
+        assert!(capabilities.is_v1_compatible());
+        let unknown_capability =
+            PolicyCapabilitySet(POLICY_CAPABILITY_ALL_V1 | (1_u64 << 63));
+        assert!(!unknown_capability.is_v1_compatible());
         let mut engine = Engine::new().unwrap();
         assert_eq!(engine.jq_max_input_bytes(), JQ_MAX_INPUT_BYTES_DEFAULT);
         assert_eq!(engine.jq_max_output_bytes(), JQ_MAX_OUTPUT_BYTES_DEFAULT);

@@ -26,9 +26,12 @@ ANIXOPS_API uint64_t anixops_policy_capability_flags(void);
 `ANIXOPS_POLICY_CAPABILITY_ALL_V1`.
 
 The Go binding exposes `PolicyCapabilityABIVersion()`,
-`PolicyCapabilities()`, and `PolicyCapability.Supports(PolicyCapability)`.
+`PolicyCapabilities()`, `PolicyCapability.Supports(PolicyCapability)`, and
+`PolicyCapability.IsV1Compatible()`.
 The Rust binding exposes `policy_capability_query_abi_version()`,
-`policy_capabilities()`, and `PolicyCapabilitySet::supports(u64)`.
+`policy_capabilities()`, `PolicyCapabilitySet::bits()`,
+`PolicyCapabilitySet::supports(u64)`, and
+`PolicyCapabilitySet::is_v1_compatible()`.
 
 ## V1 Policy Capabilities
 
@@ -54,9 +57,10 @@ an unknown bit or a mismatched query ABI version requires the host to reject
 the policy result or bypass it according to its fail-closed policy.
 
 The Go and Rust subset helpers implement
-`required == 0 || (available & required) == required`. They are only a subset
-check. They do not make an unknown query ABI version or an unknown returned bit
-compatible.
+`required == 0 || (available & required) == required`. The V1 compatibility
+helpers implement `available & ^ALL_V1 == 0` and `available & !ALL_V1 == 0`,
+respectively. Neither helper makes an unknown query ABI version compatible;
+hosts must validate the query ABI before accepting a mask.
 
 ## Explicit Non-Capabilities
 
@@ -87,7 +91,9 @@ Required CI evidence:
 
 - C: `abi/policy_capability_query_is_stable`, including the bit-63
   unknown-bit assertion.
-- Go: `TestGoBindingEvaluatesPolicy`.
-- Rust: `rust_binding_evaluates_policy`.
+- Go: `TestGoBindingEvaluatesPolicy`, including a synthetic
+  `ALL_V1 | (1 << 63)` rejection through `IsV1Compatible()`.
+- Rust: `rust_binding_evaluates_policy`, including a synthetic
+  `ALL_V1 | (1 << 63)` rejection through `is_v1_compatible()`.
 
 GitHub Actions is the acceptance source of truth for this contract.

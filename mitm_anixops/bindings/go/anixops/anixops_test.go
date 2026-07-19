@@ -48,6 +48,13 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	if capabilities.Supports(PolicyCapability(1) << 63) {
 		t.Fatal("PolicyCapabilities() unexpectedly supports bit 63")
 	}
+	if !capabilities.IsV1Compatible() {
+		t.Fatal("PolicyCapabilities() unexpectedly contains a non-V1 capability")
+	}
+	unknownCapability := PolicyCapabilityAllV1 | (PolicyCapability(1) << 63)
+	if unknownCapability.IsV1Compatible() {
+		t.Fatal("IsV1Compatible() unexpectedly accepts an unknown bit")
+	}
 	engine, err := NewEngine()
 	if err != nil {
 		t.Fatal(err)

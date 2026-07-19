@@ -78,6 +78,10 @@ Mode = input,contract
 ^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? request-body-json-replace $.from "static-request"
 ^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? response-header-add X-AnixOps-Static-Response static-response
 ^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\? response-body-json-replace $.code 7
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?request-compressed=gzip header-del Content-Encoding
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?request-compressed=deflate header-replace Content-Encoding gzip
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?compressed=gzip response-header-del Content-Encoding
+^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?compressed=deflate response-header-replace Content-Encoding gzip
 
 [Script]
 http-request ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.request, argument=[{Mode}]
@@ -322,8 +326,50 @@ if (upstream.from !== "static-request") {
 if (upstream.requestScript !== true) {
   throw new Error(`${encoding}: request script did not receive decoded JSON body`);
 }
+if (upstream.staticRequestHeader !== "static-request") {
+  throw new Error(`${encoding}: static request header was not retained after body decode`);
+}
 if (body.original.requestEncoding !== "") {
   throw new Error(`${encoding}: decoded request leaked Content-Encoding: ${body.original.requestEncoding}`);
+}
+JS
+}
+
+run_compressed_request_overflow_case() {
+	python3 - "$TMP/request-overflow.bin" <<'PY'
+import gzip
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_bytes(gzip.compress(b"x" * (32 * 1024 * 1024 + 1)))
+PY
+
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/json" \
+		--header "Content-Encoding: gzip" \
+		--data-binary "@${TMP}/request-overflow.bin" \
+		--dump-header "$TMP/request-overflow-headers.out" \
+		--output "$TMP/request-overflow-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/request-response?request-overflow=1&summary=1"
+
+	grep -F "HTTP/1.1 201 Created" "$TMP/request-overflow-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Script: applied" "$TMP/request-overflow-headers.out" >/dev/null
+
+	node - "$TMP/request-overflow-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.ok !== true || !body.original) {
+  throw new Error("overflow request did not reach the origin through the response contract");
+}
+if (body.original.requestEncoding !== "gzip") {
+  throw new Error(`overflow request lost its raw Content-Encoding: ${body.original.requestEncoding}`);
+}
+if (!Number.isInteger(body.original.requestByteCount) || body.original.requestByteCount <= 0) {
+  throw new Error(`overflow request did not retain a raw compressed body: ${body.original.requestByteCount}`);
 }
 JS
 }
@@ -332,6 +378,7 @@ run_compressed_response_case gzip
 run_compressed_response_case deflate
 run_compressed_request_case gzip
 run_compressed_request_case deflate
+run_compressed_request_overflow_case
 
 grep -F '"contract.argument": "Mode=contract"' "$TMP/script-store.json" >/dev/null
 
@@ -343,4 +390,6 @@ echo "script contract: response script timeout fails open after static rewrites"
 echo "script contract: response script exception fails open after static rewrites"
 echo "script contract: gzip/deflate response bodies decoded and returned as identity after script mutation"
 echo "script contract: gzip/deflate request bodies decoded before body/script mutation and returned as identity"
+echo "script contract: content-encoding header rewrites preserve a matching body representation"
+echo "script contract: decoded request overflow relays the raw compressed body fail-open"
 echo "mitm_anixops script contract e2e passed"

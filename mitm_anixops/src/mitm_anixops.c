@@ -7468,7 +7468,7 @@ static int anixops_apply_body_jq_replacement_isolated(
 	int pipe_fds[2];
 	pid_t pid;
 	int read_flags;
-	struct timespec start;
+	struct timespec start = {0};
 	unsigned char header_bytes[sizeof(anixops_jq_child_result_t)];
 	size_t header_read = 0;
 	size_t payload_read = 0;
@@ -7527,15 +7527,18 @@ static int anixops_apply_body_jq_replacement_isolated(
 
 	while (!eof) {
 		struct pollfd poll_fd;
-		size_t elapsed = anixops_jq_elapsed_ms(&start);
+		size_t elapsed = 0;
 		int remaining;
 		int poll_result;
 
-		if (max_execution_time_ms != 0 && (elapsed == SIZE_MAX || elapsed >= max_execution_time_ms)) {
-			close(pipe_fds[0]);
-			anixops_jq_kill_and_reap(pid);
-			*out_execution_limited = 1;
-			return ANIXOPS_ERR_CAPACITY;
+		if (max_execution_time_ms != 0) {
+			elapsed = anixops_jq_elapsed_ms(&start);
+			if (elapsed == SIZE_MAX || elapsed >= max_execution_time_ms) {
+				close(pipe_fds[0]);
+				anixops_jq_kill_and_reap(pid);
+				*out_execution_limited = 1;
+				return ANIXOPS_ERR_CAPACITY;
+			}
 		}
 		remaining = max_execution_time_ms == 0
 			? -1
@@ -7678,6 +7681,10 @@ static int anixops_apply_body_jq_replacement(
 	*out_memory_limit_unavailable = 0;
 #if defined(ANIXOPS_JQ_POSIX_ISOLATION)
 	if (max_execution_time_ms != 0 || max_memory_bytes != 0) {
+		int compile_status;
+		if (anixops_jq_filter_cache_get(engine, filter, &compile_status) == NULL) {
+			return compile_status;
+		}
 		return anixops_apply_body_jq_replacement_isolated(
 			engine,
 			body,

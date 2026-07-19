@@ -1071,19 +1071,24 @@ func (ps *proxyServer) applyRequestScript(
 			return "", "", nil, nil, err
 		}
 	}
-	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseRequest, header)
+	originalHeader := cloneHeader(header)
+	originalEncoding := contentEncodingForDecode(originalHeader)
+	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseRequest, originalHeader)
 	if err != nil {
 		return "", "", nil, nil, err
 	}
-	if needsBody {
-		decodedBody, decoded, decodeErr := decodeResponseBodyForScript(nextHeader.Get("Content-Encoding"), bodyBytes)
+	bodyIsIdentity := false
+	if needsBody || contentEncodingChanged(originalHeader, nextHeader) {
+		decodedBody, decoded, decodeErr := decodeBodyForScript(originalEncoding, bodyBytes)
 		if decodeErr != nil {
-			ps.debugf("request_body_decode_fail_open url=%s encoding=%s err=%v", rawURL, nextHeader.Get("Content-Encoding"), decodeErr)
+			restoreRawBodyHeader(nextHeader, originalHeader, len(bodyBytes))
+			ps.debugf("request_body_decode_fail_open url=%s", rawURL)
 			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
 		}
+		bodyBytes = decodedBody
+		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
+		bodyIsIdentity = true
 		if decoded {
-			bodyBytes = decodedBody
-			normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
 			ps.debugf("request_body_decoded url=%s bytes=%d", rawURL, len(bodyBytes))
 		}
 	}
@@ -1094,6 +1099,7 @@ func (ps *proxyServer) applyRequestScript(
 	if bodyChanged {
 		bodyBytes = rewrittenBody
 		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
+		bodyIsIdentity = true
 		ps.debugf("request_body_rewrite url=%s message=%s bytes=%d", rawURL, bodyMessage, len(bodyBytes))
 	}
 	if match.kind == scriptNone || ps.scriptRunner == "" {
@@ -1119,6 +1125,19 @@ func (ps *proxyServer) applyRequestScript(
 	}
 	if done.Body != nil {
 		bodyBytes = []byte(*done.Body)
+		bodyIsIdentity = true
+	}
+	if !bodyIsIdentity && contentEncodingChanged(originalHeader, nextHeader) {
+		decodedBody, _, decodeErr := decodeBodyForScript(originalEncoding, bodyBytes)
+		if decodeErr != nil {
+			restoreRawBodyHeader(nextHeader, originalHeader, len(bodyBytes))
+			ps.debugf("request_body_decode_fail_open url=%s", rawURL)
+			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+		}
+		bodyBytes = decodedBody
+		bodyIsIdentity = true
+	}
+	if bodyIsIdentity {
 		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
 	}
 	return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
@@ -1143,7 +1162,9 @@ func (ps *proxyServer) prepareUpstreamHeader(rawURL string, header http.Header) 
 }
 
 func (ps *proxyServer) applyResponseScript(rawURL string, method string, requestHeader http.Header, resp *http.Response) error {
-	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseResponse, resp.Header)
+	originalHeader := cloneHeader(resp.Header)
+	originalEncoding := contentEncodingForDecode(originalHeader)
+	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseResponse, originalHeader)
 	if err != nil {
 		return err
 	}
@@ -1158,19 +1179,23 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		return err
 	}
 	hasBodyRewrite := rewriteActionIsBody(action)
-	if match.kind == scriptNone && !hasBodyRewrite {
+	encodingChanged := contentEncodingChanged(originalHeader, nextHeader)
+	if match.kind == scriptNone && !hasBodyRewrite && !encodingChanged {
 		return nil
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
+	rawBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 	_ = resp.Body.Close()
-	scriptBody, decoded, err := decodeResponseBodyForScript(resp.Header.Get("Content-Encoding"), bodyBytes)
-	if err != nil {
-		return err
+	scriptBody, decoded, decodeErr := decodeBodyForScript(originalEncoding, rawBody)
+	if decodeErr != nil {
+		replaceRawResponseBody(resp, rawBody, originalHeader)
+		ps.debugf("response_body_decode_fail_open url=%s", rawURL)
+		return nil
 	}
+	normalizeResponseBodyHeader(resp.Header, len(scriptBody))
 	bodyChanged := false
 	bodyMessage := ""
 	if hasBodyRewrite {
@@ -1186,11 +1211,7 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		}
 	}
 	if match.kind == scriptNone {
-		if bodyChanged || decoded {
-			replaceResponseBody(resp, scriptBody)
-		} else {
-			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
-		}
+		replaceResponseBody(resp, scriptBody)
 		return nil
 	}
 	done, err := ps.runScript(
@@ -1204,10 +1225,12 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		scriptBody)
 	if err != nil {
 		ps.debugf("response_script_fail_open url=%s tag=%s err=%v", scriptURL, match.tag, err)
-		if bodyChanged {
+		if decoded || encodingChanged {
+			replaceRawResponseBody(resp, rawBody, originalHeader)
+		} else if bodyChanged {
 			replaceResponseBody(resp, scriptBody)
 		} else {
-			resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+			replaceResponseBody(resp, rawBody)
 		}
 		return nil
 	}
@@ -1218,12 +1241,9 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		}
 	}
 	if done.Body != nil {
-		replaceResponseBody(resp, []byte(*done.Body))
-	} else if bodyChanged || decoded {
-		replaceResponseBody(resp, scriptBody)
-	} else {
-		resp.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		scriptBody = []byte(*done.Body)
 	}
+	replaceResponseBody(resp, scriptBody)
 	if status, ok := numericStatus(done.Status); ok {
 		resp.StatusCode = status
 		resp.Status = fmt.Sprintf("%d %s", status, http.StatusText(status))
@@ -1231,7 +1251,17 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 	return nil
 }
 
-func decodeResponseBodyForScript(encoding string, body []byte) ([]byte, bool, error) {
+var errDecodedBodyTooLarge = errors.New("decoded body exceeds rewrite buffer")
+
+func contentEncodingForDecode(header http.Header) string {
+	return strings.Join(header.Values("Content-Encoding"), ",")
+}
+
+func contentEncodingChanged(original http.Header, rewritten http.Header) bool {
+	return contentEncodingForDecode(original) != contentEncodingForDecode(rewritten)
+}
+
+func decodeBodyForScript(encoding string, body []byte) ([]byte, bool, error) {
 	normalized := strings.ToLower(strings.TrimSpace(encoding))
 	if normalized == "" || normalized == "identity" {
 		return body, false, nil
@@ -1258,11 +1288,36 @@ func decodeResponseBodyForScript(encoding string, body []byte) ([]byte, bool, er
 		return nil, false, err
 	}
 	defer reader.Close()
-	decoded, err := io.ReadAll(reader)
+	limited := io.LimitReader(reader, int64(maxBodyRewriteBuffer)+1)
+	decoded, err := io.ReadAll(limited)
 	if err != nil {
 		return nil, false, err
 	}
+	if len(decoded) > maxBodyRewriteBuffer {
+		return nil, false, errDecodedBodyTooLarge
+	}
 	return decoded, true, nil
+}
+
+func restoreRawBodyHeader(header http.Header, originalHeader http.Header, bodyLen int) {
+	header.Del("Content-Encoding")
+	for _, value := range originalHeader.Values("Content-Encoding") {
+		header.Add("Content-Encoding", value)
+	}
+	header.Del("Transfer-Encoding")
+	header.Set("Content-Length", strconv.Itoa(bodyLen))
+}
+
+func normalizeRequestBodyHeader(header http.Header, bodyLen int) {
+	header.Del("Content-Encoding")
+	header.Del("Transfer-Encoding")
+	header.Set("Content-Length", strconv.Itoa(bodyLen))
+}
+
+func normalizeResponseBodyHeader(header http.Header, bodyLen int) {
+	header.Del("Content-Encoding")
+	header.Del("Transfer-Encoding")
+	header.Set("Content-Length", strconv.Itoa(bodyLen))
 }
 
 func replaceResponseBody(resp *http.Response, body []byte) {
@@ -1271,15 +1326,16 @@ func replaceResponseBody(resp *http.Response, body []byte) {
 	resp.TransferEncoding = nil
 	resp.Uncompressed = false
 	resp.Trailer = nil
-	resp.Header.Del("Content-Encoding")
-	resp.Header.Del("Transfer-Encoding")
-	resp.Header.Set("Content-Length", strconv.Itoa(len(body)))
+	normalizeResponseBodyHeader(resp.Header, len(body))
 }
 
-func normalizeRequestBodyHeader(header http.Header, bodyLen int) {
-	header.Del("Content-Encoding")
-	header.Del("Transfer-Encoding")
-	header.Set("Content-Length", strconv.Itoa(bodyLen))
+func replaceRawResponseBody(resp *http.Response, body []byte, originalHeader http.Header) {
+	resp.Body = io.NopCloser(bytes.NewReader(body))
+	resp.ContentLength = int64(len(body))
+	resp.TransferEncoding = nil
+	resp.Uncompressed = false
+	resp.Trailer = nil
+	restoreRawBodyHeader(resp.Header, originalHeader, len(body))
 }
 
 func (ps *proxyServer) runScript(
@@ -1741,12 +1797,22 @@ func startOrigin(addr string, cache *certCache) error {
 		if strings.HasPrefix(r.URL.Path, "/contract/request-response") {
 			body, _ := io.ReadAll(r.Body)
 			w.Header().Set("Content-Type", "application/json")
-			payload, _ := json.Marshal(map[string]interface{}{
-				"code":            0,
-				"requestScript":   r.Header.Get("X-AnixOps-Request-Script"),
-				"requestEncoding": r.Header.Get("Content-Encoding"),
-				"body":            string(body),
-			})
+			var payloadFields map[string]interface{}
+			if r.URL.Query().Get("summary") == "1" {
+				payloadFields = map[string]interface{}{
+					"code":             0,
+					"requestEncoding":  r.Header.Get("Content-Encoding"),
+					"requestByteCount": len(body),
+				}
+			} else {
+				payloadFields = map[string]interface{}{
+					"code":            0,
+					"requestScript":   r.Header.Get("X-AnixOps-Request-Script"),
+					"requestEncoding": r.Header.Get("Content-Encoding"),
+					"body":            string(body),
+				}
+			}
+			payload, _ := json.Marshal(payloadFields)
 			payload = append(payload, '\n')
 			switch r.URL.Query().Get("compressed") {
 			case "gzip":
