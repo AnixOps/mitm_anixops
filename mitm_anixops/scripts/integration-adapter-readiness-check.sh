@@ -57,9 +57,12 @@ do
 done
 
 require_pattern "$NETWORKCORE" "networkcore-integration-alpha-baseline=v0.45.10-alpha" "missing NetworkCore alpha baseline marker"
-require_pattern "$NETWORKCORE" "networkcore-integration-current-mode=vendored-policy-core-adapter" "missing NetworkCore adapter mode marker"
+require_pattern "$NETWORKCORE" "networkcore-integration-current-mode=vendored-policy-core-plus-plain-http-adapter" "missing NetworkCore adapter mode marker"
 require_pattern "$NETWORKCORE" "networkcore-integration-v1-boundary=adapter-owned-data-plane" "missing NetworkCore v1 boundary marker"
-require_pattern "$NETWORKCORE" "networkcore-integration-live-mutation-status=deferred" "missing deferred live mutation marker"
+require_pattern "$NETWORKCORE" "networkcore-integration-live-mutation-status=partial-live-http-deferred-https" "missing NetworkCore live-mutation boundary marker"
+require_pattern "$NETWORKCORE" "networkcore-integration-runtime-model=host-plugin-no-standalone-desktop-product" "missing NetworkCore host-plugin runtime marker"
+require_pattern "$NETWORKCORE" "networkcore-integration-final-target=live-https-connect-rewrite-and-script-execution" "missing NetworkCore final integration target marker"
+require_pattern "$NETWORKCORE" "networkcore-integration-next-host-slice=networkcore-engine-native-tls-session-boundary" "missing NetworkCore TLS session planning marker"
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh" "missing integration adapter readiness gate marker"
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-self-test=scripts/integration-adapter-readiness-check-test.sh" "missing integration adapter readiness self-test marker"
 require_pattern "$NETWORKCORE" "integration-adapter-readiness-status=ci-gated-alpha-boundary" "missing integration adapter readiness status marker"

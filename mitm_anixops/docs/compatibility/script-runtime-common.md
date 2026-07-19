@@ -162,7 +162,7 @@ network APIs are exposed to JavaScript.
 - `make script-contract-e2e` covers the Alpha proxy path for request/response
   script mutation, static rewrite ordering, `$persistentStore`,
   rule-level timeout fail-open, exception fail-open, and gzip/deflate response
-  decode with identity writeback.
+  decode plus gzip/deflate request decode, each with identity writeback.
 - `scripts/script-runtime-security-gate.sh` requires this security boundary,
   the pending production runtime/redaction manual-intervention markers, the
   no-embedded-engine dependency decision, and matrix/source-contract evidence

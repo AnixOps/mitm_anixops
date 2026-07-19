@@ -96,6 +96,7 @@ by `$done`:
 ```text
 request header/body rewrite -> request script dispatch -> request header/body mutation -> local origin
 response header/body rewrite -> response script dispatch -> status/header/body mutation -> MITM response
+gzip/deflate request decode -> body rewrite/script mutation -> identity upstream writeback
 gzip/deflate response decode -> body rewrite/script mutation -> identity writeback
 persistentStore write in request script -> persistentStore read in response script
 response script timeout -> fail open with static-rewritten response
@@ -119,7 +120,7 @@ Covered:
 - static request/response header and body rewrites before script dispatch
 - response script timeout/exception fail-open after static rewrites, including rule-level timeout override and max-size
   overflow fail-open
-- gzip/deflate response decode with identity writeback
+- gzip/deflate request/response decode with identity writeback
 
 Not covered yet:
 

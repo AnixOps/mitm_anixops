@@ -31,6 +31,13 @@ extern "C" {
 #define ANIXOPS_HEADER_LIST_CAP 32
 #define ANIXOPS_BODY_CHAIN_CAP 16
 #define ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT 1048576u
+#define ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT 1048576u
+#define ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT 64u
+#define ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT 0u
+#define ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT 0u
+#define ANIXOPS_MAX_BODY_BYTES_DEFAULT 0u
+#define ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT 4u
+#define ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX 16u
 
 typedef struct anixops_engine anixops_engine_t;
 
@@ -264,6 +271,27 @@ ANIXOPS_API int anixops_engine_set_regex_backend(anixops_engine_t *engine, anixo
 ANIXOPS_API anixops_regex_backend_t anixops_engine_regex_backend(const anixops_engine_t *engine);
 ANIXOPS_API int anixops_engine_set_jq_max_input_bytes(anixops_engine_t *engine, size_t max_input_bytes);
 ANIXOPS_API size_t anixops_engine_jq_max_input_bytes(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_jq_max_output_bytes(anixops_engine_t *engine, size_t max_output_bytes);
+ANIXOPS_API size_t anixops_engine_jq_max_output_bytes(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_jq_max_output_values(anixops_engine_t *engine, size_t max_output_values);
+ANIXOPS_API size_t anixops_engine_jq_max_output_values(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_jq_max_execution_time_ms(
+	anixops_engine_t *engine,
+	size_t max_execution_time_ms);
+ANIXOPS_API size_t anixops_engine_jq_max_execution_time_ms(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_jq_max_memory_bytes(
+	anixops_engine_t *engine,
+	size_t max_memory_bytes);
+ANIXOPS_API size_t anixops_engine_jq_max_memory_bytes(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_max_body_bytes(anixops_engine_t *engine, size_t max_body_bytes);
+ANIXOPS_API size_t anixops_engine_max_body_bytes(const anixops_engine_t *engine);
+ANIXOPS_API size_t anixops_engine_jq_filter_cache_count(const anixops_engine_t *engine);
+ANIXOPS_API size_t anixops_engine_jq_filter_cache_hit_count(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_set_jq_filter_cache_capacity(
+	anixops_engine_t *engine,
+	size_t capacity);
+ANIXOPS_API size_t anixops_engine_jq_filter_cache_capacity(const anixops_engine_t *engine);
+ANIXOPS_API int anixops_engine_clear_jq_filter_cache(anixops_engine_t *engine);
 ANIXOPS_API size_t anixops_engine_rule_diagnostic_count(const anixops_engine_t *engine);
 ANIXOPS_API int anixops_engine_copy_rule_diagnostic(
 	const anixops_engine_t *engine,
@@ -310,6 +338,16 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 	char *out_body,
 	size_t out_body_cap,
 	anixops_rewrite_result_t *out_result);
+ANIXOPS_API int anixops_rewrite_apply_body_bytes(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const unsigned char *body,
+	size_t body_len,
+	unsigned char *out_body,
+	size_t out_body_cap,
+	size_t *out_body_len,
+	anixops_rewrite_result_t *out_result);
 ANIXOPS_API int anixops_rewrite_apply_body_chain(
 	const anixops_engine_t *engine,
 	const char *url,
@@ -317,6 +355,16 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 	const char *body,
 	char *out_body,
 	size_t out_body_cap,
+	anixops_body_rewrite_chain_t *out_chain);
+ANIXOPS_API int anixops_rewrite_apply_body_chain_bytes(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const unsigned char *body,
+	size_t body_len,
+	unsigned char *out_body,
+	size_t out_body_cap,
+	size_t *out_body_len,
 	anixops_body_rewrite_chain_t *out_chain);
 
 ANIXOPS_API int anixops_rewrite_evaluate_header(

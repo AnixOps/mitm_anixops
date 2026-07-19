@@ -199,6 +199,21 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   and positive/negative tests for the body-mutation contract.
 - [x] Add portable/common HTTP JQ alias mutation parser fixtures and
   positive/negative tests for the body-mutation contract.
+- [x] Add optional libjq output-byte budgeting with fail-open runtime tests and
+  C, Go, and Rust binding coverage.
+- [x] Add optional libjq output-value enumeration budgeting with fail-open
+  runtime tests and C, Go, and Rust binding coverage.
+- [x] Add optional POSIX libjq wall-clock timeout isolation with fail-open
+  runtime tests and C, Go, and Rust binding coverage.
+- [x] Add optional POSIX libjq child memory ceilings with fail-open runtime
+  tests and C, Go, and Rust binding coverage.
+- [x] Add configurable bounded per-engine libjq compiled-filter cache reuse,
+  explicit invalidation, and C, Go, and Rust binding observability tests.
+- [x] Add optional libjq advanced-filter fixtures and positive/negative tests
+  for predicates, slices, recursive selectors, computed filters, `del`, `map`,
+  `with_entries`, `walk`, `test`, `capture`, assignment, and iterator pipes.
+- [x] Add Surge `[URL Rewrite]` request/response JQ body mutation fixtures and
+  positive/negative tests for the body-mutation contract.
 - [x] Add Shadowrocket `[URL Rewrite]` response body regex mutation parser
   fixtures and positive/negative tests for the body-mutation contract.
 - [x] Define trace schema for URL, host, header, body, script trigger, and

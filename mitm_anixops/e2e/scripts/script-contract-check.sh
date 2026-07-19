@@ -275,8 +275,63 @@ if (upstream.storeAfter !== "Mode=contract") throw new Error(`${encoding}: reque
 JS
 }
 
+run_compressed_request_case() {
+	encoding=$1
+	python3 - "$TMP/${encoding}-request.bin" "$encoding" <<'PY'
+import gzip
+import pathlib
+import sys
+import zlib
+
+path = pathlib.Path(sys.argv[1])
+encoding = sys.argv[2]
+payload = ('{"from":"' + encoding + '"}').encode()
+if encoding == "gzip":
+    payload = gzip.compress(payload)
+elif encoding == "deflate":
+    payload = zlib.compress(payload)
+else:
+    raise SystemExit(f"unsupported test encoding: {encoding}")
+path.write_bytes(payload)
+PY
+
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/json" \
+		--header "Content-Encoding: ${encoding}" \
+		--data-binary "@${TMP}/${encoding}-request.bin" \
+		--dump-header "$TMP/${encoding}-request-headers.out" \
+		--output "$TMP/${encoding}-request-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/request-response?request-compressed=${encoding}"
+
+	grep -F "HTTP/1.1 201 Created" "$TMP/${encoding}-request-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Script: applied" "$TMP/${encoding}-request-headers.out" >/dev/null
+
+	node - "$TMP/${encoding}-request-body.out" "$encoding" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const encoding = process.argv[3];
+if (body.ok !== true) throw new Error(`${encoding}: request script was not applied`);
+if (!body.original) throw new Error(`${encoding}: missing origin response payload`);
+const upstream = JSON.parse(body.original.body);
+if (upstream.from !== "static-request") {
+  throw new Error(`${encoding}: static body rewrite did not run after request decode`);
+}
+if (upstream.requestScript !== true) {
+  throw new Error(`${encoding}: request script did not receive decoded JSON body`);
+}
+if (body.original.requestEncoding !== "") {
+  throw new Error(`${encoding}: decoded request leaked Content-Encoding: ${body.original.requestEncoding}`);
+}
+JS
+}
+
 run_compressed_response_case gzip
 run_compressed_response_case deflate
+run_compressed_request_case gzip
+run_compressed_request_case deflate
 
 grep -F '"contract.argument": "Mode=contract"' "$TMP/script-store.json" >/dev/null
 
@@ -287,4 +342,5 @@ echo "script contract: persistentStore read/write shared across request and resp
 echo "script contract: response script timeout fails open after static rewrites"
 echo "script contract: response script exception fails open after static rewrites"
 echo "script contract: gzip/deflate response bodies decoded and returned as identity after script mutation"
+echo "script contract: gzip/deflate request bodies decoded before body/script mutation and returned as identity"
 echo "mitm_anixops script contract e2e passed"

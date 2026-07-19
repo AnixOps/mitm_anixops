@@ -180,19 +180,27 @@ anixops-mitm-runner trace --plugin plugin.plugin --url https://example.com/api
 
 ## JQ 补洞路线
 
-现状只有 JSON path replacement 子集，不能覆盖真正的 jq filter。
+现状为 JSON path replacement 子集加可选的 `JQ=1` libjq filter 执行；默认
+构建仍 fail-open，生产级 runtime 隔离和更广插件语料尚未完成。
 
 分三步：
 
 1. `jq-lite` 过渡层：继续支持当前 JSON path，并加入常见 assignment 形态，如 `.foo = value`、`.items[] |= ...`、`del(.field)`、`with_entries(select(...))` 的有限模式识别。
 2. `libjq` 后端：为 `http-request-jq`、`http-response-jq` 接入真正 jq program 编译和执行，支持 pipe、assignment、iterator、select、map、del、walk、test、capture。
-3. 资源限制：每次执行设置 max input bytes、max output bytes、timeout、recursion/iteration budget，防止插件卡死 runner。
+3. 资源限制：每次执行设置 max input bytes、max output bytes、output-value
+   enumeration budget、timeout、recursion/iteration budget，防止插件卡死
+   runner。当前 policy core 已实现输入/输出字节预算、output-value
+   enumeration budget、POSIX wall-clock timeout isolation，以及 POSIX 子进程
+   memory ceiling，以及默认 4、可配置 1–16 项且支持显式失效的 bounded
+   per-engine compiled-filter cache；内部
+   recursion/iteration budget 和 production cache refresh/reuse policy 仍属于
+   独立 runtime/adapter 隔离层。
 
 验收：
 
 - Surge `http-request-jq` / `http-response-jq` fixture 通过。
 - LOON/AnixOps 同类 JSON rewrite 规则通过。
-- jq compile error、multi-output、empty output、non-object output、invalid JSON 输入、输入超限和输出超限行为有明确诊断。
+- jq compile error、multi-output、empty output、non-object output、invalid JSON 输入、输入超限、输出超限和 output-value budget 行为有明确诊断。
 - mutation 后 JSON 序列化和 body framing 在 runner E2E 中一致。
 
 ## PCRE / NSRegularExpression 补洞路线
@@ -398,10 +406,10 @@ int anixops_runtime_apply_plan(
 | --- | --- | --- | --- |
 | P0 | Plan API | Alpha 已提供 `anixops_rewrite_build_plan`，聚合 URL/body/header/script 操作；后续补完整 trace schema 和更多 corpus ordering | 现有 `evaluate_*` API 与 plan API 对同一 fixture 输出一致 |
 | P0 | Trace | JSON trace schema 和 golden trace fixtures | `runner replay` 输出可 diff 的 trace |
-| P0 | Body pipeline | text/json body view、max body size、empty body、binary passthrough | body matrix 覆盖空 body、invalid UTF-8、超限 body |
+| P0 | Body pipeline | text/json body view、max body size、empty body、binary passthrough；policy core 已提供默认关闭且可配置的 already-buffered max-body-bytes fail-open ceiling，以及单次/chain 显式长度 bytes API | body matrix 覆盖空 body、invalid UTF-8、超限 body |
 | P1 | JS runtime | QuickJS backend，支持 `$request`、`$response`、`$argument`、`$persistentStore`、`$done` | BiliUniverse runtime fixture 不依赖测试专用 Node runner |
 | P1 | Script cache | Alpha runner 已支持 offline bundle、sha256 digest 校验、digest mismatch/cache miss 诊断；后续补 remote fetch/cache refresh policy | digest mismatch、cache miss、offline mode 均有 fixture |
-| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、max-input fail-open、output-buffer fail-open；后续补 timeout/memory limit | jq manual 常用 filter 子集和插件 corpus 均通过 |
+| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、max-input/max-output/output-value budget、POSIX wall-clock timeout isolation、POSIX child memory ceiling、默认 4 且可配置 1–16 项并支持显式失效的 bounded per-engine compiled-filter cache fail-open；后续补 internal recursion/iteration limit 和 production cache refresh/reuse policy | jq manual 常用 filter 子集和插件 corpus 均通过 |
 | P1 | Compression | gzip/deflate/brotli/zstd decode/re-encode 或 remove encoding 策略 | Content-Encoding 和 Content-Length replay fixture 通过 |
 | P2 | Async script | async `$done`、timeout、promise、exception fail-open | timeout/throw/double `$done` fixture 通过 |
 | P2 | Persistent store | namespace、read/write、transaction 或 file backend | 多脚本共享状态 fixture 通过 |

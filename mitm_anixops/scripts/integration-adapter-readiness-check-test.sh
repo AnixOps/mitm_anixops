@@ -28,9 +28,12 @@ write_passing_fixture() {
 
 ```text
 networkcore-integration-alpha-baseline=v0.45.10-alpha
-networkcore-integration-current-mode=vendored-policy-core-adapter
+networkcore-integration-current-mode=vendored-policy-core-plus-plain-http-adapter
 networkcore-integration-v1-boundary=adapter-owned-data-plane
-networkcore-integration-live-mutation-status=deferred
+networkcore-integration-live-mutation-status=partial-live-http-deferred-https
+networkcore-integration-runtime-model=host-plugin-no-standalone-desktop-product
+networkcore-integration-final-target=live-https-connect-rewrite-and-script-execution
+networkcore-integration-next-host-slice=networkcore-engine-native-tls-session-boundary
 integration-adapter-readiness-gate=scripts/integration-adapter-readiness-check.sh
 integration-adapter-readiness-self-test=scripts/integration-adapter-readiness-check-test.sh
 integration-adapter-readiness-status=ci-gated-alpha-boundary
@@ -155,7 +158,7 @@ run_gate > "$OUTPUT"
 grep -q "integration adapter readiness check passed" "$OUTPUT"
 
 write_passing_fixture
-grep -v "networkcore-integration-current-mode=vendored-policy-core-adapter" "$NETWORKCORE" > "$TMP_DIR/networkcore-missing-mode.md"
+grep -v "networkcore-integration-current-mode=vendored-policy-core-plus-plain-http-adapter" "$NETWORKCORE" > "$TMP_DIR/networkcore-missing-mode.md"
 mv "$TMP_DIR/networkcore-missing-mode.md" "$NETWORKCORE"
 if run_gate > "$OUTPUT" 2>&1; then
 	printf '%s\n' "integration adapter readiness check test failed: missing NetworkCore marker was accepted" >&2

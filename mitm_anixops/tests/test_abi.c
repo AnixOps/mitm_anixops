@@ -39,6 +39,7 @@ static void null_arguments_are_rejected(void)
 	anixops_plugin_metadata_descriptor_t metadata;
 	char body[16];
 	ANIXOPS_EXPECT_TRUE(engine != NULL);
+	ANIXOPS_EXPECT_EQ_SIZE(ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT, 4);
 
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(NULL, ""), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
@@ -180,6 +181,21 @@ static void null_arguments_are_rejected(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(NULL, ANIXOPS_REGEX_BACKEND_POSIX_LITE), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, (anixops_regex_backend_t)99), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_input_bytes(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_bytes(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_values(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_execution_time_ms(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_memory_bytes(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_max_body_bytes(NULL, 1024), ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(NULL), ANIXOPS_MAX_BODY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(NULL), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(NULL), 0);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_set_jq_filter_cache_capacity(NULL, ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(NULL),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_clear_jq_filter_cache(NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(NULL), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(NULL, 0, &diagnostic), ANIXOPS_ERR_INVALID_ARGUMENT);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, NULL), ANIXOPS_ERR_INVALID_ARGUMENT);
@@ -203,6 +219,205 @@ static void jq_max_input_option_is_configurable(void)
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), 0);
 	anixops_engine_clear(engine);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_max_output_option_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_bytes(NULL), ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_bytes(engine), ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_bytes(engine, 4096), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_bytes(engine), 4096);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_bytes(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_bytes(engine), 0);
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_bytes(engine), ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_max_output_values_option_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_output_values(NULL),
+		ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_output_values(engine),
+		ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_values(engine, 1), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_values(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_values(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_values(engine), 0);
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_output_values(engine),
+		ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_execution_timeout_option_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_execution_time_ms(NULL),
+		ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_execution_time_ms(engine),
+		ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_execution_time_ms(engine, 250), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_execution_time_ms(engine), 250);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_execution_time_ms(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_execution_time_ms(engine), 0);
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_execution_time_ms(engine),
+		ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_memory_option_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_memory_bytes(NULL),
+		ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_memory_bytes(engine),
+		ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_memory_bytes(engine, 32u * 1024u * 1024u), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_memory_bytes(engine), 32u * 1024u * 1024u);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_memory_bytes(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_memory_bytes(engine), 0);
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_max_memory_bytes(engine),
+		ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_filter_cache_reuses_compiled_program(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char body[64];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://cache\\.test response-body-jq '.ok = true'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://cache.test",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ok\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://cache.test",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ok\":false}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 1);
+#else
+	ANIXOPS_EXPECT_STREQ(result.message, "jq backend unavailable");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":false}");
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
+#endif
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
+	anixops_engine_free(engine);
+}
+
+static void max_body_option_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(NULL), ANIXOPS_MAX_BODY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(engine), ANIXOPS_MAX_BODY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_max_body_bytes(engine, 4096), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(engine), 4096);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_max_body_bytes(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(engine), 0);
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(engine), ANIXOPS_MAX_BODY_BYTES_DEFAULT);
+
+	anixops_engine_free(engine);
+}
+
+static void jq_filter_cache_policy_is_configurable(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(NULL),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(engine),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_set_jq_filter_cache_capacity(engine, 2),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_capacity(engine), 2);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_set_jq_filter_cache_capacity(engine, ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(engine),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_set_jq_filter_cache_capacity(engine, 0),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_set_jq_filter_cache_capacity(
+			engine,
+			ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX + 1u),
+		ANIXOPS_ERR_INVALID_ARGUMENT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_clear_jq_filter_cache(engine), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(engine),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
+
+	anixops_engine_clear(engine);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(engine),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT);
 
 	anixops_engine_free(engine);
 }
@@ -269,6 +484,15 @@ static void default_engine_state_is_conservative(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_PORTABLE);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_values(engine), ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_execution_time_ms(engine), ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_memory_bytes(engine), ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(engine), ANIXOPS_MAX_BODY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(engine),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_regex_backend_available(ANIXOPS_REGEX_BACKEND_POSIX_LITE), 1);
 	ANIXOPS_EXPECT_EQ_INT(anixops_regex_backend_available((anixops_regex_backend_t)99), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
@@ -314,6 +538,15 @@ static void clear_resets_and_engine_remains_usable(void)
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_compat_profile(engine), ANIXOPS_COMPAT_PORTABLE);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_regex_backend(engine), ANIXOPS_REGEX_BACKEND_POSIX_LITE);
 	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_input_bytes(engine), ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_values(engine), ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_execution_time_ms(engine), ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_memory_bytes(engine), ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_max_body_bytes(engine), ANIXOPS_MAX_BODY_BYTES_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(
+		anixops_engine_jq_filter_cache_capacity(engine),
+		ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_h2_mitm_enabled(engine), 1);
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_skip_server_cert_verify(engine), 0);
 	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "api.example.com", 0, &decision), ANIXOPS_OK);
@@ -333,6 +566,13 @@ void anixops_register_abi_tests(anixops_test_case_t *tests, size_t *count, size_
 	add_test(tests, count, cap, "abi/version_is_stable", version_is_stable);
 	add_test(tests, count, cap, "abi/null_arguments_are_rejected", null_arguments_are_rejected);
 	add_test(tests, count, cap, "abi/jq_max_input_option_is_configurable", jq_max_input_option_is_configurable);
+	add_test(tests, count, cap, "abi/jq_max_output_option_is_configurable", jq_max_output_option_is_configurable);
+	add_test(tests, count, cap, "abi/jq_max_output_values_option_is_configurable", jq_max_output_values_option_is_configurable);
+	add_test(tests, count, cap, "abi/jq_execution_timeout_option_is_configurable", jq_execution_timeout_option_is_configurable);
+	add_test(tests, count, cap, "abi/jq_memory_option_is_configurable", jq_memory_option_is_configurable);
+	add_test(tests, count, cap, "abi/max_body_option_is_configurable", max_body_option_is_configurable);
+	add_test(tests, count, cap, "abi/jq_filter_cache_reuses_compiled_program", jq_filter_cache_reuses_compiled_program);
+	add_test(tests, count, cap, "abi/jq_filter_cache_policy_is_configurable", jq_filter_cache_policy_is_configurable);
 	add_test(tests, count, cap, "abi/status_messages_are_stable", status_messages_are_stable);
 	add_test(tests, count, cap, "abi/last_error_api_copies_status_line_and_message", last_error_api_copies_status_line_and_message);
 	add_test(tests, count, cap, "abi/default_engine_state_is_conservative", default_engine_state_is_conservative);

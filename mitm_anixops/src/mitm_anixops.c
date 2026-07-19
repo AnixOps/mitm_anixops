@@ -20,7 +20,23 @@
 #if defined(ANIXOPS_ENABLE_LIBJQ)
 #  include <jq.h>
 #  include <jv.h>
+typedef struct anixops_jq_filter_cache_entry {
+	char *filter;
+	jq_state *jq;
+	uint64_t last_used;
+} anixops_jq_filter_cache_entry_t;
 static void anixops_jq_ignore_error(void *data, jv msg);
+#  if defined(__unix__) || defined(__APPLE__)
+#    define ANIXOPS_JQ_POSIX_ISOLATION 1
+#    include <fcntl.h>
+#    include <poll.h>
+#    include <signal.h>
+#    include <sys/resource.h>
+#    include <sys/types.h>
+#    include <sys/wait.h>
+#    include <time.h>
+#    include <unistd.h>
+#  endif
 #endif
 
 #define ANIXOPS_MATCH_CAP 10
@@ -151,6 +167,18 @@ struct anixops_engine {
 	anixops_compat_profile_t compat_profile;
 	anixops_regex_backend_t regex_backend;
 	size_t jq_max_input_bytes;
+	size_t jq_max_output_bytes;
+	size_t jq_max_output_values;
+	size_t jq_max_execution_time_ms;
+	size_t jq_max_memory_bytes;
+	size_t max_body_bytes;
+	size_t jq_filter_cache_capacity;
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	anixops_jq_filter_cache_entry_t jq_filter_cache[ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX];
+	size_t jq_filter_cache_len;
+	size_t jq_filter_cache_hit_count;
+	uint64_t jq_filter_cache_tick;
+#endif
 	int mitm_enabled;
 	int h2_mitm_enabled;
 	int disable_quic_for_mitm;
@@ -378,6 +406,20 @@ static int anixops_apply_body_regex_replacement(
 	char *out,
 	size_t out_cap,
 	int *out_replaced);
+static int anixops_body_exceeds_limit(const anixops_engine_t *engine, const char *body);
+static int anixops_body_bytes_is_text(const unsigned char *body, size_t body_len);
+static void anixops_copy_body_bytes(
+	const unsigned char *body,
+	size_t body_len,
+	unsigned char *out_body,
+	size_t out_body_cap,
+	size_t *out_body_len);
+static void anixops_body_chain_add_passthrough(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *message,
+	anixops_body_rewrite_chain_t *out_chain);
 static int anixops_apply_body_json_replacement(
 	const char *body,
 	const anixops_rewrite_rule_t *rule,
@@ -385,15 +427,144 @@ static int anixops_apply_body_json_replacement(
 	size_t out_cap,
 	int *out_replaced,
 	int *out_path_supported);
-static int anixops_apply_body_jq_replacement(
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+static uint64_t anixops_jq_filter_cache_next_tick(anixops_engine_t *engine)
+{
+	if (engine->jq_filter_cache_tick == UINT64_MAX) {
+		size_t i;
+		for (i = 0; i < engine->jq_filter_cache_len; i++) {
+			engine->jq_filter_cache[i].last_used = (uint64_t)(i + 1);
+		}
+		engine->jq_filter_cache_tick = engine->jq_filter_cache_len;
+	}
+	engine->jq_filter_cache_tick++;
+	return engine->jq_filter_cache_tick;
+}
+
+static void anixops_jq_filter_cache_entry_clear(anixops_jq_filter_cache_entry_t *entry)
+{
+	if (entry == NULL) {
+		return;
+	}
+	if (entry->jq != NULL) {
+		jq_teardown(&entry->jq);
+	}
+	free(entry->filter);
+	memset(entry, 0, sizeof(*entry));
+}
+
+static void anixops_jq_filter_cache_clear(anixops_engine_t *engine)
+{
+	size_t i;
+	if (engine == NULL) {
+		return;
+	}
+	for (i = 0; i < ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX; i++) {
+		anixops_jq_filter_cache_entry_clear(&engine->jq_filter_cache[i]);
+	}
+	engine->jq_filter_cache_len = 0;
+	engine->jq_filter_cache_hit_count = 0;
+	engine->jq_filter_cache_tick = 0;
+}
+
+static jq_state *anixops_jq_filter_cache_get(
+	anixops_engine_t *engine,
+	const char *filter,
+	int *out_status)
+{
+	size_t i;
+	size_t index;
+	uint64_t oldest_tick;
+	jq_state *jq;
+	char *filter_copy;
+
+	if (engine == NULL || filter == NULL || out_status == NULL) {
+		if (out_status != NULL) {
+			*out_status = ANIXOPS_ERR_INVALID_ARGUMENT;
+		}
+		return NULL;
+	}
+	for (i = 0; i < engine->jq_filter_cache_len; i++) {
+		if (strcmp(engine->jq_filter_cache[i].filter, filter) == 0) {
+			engine->jq_filter_cache[i].last_used = anixops_jq_filter_cache_next_tick(engine);
+			engine->jq_filter_cache_hit_count++;
+			*out_status = ANIXOPS_OK;
+			return engine->jq_filter_cache[i].jq;
+		}
+	}
+
+	jq = jq_init();
+	if (jq == NULL) {
+		*out_status = ANIXOPS_ERR_OUT_OF_MEMORY;
+		return NULL;
+	}
+	jq_set_error_cb(jq, anixops_jq_ignore_error, NULL);
+	if (!jq_compile(jq, filter)) {
+		jq_teardown(&jq);
+		*out_status = ANIXOPS_ERR_PARSE;
+		return NULL;
+	}
+	filter_copy = anixops_strdup(filter);
+	if (filter_copy == NULL) {
+		jq_teardown(&jq);
+		*out_status = ANIXOPS_ERR_OUT_OF_MEMORY;
+		return NULL;
+	}
+
+	if (engine->jq_filter_cache_len < engine->jq_filter_cache_capacity) {
+		index = engine->jq_filter_cache_len++;
+	}
+	else {
+		index = 0;
+		oldest_tick = engine->jq_filter_cache[0].last_used;
+		for (i = 1; i < engine->jq_filter_cache_capacity; i++) {
+			if (engine->jq_filter_cache[i].last_used < oldest_tick) {
+				index = i;
+				oldest_tick = engine->jq_filter_cache[i].last_used;
+			}
+		}
+		anixops_jq_filter_cache_entry_clear(&engine->jq_filter_cache[index]);
+	}
+	engine->jq_filter_cache[index].filter = filter_copy;
+	engine->jq_filter_cache[index].jq = jq;
+	engine->jq_filter_cache[index].last_used = anixops_jq_filter_cache_next_tick(engine);
+	*out_status = ANIXOPS_OK;
+	return jq;
+}
+#endif
+
+static int anixops_apply_body_jq_replacement_direct(
+	anixops_engine_t *engine,
 	const char *body,
 	const char *filter,
 	size_t max_input_bytes,
+	size_t max_output_bytes,
+	size_t max_output_values,
 	char *out,
 	size_t out_cap,
 	int *out_replaced,
 	int *out_runtime_available,
-	int *out_input_limited);
+	int *out_input_limited,
+	int *out_output_limited);
+static int anixops_apply_body_jq_replacement(
+	anixops_engine_t *engine,
+	const char *body,
+	const char *filter,
+	size_t max_input_bytes,
+	size_t max_output_bytes,
+	size_t max_output_values,
+	size_t max_execution_time_ms,
+	size_t max_memory_bytes,
+	char *out,
+	size_t out_cap,
+	int *out_replaced,
+	int *out_runtime_available,
+	int *out_input_limited,
+	int *out_output_limited,
+	int *out_execution_limited,
+	int *out_execution_limit_unavailable,
+	int *out_memory_limited,
+	int *out_memory_limit_unavailable);
 static int anixops_rewrite_evaluate_header_internal(
 	const anixops_engine_t *engine,
 	const char *url,
@@ -491,6 +662,9 @@ static void anixops_clear_diagnostic(anixops_engine_t *engine);
 static int anixops_config_line_error(anixops_engine_t *engine, int status, size_t line_no, char *line);
 static void anixops_copy_text(char *dst, size_t cap, const char *src);
 static int anixops_copy_text_checked(char *dst, size_t cap, const char *src);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+static void anixops_jq_filter_cache_clear(anixops_engine_t *engine);
+#endif
 
 ANIXOPS_API const char *anixops_version(void)
 {
@@ -550,6 +724,12 @@ ANIXOPS_API anixops_engine_t *anixops_engine_new(void)
 	engine->compat_profile = ANIXOPS_COMPAT_PORTABLE;
 	engine->regex_backend = ANIXOPS_REGEX_BACKEND_POSIX_LITE;
 	engine->jq_max_input_bytes = ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT;
+	engine->jq_max_output_bytes = ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT;
+	engine->jq_max_output_values = ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT;
+	engine->jq_max_execution_time_ms = ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT;
+	engine->jq_max_memory_bytes = ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT;
+	engine->max_body_bytes = ANIXOPS_MAX_BODY_BYTES_DEFAULT;
+	engine->jq_filter_cache_capacity = ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT;
 	engine->cert_state = ANIXOPS_CERT_UNKNOWN;
 	anixops_clear_diagnostic(engine);
 	return engine;
@@ -613,6 +793,9 @@ ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine)
 	memset(&engine->plugin_metadata, 0, sizeof(engine->plugin_metadata));
 
 	anixops_clear_rule_diagnostics(engine);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	anixops_jq_filter_cache_clear(engine);
+#endif
 	engine->mitm_enabled = 0;
 	engine->h2_mitm_enabled = 1;
 	engine->disable_quic_for_mitm = 1;
@@ -620,6 +803,12 @@ ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine)
 	engine->compat_profile = ANIXOPS_COMPAT_PORTABLE;
 	engine->regex_backend = ANIXOPS_REGEX_BACKEND_POSIX_LITE;
 	engine->jq_max_input_bytes = ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT;
+	engine->jq_max_output_bytes = ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT;
+	engine->jq_max_output_values = ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT;
+	engine->jq_max_execution_time_ms = ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT;
+	engine->jq_max_memory_bytes = ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT;
+	engine->max_body_bytes = ANIXOPS_MAX_BODY_BYTES_DEFAULT;
+	engine->jq_filter_cache_capacity = ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT;
 	engine->cert_state = ANIXOPS_CERT_UNKNOWN;
 	anixops_clear_diagnostic(engine);
 }
@@ -726,6 +915,142 @@ ANIXOPS_API int anixops_engine_set_jq_max_input_bytes(anixops_engine_t *engine, 
 ANIXOPS_API size_t anixops_engine_jq_max_input_bytes(const anixops_engine_t *engine)
 {
 	return engine == NULL ? ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT : engine->jq_max_input_bytes;
+}
+
+ANIXOPS_API int anixops_engine_set_jq_max_output_bytes(anixops_engine_t *engine, size_t max_output_bytes)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	engine->jq_max_output_bytes = max_output_bytes;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_max_output_bytes(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT : engine->jq_max_output_bytes;
+}
+
+ANIXOPS_API int anixops_engine_set_jq_max_output_values(anixops_engine_t *engine, size_t max_output_values)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	engine->jq_max_output_values = max_output_values;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_max_output_values(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT : engine->jq_max_output_values;
+}
+
+ANIXOPS_API int anixops_engine_set_jq_max_execution_time_ms(
+	anixops_engine_t *engine,
+	size_t max_execution_time_ms)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	engine->jq_max_execution_time_ms = max_execution_time_ms;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_max_execution_time_ms(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT : engine->jq_max_execution_time_ms;
+}
+
+ANIXOPS_API int anixops_engine_set_jq_max_memory_bytes(
+	anixops_engine_t *engine,
+	size_t max_memory_bytes)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	engine->jq_max_memory_bytes = max_memory_bytes;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_max_memory_bytes(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT : engine->jq_max_memory_bytes;
+}
+
+ANIXOPS_API int anixops_engine_set_max_body_bytes(anixops_engine_t *engine, size_t max_body_bytes)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	engine->max_body_bytes = max_body_bytes;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_max_body_bytes(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_MAX_BODY_BYTES_DEFAULT : engine->max_body_bytes;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_filter_cache_count(const anixops_engine_t *engine)
+{
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	return engine == NULL ? 0 : engine->jq_filter_cache_len;
+#else
+	(void)engine;
+	return 0;
+#endif
+}
+
+ANIXOPS_API size_t anixops_engine_jq_filter_cache_hit_count(const anixops_engine_t *engine)
+{
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	return engine == NULL ? 0 : engine->jq_filter_cache_hit_count;
+#else
+	(void)engine;
+	return 0;
+#endif
+}
+
+ANIXOPS_API int anixops_engine_set_jq_filter_cache_capacity(
+	anixops_engine_t *engine,
+	size_t capacity)
+{
+	if (engine == NULL || capacity == 0 || capacity > ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX) {
+		if (engine != NULL) {
+			anixops_set_diagnostic(engine, ANIXOPS_ERR_INVALID_ARGUMENT, 0, "invalid jq filter cache capacity");
+		}
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	if (capacity < engine->jq_filter_cache_len) {
+		anixops_jq_filter_cache_clear(engine);
+	}
+#endif
+	engine->jq_filter_cache_capacity = capacity;
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
+}
+
+ANIXOPS_API size_t anixops_engine_jq_filter_cache_capacity(const anixops_engine_t *engine)
+{
+	return engine == NULL ? ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT : engine->jq_filter_cache_capacity;
+}
+
+ANIXOPS_API int anixops_engine_clear_jq_filter_cache(anixops_engine_t *engine)
+{
+	if (engine == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	anixops_jq_filter_cache_clear(engine);
+#endif
+	anixops_clear_diagnostic(engine);
+	return ANIXOPS_OK;
 }
 
 ANIXOPS_API size_t anixops_engine_rule_diagnostic_count(const anixops_engine_t *engine)
@@ -3212,6 +3537,18 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 	if (rc != ANIXOPS_OK) {
 		return rc;
 	}
+	if ((out_result->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+			out_result->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY ||
+			anixops_rewrite_action_replaces_body(out_result->action)) &&
+		anixops_body_exceeds_limit(engine, body)) {
+		if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+		}
+		else {
+			anixops_copy_text(out_result->message, sizeof(out_result->message), "body exceeds limit");
+		}
+		return ANIXOPS_OK;
+	}
 	if (out_result->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
 		out_result->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
 		if (anixops_copy_text_checked(out_body, out_body_cap, out_result->value) != ANIXOPS_OK) {
@@ -3269,16 +3606,31 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 		if (anixops_rewrite_action_replaces_body_jq(out_result->action)) {
 			int runtime_available = 0;
 			int input_limited = 0;
+			int output_limited = 0;
+			int execution_limited = 0;
+			int execution_limit_unavailable = 0;
+			int memory_limited = 0;
+			int memory_limit_unavailable = 0;
 			anixops_copy_text(out_result->value, sizeof(out_result->value), rule->replacement);
 			rc = anixops_apply_body_jq_replacement(
+				(anixops_engine_t *)engine,
 				body,
 				rule->replacement,
 				engine->jq_max_input_bytes,
+				engine->jq_max_output_bytes,
+				engine->jq_max_output_values,
+				engine->jq_max_execution_time_ms,
+				engine->jq_max_memory_bytes,
 				out_body,
 				out_body_cap,
 				&replaced,
 				&runtime_available,
-				&input_limited);
+				&input_limited,
+				&output_limited,
+				&execution_limited,
+				&execution_limit_unavailable,
+				&memory_limited,
+				&memory_limit_unavailable);
 			if (!runtime_available) {
 				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
 					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
@@ -3293,6 +3645,36 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 				}
 				else {
 					anixops_copy_text(out_result->message, sizeof(out_result->message), "jq input exceeds limit");
+				}
+			}
+			else if (output_limited) {
+				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				}
+				else {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "jq output exceeds limit");
+				}
+			}
+			else if (memory_limited || memory_limit_unavailable) {
+				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				}
+				else {
+					anixops_copy_text(
+						out_result->message,
+						sizeof(out_result->message),
+						memory_limit_unavailable ? "jq memory limit unavailable" : "jq memory limit exceeded");
+				}
+			}
+			else if (execution_limited) {
+				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
+					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
+				}
+				else {
+					anixops_copy_text(
+						out_result->message,
+						sizeof(out_result->message),
+						execution_limit_unavailable ? "jq execution limit unavailable" : "jq execution time limit exceeded");
 				}
 			}
 			else if (rc == ANIXOPS_ERR_CAPACITY) {
@@ -3331,6 +3713,90 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 		anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
 	}
 	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_apply_body_bytes(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const unsigned char *body,
+	size_t body_len,
+	unsigned char *out_body,
+	size_t out_body_cap,
+	size_t *out_body_len,
+	anixops_rewrite_result_t *out_result)
+{
+	char *text_body = NULL;
+	char *text_out = NULL;
+	size_t text_out_cap;
+	size_t produced_len;
+	int rc;
+	int body_action;
+
+	if (engine == NULL || url == NULL || (body == NULL && body_len != 0) || out_body == NULL ||
+		out_body_cap == 0 || out_body_len == NULL || out_result == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	*out_body_len = 0;
+	rc = anixops_rewrite_evaluate_url(engine, url, phase, out_result);
+	if (rc != ANIXOPS_OK) {
+		return rc;
+	}
+	body_action = out_result->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+		out_result->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY ||
+		anixops_rewrite_action_replaces_body(out_result->action);
+	if (body_action && engine->max_body_bytes != 0 && body_len > engine->max_body_bytes) {
+		anixops_copy_body_bytes(body, body_len, out_body, out_body_cap, out_body_len);
+		anixops_copy_text(
+			out_result->message,
+			sizeof(out_result->message),
+			*out_body_len == body_len ? "body exceeds limit" : "body truncated");
+		return ANIXOPS_OK;
+	}
+	if (!anixops_body_bytes_is_text(body, body_len)) {
+		anixops_copy_body_bytes(body, body_len, out_body, out_body_cap, out_body_len);
+		anixops_copy_text(
+			out_result->message,
+			sizeof(out_result->message),
+			*out_body_len == body_len ? "binary body passthrough" : "body truncated");
+		return ANIXOPS_OK;
+	}
+	if (body_len == SIZE_MAX || out_body_cap == SIZE_MAX) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	text_body = (char *)malloc(body_len + 1);
+	text_out_cap = out_body_cap + 1;
+	text_out = (char *)malloc(text_out_cap);
+	if (text_body == NULL || text_out == NULL) {
+		free(text_body);
+		free(text_out);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	if (body_len != 0) {
+		memcpy(text_body, body, body_len);
+	}
+	text_body[body_len] = '\0';
+	rc = anixops_rewrite_apply_body(
+		engine,
+		url,
+		phase,
+		text_body,
+		text_out,
+		text_out_cap,
+		out_result);
+	if (rc == ANIXOPS_OK) {
+		produced_len = strlen(text_out);
+		if (produced_len > out_body_cap) {
+			produced_len = out_body_cap;
+		}
+		if (produced_len != 0) {
+			memcpy(out_body, text_out, produced_len);
+		}
+		*out_body_len = produced_len;
+	}
+	free(text_body);
+	free(text_out);
+	return rc;
 }
 
 ANIXOPS_API int anixops_rewrite_apply_body_chain(
@@ -3390,6 +3856,11 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 		result.status_code = rule->status_code;
 		result.rule_index = (int)i;
 		anixops_copy_text(result.matched_pattern, sizeof(result.matched_pattern), rule->pattern);
+		if (anixops_body_exceeds_limit(engine, current_body)) {
+			anixops_copy_text(result.message, sizeof(result.message), "body exceeds limit");
+			anixops_body_rewrite_chain_add(out_chain, &result);
+			continue;
+		}
 
 		if (rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY || rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY) {
 			apply_rc = anixops_expand_replacement(
@@ -3447,16 +3918,31 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 		else if (anixops_rewrite_action_replaces_body_jq(rule->action)) {
 			int runtime_available = 0;
 			int input_limited = 0;
+			int output_limited = 0;
+			int execution_limited = 0;
+			int execution_limit_unavailable = 0;
+			int memory_limited = 0;
+			int memory_limit_unavailable = 0;
 			anixops_copy_text(result.value, sizeof(result.value), rule->replacement);
 			apply_rc = anixops_apply_body_jq_replacement(
+				(anixops_engine_t *)engine,
 				current_body,
 				rule->replacement,
 				engine->jq_max_input_bytes,
+				engine->jq_max_output_bytes,
+				engine->jq_max_output_values,
+				engine->jq_max_execution_time_ms,
+				engine->jq_max_memory_bytes,
 				next_body,
 				out_body_cap,
 				&replaced,
 				&runtime_available,
-				&input_limited);
+				&input_limited,
+				&output_limited,
+				&execution_limited,
+				&execution_limit_unavailable,
+				&memory_limited,
+				&memory_limit_unavailable);
 			if (!runtime_available) {
 				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
 					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
@@ -3473,6 +3959,39 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 				}
 				else {
 					anixops_copy_text(result.message, sizeof(result.message), "jq input exceeds limit");
+				}
+			}
+			else if (output_limited) {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(result.message, sizeof(result.message), "jq output exceeds limit");
+				}
+			}
+			else if (memory_limited || memory_limit_unavailable) {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(
+						result.message,
+						sizeof(result.message),
+						memory_limit_unavailable ? "jq memory limit unavailable" : "jq memory limit exceeded");
+				}
+			}
+			else if (execution_limited) {
+				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
+					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
+					out_chain->truncated = 1;
+				}
+				else {
+					anixops_copy_text(
+						result.message,
+						sizeof(result.message),
+						execution_limit_unavailable ? "jq execution limit unavailable" : "jq execution time limit exceeded");
 				}
 			}
 			else if (apply_rc == ANIXOPS_ERR_CAPACITY) {
@@ -3525,6 +4044,85 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 	free(current_body);
 	free(next_body);
 	return ANIXOPS_OK;
+}
+
+ANIXOPS_API int anixops_rewrite_apply_body_chain_bytes(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const unsigned char *body,
+	size_t body_len,
+	unsigned char *out_body,
+	size_t out_body_cap,
+	size_t *out_body_len,
+	anixops_body_rewrite_chain_t *out_chain)
+{
+	char *text_body = NULL;
+	char *text_out = NULL;
+	size_t text_out_cap;
+	size_t produced_len;
+	int rc;
+
+	if (engine == NULL || url == NULL || (body == NULL && body_len != 0) || out_body == NULL ||
+		out_body_cap == 0 || out_body_len == NULL || out_chain == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	*out_body_len = 0;
+	anixops_set_body_rewrite_chain_none(out_chain);
+	if (body_len > engine->max_body_bytes && engine->max_body_bytes != 0) {
+		anixops_body_chain_add_passthrough(engine, url, phase, "body exceeds limit", out_chain);
+		if (out_chain->rewrite_count != 0) {
+			anixops_copy_body_bytes(body, body_len, out_body, out_body_cap, out_body_len);
+			if (*out_body_len != body_len) {
+				out_chain->truncated = 1;
+			}
+			return ANIXOPS_OK;
+		}
+	}
+	if (!anixops_body_bytes_is_text(body, body_len)) {
+		anixops_body_chain_add_passthrough(engine, url, phase, "binary body passthrough", out_chain);
+		anixops_copy_body_bytes(body, body_len, out_body, out_body_cap, out_body_len);
+		if (*out_body_len != body_len) {
+			out_chain->truncated = 1;
+		}
+		return ANIXOPS_OK;
+	}
+	if (body_len == SIZE_MAX || out_body_cap == SIZE_MAX) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	text_body = (char *)malloc(body_len + 1);
+	text_out_cap = out_body_cap + 1;
+	text_out = (char *)malloc(text_out_cap);
+	if (text_body == NULL || text_out == NULL) {
+		free(text_body);
+		free(text_out);
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	if (body_len != 0) {
+		memcpy(text_body, body, body_len);
+	}
+	text_body[body_len] = '\0';
+	rc = anixops_rewrite_apply_body_chain(
+		engine,
+		url,
+		phase,
+		text_body,
+		text_out,
+		text_out_cap,
+		out_chain);
+	if (rc == ANIXOPS_OK) {
+		produced_len = strlen(text_out);
+		if (produced_len > out_body_cap) {
+			produced_len = out_body_cap;
+		}
+		if (produced_len != 0) {
+			memcpy(out_body, text_out, produced_len);
+		}
+		*out_body_len = produced_len;
+	}
+	free(text_body);
+	free(text_out);
+	return rc;
 }
 
 ANIXOPS_API int anixops_rewrite_evaluate_header(
@@ -6366,6 +6964,139 @@ static int anixops_expand_replacement(
 	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
 }
 
+static int anixops_body_exceeds_limit(const anixops_engine_t *engine, const char *body)
+{
+	return engine != NULL && body != NULL && engine->max_body_bytes != 0 && strlen(body) > engine->max_body_bytes;
+}
+
+static int anixops_body_bytes_is_text(const unsigned char *body, size_t body_len)
+{
+	size_t i = 0;
+	if (body == NULL && body_len != 0) {
+		return 0;
+	}
+	while (i < body_len) {
+		unsigned char first = body[i];
+		if (first == 0) {
+			return 0;
+		}
+		if (first < 0x80) {
+			i++;
+			continue;
+		}
+		if (first >= 0xC2 && first <= 0xDF) {
+			if (i + 1 >= body_len || body[i + 1] < 0x80 || body[i + 1] > 0xBF) {
+				return 0;
+			}
+			i += 2;
+			continue;
+		}
+		if (first == 0xE0) {
+			if (i + 2 >= body_len || body[i + 1] < 0xA0 || body[i + 1] > 0xBF ||
+				body[i + 2] < 0x80 || body[i + 2] > 0xBF) {
+				return 0;
+			}
+			i += 3;
+			continue;
+		}
+		if ((first >= 0xE1 && first <= 0xEC) || (first >= 0xEE && first <= 0xEF)) {
+			if (i + 2 >= body_len || body[i + 1] < 0x80 || body[i + 1] > 0xBF ||
+				body[i + 2] < 0x80 || body[i + 2] > 0xBF) {
+				return 0;
+			}
+			i += 3;
+			continue;
+		}
+		if (first == 0xED) {
+			if (i + 2 >= body_len || body[i + 1] < 0x80 || body[i + 1] > 0x9F ||
+				body[i + 2] < 0x80 || body[i + 2] > 0xBF) {
+				return 0;
+			}
+			i += 3;
+			continue;
+		}
+		if (first == 0xF0) {
+			if (i + 3 >= body_len || body[i + 1] < 0x90 || body[i + 1] > 0xBF ||
+				body[i + 2] < 0x80 || body[i + 2] > 0xBF ||
+				body[i + 3] < 0x80 || body[i + 3] > 0xBF) {
+				return 0;
+			}
+			i += 4;
+			continue;
+		}
+		if (first >= 0xF1 && first <= 0xF3) {
+			if (i + 3 >= body_len || body[i + 1] < 0x80 || body[i + 1] > 0xBF ||
+				body[i + 2] < 0x80 || body[i + 2] > 0xBF ||
+				body[i + 3] < 0x80 || body[i + 3] > 0xBF) {
+				return 0;
+			}
+			i += 4;
+			continue;
+		}
+		if (first == 0xF4) {
+			if (i + 3 >= body_len || body[i + 1] < 0x80 || body[i + 1] > 0x8F ||
+				body[i + 2] < 0x80 || body[i + 2] > 0xBF ||
+				body[i + 3] < 0x80 || body[i + 3] > 0xBF) {
+				return 0;
+			}
+			i += 4;
+			continue;
+		}
+		return 0;
+	}
+	return 1;
+}
+
+static void anixops_copy_body_bytes(
+	const unsigned char *body,
+	size_t body_len,
+	unsigned char *out_body,
+	size_t out_body_cap,
+	size_t *out_body_len)
+{
+	size_t copy_len = body_len < out_body_cap ? body_len : out_body_cap;
+	if (copy_len != 0) {
+		memmove(out_body, body, copy_len);
+	}
+	if (out_body_len != NULL) {
+		*out_body_len = copy_len;
+	}
+}
+
+static void anixops_body_chain_add_passthrough(
+	const anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *message,
+	anixops_body_rewrite_chain_t *out_chain)
+{
+	size_t i;
+	if (engine == NULL || url == NULL || message == NULL || out_chain == NULL) {
+		return;
+	}
+	for (i = 0; i < engine->rule_len; i++) {
+		const anixops_rewrite_rule_t *rule = &engine->rules[i];
+		regmatch_t url_matches[ANIXOPS_MATCH_CAP];
+		anixops_rewrite_result_t result;
+		if (rule->phase != phase || !rule->regex_ready ||
+			!(rule->action == ANIXOPS_REWRITE_MOCK_REQUEST_BODY ||
+				rule->action == ANIXOPS_REWRITE_MOCK_RESPONSE_BODY ||
+				anixops_rewrite_action_replaces_body(rule->action))) {
+			continue;
+		}
+		if (anixops_regex_exec(&rule->regex, url, sizeof(url_matches) / sizeof(url_matches[0]), url_matches) != 0) {
+			continue;
+		}
+		anixops_set_rewrite_none(&result);
+		result.action = rule->action;
+		result.status_code = rule->status_code;
+		result.rule_index = (int)i;
+		anixops_copy_text(result.matched_pattern, sizeof(result.matched_pattern), rule->pattern);
+		anixops_copy_text(result.message, sizeof(result.message), message);
+		anixops_body_rewrite_chain_add(out_chain, &result);
+	}
+}
+
 static int anixops_apply_body_regex_replacement(
 	const char *body,
 	const anixops_rewrite_rule_t *rule,
@@ -6436,15 +7167,19 @@ static int anixops_apply_body_json_replacement(
 	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
 }
 
-static int anixops_apply_body_jq_replacement(
+static int anixops_apply_body_jq_replacement_direct(
+	anixops_engine_t *engine,
 	const char *body,
 	const char *filter,
 	size_t max_input_bytes,
+	size_t max_output_bytes,
+	size_t max_output_values,
 	char *out,
 	size_t out_cap,
 	int *out_replaced,
 	int *out_runtime_available,
-	int *out_input_limited)
+	int *out_input_limited,
+	int *out_output_limited)
 {
 #if defined(ANIXOPS_ENABLE_LIBJQ)
 	jq_state *jq;
@@ -6453,58 +7188,80 @@ static int anixops_apply_body_jq_replacement(
 	jv dumped;
 	const char *dumped_text;
 	int copy_rc;
-	int compile_ok;
+	int compile_status;
 
-	if (body == NULL || filter == NULL || out == NULL || out_cap == 0 || out_replaced == NULL ||
-		out_runtime_available == NULL || out_input_limited == NULL) {
+	if (engine == NULL || body == NULL || filter == NULL || out == NULL || out_cap == 0 || out_replaced == NULL ||
+		out_runtime_available == NULL || out_input_limited == NULL || out_output_limited == NULL) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
 	*out_replaced = 0;
 	*out_runtime_available = 1;
 	*out_input_limited = 0;
+	*out_output_limited = 0;
 
 	if (max_input_bytes != 0 && strlen(body) > max_input_bytes) {
 		*out_input_limited = 1;
 		return ANIXOPS_ERR_CAPACITY;
 	}
 
-	jq = jq_init();
+	jq = anixops_jq_filter_cache_get(engine, filter, &compile_status);
 	if (jq == NULL) {
-		return ANIXOPS_ERR_OUT_OF_MEMORY;
-	}
-	jq_set_error_cb(jq, anixops_jq_ignore_error, NULL);
-	compile_ok = jq_compile(jq, filter);
-	if (!compile_ok) {
-		jq_teardown(&jq);
-		return ANIXOPS_ERR_PARSE;
+		return compile_status;
 	}
 	input = jv_parse(body);
 	if (!jv_is_valid(input)) {
 		jv_free(input);
-		jq_teardown(&jq);
 		return ANIXOPS_ERR_PARSE;
 	}
 	jq_start(jq, input, 0);
 	result = jq_next(jq);
 	if (!jv_is_valid(result)) {
 		jv_free(result);
-		jq_teardown(&jq);
 		return ANIXOPS_OK;
 	}
 	dumped = jv_dump_string(result, 0);
 	dumped_text = jv_string_value(dumped);
+	if (max_output_bytes != 0 && dumped_text != NULL && strlen(dumped_text) > max_output_bytes) {
+		*out_output_limited = 1;
+		jv_free(dumped);
+		return ANIXOPS_ERR_CAPACITY;
+	}
+	if (max_output_values != 0) {
+		size_t output_values = 1;
+		while (output_values < max_output_values) {
+			jv extra = jq_next(jq);
+			if (!jv_is_valid(extra)) {
+				jv_free(extra);
+				break;
+			}
+			jv_free(extra);
+			output_values++;
+		}
+		if (output_values == max_output_values) {
+			jv extra = jq_next(jq);
+			if (jv_is_valid(extra)) {
+				*out_output_limited = 1;
+				jv_free(extra);
+				jv_free(dumped);
+				return ANIXOPS_ERR_CAPACITY;
+			}
+			jv_free(extra);
+		}
+	}
 	copy_rc = anixops_copy_text_checked(out, out_cap, dumped_text == NULL ? "" : dumped_text);
 	jv_free(dumped);
-	jq_teardown(&jq);
 	if (copy_rc != ANIXOPS_OK) {
 		return ANIXOPS_ERR_CAPACITY;
 	}
 	*out_replaced = 1;
 	return ANIXOPS_OK;
 #else
+	(void)engine;
 	(void)body;
 	(void)filter;
 	(void)max_input_bytes;
+	(void)max_output_bytes;
+	(void)max_output_values;
 	(void)out;
 	(void)out_cap;
 	if (out_replaced != NULL) {
@@ -6516,8 +7273,445 @@ static int anixops_apply_body_jq_replacement(
 	if (out_input_limited != NULL) {
 		*out_input_limited = 0;
 	}
+	if (out_output_limited != NULL) {
+		*out_output_limited = 0;
+	}
 	return ANIXOPS_OK;
 #endif
+}
+
+#if defined(ANIXOPS_JQ_POSIX_ISOLATION)
+typedef struct anixops_jq_child_result {
+	int status;
+	int replaced;
+	int runtime_available;
+	int input_limited;
+	int output_limited;
+	int memory_limited;
+	int memory_limit_unavailable;
+	size_t payload_len;
+} anixops_jq_child_result_t;
+
+static int anixops_jq_write_all(int fd, const void *data, size_t len)
+{
+	const unsigned char *cursor = (const unsigned char *)data;
+	while (len != 0) {
+		ssize_t written = write(fd, cursor, len);
+		if (written < 0 && errno == EINTR) {
+			continue;
+		}
+		if (written <= 0) {
+			return -1;
+		}
+		cursor += (size_t)written;
+		len -= (size_t)written;
+	}
+	return 0;
+}
+
+static int anixops_jq_set_memory_limit(size_t max_memory_bytes)
+{
+	struct rlimit limit;
+
+	if (max_memory_bytes == 0) {
+		return 0;
+	}
+#if defined(RLIMIT_AS)
+	if ((uintmax_t)max_memory_bytes > (uintmax_t)RLIM_INFINITY) {
+		limit.rlim_cur = RLIM_INFINITY;
+		limit.rlim_max = RLIM_INFINITY;
+	}
+	else {
+		limit.rlim_cur = (rlim_t)max_memory_bytes;
+		limit.rlim_max = (rlim_t)max_memory_bytes;
+	}
+	return setrlimit(RLIMIT_AS, &limit);
+#elif defined(RLIMIT_DATA)
+	if ((uintmax_t)max_memory_bytes > (uintmax_t)RLIM_INFINITY) {
+		limit.rlim_cur = RLIM_INFINITY;
+		limit.rlim_max = RLIM_INFINITY;
+	}
+	else {
+		limit.rlim_cur = (rlim_t)max_memory_bytes;
+		limit.rlim_max = (rlim_t)max_memory_bytes;
+	}
+	return setrlimit(RLIMIT_DATA, &limit);
+#else
+	(void)limit;
+	return -1;
+#endif
+}
+
+static void anixops_jq_child_execute(
+	int fd,
+	anixops_engine_t *engine,
+	const char *body,
+	const char *filter,
+	size_t max_input_bytes,
+	size_t max_output_bytes,
+	size_t max_output_values,
+	size_t max_memory_bytes,
+	size_t out_cap)
+{
+	anixops_jq_child_result_t child_result = {0};
+	char *child_output = NULL;
+
+	memset(&child_result, 0, sizeof(child_result));
+	child_result.runtime_available = 1;
+	if (anixops_jq_set_memory_limit(max_memory_bytes) != 0) {
+		child_result.status = ANIXOPS_ERR_CAPACITY;
+		child_result.memory_limit_unavailable = 1;
+	}
+	else if (out_cap != 0) {
+		child_output = (char *)malloc(out_cap);
+	}
+	if (child_result.memory_limit_unavailable) {
+		/* Keep the result frame small and deterministic when the platform has no resource limit. */
+	}
+	else if (child_output == NULL) {
+		child_result.status = ANIXOPS_ERR_OUT_OF_MEMORY;
+		child_result.memory_limited = max_memory_bytes != 0;
+	}
+	else {
+		child_result.status = anixops_apply_body_jq_replacement_direct(
+			engine,
+			body,
+			filter,
+			max_input_bytes,
+			max_output_bytes,
+			max_output_values,
+			child_output,
+			out_cap,
+			&child_result.replaced,
+			&child_result.runtime_available,
+			&child_result.input_limited,
+			&child_result.output_limited);
+		if (child_result.status == ANIXOPS_ERR_OUT_OF_MEMORY && max_memory_bytes != 0) {
+			child_result.memory_limited = 1;
+		}
+		if (child_result.status == ANIXOPS_OK && child_result.replaced) {
+			child_result.payload_len = strlen(child_output);
+		}
+	}
+
+	(void)anixops_jq_write_all(fd, &child_result, sizeof(child_result));
+	if (child_result.payload_len != 0 && child_output != NULL) {
+		(void)anixops_jq_write_all(fd, child_output, child_result.payload_len);
+	}
+	free(child_output);
+	close(fd);
+	_exit(0);
+}
+
+static size_t anixops_jq_elapsed_ms(const struct timespec *start)
+{
+	struct timespec now;
+	int64_t seconds;
+	int64_t nanoseconds;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+		return SIZE_MAX;
+	}
+	seconds = (int64_t)now.tv_sec - (int64_t)start->tv_sec;
+	nanoseconds = (int64_t)now.tv_nsec - (int64_t)start->tv_nsec;
+	if (nanoseconds < 0) {
+		seconds--;
+		nanoseconds += 1000000000;
+	}
+	if (seconds < 0) {
+		return 0;
+	}
+	if ((uint64_t)seconds > (uint64_t)(SIZE_MAX / 1000)) {
+		return SIZE_MAX;
+	}
+	return (size_t)seconds * 1000u + (size_t)nanoseconds / 1000000u;
+}
+
+static void anixops_jq_kill_and_reap(pid_t pid)
+{
+	int status;
+	(void)kill(pid, SIGKILL);
+	while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+	}
+}
+
+static int anixops_apply_body_jq_replacement_isolated(
+	anixops_engine_t *engine,
+	const char *body,
+	const char *filter,
+	size_t max_input_bytes,
+	size_t max_output_bytes,
+	size_t max_output_values,
+	size_t max_execution_time_ms,
+	size_t max_memory_bytes,
+	char *out,
+	size_t out_cap,
+	int *out_replaced,
+	int *out_runtime_available,
+	int *out_input_limited,
+	int *out_output_limited,
+	int *out_execution_limited,
+	int *out_execution_limit_unavailable,
+	int *out_memory_limited,
+	int *out_memory_limit_unavailable)
+{
+	int pipe_fds[2];
+	pid_t pid;
+	int read_flags;
+	struct timespec start;
+	unsigned char header_bytes[sizeof(anixops_jq_child_result_t)];
+	size_t header_read = 0;
+	size_t payload_read = 0;
+	anixops_jq_child_result_t child_result = {0};
+	int header_ready = 0;
+	int eof = 0;
+	int invalid_frame = 0;
+
+	*out_replaced = 0;
+	*out_runtime_available = 1;
+	*out_input_limited = 0;
+	*out_output_limited = 0;
+	*out_execution_limited = 0;
+	*out_execution_limit_unavailable = 0;
+	*out_memory_limited = 0;
+	*out_memory_limit_unavailable = 0;
+
+	if ((max_execution_time_ms != 0 && clock_gettime(CLOCK_MONOTONIC, &start) != 0) || pipe(pipe_fds) != 0) {
+		*out_execution_limit_unavailable = max_execution_time_ms != 0;
+		*out_memory_limit_unavailable = max_memory_bytes != 0;
+		return ANIXOPS_ERR_CAPACITY;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		close(pipe_fds[0]);
+		close(pipe_fds[1]);
+		*out_execution_limit_unavailable = max_execution_time_ms != 0;
+		*out_memory_limit_unavailable = max_memory_bytes != 0;
+		return ANIXOPS_ERR_CAPACITY;
+	}
+	if (pid == 0) {
+		close(pipe_fds[0]);
+		(void)signal(SIGPIPE, SIG_IGN);
+		anixops_jq_child_execute(
+			pipe_fds[1],
+			engine,
+			body,
+			filter,
+			max_input_bytes,
+			max_output_bytes,
+			max_output_values,
+			max_memory_bytes,
+			out_cap);
+	}
+
+	close(pipe_fds[1]);
+	read_flags = fcntl(pipe_fds[0], F_GETFL, 0);
+	if (read_flags < 0 || fcntl(pipe_fds[0], F_SETFL, read_flags | O_NONBLOCK) < 0) {
+		close(pipe_fds[0]);
+		anixops_jq_kill_and_reap(pid);
+		*out_execution_limit_unavailable = max_execution_time_ms != 0;
+		*out_memory_limit_unavailable = max_memory_bytes != 0;
+		return ANIXOPS_ERR_CAPACITY;
+	}
+
+	while (!eof) {
+		struct pollfd poll_fd;
+		size_t elapsed = anixops_jq_elapsed_ms(&start);
+		int remaining;
+		int poll_result;
+
+		if (max_execution_time_ms != 0 && (elapsed == SIZE_MAX || elapsed >= max_execution_time_ms)) {
+			close(pipe_fds[0]);
+			anixops_jq_kill_and_reap(pid);
+			*out_execution_limited = 1;
+			return ANIXOPS_ERR_CAPACITY;
+		}
+		remaining = max_execution_time_ms == 0
+			? -1
+			: (max_execution_time_ms - elapsed > (size_t)INT_MAX
+				? INT_MAX
+				: (int)(max_execution_time_ms - elapsed));
+		poll_fd.fd = pipe_fds[0];
+		poll_fd.events = POLLIN | POLLHUP | POLLERR;
+		poll_fd.revents = 0;
+		poll_result = poll(&poll_fd, 1, remaining);
+		if (poll_result == 0) {
+			close(pipe_fds[0]);
+			anixops_jq_kill_and_reap(pid);
+			*out_execution_limited = 1;
+			return ANIXOPS_ERR_CAPACITY;
+		}
+		if (poll_result < 0) {
+			if (errno == EINTR) {
+				continue;
+			}
+			close(pipe_fds[0]);
+			anixops_jq_kill_and_reap(pid);
+			*out_execution_limit_unavailable = max_execution_time_ms != 0;
+			*out_memory_limit_unavailable = max_memory_bytes != 0;
+			return ANIXOPS_ERR_CAPACITY;
+		}
+
+		for (;;) {
+			unsigned char chunk[4096];
+			ssize_t bytes_read = read(pipe_fds[0], chunk, sizeof(chunk));
+			size_t offset = 0;
+			if (bytes_read < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+				break;
+			}
+			if (bytes_read < 0 && errno == EINTR) {
+				continue;
+			}
+			if (bytes_read < 0) {
+				invalid_frame = 1;
+				eof = 1;
+				break;
+			}
+			if (bytes_read == 0) {
+				eof = 1;
+				break;
+			}
+
+			while (offset < (size_t)bytes_read) {
+				if (header_read < sizeof(header_bytes)) {
+					size_t take = sizeof(header_bytes) - header_read;
+					if (take > (size_t)bytes_read - offset) {
+						take = (size_t)bytes_read - offset;
+					}
+					memcpy(header_bytes + header_read, chunk + offset, take);
+					header_read += take;
+					offset += take;
+					if (header_read == sizeof(header_bytes)) {
+						memcpy(&child_result, header_bytes, sizeof(child_result));
+						header_ready = 1;
+						if (child_result.payload_len >= out_cap) {
+							invalid_frame = 1;
+						}
+					}
+					continue;
+				}
+				if (!header_ready || payload_read >= child_result.payload_len) {
+					invalid_frame = 1;
+					offset = (size_t)bytes_read;
+					continue;
+				}
+				{
+					size_t take = child_result.payload_len - payload_read;
+					if (take > (size_t)bytes_read - offset) {
+						take = (size_t)bytes_read - offset;
+					}
+					memcpy(out + payload_read, chunk + offset, take);
+					payload_read += take;
+					offset += take;
+				}
+			}
+		}
+	}
+
+	close(pipe_fds[0]);
+	{
+		int status;
+		while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
+		}
+	}
+	if (invalid_frame || !header_ready || payload_read != child_result.payload_len) {
+		if (max_memory_bytes != 0) {
+			*out_memory_limited = 1;
+		}
+		else {
+			*out_execution_limited = 1;
+		}
+		return ANIXOPS_ERR_CAPACITY;
+	}
+
+	*out_replaced = child_result.replaced;
+	*out_runtime_available = child_result.runtime_available;
+	*out_input_limited = child_result.input_limited;
+	*out_output_limited = child_result.output_limited;
+	*out_memory_limited = child_result.memory_limited;
+	*out_memory_limit_unavailable = child_result.memory_limit_unavailable;
+	if (*out_replaced) {
+		out[payload_read] = '\0';
+	}
+	return child_result.status;
+}
+#endif
+
+static int anixops_apply_body_jq_replacement(
+	anixops_engine_t *engine,
+	const char *body,
+	const char *filter,
+	size_t max_input_bytes,
+	size_t max_output_bytes,
+	size_t max_output_values,
+	size_t max_execution_time_ms,
+	size_t max_memory_bytes,
+	char *out,
+	size_t out_cap,
+	int *out_replaced,
+	int *out_runtime_available,
+	int *out_input_limited,
+	int *out_output_limited,
+	int *out_execution_limited,
+	int *out_execution_limit_unavailable,
+	int *out_memory_limited,
+	int *out_memory_limit_unavailable)
+{
+	if (out_execution_limited == NULL || out_execution_limit_unavailable == NULL ||
+		out_memory_limited == NULL || out_memory_limit_unavailable == NULL) {
+		return ANIXOPS_ERR_INVALID_ARGUMENT;
+	}
+	*out_execution_limited = 0;
+	*out_execution_limit_unavailable = 0;
+	*out_memory_limited = 0;
+	*out_memory_limit_unavailable = 0;
+#if defined(ANIXOPS_JQ_POSIX_ISOLATION)
+	if (max_execution_time_ms != 0 || max_memory_bytes != 0) {
+		return anixops_apply_body_jq_replacement_isolated(
+			engine,
+			body,
+			filter,
+			max_input_bytes,
+			max_output_bytes,
+			max_output_values,
+			max_execution_time_ms,
+			max_memory_bytes,
+			out,
+			out_cap,
+			out_replaced,
+			out_runtime_available,
+			out_input_limited,
+			out_output_limited,
+			out_execution_limited,
+			out_execution_limit_unavailable,
+			out_memory_limited,
+			out_memory_limit_unavailable);
+	}
+#elif defined(ANIXOPS_ENABLE_LIBJQ)
+	if (max_execution_time_ms != 0 || max_memory_bytes != 0) {
+		*out_runtime_available = 1;
+		*out_execution_limit_unavailable = max_execution_time_ms != 0;
+		*out_memory_limit_unavailable = max_memory_bytes != 0;
+		return ANIXOPS_ERR_CAPACITY;
+	}
+#else
+	(void)max_execution_time_ms;
+	(void)max_memory_bytes;
+#endif
+	return anixops_apply_body_jq_replacement_direct(
+		engine,
+		body,
+		filter,
+		max_input_bytes,
+		max_output_bytes,
+		max_output_values,
+		out,
+		out_cap,
+		out_replaced,
+		out_runtime_available,
+		out_input_limited,
+		out_output_limited);
 }
 
 #if defined(ANIXOPS_ENABLE_LIBJQ)

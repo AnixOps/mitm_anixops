@@ -23,6 +23,13 @@ const (
 )
 
 const JQMaxInputBytesDefault uint = C.ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT
+const JQMaxOutputBytesDefault uint = C.ANIXOPS_JQ_MAX_OUTPUT_BYTES_DEFAULT
+const JQMaxOutputValuesDefault uint = C.ANIXOPS_JQ_MAX_OUTPUT_VALUES_DEFAULT
+const JQMaxExecutionTimeMsDefault uint = C.ANIXOPS_JQ_MAX_EXECUTION_TIME_MS_DEFAULT
+const JQMaxMemoryBytesDefault uint = C.ANIXOPS_JQ_MAX_MEMORY_BYTES_DEFAULT
+const MaxBodyBytesDefault uint = C.ANIXOPS_MAX_BODY_BYTES_DEFAULT
+const JQFilterCacheCapacityDefault uint = C.ANIXOPS_JQ_FILTER_CACHE_CAPACITY_DEFAULT
+const JQFilterCacheCapacityMax uint = C.ANIXOPS_JQ_FILTER_CACHE_CAPACITY_MAX
 
 type RewriteAction int
 
@@ -147,6 +154,111 @@ func (e *Engine) JQMaxInputBytes() uint {
 	return uint(C.anixops_engine_jq_max_input_bytes(e.ptr))
 }
 
+func (e *Engine) SetJQMaxOutputBytes(maxOutputBytes uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set jq max output bytes", C.anixops_engine_set_jq_max_output_bytes(e.ptr, C.size_t(maxOutputBytes)))
+}
+
+func (e *Engine) JQMaxOutputBytes() uint {
+	if e == nil || e.ptr == nil {
+		return JQMaxOutputBytesDefault
+	}
+	return uint(C.anixops_engine_jq_max_output_bytes(e.ptr))
+}
+
+func (e *Engine) SetJQMaxOutputValues(maxOutputValues uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set jq max output values", C.anixops_engine_set_jq_max_output_values(e.ptr, C.size_t(maxOutputValues)))
+}
+
+func (e *Engine) JQMaxOutputValues() uint {
+	if e == nil || e.ptr == nil {
+		return JQMaxOutputValuesDefault
+	}
+	return uint(C.anixops_engine_jq_max_output_values(e.ptr))
+}
+
+func (e *Engine) SetJQMaxExecutionTimeMs(maxExecutionTimeMs uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set jq max execution time ms", C.anixops_engine_set_jq_max_execution_time_ms(e.ptr, C.size_t(maxExecutionTimeMs)))
+}
+
+func (e *Engine) JQMaxExecutionTimeMs() uint {
+	if e == nil || e.ptr == nil {
+		return JQMaxExecutionTimeMsDefault
+	}
+	return uint(C.anixops_engine_jq_max_execution_time_ms(e.ptr))
+}
+
+func (e *Engine) SetJQMaxMemoryBytes(maxMemoryBytes uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set jq max memory bytes", C.anixops_engine_set_jq_max_memory_bytes(e.ptr, C.size_t(maxMemoryBytes)))
+}
+
+func (e *Engine) JQMaxMemoryBytes() uint {
+	if e == nil || e.ptr == nil {
+		return JQMaxMemoryBytesDefault
+	}
+	return uint(C.anixops_engine_jq_max_memory_bytes(e.ptr))
+}
+
+func (e *Engine) SetMaxBodyBytes(maxBodyBytes uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set max body bytes", C.anixops_engine_set_max_body_bytes(e.ptr, C.size_t(maxBodyBytes)))
+}
+
+func (e *Engine) MaxBodyBytes() uint {
+	if e == nil || e.ptr == nil {
+		return MaxBodyBytesDefault
+	}
+	return uint(C.anixops_engine_max_body_bytes(e.ptr))
+}
+
+func (e *Engine) JQFilterCacheCount() uint {
+	if e == nil || e.ptr == nil {
+		return 0
+	}
+	return uint(C.anixops_engine_jq_filter_cache_count(e.ptr))
+}
+
+func (e *Engine) JQFilterCacheHitCount() uint {
+	if e == nil || e.ptr == nil {
+		return 0
+	}
+	return uint(C.anixops_engine_jq_filter_cache_hit_count(e.ptr))
+}
+
+func (e *Engine) SetJQFilterCacheCapacity(capacity uint) error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("set jq filter cache capacity", C.anixops_engine_set_jq_filter_cache_capacity(e.ptr, C.size_t(capacity)))
+}
+
+func (e *Engine) JQFilterCacheCapacity() uint {
+	if e == nil || e.ptr == nil {
+		return JQFilterCacheCapacityDefault
+	}
+	return uint(C.anixops_engine_jq_filter_cache_capacity(e.ptr))
+}
+
+func (e *Engine) ClearJQFilterCache() error {
+	if e == nil || e.ptr == nil {
+		return fmt.Errorf("anixops: nil engine")
+	}
+	return statusError("clear jq filter cache", C.anixops_engine_clear_jq_filter_cache(e.ptr))
+}
+
 func (e *Engine) LoadConfig(config string) error {
 	if e == nil || e.ptr == nil {
 		return fmt.Errorf("anixops: nil engine")
@@ -209,6 +321,40 @@ func (e *Engine) ApplyBody(url string, phase Phase, body string) (string, Rewrit
 	return C.GoString((*C.char)(unsafe.Pointer(&out[0]))), rewriteResultFromC(&result), nil
 }
 
+func (e *Engine) ApplyBodyBytes(url string, phase Phase, body []byte) ([]byte, RewriteResult, error) {
+	var result C.anixops_rewrite_result_t
+	var outLen C.size_t
+	outCap := len(body) + C.ANIXOPS_VALUE_CAP
+	out := make([]byte, outCap)
+	if e == nil || e.ptr == nil {
+		return nil, RewriteResult{}, fmt.Errorf("anixops: nil engine")
+	}
+	curl := C.CString(url)
+	defer C.free(unsafe.Pointer(curl))
+	var bodyPtr *C.uchar
+	if len(body) != 0 {
+		bodyPtr = (*C.uchar)(unsafe.Pointer(&body[0]))
+	}
+	if err := statusError(
+		"apply body bytes",
+		C.anixops_rewrite_apply_body_bytes(
+			e.ptr,
+			curl,
+			C.anixops_phase_t(phase),
+			bodyPtr,
+			C.size_t(len(body)),
+			(*C.uchar)(unsafe.Pointer(&out[0])),
+			C.size_t(len(out)),
+			&outLen,
+			&result)); err != nil {
+		return nil, RewriteResult{}, err
+	}
+	if uint64(outLen) > uint64(len(out)) {
+		return nil, RewriteResult{}, fmt.Errorf("anixops: body output length exceeds buffer")
+	}
+	return out[:int(outLen)], rewriteResultFromC(&result), nil
+}
+
 func (e *Engine) ApplyBodyChain(url string, phase Phase, body string) (string, BodyRewriteChain, error) {
 	var chain C.anixops_body_rewrite_chain_t
 	outCap := len(body) + C.ANIXOPS_VALUE_CAP
@@ -233,6 +379,40 @@ func (e *Engine) ApplyBodyChain(url string, phase Phase, body string) (string, B
 		return "", BodyRewriteChain{}, err
 	}
 	return C.GoString((*C.char)(unsafe.Pointer(&out[0]))), bodyRewriteChainFromC(&chain), nil
+}
+
+func (e *Engine) ApplyBodyChainBytes(url string, phase Phase, body []byte) ([]byte, BodyRewriteChain, error) {
+	var chain C.anixops_body_rewrite_chain_t
+	var outLen C.size_t
+	outCap := len(body) + C.ANIXOPS_VALUE_CAP
+	out := make([]byte, outCap)
+	if e == nil || e.ptr == nil {
+		return nil, BodyRewriteChain{}, fmt.Errorf("anixops: nil engine")
+	}
+	curl := C.CString(url)
+	defer C.free(unsafe.Pointer(curl))
+	var bodyPtr *C.uchar
+	if len(body) != 0 {
+		bodyPtr = (*C.uchar)(unsafe.Pointer(&body[0]))
+	}
+	if err := statusError(
+		"apply body chain bytes",
+		C.anixops_rewrite_apply_body_chain_bytes(
+			e.ptr,
+			curl,
+			C.anixops_phase_t(phase),
+			bodyPtr,
+			C.size_t(len(body)),
+			(*C.uchar)(unsafe.Pointer(&out[0])),
+			C.size_t(len(out)),
+			&outLen,
+			&chain)); err != nil {
+		return nil, BodyRewriteChain{}, err
+	}
+	if uint64(outLen) > uint64(len(out)) {
+		return nil, BodyRewriteChain{}, fmt.Errorf("anixops: body output length exceeds buffer")
+	}
+	return out[:int(outLen)], bodyRewriteChainFromC(&chain), nil
 }
 
 func (e *Engine) EvaluateNamedHeader(

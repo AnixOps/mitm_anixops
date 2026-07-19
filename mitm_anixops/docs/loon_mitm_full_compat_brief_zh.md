@@ -62,7 +62,7 @@ QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/J
 
 - 执行 JavaScript 插件，提供 `$request`、`$response`、`$argument`、`$persistentStore`、`$done`。
 - 执行 JQ body rewrite，支持 Surge/LOON 常见 JSON 改写语义。
-- 管理 body pipeline：charset、gzip/deflate/brotli/zstd 解压重压、Content-Length、Transfer-Encoding。
+- 管理 body pipeline：charset、gzip/deflate/brotli/zstd 解压重压、Content-Length、Transfer-Encoding；policy core 已提供默认关闭且可配置的 already-buffered body size ceiling，以及单次/chain 显式长度 bytes API。
 - 管理脚本资源：Alpha runner 已支持离线包和 digest 校验；后续补下载、缓存刷新、超时和异常处理。
 
 建议 runtime 后端可选：桌面优先 QuickJS，Darwin 平台可选 JavaScriptCore，JQ 使用 libjq 或兼容实现。
@@ -103,7 +103,8 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 
 ### JQ rewrite
 
-目标：从 JSON path replacement 子集升级到真正的 jq filter 执行。
+目标：把当前 JSON path replacement 与可选 `JQ=1` libjq 执行继续补齐为
+稳定的 jq filter runtime。
 
 优先支持：
 
@@ -113,7 +114,7 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 - `select(...)`
 - `map(...)`
 - `with_entries(...)`
-- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、input-limit fail-open、output-buffer fail-open
+- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、input-limit fail-open、output-buffer fail-open、output-value budget fail-open、POSIX timeout isolation fail-open
 
 验收标准：Surge `http-request-jq` / `http-response-jq`、LOON JSON rewrite、真实插件 corpus 都能生成稳定 trace。
 
@@ -189,7 +190,7 @@ Quantumult X：
 
 - 接入 libjq 或兼容 engine。
 - 支持 request/response JQ body rewrite。
-- 增加资源限制、错误诊断和 trace。
+- 增加输入/输出/多值预算、POSIX 超时与子进程内存上限、默认 4 且可配置 1–16 项并支持显式失效的 bounded 编译 filter cache、错误诊断和 trace；内部递归/迭代预算仍待 runtime 层补齐。
 
 ### Phase 4：JavaScript runtime
 

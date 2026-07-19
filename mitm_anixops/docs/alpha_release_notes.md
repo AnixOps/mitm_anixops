@@ -48,7 +48,7 @@ Included:
   `anixops_rewrite_build_plan`
   provides a C ABI foundation that aggregates phase rewrite, header rewrites, script dispatch, body-rewrite output, and
   `requires_body`; the Alpha proxy shim provides HTTP/1.1 CONNECT/TLS demo coverage around the C ABI, including buffered
-  request/response header and chain body rewrite before script dispatch and gzip/deflate response decoding for
+  request/response header and chain body rewrite before script dispatch and gzip/deflate request/response decoding for
   body/script mutation with identity writeback.
 - P6 packaging foundation: `make alpha-dist` creates a tar.gz package with libraries, pkg-config metadata, CMake package
   config, Go cgo binding, Rust FFI wrapper, runner, proxy shim, script runner, all top-level compatibility fixtures,
@@ -64,13 +64,15 @@ Included:
 - Script timeout/max-size/error fail-open and offline bundle digest checks are covered in the Alpha runner/proxy shim;
   production script scheduling, cancellation, memory limits, network download, and cache refresh policy remain future
   work.
-- Optional libjq execution has a max-input-bytes guard, but timeout/memory limits, cache/reuse policy, and broad jq
-  corpus coverage are not complete.
+- At the original Alpha baseline optional libjq execution only had a max-input-bytes guard. The current maintenance
+  track adds output-byte/output-value budgets, POSIX timeout and child-memory isolation, and a bounded per-engine
+  compiled-filter cache (default capacity 4, configurable 1–16 with explicit invalidation); production cache refresh/reuse policy, internal recursion/iteration limits, and broad jq
+  corpus coverage are still not complete.
 - No NSRegularExpression Darwin backend yet.
 - The Rust and Go bindings are Alpha wrappers, not versioned registry/module releases yet. The CMake package config is
   included and covered by a staged configure/build/run smoke in the Alpha verification environment.
 - The packaged proxy shim is Alpha/demo quality and HTTP/1.1 oriented; buffered header/body rewrite ordering and
-  gzip/deflate scripted response bodies are covered, but no production HTTP/2, brotli/zstd, streaming body, or platform
+  gzip/deflate scripted request/response bodies are covered, but no production HTTP/2, brotli/zstd, streaming body, or platform
   capture adapter is included.
 - No iOS/macOS Network Extension adapter yet.
 
@@ -87,5 +89,5 @@ The check gate covers unit tests, the C ABI plan builder, optional PCRE2/libjq b
 pkg-config compile/run smoke, CMake package configure/build/run smoke, Go cgo binding tests, Rust wrapper tests, ABI
 exports, strategy demo, runner corpus scan with sha256 and diagnostic-status checks, runner replay with and without
 script execution, proxy-shim smoke tests, mihomo proxy E2E, BiliUniverse fixture, generic script contract E2E with
-persistentStore, header/body rewrite ordering, gzip/deflate response decode coverage, and script timeout/exception
+persistentStore, header/body rewrite ordering, gzip/deflate request/response decode coverage, and script timeout/exception
 fail-open, plus the Bilibili homepage demo E2E. Go and Rust wrapper tests also cover the aggregated plan helper.

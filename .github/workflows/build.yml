@@ -156,6 +156,10 @@ jobs:
             mitm_anixops/tests/fixtures/ResponseRewrite.Common.Malformed.conf
             mitm_anixops/tests/fixtures/BodyMutation.Common.conf
             mitm_anixops/tests/fixtures/BodyMutation.Common.Malformed.conf
+            mitm_anixops/tests/fixtures/BodyJqAdvanced.Common.conf
+            mitm_anixops/tests/fixtures/BodyJqAdvanced.Common.Malformed.conf
+            mitm_anixops/tests/fixtures/Surge.BodyJqMutation.sgmodule
+            mitm_anixops/tests/fixtures/Surge.BodyJqMutation.Malformed.sgmodule
             mitm_anixops/tests/fixtures/DecisionTrace.Schema.conf
             mitm_anixops/tests/fixtures/DecisionTrace.Schema.UnsupportedPolicy.conf
             mitm_anixops/tests/fixtures/PlanApiParity.Golden.conf

@@ -1,0 +1,2 @@
+[URL Rewrite]
+^https:\/\/jq\.surge\.test\/bad http-response-jq

@@ -68,8 +68,8 @@ adapter-owned status, header, or body mutation. After any body mutation, remove 
 recompute them consistently.
 
 The Alpha proxy shim follows this ordering for its HTTP/1.1 MITM demo path: request and response header/body rewrites
-run before the Node contract runner is invoked, and response bodies decoded from gzip/deflate are returned as identity
-after mutation.
+run before the Node contract runner is invoked. Gzip/deflate request bodies are decoded before mutation and sent
+upstream as identity; gzip/deflate response bodies are returned as identity after mutation.
 
 ## Globals
 

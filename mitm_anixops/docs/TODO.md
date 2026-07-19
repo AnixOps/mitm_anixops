@@ -24,10 +24,18 @@ publishing.
   diagnostics for PCRE2-only constructs; NSRegularExpression still needs a real
   Darwin backend.
 - Full JQ-style JSON body rewrite hardening beyond the optional libjq backend behind `JQ=1`. Default builds still
-  fail-open with `jq backend unavailable`, and `JQ=1` now fails open when input exceeds the configurable max-input
-  budget or output exceeds the caller buffer; remaining work includes timeout/memory limits, production cache/reuse
-  policy, broad plugin-corpus coverage, and edge behavior for predicates, slices, recursive selectors, and computed
-  filters.
+  fail-open with `jq backend unavailable`, and `JQ=1` now fails open when input or output exceeds configurable byte
+  budgets or output exceeds the caller buffer; the optional backend also
+  bounds multi-output enumeration with a configurable output-value budget;
+  POSIX `JQ=1` builds can isolate a configured wall-clock timeout;
+  POSIX `JQ=1` builds can also apply a configured child memory ceiling;
+  the bounded per-engine compiled-filter cache has configurable capacity and
+  explicit invalidation; already-buffered body mutations also have an optional
+  max-body-bytes ceiling and an explicit-length bytes API; remaining work includes internal recursion/iteration limits, production cache
+  refresh/reuse policy, broader plugin-corpus coverage beyond the advanced predicate/slice/
+  recursive/computed/del/map/with_entries/walk/test/capture fixture and the
+  Surge request/response JQ fixture, and
+  production adapter integration.
 - Full NSRegularExpression/PCRE compatibility beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand class subset, horizontal and vertical whitespace subset, control, hex, and Unicode escapes, lazy quantifier
   normalization, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement subset.
@@ -58,7 +66,7 @@ publishing.
 - System certificate installation or platform trust UI.
 - HTTP/2 frame parsing.
 - Full compression, chunked transfer decoding, or body streaming beyond the Alpha proxy shim's gzip/deflate
-  body/script mutation path.
+  request/response body/script mutation path.
 - Embedded QuickJS/JavaScriptCore runtime. The Alpha package includes a Node-based contract runner for tests/demos, but
   the C library still only returns script dispatch metadata.
 - GUI client features.

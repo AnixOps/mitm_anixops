@@ -30,11 +30,83 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	if engine.JQMaxInputBytes() != JQMaxInputBytesDefault {
 		t.Fatalf("JQMaxInputBytes() = %d", engine.JQMaxInputBytes())
 	}
+	if engine.JQMaxOutputBytes() != JQMaxOutputBytesDefault {
+		t.Fatalf("JQMaxOutputBytes() = %d", engine.JQMaxOutputBytes())
+	}
+	if engine.JQMaxOutputValues() != JQMaxOutputValuesDefault {
+		t.Fatalf("JQMaxOutputValues() = %d", engine.JQMaxOutputValues())
+	}
+	if engine.JQMaxExecutionTimeMs() != JQMaxExecutionTimeMsDefault {
+		t.Fatalf("JQMaxExecutionTimeMs() = %d", engine.JQMaxExecutionTimeMs())
+	}
+	if engine.JQMaxMemoryBytes() != JQMaxMemoryBytesDefault {
+		t.Fatalf("JQMaxMemoryBytes() = %d", engine.JQMaxMemoryBytes())
+	}
+	if MaxBodyBytesDefault != 0 {
+		t.Fatalf("MaxBodyBytesDefault = %d", MaxBodyBytesDefault)
+	}
+	if engine.MaxBodyBytes() != MaxBodyBytesDefault {
+		t.Fatalf("MaxBodyBytes() = %d", engine.MaxBodyBytes())
+	}
+	if err := engine.SetMaxBodyBytes(4096); err != nil {
+		t.Fatal(err)
+	}
+	if engine.MaxBodyBytes() != 4096 {
+		t.Fatalf("MaxBodyBytes() = %d", engine.MaxBodyBytes())
+	}
+	if err := engine.SetMaxBodyBytes(0); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQFilterCacheCount() != 0 || engine.JQFilterCacheHitCount() != 0 {
+		t.Fatalf("unexpected JQ filter cache state: count=%d hits=%d", engine.JQFilterCacheCount(), engine.JQFilterCacheHitCount())
+	}
+	if JQFilterCacheCapacityDefault != 4 {
+		t.Fatalf("JQFilterCacheCapacityDefault = %d", JQFilterCacheCapacityDefault)
+	}
+	if JQFilterCacheCapacityMax != 16 {
+		t.Fatalf("JQFilterCacheCapacityMax = %d", JQFilterCacheCapacityMax)
+	}
+	if engine.JQFilterCacheCapacity() != JQFilterCacheCapacityDefault {
+		t.Fatalf("JQFilterCacheCapacity() = %d", engine.JQFilterCacheCapacity())
+	}
+	if err := engine.SetJQFilterCacheCapacity(2); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQFilterCacheCapacity() != 2 {
+		t.Fatalf("JQFilterCacheCapacity() = %d", engine.JQFilterCacheCapacity())
+	}
+	if err := engine.ClearJQFilterCache(); err != nil {
+		t.Fatal(err)
+	}
 	if err := engine.SetJQMaxInputBytes(4096); err != nil {
 		t.Fatal(err)
 	}
 	if engine.JQMaxInputBytes() != 4096 {
 		t.Fatalf("JQMaxInputBytes() = %d", engine.JQMaxInputBytes())
+	}
+	if err := engine.SetJQMaxOutputBytes(8192); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQMaxOutputBytes() != 8192 {
+		t.Fatalf("JQMaxOutputBytes() = %d", engine.JQMaxOutputBytes())
+	}
+	if err := engine.SetJQMaxOutputValues(8); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQMaxOutputValues() != 8 {
+		t.Fatalf("JQMaxOutputValues() = %d", engine.JQMaxOutputValues())
+	}
+	if err := engine.SetJQMaxExecutionTimeMs(250); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQMaxExecutionTimeMs() != 250 {
+		t.Fatalf("JQMaxExecutionTimeMs() = %d", engine.JQMaxExecutionTimeMs())
+	}
+	if err := engine.SetJQMaxMemoryBytes(32 * 1024 * 1024); err != nil {
+		t.Fatal(err)
+	}
+	if engine.JQMaxMemoryBytes() != 32*1024*1024 {
+		t.Fatalf("JQMaxMemoryBytes() = %d", engine.JQMaxMemoryBytes())
 	}
 
 	if err := engine.LoadConfig(fixtureConfig); err != nil {
@@ -361,5 +433,51 @@ func TestGoBindingAppliesBodyChain(t *testing.T) {
 	if chain.Rewrites[0].Action != RewriteRequestBodyReplaceRegex ||
 		chain.Rewrites[1].Action != RewriteRequestBodyReplaceRegex {
 		t.Fatalf("unexpected chain rewrites: %+v", chain.Rewrites)
+	}
+}
+
+func TestGoBindingAppliesBodyBytes(t *testing.T) {
+	engine, err := NewEngine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer engine.Close()
+
+	if err := engine.LoadConfig(`
+[Rewrite]
+^https:\/\/api\.go\.example\/bytes request-body-replace-regex "from=([0-9]+)" "to=$1"
+`); err != nil {
+		t.Fatal(err)
+	}
+	body, rewrite, err := engine.ApplyBodyBytes(
+		"https://api.go.example/bytes",
+		PhaseRequest,
+		[]byte{'f', 'r', 'o', 'm', '=', '1', 0, 'x'},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != "from=1\x00x" {
+		t.Fatalf("body = %q", body)
+	}
+	if rewrite.Message != "binary body passthrough" {
+		t.Fatalf("rewrite message = %q", rewrite.Message)
+	}
+	chainBody, chain, err := engine.ApplyBodyChainBytes(
+		"https://api.go.example/bytes",
+		PhaseRequest,
+		[]byte{'f', 'r', 'o', 'm', '=', '1', 0, 'x'},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(chainBody) != "from=1\x00x" {
+		t.Fatalf("chain body = %q", chainBody)
+	}
+	if chain.Rewritten || chain.Truncated || len(chain.Rewrites) != 1 {
+		t.Fatalf("unexpected body chain: %+v", chain)
+	}
+	if chain.Rewrites[0].Message != "binary body passthrough" {
+		t.Fatalf("chain rewrite message = %q", chain.Rewrites[0].Message)
 	}
 }

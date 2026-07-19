@@ -25,6 +25,10 @@ The full LOON MITM plugin compatibility and no-UI runtime plan is tracked in
 `docs/loon_mitm_full_compat_plan.md`, with a shorter Chinese presentation draft in
 `docs/loon_mitm_full_compat_brief_zh.md`.
 
+For the NetworkCore delivery path, this library is a versioned policy plugin,
+not a standalone desktop proxy or client. The host-owned integration plan and
+current data-plane boundary are in `docs/networkcore_integration.md`.
+
 Implemented:
 
 - AnixOps/Loon-style `[MITM] hostname = ...` and adapter-visible MITM option parsing plus Quantumult X
@@ -46,6 +50,10 @@ Implemented:
 - Request/response header rewrite dispatch for add, replace, delete, and regex replace actions, including
   case-insensitive named-header lookup and bounded header-list application for multi-value add/replace/delete and
   independent `Set-Cookie` fields.
+- Already-buffered body rewrite input can use an engine-level `max body bytes`
+  ceiling (default `0`, unlimited); over-limit body mutations fail open and
+  preserve the original body. The explicit-length bytes APIs preserve empty,
+  NUL-containing, and invalid-UTF-8 bodies without treating them as C strings.
 - Quantumult X `url`-prefixed rewrite forms for redirect, reject, body rewrite, JSON body rewrite, header rewrite,
   `echo-response`, and request/response script actions.
 - Regex capture replacement with `$1`, `${1}`, `\1`, `${name}`, and `$<name>`.
@@ -63,7 +71,20 @@ Implemented:
 - AnixOps-style `[Argument]` defaults, Loon/Surge-style `#!arguments`, tolerated `[Plugin]` and `#!` metadata
   diagnostics, plus per-argument overrides for script `$argument` generation.
 - Optional libjq execution for `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` when built
-  with `JQ=1`, including a configurable max-input-bytes fail-open guard; the default no-libjq build remains fail-open.
+  with `JQ=1`, including configurable max-input-bytes and max-output-bytes fail-open guards; the default no-libjq build
+  remains fail-open. The optional fixture corpus covers assignments, predicates,
+  slices, recursive selectors, computed filters, `del`, `map`, `with_entries`,
+  `walk`, `test`, `capture`, assignment/iterator pipes, multi-output, empty
+  output, malformed filters, invalid JSON, and Surge `[URL Rewrite]` request/response
+  JQ phase mapping. A configurable max-output-values budget bounds multi-output
+  enumeration and preserves the original body on overflow; on POSIX `JQ=1`
+  builds, an optional wall-clock execution timeout isolates the libjq child and
+  preserves the original body on timeout. POSIX `JQ=1` builds can also apply an
+  optional child address-space memory ceiling; `0` disables it and unsupported
+  platforms fail open with the original body. Each engine keeps a bounded
+  configurable 1–16-entry LRU cache of compiled filters (default 4); cache
+  state can be explicitly invalidated with `anixops_engine_clear_jq_filter_cache`
+  or `anixops_engine_clear`, and hit/count metrics are observable through the ABI.
 - BiliUniverse Enhanced-style `.plugin`, `.snippet`, and `.sgmodule` fixtures.
 - Status text and last-error diagnostics for config/add-rule failures, including config line numbers.
 - C ABI result structs with no exposed internal pointers.
@@ -74,8 +95,14 @@ Not implemented yet:
 
 - TLS socketing, dynamic leaf certificate generation, CA storage, or iOS trust detection.
 - HTTP parser, HTTP/2 frame parser, compression/chunk handling, body buffering.
-- Full JQ compatibility beyond the optional libjq first-output execution policy, including timeout/memory limits and
-  broader corpus coverage.
+- Full JQ compatibility beyond the optional libjq first-output execution policy,
+  including internal recursion/iteration limits and broader corpus coverage. The current
+  corpus includes advanced portable filters and a Surge request/response JQ
+  fixture; the optional backend exposes input/output byte budgets, an
+  output-value enumeration budget, POSIX wall-clock timeout isolation, and a
+  POSIX child memory ceiling, plus a bounded compiled-filter cache, but does not
+  yet enforce internal recursion or iteration budgets or production cache
+  refresh/reuse policy.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand classes, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement
@@ -134,8 +161,9 @@ build/anixops-mitm-proxy-shim --bilibili-demo --listen 127.0.0.1:19080 --upstrea
 
 The proxy shim is a demo/Alpha integration artifact around the C ABI. It supports HTTP/1.1 CONNECT/TLS MITM, generated
 test CA material, upstream proxy forwarding, URL rewrite, buffered request/response header and body rewrite, script
-runner integration with file-backed `$persistentStore`, and gzip/deflate response decoding for body/script mutation
-with identity writeback. Script runner timeout/errors fail open after static rewrites. It is not a production HTTP/2,
+runner integration with file-backed `$persistentStore`, and gzip/deflate request/response decoding for body/script
+mutation with identity writeback. Request bodies are decoded before static body/script mutation and sent upstream as
+identity. Script runner timeout/errors fail open after static rewrites. It is not a production HTTP/2,
 brotli/zstd, or streaming body pipeline.
 
 For a local Alpha package:
@@ -174,8 +202,8 @@ make go-binding-check
 
 The Go package lives under `bindings/go/anixops` and uses `pkg-config: mitm_anixops`, so consumers should point
 `PKG_CONFIG_PATH` at the Alpha package's `lib/pkgconfig` directory. The Alpha wrapper exposes config load, rewrite/body
-evaluation, body-chain application, header-list application, script dispatch, JQ max-input configuration, and the
-aggregated rewrite plan.
+evaluation, body-chain application, header-list application, script dispatch, JQ input/output budget configuration, and the
+output-value/timeout/memory configuration, and the aggregated rewrite plan.
 
 For Rust binding coverage:
 
@@ -186,8 +214,8 @@ make rust-binding-check
 The Rust crate lives under `bindings/rust/mitm-anixops` and uses `pkg-config` from `build.rs`, so consumers should point
 `PKG_CONFIG_PATH` at the Alpha package's `lib/pkgconfig` directory and set `LD_LIBRARY_PATH` to the package `lib`
 directory when running tests against the shared library. The Alpha wrapper exposes rewrite/body evaluation,
-body-chain application, named-header lookup, bounded header-list application, script dispatch, JQ max-input
-configuration, and the aggregated rewrite plan.
+body-chain application, named-header lookup, bounded header-list application, script dispatch, JQ input/output
+budget, output-value, timeout, and memory configuration, and the aggregated rewrite plan.
 
 For optional PCRE2 regex backend coverage:
 
@@ -235,8 +263,8 @@ optional PCRE2/libjq test builds when headers are present, verifies the complete
 replay with and without script execution, runs the proxy-shim smoke check, runs the mihomo proxy-chain E2E when
 `MIHOMO_BIN` points to an executable binary, runs the BiliUniverse script-runtime E2E fixture, and checks the generic
 request/response script contract including `$persistentStore`, rule-level script timeout fail-open, static header/body
-rewrite ordering, and gzip/deflate response decode coverage. GitHub Actions runs the same entrypoint after installing the
-pinned mihomo fixture with `scripts/ensure-mihomo.sh`.
+rewrite ordering, and gzip/deflate request/response decode coverage. GitHub Actions runs the same entrypoint after
+installing the pinned mihomo fixture with `scripts/ensure-mihomo.sh`.
 
 Test policy and layout are documented in `tests/README.md`.
 

@@ -85,12 +85,13 @@ runner-check: $(RUNNER_BIN)
 	grep -F '"counts":{"mitm":2,"rewrite":2,"script":2,"argument":1}' $(BUILD_DIR)/runner-scan.out >/dev/null
 	$(RUNNER_BIN) scan --corpus tests/fixtures/corpus/manifest.json > $(BUILD_DIR)/runner-corpus.out
 	node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" $(BUILD_DIR)/runner-corpus.out
-	grep -F '"fixtureCount":4' $(BUILD_DIR)/runner-corpus.out >/dev/null
+	grep -F '"fixtureCount":6' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	grep -F '"sha256Matched":true' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	grep -F '"expectedDiagnostics":{"accepted":16,"ignored":7,"rejected":0}' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	grep -F '"platform":"loon"' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	grep -F '"platform":"surge"' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	grep -F '"platform":"quantumultx"' $(BUILD_DIR)/runner-corpus.out >/dev/null
+	grep -F '"platform":"portable"' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	grep -F '"passed":true' $(BUILD_DIR)/runner-corpus.out >/dev/null
 	$(RUNNER_BIN) trace --plugin tests/fixtures/Representative.Loon.plugin --url https://api.loon.example/v1 --phase response > $(BUILD_DIR)/runner-trace.out
 	grep -F '"kind":2' $(BUILD_DIR)/runner-trace.out >/dev/null

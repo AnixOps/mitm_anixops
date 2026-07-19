@@ -41,6 +41,41 @@ not overstate planned or partial behavior.
 | cron/task trigger | Loon, Quantumult X, Surge, portable | partial | `cron-task-trigger.md` | `CronTaskTrigger.HttpScriptGuard.conf`, `CronTaskTrigger.QuotedTypes.conf`, `CronTaskTrigger.Unsupported.conf`, `CronTaskTrigger.Malformed.conf`, `Loon.TaskMetadata.plugin`, `Loon.TaskUnsupported.plugin`, `QuantumultX.TaskMetadata.snippet`, `QuantumultX.TaskMetadata.EventMalformed.snippet`, `QuantumultX.TaskMetadata.UnsupportedEvent.snippet`, `Surge.TaskMetadata.sgmodule`, `Surge.TaskEvent.sgmodule`, `Surge.TaskEvent.Malformed.sgmodule`, `Surge.TaskEvent.Unsupported.sgmodule` | `config/cron_task_trigger_common_fixture_emits_task_descriptors`, `config/cron_task_trigger_quoted_attr_types_stay_task_descriptors`, `config/loon_task_metadata_fixture_emits_task_descriptors`, `config/quantumultx_task_metadata_fixture_emits_task_descriptors`, `config/surge_task_metadata_fixture_emits_task_descriptors`, `config/surge_task_event_fixture_emits_event_descriptors` | `config/cron_task_trigger_unsupported_fixture_does_not_register_descriptors`, `config/cron_task_trigger_malformed_fixture_rejects_invalid_cron`, `config/loon_task_unsupported_fixture_keeps_non_task_types_ignored`, `config/quantumultx_task_metadata_malformed_fixture_rejects_invalid_cron`, `config/quantumultx_task_metadata_event_malformed_fixture_rejects_missing_path`, `config/quantumultx_task_metadata_unsupported_event_fixture_stays_ignored`, `config/surge_task_metadata_malformed_fixture_rejects_invalid_cron`, `config/surge_task_event_malformed_fixture_rejects_missing_event_name`, `config/surge_task_event_unsupported_fixture_rejects_unknown_event_name`, `script/malformed_and_non_http_script_rules_are_ignored_or_rejected` | Parser emits task descriptors through public ABI and keeps them separate from HTTP script URL dispatch, including quoted task type attr-list values; unsupported Loon task-like types stay ignored; scheduler/runtime and event dispatch behavior are not claimed | scheduler/runtime, event dispatch, task JS bindings, permission model, concurrency policy, broader ecosystem corpus |
 | reject/direct/proxy policy intent | portable migration target | partial | `policy-intent-common.md` | `PolicyIntent.Common.conf`, `PolicyIntent.Unsupported.conf`, reject subset in rewrite fixtures | `config/policy_intent_common_fixture_covers_reject_subset`, reject URL rewrite tests | `config/policy_intent_unsupported_routes_are_ignored`, `config/decision_trace_schema_fixture_ignores_unsupported_policy_intent` | Reject is mapped as policy-core URL decision evidence; direct/proxy route selection is not claimed | adapter route-selection contract, proxy groups, DNS/fallback semantics, platform network-extension behavior |
 
+The body-mutation row's optional JQ evidence also includes registered
+`abi/jq_max_output_option_is_configurable` and
+`rewrite/jq_backend_handles_output_and_error_policy` tests, plus Go/Rust
+binding checks. The advanced filter fixture is
+`tests/fixtures/BodyJqAdvanced.Common.conf` with positive test
+`config/body_jq_advanced_common_fixture_maps_filter_edges`; it covers
+predicate/slice/recursive/computed filters plus `del`, `map`, `with_entries`,
+`walk`, `test`, `capture`, assignment, and iterator pipes. A zero
+input/output/output-value budget means unlimited; a non-zero byte or
+output-value budget preserves the
+original body when the optional backend exceeds that budget. The ABI evidence
+also includes `abi/jq_max_output_values_option_is_configurable`,
+`abi/jq_execution_timeout_option_is_configurable`, and
+`abi/jq_memory_option_is_configurable`; `abi/jq_filter_cache_reuses_compiled_program`
+and `abi/jq_filter_cache_policy_is_configurable` prove bounded per-engine
+compiled-filter reuse, configurable capacity, and explicit invalidation. POSIX `JQ=1` builds
+isolate configured wall-clock timeouts and child memory ceilings, while
+internal recursion and iteration limits and production cache refresh policy
+remain runtime gaps.
+
+The body-mutation row also includes the independent already-buffered body
+ceiling through `abi/max_body_option_is_configurable` and
+`rewrite/body_size_limit_fails_open_for_single_and_chain`; `0` keeps the
+ceiling disabled and over-limit mutations preserve the original body. The
+explicit-length bytes paths are covered by
+`rewrite/body_bytes_api_preserves_binary_and_tracks_lengths` and preserves
+empty, NUL-containing, and invalid-UTF-8 bodies through single and chain
+application.
+
+The Surge module row additionally has platform-specific JQ evidence in
+`tests/fixtures/Surge.BodyJqMutation.sgmodule` and
+`tests/fixtures/Surge.BodyJqMutation.Malformed.sgmodule`, covered by
+`config/surge_body_jq_mutation_fixture_maps_request_and_response_jq` and
+`config/surge_body_jq_mutation_malformed_fixture_rejects_missing_filter`.
+
 ## Rules For Updating This Matrix
 
 Do not change `planned` to `partial` or `supported` unless the same change adds

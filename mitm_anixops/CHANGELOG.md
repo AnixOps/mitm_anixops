@@ -9,6 +9,29 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added Alpha proxy-shim gzip/deflate request-body decoding before static
+  body/script mutation, with identity upstream writeback and E2E coverage.
+- Added optional-libjq advanced-filter fixture coverage for predicates, slices,
+  recursive selectors, and computed filters, with strict malformed-filter
+  coverage.
+- Added Surge `[URL Rewrite]` request/response JQ body-mutation fixtures,
+  strict malformed-filter coverage, and runner-corpus evidence.
+- Added an optional libjq output-value enumeration budget with fail-open
+  behavior and C, Go, and Rust binding coverage.
+- Added optional POSIX libjq wall-clock timeout isolation with fail-open
+  behavior and C, Go, and Rust binding coverage.
+- Added optional POSIX libjq child memory ceilings with fail-open behavior and
+  C, Go, and Rust binding coverage.
+- Added a configurable 1–16-entry per-engine libjq compiled-filter LRU cache
+  (default 4), explicit invalidation, cache hit/count observability, and C, Go,
+  and Rust binding coverage.
+- Added an optional engine-level max-body-bytes ceiling for already-buffered
+  body mutations, with fail-open preservation and C, Go, and Rust binding
+  coverage.
+- Added explicit-length body-bytes APIs with output-length reporting and
+  binary/invalid-UTF-8 pass-through coverage across C, Go, and Rust.
+- Added configurable optional-libjq output byte budgeting alongside the existing
+  input budget, with fail-open diagnostics and C, Go, and Rust binding coverage.
 - Added a `v1.4.6` release evidence index rollover that records `v1.4.5` as
   the latest public stable Release, makes `v1.4.6` the next stable patch
   target, and requires every retained evidence entry to carry publication

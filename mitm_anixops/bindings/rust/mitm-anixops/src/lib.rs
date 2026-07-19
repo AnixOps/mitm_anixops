@@ -1,6 +1,6 @@
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::os::raw::{c_char, c_int};
+use std::os::raw::{c_char, c_int, c_uchar};
 
 const ANIXOPS_OK: c_int = 0;
 const ANIXOPS_VALUE_CAP: usize = 2048;
@@ -11,6 +11,13 @@ const ANIXOPS_PLAN_HEADER_CAP: usize = 16;
 const ANIXOPS_HEADER_LIST_CAP: usize = 32;
 const ANIXOPS_BODY_CHAIN_CAP: usize = 16;
 pub const JQ_MAX_INPUT_BYTES_DEFAULT: usize = 1_048_576;
+pub const JQ_MAX_OUTPUT_BYTES_DEFAULT: usize = 1_048_576;
+pub const JQ_MAX_OUTPUT_VALUES_DEFAULT: usize = 64;
+pub const JQ_MAX_EXECUTION_TIME_MS_DEFAULT: usize = 0;
+pub const JQ_MAX_MEMORY_BYTES_DEFAULT: usize = 0;
+pub const MAX_BODY_BYTES_DEFAULT: usize = 0;
+pub const JQ_FILTER_CACHE_CAPACITY_DEFAULT: usize = 4;
+pub const JQ_FILTER_CACHE_CAPACITY_MAX: usize = 16;
 
 #[repr(C)]
 struct AnixopsEngine {
@@ -106,6 +113,39 @@ extern "C" {
         max_input_bytes: usize,
     ) -> c_int;
     fn anixops_engine_jq_max_input_bytes(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_jq_max_output_bytes(
+        engine: *mut AnixopsEngine,
+        max_output_bytes: usize,
+    ) -> c_int;
+    fn anixops_engine_jq_max_output_bytes(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_jq_max_output_values(
+        engine: *mut AnixopsEngine,
+        max_output_values: usize,
+    ) -> c_int;
+    fn anixops_engine_jq_max_output_values(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_jq_max_execution_time_ms(
+        engine: *mut AnixopsEngine,
+        max_execution_time_ms: usize,
+    ) -> c_int;
+    fn anixops_engine_jq_max_execution_time_ms(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_jq_max_memory_bytes(
+        engine: *mut AnixopsEngine,
+        max_memory_bytes: usize,
+    ) -> c_int;
+    fn anixops_engine_jq_max_memory_bytes(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_max_body_bytes(
+        engine: *mut AnixopsEngine,
+        max_body_bytes: usize,
+    ) -> c_int;
+    fn anixops_engine_max_body_bytes(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_jq_filter_cache_count(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_jq_filter_cache_hit_count(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_set_jq_filter_cache_capacity(
+        engine: *mut AnixopsEngine,
+        capacity: usize,
+    ) -> c_int;
+    fn anixops_engine_jq_filter_cache_capacity(engine: *const AnixopsEngine) -> usize;
+    fn anixops_engine_clear_jq_filter_cache(engine: *mut AnixopsEngine) -> c_int;
     fn anixops_rewrite_evaluate_url(
         engine: *const AnixopsEngine,
         url: *const c_char,
@@ -121,6 +161,17 @@ extern "C" {
         out_body_cap: usize,
         out_result: *mut AnixopsRewriteResult,
     ) -> c_int;
+    fn anixops_rewrite_apply_body_bytes(
+        engine: *const AnixopsEngine,
+        url: *const c_char,
+        phase: c_int,
+        body: *const c_uchar,
+        body_len: usize,
+        out_body: *mut c_uchar,
+        out_body_cap: usize,
+        out_body_len: *mut usize,
+        out_result: *mut AnixopsRewriteResult,
+    ) -> c_int;
     fn anixops_rewrite_apply_body_chain(
         engine: *const AnixopsEngine,
         url: *const c_char,
@@ -128,6 +179,17 @@ extern "C" {
         body: *const c_char,
         out_body: *mut c_char,
         out_body_cap: usize,
+        out_chain: *mut AnixopsBodyRewriteChain,
+    ) -> c_int;
+    fn anixops_rewrite_apply_body_chain_bytes(
+        engine: *const AnixopsEngine,
+        url: *const c_char,
+        phase: c_int,
+        body: *const c_uchar,
+        body_len: usize,
+        out_body: *mut c_uchar,
+        out_body_cap: usize,
+        out_body_len: *mut usize,
         out_chain: *mut AnixopsBodyRewriteChain,
     ) -> c_int;
     fn anixops_rewrite_evaluate_named_header(
@@ -353,6 +415,87 @@ impl Engine {
         unsafe { anixops_engine_jq_max_input_bytes(self.ptr) }
     }
 
+    pub fn set_jq_max_output_bytes(&mut self, max_output_bytes: usize) -> Result<(), Error> {
+        check_status(
+            "set_jq_max_output_bytes",
+            unsafe { anixops_engine_set_jq_max_output_bytes(self.ptr, max_output_bytes) },
+        )
+    }
+
+    pub fn jq_max_output_bytes(&self) -> usize {
+        unsafe { anixops_engine_jq_max_output_bytes(self.ptr) }
+    }
+
+    pub fn set_jq_max_output_values(&mut self, max_output_values: usize) -> Result<(), Error> {
+        check_status(
+            "set_jq_max_output_values",
+            unsafe { anixops_engine_set_jq_max_output_values(self.ptr, max_output_values) },
+        )
+    }
+
+    pub fn jq_max_output_values(&self) -> usize {
+        unsafe { anixops_engine_jq_max_output_values(self.ptr) }
+    }
+
+    pub fn set_jq_max_execution_time_ms(&mut self, max_execution_time_ms: usize) -> Result<(), Error> {
+        check_status(
+            "set_jq_max_execution_time_ms",
+            unsafe { anixops_engine_set_jq_max_execution_time_ms(self.ptr, max_execution_time_ms) },
+        )
+    }
+
+    pub fn jq_max_execution_time_ms(&self) -> usize {
+        unsafe { anixops_engine_jq_max_execution_time_ms(self.ptr) }
+    }
+
+    pub fn set_jq_max_memory_bytes(&mut self, max_memory_bytes: usize) -> Result<(), Error> {
+        check_status(
+            "set_jq_max_memory_bytes",
+            unsafe { anixops_engine_set_jq_max_memory_bytes(self.ptr, max_memory_bytes) },
+        )
+    }
+
+    pub fn jq_max_memory_bytes(&self) -> usize {
+        unsafe { anixops_engine_jq_max_memory_bytes(self.ptr) }
+    }
+
+    pub fn set_max_body_bytes(&mut self, max_body_bytes: usize) -> Result<(), Error> {
+        check_status(
+            "set_max_body_bytes",
+            unsafe { anixops_engine_set_max_body_bytes(self.ptr, max_body_bytes) },
+        )
+    }
+
+    pub fn max_body_bytes(&self) -> usize {
+        unsafe { anixops_engine_max_body_bytes(self.ptr) }
+    }
+
+    pub fn jq_filter_cache_count(&self) -> usize {
+        unsafe { anixops_engine_jq_filter_cache_count(self.ptr) }
+    }
+
+    pub fn jq_filter_cache_hit_count(&self) -> usize {
+        unsafe { anixops_engine_jq_filter_cache_hit_count(self.ptr) }
+    }
+
+    pub fn set_jq_filter_cache_capacity(&mut self, capacity: usize) -> Result<(), Error> {
+        check_status(
+            "set_jq_filter_cache_capacity",
+            unsafe { anixops_engine_set_jq_filter_cache_capacity(self.ptr, capacity) },
+        )
+    }
+
+    pub fn jq_filter_cache_capacity(&self) -> usize {
+        unsafe { anixops_engine_jq_filter_cache_capacity(self.ptr) }
+    }
+
+    pub fn clear_jq_filter_cache(&mut self) -> Result<(), Error> {
+        check_status(
+            "clear_jq_filter_cache",
+            unsafe { anixops_engine_clear_jq_filter_cache(self.ptr) },
+        )
+    }
+
     pub fn rewrite_rule_count(&self) -> usize {
         unsafe { anixops_engine_rewrite_rule_count(self.ptr) }
     }
@@ -398,6 +541,90 @@ impl Engine {
             },
         )?;
         Ok((cstr_from_buf(&out), rewrite_result_from_c(&result)))
+    }
+
+    pub fn apply_body_bytes(
+        &self,
+        url: &str,
+        phase: Phase,
+        body: &[u8],
+    ) -> Result<(Vec<u8>, RewriteResult), Error> {
+        let url = CString::new(url).expect("url must not contain nul bytes");
+        let mut result = empty_rewrite_result();
+        let mut out = vec![0u8; body.len() + ANIXOPS_VALUE_CAP];
+        let mut out_len = 0usize;
+        let body_ptr = if body.is_empty() {
+            std::ptr::null()
+        } else {
+            body.as_ptr()
+        };
+        check_status(
+            "apply_body_bytes",
+            unsafe {
+                anixops_rewrite_apply_body_bytes(
+                    self.ptr,
+                    url.as_ptr(),
+                    phase.as_c(),
+                    body_ptr,
+                    body.len(),
+                    out.as_mut_ptr(),
+                    out.len(),
+                    &mut out_len,
+                    &mut result,
+                )
+            },
+        )?;
+        if out_len > out.len() {
+            return Err(Error {
+                operation: "apply_body_bytes",
+                status: -4,
+                message: "body output length exceeds buffer".to_string(),
+            });
+        }
+        out.truncate(out_len);
+        Ok((out, rewrite_result_from_c(&result)))
+    }
+
+    pub fn apply_body_chain_bytes(
+        &self,
+        url: &str,
+        phase: Phase,
+        body: &[u8],
+    ) -> Result<(Vec<u8>, BodyRewriteChain), Error> {
+        let url = CString::new(url).expect("url must not contain nul bytes");
+        let mut chain = empty_body_rewrite_chain();
+        let mut out = vec![0u8; body.len() + ANIXOPS_VALUE_CAP];
+        let mut out_len = 0usize;
+        let body_ptr = if body.is_empty() {
+            std::ptr::null()
+        } else {
+            body.as_ptr()
+        };
+        check_status(
+            "apply_body_chain_bytes",
+            unsafe {
+                anixops_rewrite_apply_body_chain_bytes(
+                    self.ptr,
+                    url.as_ptr(),
+                    phase.as_c(),
+                    body_ptr,
+                    body.len(),
+                    out.as_mut_ptr(),
+                    out.len(),
+                    &mut out_len,
+                    &mut chain,
+                )
+            },
+        )?;
+        if out_len > out.len() {
+            return Err(Error {
+                operation: "apply_body_chain_bytes",
+                status: -4,
+                message: "body output length exceeds buffer".to_string(),
+            });
+        }
+        out.truncate(out_len);
+        Ok((out, body_rewrite_chain_from_c(&chain)))
     }
 
     pub fn apply_body_chain(
@@ -820,8 +1047,33 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert_eq!(version(), "0.45.10");
         let mut engine = Engine::new().unwrap();
         assert_eq!(engine.jq_max_input_bytes(), JQ_MAX_INPUT_BYTES_DEFAULT);
+        assert_eq!(engine.jq_max_output_bytes(), JQ_MAX_OUTPUT_BYTES_DEFAULT);
+        assert_eq!(engine.jq_max_output_values(), JQ_MAX_OUTPUT_VALUES_DEFAULT);
+        assert_eq!(engine.jq_max_execution_time_ms(), JQ_MAX_EXECUTION_TIME_MS_DEFAULT);
+        assert_eq!(engine.jq_max_memory_bytes(), JQ_MAX_MEMORY_BYTES_DEFAULT);
+        assert_eq!(MAX_BODY_BYTES_DEFAULT, 0);
+        assert_eq!(engine.max_body_bytes(), MAX_BODY_BYTES_DEFAULT);
+        engine.set_max_body_bytes(4096).unwrap();
+        assert_eq!(engine.max_body_bytes(), 4096);
+        engine.set_max_body_bytes(0).unwrap();
+        assert_eq!(engine.jq_filter_cache_count(), 0);
+        assert_eq!(engine.jq_filter_cache_hit_count(), 0);
+        assert_eq!(JQ_FILTER_CACHE_CAPACITY_DEFAULT, 4);
+        assert_eq!(JQ_FILTER_CACHE_CAPACITY_MAX, 16);
+        assert_eq!(engine.jq_filter_cache_capacity(), JQ_FILTER_CACHE_CAPACITY_DEFAULT);
+        engine.set_jq_filter_cache_capacity(2).unwrap();
+        assert_eq!(engine.jq_filter_cache_capacity(), 2);
+        engine.clear_jq_filter_cache().unwrap();
         engine.set_jq_max_input_bytes(4096).unwrap();
         assert_eq!(engine.jq_max_input_bytes(), 4096);
+        engine.set_jq_max_output_bytes(8192).unwrap();
+        assert_eq!(engine.jq_max_output_bytes(), 8192);
+        engine.set_jq_max_output_values(8).unwrap();
+        assert_eq!(engine.jq_max_output_values(), 8);
+        engine.set_jq_max_execution_time_ms(250).unwrap();
+        assert_eq!(engine.jq_max_execution_time_ms(), 250);
+        engine.set_jq_max_memory_bytes(32 * 1024 * 1024).unwrap();
+        assert_eq!(engine.jq_max_memory_bytes(), 32 * 1024 * 1024);
         engine.load_config(FIXTURE_CONFIG).unwrap();
         assert_eq!(engine.rewrite_rule_count(), 3);
         assert_eq!(engine.script_rule_count(), 1);
@@ -1102,5 +1354,40 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
         assert_eq!(chain.rewrites.len(), 2);
         assert_eq!(chain.rewrites[0].action, RewriteAction::RequestBodyReplaceRegex);
         assert_eq!(chain.rewrites[1].action, RewriteAction::RequestBodyReplaceRegex);
+    }
+
+    #[test]
+    fn rust_binding_applies_body_bytes() {
+        let mut engine = Engine::new().unwrap();
+        engine
+            .load_config(
+                r#"
+[Rewrite]
+^https:\/\/api\.rust\.example\/bytes request-body-replace-regex "from=([0-9]+)" "to=$1"
+"#,
+            )
+            .unwrap();
+
+        let (body, rewrite) = engine
+            .apply_body_bytes(
+                "https://api.rust.example/bytes",
+                Phase::Request,
+                b"from=1\0x",
+            )
+            .unwrap();
+        assert_eq!(body, b"from=1\0x");
+        assert_eq!(rewrite.message, "binary body passthrough");
+        let (chain_body, chain) = engine
+            .apply_body_chain_bytes(
+                "https://api.rust.example/bytes",
+                Phase::Request,
+                b"from=1\0x",
+            )
+            .unwrap();
+        assert_eq!(chain_body, b"from=1\0x");
+        assert!(!chain.rewritten);
+        assert!(!chain.truncated);
+        assert_eq!(chain.rewrites.len(), 1);
+        assert_eq!(chain.rewrites[0].message, "binary body passthrough");
     }
 }

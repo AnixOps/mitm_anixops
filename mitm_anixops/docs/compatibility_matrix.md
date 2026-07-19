@@ -87,14 +87,14 @@ features it understands.
 | Response body mock | Supported for buffered plain text | `anixops_rewrite_apply_body`, chain-capable `anixops_rewrite_apply_body_chain`, `ResponseEchoRewrite.Common.conf`, `ResponseEchoRewrite.Common.Malformed.conf`, `config/response_echo_rewrite_common_fixture_maps_direct_and_url_echo_response`, and `config/response_echo_rewrite_common_strict_fixture_rejects_missing_body` |
 | Request/response body regex replace | Supported for buffered plain text | POSIX ERE, capture replacement, global replacement, empty-match tests, and chain API tests proving previous output feeds the next matching body rule |
 | Request/response body JSON path replace | Supported subset for buffered JSON | `$.field`, `$['field']`, empty, common escaped, and `\uXXXX` bracket keys, nested object path, and positive/negative array index tests |
-| Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with configurable max-input bytes |
+| Request/response body JQ rewrite actions | Supported with optional backend | `request-body-jq`, `http-request-jq`, `response-body-jq`, and `http-response-jq` parse and match. Default builds fail open with `jq backend unavailable`; `JQ=1` builds execute through libjq with configurable input/output byte and output-value budgets, plus POSIX timeout and child-memory isolation |
 | Alpha proxy body rewrite path | Supported subset | `make script-contract-e2e` verifies buffered request/response body rewrite before script dispatch through the HTTP/1.1 MITM shim, which now calls the chain body rewrite API |
 | Request header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header`, `HeaderRequestRegexMutation.Common.conf`, `HeaderRequestRegexMutation.Common.Malformed.conf`, `Loon.HeaderMutation.plugin`, `Surge.HeaderMutation.sgmodule`, `config/header_request_regex_mutation_common_fixture_maps_request_header_regex`, `config/header_request_regex_mutation_common_fixture_rejects_invalid_header_regex`, `config/loon_header_mutation_fixture_maps_header_rewrites`, `config/surge_header_mutation_fixture_maps_header_rewrites` |
 | Response header add/replace/delete/regex replace | Supported as structured operation | `anixops_rewrite_evaluate_header`, `HeaderResponseMutation.Common.conf`, `HeaderResponseMutation.Common.Malformed.conf`, `Loon.HeaderMutation.plugin`, `Surge.HeaderMutation.sgmodule`, `config/header_response_mutation_common_fixture_maps_response_header_add_replace`, `config/header_response_mutation_common_strict_fixture_rejects_missing_header_name`, `config/loon_header_mutation_fixture_maps_header_rewrites`, `config/loon_header_mutation_malformed_fixture_rejects_invalid_header_regex`, `config/surge_header_mutation_fixture_maps_header_rewrites`, `config/surge_header_mutation_malformed_fixture_rejects_invalid_header_regex` |
 | Case-insensitive named header lookup | Supported foundation | `anixops_rewrite_evaluate_named_header` filters rewrite rules by header name using case-insensitive matching; Go/Rust wrappers expose the same helper |
 | Multi-value header-list application | Supported Alpha bounded list | `anixops_rewrite_apply_headers` applies add/replace/delete and regex replace across a bounded header list with case-insensitive names; tests cover request multi-value semantics and response `Set-Cookie` fields kept as independent header entries |
 | Alpha proxy header rewrite path | Supported subset | `make script-contract-e2e` verifies request/response header rewrite before script dispatch through the HTTP/1.1 MITM shim |
-| Full JQ-style JSON rewrites | Supported subset with gaps | libjq first-output-wins, empty-output, invalid JSON, compile-error, input-limit fail-open, and output-buffer fail-open policies are tested; timeout/memory limits and broad corpus coverage remain gaps |
+| Full JQ-style JSON rewrites | Supported subset with gaps | libjq first-output-wins, empty-output, invalid JSON, compile-error, input-limit, output-buffer, output-value, POSIX timeout, and POSIX child-memory fail-open policies are tested; internal recursion/iteration limits and broad corpus coverage remain gaps |
 | Compression/chunk handling | Out of scope | adapter responsibility |
 
 ## Script Dispatch
@@ -118,7 +118,7 @@ features it understands.
 | Script timeout/error policy | Alpha runner/proxy shim subset | Rule-level `timeout` metadata overrides the global runner timeout; max-size overflow fails open; `make runner-check` covers a throwing replay script, and `make script-contract-e2e` verifies timed-out and throwing response scripts fail open after static rewrites instead of returning 502 |
 | Double `$done` | Alpha runner backend | `make runner-check` covers no-network replay where the first `$done` body wins and a later `$done` call is ignored |
 | Cron/task trigger runtime | Planned | Source contract is `docs/compatibility/cron-task-trigger.md`; parser descriptors are exposed through the C ABI, while scheduler, task runtime bindings, permissions, and concurrency policy remain future work |
-| Response compression for scripts | Alpha proxy shim subset | gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
+| Request/response compression for scripts | Alpha proxy shim subset | gzip/deflate request bodies are decoded before static body/script mutation and sent upstream as identity; gzip/deflate response bodies are decoded before the script runner and returned as identity after mutation; brotli/zstd/streaming remain future work |
 
 ## Diagnostics And ABI
 
@@ -150,8 +150,8 @@ features it understands.
   script-runtime replay, `$done.body` writeback, throwing-script fail-open, and file-backed `$persistentStore`.
 - `make proxy-shim-check`: Alpha HTTP/1.1 CONNECT/TLS proxy shim build smoke test.
 - `make script-contract-e2e`: request/response header/body-chain rewrite and script mutation through the proxy path,
-  including shared `$persistentStore`, script timeout/exception fail-open, gzip/deflate response decode, and identity
-  writeback.
+  including shared `$persistentStore`, script timeout/exception fail-open, gzip/deflate request/response decode, and
+  identity writeback.
 - `make pkg-config-check`: staged Alpha-style install layout compiled and executed through `pkg-config`.
 - `make cmake-package-check`: staged Alpha-style install layout checked as a CMake config package, including
   configure/build/run smoke when `cmake` is available.

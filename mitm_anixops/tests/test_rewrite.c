@@ -2058,6 +2058,216 @@ static void body_rewrite_chain_applies_matching_rules_in_order(void)
 	anixops_engine_free(engine);
 }
 
+static void body_size_limit_fails_open_for_single_and_chain(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	anixops_body_rewrite_chain_t chain;
+	char body[128];
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/limit request-body-replace-regex \"from=([0-9]+)\" \"mid=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/limit request-body-replace-regex \"mid=([0-9]+)\" \"to=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_max_body_bytes(engine, 6), ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/limit",
+			ANIXOPS_PHASE_REQUEST,
+			"from=42",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "body exceeds limit");
+	ANIXOPS_EXPECT_STREQ(body, "from=42");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(
+			engine,
+			"https://api.test/limit",
+			ANIXOPS_PHASE_REQUEST,
+			"from=42",
+			body,
+			sizeof(body),
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 2);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "body exceeds limit");
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[1].message, "body exceeds limit");
+	ANIXOPS_EXPECT_STREQ(body, "from=42");
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_max_body_bytes(engine, 7), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/limit",
+			ANIXOPS_PHASE_REQUEST,
+			"from=42",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "mid=42");
+
+	anixops_engine_free(engine);
+}
+
+static void body_bytes_api_preserves_binary_and_tracks_lengths(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	anixops_body_rewrite_chain_t chain;
+	unsigned char out[64];
+	size_t out_len = 0;
+	const unsigned char binary_body[] = {'f', 'r', 'o', 'm', '=', '1', 0, 'x'};
+	const unsigned char invalid_utf8[] = {0xC3, 0x28};
+	const unsigned char text_body[] = "from=1";
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/bytes request-body-replace-regex \"from=([0-9]+)\" \"to=$1\""),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/empty request-body-replace-regex \"^$\" generated"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_bytes(
+			engine,
+			"https://api.test/bytes",
+			ANIXOPS_PHASE_REQUEST,
+			binary_body,
+		sizeof(binary_body),
+			out,
+			sizeof(out),
+			&out_len,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, sizeof(binary_body));
+	ANIXOPS_EXPECT_TRUE(memcmp(out, binary_body, sizeof(binary_body)) == 0);
+	ANIXOPS_EXPECT_STREQ(result.message, "binary body passthrough");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_bytes(
+			engine,
+			"https://api.test/bytes",
+			ANIXOPS_PHASE_REQUEST,
+			invalid_utf8,
+		sizeof(invalid_utf8),
+			out,
+			sizeof(out),
+			&out_len,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, sizeof(invalid_utf8));
+	ANIXOPS_EXPECT_TRUE(memcmp(out, invalid_utf8, sizeof(invalid_utf8)) == 0);
+	ANIXOPS_EXPECT_STREQ(result.message, "binary body passthrough");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_bytes(
+			engine,
+			"https://api.test/bytes",
+			ANIXOPS_PHASE_REQUEST,
+			text_body,
+		strlen((const char *)text_body),
+			out,
+			sizeof(out),
+			&out_len,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, 4);
+	ANIXOPS_EXPECT_TRUE(memcmp(out, "to=1", 4) == 0);
+	ANIXOPS_EXPECT_STREQ(result.message, "body rewritten");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_bytes(
+			engine,
+			"https://api.test/empty",
+			ANIXOPS_PHASE_REQUEST,
+			NULL,
+			0,
+			out,
+			sizeof(out),
+			&out_len,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, strlen("generated"));
+	ANIXOPS_EXPECT_TRUE(memcmp(out, "generated", out_len) == 0);
+	ANIXOPS_EXPECT_STREQ(result.message, "body rewritten");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_bytes(
+			engine,
+			"https://api.test/bytes",
+			ANIXOPS_PHASE_REQUEST,
+			binary_body,
+		sizeof(binary_body),
+			out,
+		2,
+			&out_len,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, 2);
+	ANIXOPS_EXPECT_TRUE(memcmp(out, binary_body, 2) == 0);
+	ANIXOPS_EXPECT_STREQ(result.message, "body truncated");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain_bytes(
+			engine,
+			"https://api.test/bytes",
+			ANIXOPS_PHASE_REQUEST,
+			binary_body,
+			sizeof(binary_body),
+			out,
+			sizeof(out),
+			&out_len,
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, sizeof(binary_body));
+	ANIXOPS_EXPECT_TRUE(memcmp(out, binary_body, sizeof(binary_body)) == 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "binary body passthrough");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain_bytes(
+			engine,
+			"https://api.test/bytes",
+			ANIXOPS_PHASE_REQUEST,
+			text_body,
+			strlen((const char *)text_body),
+			out,
+			sizeof(out),
+			&out_len,
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(out_len, 4);
+	ANIXOPS_EXPECT_TRUE(memcmp(out, "to=1", 4) == 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 1);
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "body rewritten");
+
+	anixops_engine_free(engine);
+}
+
 static void legacy_apply_body_keeps_first_body_rule_behavior(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -2211,6 +2421,40 @@ static void jq_backend_handles_output_and_error_policy(void)
 	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
 	ANIXOPS_EXPECT_STREQ(body, "1");
 
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_values(engine, 1), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_values(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/multi",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"items\":[1,2]}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq output exceeds limit");
+	ANIXOPS_EXPECT_STREQ(body, "{\"items\":[1,2]}");
+	{
+		anixops_body_rewrite_chain_t chain;
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_apply_body_chain(
+				engine,
+				"https://api.test/jq/multi",
+				ANIXOPS_PHASE_RESPONSE,
+				"{\"items\":[1,2]}",
+				body,
+				sizeof(body),
+				&chain),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+		ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq output exceeds limit");
+		ANIXOPS_EXPECT_STREQ(body, "{\"items\":[1,2]}");
+	}
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_values(engine, 0), ANIXOPS_OK);
+
 	ANIXOPS_EXPECT_EQ_INT(
 		anixops_rewrite_apply_body(
 			engine,
@@ -2320,6 +2564,106 @@ static void jq_backend_handles_output_and_error_policy(void)
 		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq input exceeds limit");
 		ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
 	}
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_input_bytes(engine, 0), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_output_bytes(engine, 4), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_output_bytes(engine), 4);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/limited",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ok\":true}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq output exceeds limit");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+	{
+		anixops_body_rewrite_chain_t chain;
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_apply_body_chain(
+				engine,
+				"https://api.test/jq/limited",
+				ANIXOPS_PHASE_RESPONSE,
+				"{\"ok\":true}",
+				body,
+				sizeof(body),
+				&chain),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+		ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+		ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq output exceeds limit");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/jq/timeout response-body-jq 'def f: f; f'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_execution_time_ms(engine, 50), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_execution_time_ms(engine), 50);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/timeout",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ok\":true}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_STREQ(result.message, "jq execution time limit exceeded");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+	{
+		anixops_body_rewrite_chain_t chain;
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_apply_body_chain(
+				engine,
+				"https://api.test/jq/timeout",
+				ANIXOPS_PHASE_RESPONSE,
+				"{\"ok\":true}",
+				body,
+				sizeof(body),
+				&chain),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+		ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq execution time limit exceeded");
+		ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+	}
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_execution_time_ms(engine, 0), ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://api\\.test/jq/memory response-body-jq '[range(0;100000000)]'"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_memory_bytes(engine, 16u * 1024u * 1024u), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_max_memory_bytes(engine), 16u * 1024u * 1024u);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/jq/memory",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ok\":true}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+#if defined(__unix__) || defined(__APPLE__)
+	ANIXOPS_EXPECT_STREQ(result.message, "jq memory limit exceeded");
+#else
+	ANIXOPS_EXPECT_STREQ(result.message, "jq memory limit unavailable");
+#endif
+	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_memory_bytes(engine, 0), ANIXOPS_OK);
 
 	anixops_engine_free(engine);
 }
@@ -3393,6 +3737,18 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/body_rewrite_chain_applies_matching_rules_in_order",
 		body_rewrite_chain_applies_matching_rules_in_order);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/body_size_limit_fails_open_for_single_and_chain",
+		body_size_limit_fails_open_for_single_and_chain);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/body_bytes_api_preserves_binary_and_tracks_lengths",
+		body_bytes_api_preserves_binary_and_tracks_lengths);
 	add_test(
 		tests,
 		count,

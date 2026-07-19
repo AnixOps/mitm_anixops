@@ -2990,6 +2990,134 @@ static void surge_body_mutation_malformed_fixture_rejects_invalid_regex(void)
 	free(fixture);
 }
 
+static void surge_body_jq_mutation_fixture_maps_request_and_response_jq(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.BodyJqMutation.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	anixops_rewrite_result_t rewrite;
+	char body[128];
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_SURGE_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_argument_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 2);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 2);
+
+	for (i = 0; i < 2; i++) {
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, i, &diagnostic), ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_ACCEPTED);
+		ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+		ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, i + 2);
+		ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+		ANIXOPS_EXPECT_STREQ(diagnostic.message, "rewrite rule accepted");
+	}
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://jq.surge.test/request",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"enabled\":false}",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_JQ);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 0);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 0);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, ".enabled = true");
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "jq body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true}");
+#else
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "jq backend unavailable");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":false}");
+#endif
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://jq.surge.test/response",
+			ANIXOPS_PHASE_REQUEST,
+			"{\"enabled\":true}",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_NONE);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, -1);
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true}");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://jq.surge.test/response",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"enabled\":true}",
+			body,
+			sizeof(body),
+			&rewrite),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.status_code, 200);
+	ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, 1);
+	ANIXOPS_EXPECT_STREQ(rewrite.value, ".enabled = false");
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "jq body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":false}");
+#else
+	ANIXOPS_EXPECT_STREQ(rewrite.message, "jq backend unavailable");
+	ANIXOPS_EXPECT_STREQ(body, "{\"enabled\":true}");
+#endif
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void surge_body_jq_mutation_malformed_fixture_rejects_missing_filter(void)
+{
+	char *fixture = read_fixture("tests/fixtures/Surge.BodyJqMutation.Malformed.sgmodule");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_SURGE_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_task_descriptor_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_SURGE_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void surge_body_json_mutation_fixture_maps_response_body_json_replace(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Surge.BodyJsonMutation.sgmodule");
@@ -7895,6 +8023,121 @@ static void body_jq_alias_mutation_common_strict_fixture_rejects_missing_filter(
 	free(fixture);
 }
 
+static void body_jq_advanced_common_fixture_maps_filter_edges(void)
+{
+	char *fixture = read_fixture("tests/fixtures/BodyJqAdvanced.Common.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t rewrite;
+	char body[256];
+	const char *urls[] = {
+		"https://jq.advanced.body.mutation.test/predicate",
+		"https://jq.advanced.body.mutation.test/slice",
+		"https://jq.advanced.body.mutation.test/recursive",
+		"https://jq.advanced.body.mutation.test/computed",
+		"https://jq.advanced.body.mutation.test/delete",
+		"https://jq.advanced.body.mutation.test/map",
+		"https://jq.advanced.body.mutation.test/entries",
+		"https://jq.advanced.body.mutation.test/walk",
+		"https://jq.advanced.body.mutation.test/test",
+		"https://jq.advanced.body.mutation.test/capture",
+		"https://jq.advanced.body.mutation.test/assignment",
+		"https://jq.advanced.body.mutation.test/iterator"
+	};
+	const char *inputs[] = {
+		"{\"items\":[{\"name\":\"disabled\",\"enabled\":false},{\"name\":\"enabled\",\"enabled\":true}]}",
+		"{\"items\":[1,2,3,4]}",
+		"{\"name\":\"root\",\"nested\":{\"name\":\"child\"}}",
+		"{\"items\":[{\"name\":\"alpha\",\"value\":1},{\"name\":\"beta\",\"value\":2}]}",
+		"{\"items\":[{\"name\":\"alpha\"},{\"name\":\"beta\"}],\"secret\":\"remove\"}",
+		"{\"items\":[{\"name\":\"alpha\"},{\"name\":\"beta\"}]}",
+		"{\"keep\":1,\"drop\":2}",
+		"{\"name\":\"alpha\",\"nested\":{\"name\":\"beta\"}}",
+		"{\"name\":\"ABC\"}",
+		"{\"path\":\"alice/42\"}",
+		"{\"items\":[{\"value\":1},{\"value\":2}]}",
+		"{\"items\":[{\"name\":\"alpha\"},{\"name\":\"beta\"}]}"
+	};
+	const char *expected[] = {
+		"\"enabled\"",
+		"[2,3]",
+		"\"root\"",
+		"\"alpha:1,beta:2\"",
+		"{\"items\":[{\"name\":\"alpha\"},{\"name\":\"beta\"}]}",
+		"[\"alpha\",\"beta\"]",
+		"{\"keep\":1}",
+		"{\"name\":\"ALPHA\",\"nested\":{\"name\":\"BETA\"}}",
+		"true",
+		"{\"user\":\"alice\",\"id\":\"42\"}",
+		"{\"items\":[2,3]}",
+		"\"alpha\""
+	};
+	size_t i;
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+	(void)expected;
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 12);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 12);
+	for (i = 0; i < 12; i++) {
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_apply_body(
+				engine,
+				urls[i],
+				ANIXOPS_PHASE_RESPONSE,
+				inputs[i],
+				body,
+				sizeof(body),
+				&rewrite),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_EQ_INT(rewrite.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
+		ANIXOPS_EXPECT_EQ_INT(rewrite.rule_index, (int)i);
+#if defined(ANIXOPS_ENABLE_LIBJQ)
+		ANIXOPS_EXPECT_STREQ(rewrite.message, "jq body rewritten");
+		ANIXOPS_EXPECT_STREQ(body, expected[i]);
+#else
+		ANIXOPS_EXPECT_STREQ(rewrite.message, "jq backend unavailable");
+		ANIXOPS_EXPECT_STREQ(body, inputs[i]);
+#endif
+	}
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
+static void body_jq_advanced_common_strict_fixture_rejects_missing_filter(void)
+{
+	char *fixture = read_fixture("tests/fixtures/BodyJqAdvanced.Common.Malformed.conf");
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rule_diagnostic_t diagnostic;
+	int status = 0;
+	size_t line = 0;
+	char message[ANIXOPS_MESSAGE_CAP];
+	ANIXOPS_EXPECT_TRUE(fixture != NULL);
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_compat_profile(engine, ANIXOPS_COMPAT_LOON_STRICT), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, fixture), ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rewrite_rule_count(engine), 0);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_rule_diagnostic_count(engine), 1);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_copy_rule_diagnostic(engine, 0, &diagnostic), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.status, ANIXOPS_RULE_DIAGNOSTIC_REJECTED);
+	ANIXOPS_EXPECT_EQ_INT(diagnostic.profile, ANIXOPS_COMPAT_LOON_STRICT);
+	ANIXOPS_EXPECT_EQ_SIZE(diagnostic.line, 2);
+	ANIXOPS_EXPECT_STREQ(diagnostic.section, "Rewrite");
+	ANIXOPS_EXPECT_STREQ(diagnostic.action, "rewrite");
+	ANIXOPS_EXPECT_TRUE(strstr(diagnostic.message, "strict compatibility profile") != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_copy_last_error(engine, &status, &line, message, sizeof(message)),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(status, ANIXOPS_ERR_PARSE);
+	ANIXOPS_EXPECT_EQ_SIZE(line, 2);
+	ANIXOPS_EXPECT_TRUE(strstr(message, "strict compatibility profile") != NULL);
+
+	anixops_engine_free(engine);
+	free(fixture);
+}
+
 static void loon_body_mutation_fixture_maps_body_rewrites(void)
 {
 	char *fixture = read_fixture("tests/fixtures/Loon.BodyMutation.plugin");
@@ -9860,6 +10103,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		tests,
 		count,
 		cap,
+		"config/surge_body_jq_mutation_fixture_maps_request_and_response_jq",
+		surge_body_jq_mutation_fixture_maps_request_and_response_jq);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/surge_body_jq_mutation_malformed_fixture_rejects_missing_filter",
+		surge_body_jq_mutation_malformed_fixture_rejects_missing_filter);
+	add_test(
+		tests,
+		count,
+		cap,
 		"config/surge_body_json_mutation_fixture_maps_response_body_json_replace",
 		surge_body_json_mutation_fixture_maps_response_body_json_replace);
 	add_test(
@@ -10414,6 +10669,18 @@ void anixops_register_config_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"config/body_jq_alias_mutation_common_strict_fixture_rejects_missing_filter",
 		body_jq_alias_mutation_common_strict_fixture_rejects_missing_filter);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/body_jq_advanced_common_fixture_maps_filter_edges",
+		body_jq_advanced_common_fixture_maps_filter_edges);
+	add_test(
+		tests,
+		count,
+		cap,
+		"config/body_jq_advanced_common_strict_fixture_rejects_missing_filter",
+		body_jq_advanced_common_strict_fixture_rejects_missing_filter);
 	add_test(
 		tests,
 		count,

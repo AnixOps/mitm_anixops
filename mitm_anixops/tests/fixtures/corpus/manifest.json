@@ -47,6 +47,21 @@
       "expectedDiagnosticRejected": 0
     },
     {
+      "name": "Surge JQ Body Mutation",
+      "platform": "surge",
+      "path": "../Surge.BodyJqMutation.sgmodule",
+      "source": "bundled fixture",
+      "sha256": "4d0b3fb4251e4f408b8661be1fe404b49edd38b3e34c990a8f192120a9fd6f9f",
+      "expectedStatus": 0,
+      "expectedMitm": 0,
+      "expectedRewrite": 2,
+      "expectedScript": 0,
+      "expectedArgument": 0,
+      "expectedDiagnosticAccepted": 2,
+      "expectedDiagnosticIgnored": 0,
+      "expectedDiagnosticRejected": 0
+    },
+    {
       "name": "Representative Quantumult X",
       "platform": "quantumultx",
       "path": "../Representative.QuantumultX.snippet",
@@ -59,6 +74,21 @@
       "expectedArgument": 0,
       "expectedDiagnosticAccepted": 6,
       "expectedDiagnosticIgnored": 1,
+      "expectedDiagnosticRejected": 0
+    },
+    {
+      "name": "Advanced JQ Body Mutation",
+      "platform": "portable",
+      "path": "../BodyJqAdvanced.Common.conf",
+      "source": "bundled fixture",
+      "sha256": "5729a6d683264632c693a499cbbcf1319b5fdad464fcc0424bfb43edf053a134",
+      "expectedStatus": 0,
+      "expectedMitm": 0,
+      "expectedRewrite": 12,
+      "expectedScript": 0,
+      "expectedArgument": 0,
+      "expectedDiagnosticAccepted": 12,
+      "expectedDiagnosticIgnored": 0,
       "expectedDiagnosticRejected": 0
     }
   ]

@@ -645,12 +645,14 @@ Current CI evidence:
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.ResponseRewrite.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
+- positive fixture `tests/fixtures/Surge.BodyJqMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.HeaderMutation.sgmodule`;
 - negative fixture `tests/fixtures/Surge.CommonConfig.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Surge.BodyJqMutation.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule`;
 - unsupported fixture `tests/fixtures/Surge.MitmCertificateUnsupported.sgmodule`;
 - `config/surge_common_config_fixture_is_supported`;
@@ -663,6 +665,8 @@ Current CI evidence:
 - `config/surge_response_rewrite_malformed_fixture_rejects_invalid_body_regex`;
 - `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
 - `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
+- `config/surge_body_jq_mutation_fixture_maps_request_and_response_jq`;
+- `config/surge_body_jq_mutation_malformed_fixture_rejects_missing_filter`;
 - `config/surge_header_mutation_fixture_maps_header_rewrites`;
 - `config/surge_header_mutation_malformed_fixture_rejects_invalid_header_regex`;
 - `config/surge_mitm_certificate_unsupported_fixture_keeps_material_ignored`;
@@ -1325,7 +1329,22 @@ Input form:
 - request and response body regex replacement rules;
 - request and response body JSON replacement rules.
 - request and response body JQ action-token matching with optional libjq
-  runtime execution or default fail-open behavior.
+  runtime execution or default fail-open behavior, with configurable input and
+  output byte budgets, output-value enumeration budget, and optional POSIX
+  wall-clock timeout isolation and child memory ceiling.
+- already-buffered body mutation calls accept an independent optional
+  max-body-bytes ceiling; `0` disables it and over-limit mutations fail open
+  with the original body preserved.
+- the explicit-length body-bytes APIs report output length and preserve empty,
+  NUL-containing, and invalid-UTF-8 bodies without C-string truncation,
+  including ordered body-chain application;
+- libjq-enabled engines use a bounded configurable 1–16-entry compiled-filter
+  LRU cache (default 4); explicit invalidation plus cache count and hit metrics
+  are exposed for adapter diagnostics, while production cache refresh/reuse
+  policy remains adapter-owned.
+- advanced JQ fixture coverage includes predicate/slice/recursive/computed
+  filters plus `del`, `map`, `with_entries`, `walk`, `test`, `capture`,
+  assignment, and iterator pipes.
 - HTTP-flavored JQ aliases with the same request/response phase separation and
   runtime boundary.
 
@@ -1336,23 +1355,27 @@ Current CI evidence:
 - positive fixture `tests/fixtures/BodyJsonMutation.Common.conf`;
 - positive fixture `tests/fixtures/BodyJqMutation.Common.conf`;
 - positive fixture `tests/fixtures/BodyJqAliasMutation.Common.conf`;
+- positive fixture `tests/fixtures/BodyJqAdvanced.Common.conf`;
 - positive fixture `tests/fixtures/Loon.BodyMutation.plugin`;
 - positive fixture `tests/fixtures/Loon.BodyJsonMutation.plugin`;
 - positive fixture `tests/fixtures/Loon.ResponseBodyJsonMutation.plugin`;
 - positive fixture `tests/fixtures/QuantumultX.BodyMutation.snippet`;
 - positive fixture `tests/fixtures/Surge.BodyMutation.sgmodule`;
 - positive fixture `tests/fixtures/Surge.BodyJsonMutation.sgmodule`;
+- positive fixture `tests/fixtures/Surge.BodyJqMutation.sgmodule`;
 - negative fixture `tests/fixtures/BodyMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/BodyRequestJsonMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/BodyJsonMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/BodyJqMutation.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/BodyJqAliasMutation.Common.Malformed.conf`;
+- negative fixture `tests/fixtures/BodyJqAdvanced.Common.Malformed.conf`;
 - negative fixture `tests/fixtures/Loon.BodyMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/Loon.BodyJsonMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/Loon.ResponseBodyJsonMutation.Malformed.plugin`;
 - negative fixture `tests/fixtures/QuantumultX.BodyMutation.Malformed.snippet`;
 - negative fixture `tests/fixtures/Surge.BodyMutation.Malformed.sgmodule`;
 - negative fixture `tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule`;
+- negative fixture `tests/fixtures/Surge.BodyJqMutation.Malformed.sgmodule`;
 - `config/body_mutation_common_fixture_is_supported`;
 - `config/body_mutation_common_fixture_rejects_invalid_body_regex`;
 - `config/body_request_json_mutation_common_fixture_maps_request_body_json_replace`;
@@ -1363,6 +1386,8 @@ Current CI evidence:
 - `config/body_jq_mutation_common_strict_fixture_rejects_missing_filter`;
 - `config/body_jq_alias_mutation_common_fixture_maps_http_request_and_response_jq`;
 - `config/body_jq_alias_mutation_common_strict_fixture_rejects_missing_filter`;
+- `config/body_jq_advanced_common_fixture_maps_filter_edges`;
+- `config/body_jq_advanced_common_strict_fixture_rejects_missing_filter`;
 - `config/loon_body_mutation_fixture_maps_body_rewrites`;
 - `config/loon_body_mutation_malformed_fixture_rejects_invalid_body_regex`;
 - `config/loon_body_json_mutation_fixture_maps_request_body_json_replace`;
@@ -1375,15 +1400,28 @@ Current CI evidence:
 - `config/surge_body_mutation_malformed_fixture_rejects_invalid_regex`;
 - `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
 - `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
+- `config/surge_body_jq_mutation_fixture_maps_request_and_response_jq`;
+- `config/surge_body_jq_mutation_malformed_fixture_rejects_missing_filter`;
+- `abi/jq_max_output_values_option_is_configurable`;
+- `abi/jq_execution_timeout_option_is_configurable`;
+- `abi/jq_memory_option_is_configurable`;
+- `abi/jq_filter_cache_reuses_compiled_program`;
+- `abi/jq_filter_cache_policy_is_configurable`;
+- `abi/max_body_option_is_configurable`;
 - regex, JSON path, body-chain, and optional JQ tests under
-  `tests/test_rewrite.c`.
+  `tests/test_rewrite.c`, including
+  `rewrite/jq_backend_handles_output_and_error_policy`,
+  `rewrite/body_size_limit_fails_open_for_single_and_chain`,
+  `rewrite/body_bytes_api_preserves_binary_and_tracks_lengths`, and the ABI
+  budget check `abi/jq_max_output_option_is_configurable`.
 
 Unimplemented items:
 
 - streaming body mutation;
 - compression/framing behavior;
 - charset matrix;
-- broader JSON/JQ corpus and production runtime limits;
+- broader JSON/JQ corpus, internal recursion/iteration limits, and production
+  cache refresh/reuse policy beyond the bounded per-engine cache;
 - production adapter HTTP body serialization.
 
 ### Decision Trace Schema

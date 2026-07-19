@@ -24,6 +24,7 @@ The current common-config subset accepts:
 - `#!arguments = Feature:true,Mode:value` inline argument defaults;
 - `[URL Rewrite]` URL redirect and reject rules;
 - `[URL Rewrite]` response body regex and JSON mutation rules;
+- `[URL Rewrite]` request and response JQ body mutation rules;
 - `[URL Rewrite]` request and response header mutation rules;
 - `[Script]` attr-list rules with `type`, `pattern`, `requires-body`,
   `timeout`, `timeout-ms`, `max-size`, `max_size`, `script-path`, and
@@ -57,6 +58,7 @@ tests/fixtures/Surge.RequestRewrite.sgmodule
 tests/fixtures/Surge.ResponseRewrite.sgmodule
 tests/fixtures/Surge.BodyMutation.sgmodule
 tests/fixtures/Surge.BodyJsonMutation.sgmodule
+tests/fixtures/Surge.BodyJqMutation.sgmodule
 tests/fixtures/Surge.HeaderMutation.sgmodule
 ```
 
@@ -73,14 +75,18 @@ Expected behavior:
   mutation fixture;
 - one response body JSON replacement rule is registered in the dedicated body
   mutation fixture;
+- two request/response JQ body mutation rules are registered in the dedicated
+  JQ body mutation fixture;
 - eight request/response header mutation rules are registered in the dedicated
   header mutation fixture;
 - two script rules are registered;
 - three MITM host patterns are registered;
 - module metadata is tolerated and recorded as diagnostics;
 - redirect, reject, response body regex mutation, response body JSON mutation,
-  request script, response script, header mutation, argument resolution, and
-  MITM allow/deny behavior are observable through public ABI calls.
+  request/response JQ body mutation, request script, response script, header
+  mutation, argument resolution, and MITM allow/deny behavior are observable
+  through public ABI calls, with JQ execution remaining optional and fail-open
+  when unavailable.
 
 ## Negative Case
 
@@ -92,6 +98,7 @@ tests/fixtures/Surge.RequestRewrite.Malformed.sgmodule
 tests/fixtures/Surge.ResponseRewrite.Malformed.sgmodule
 tests/fixtures/Surge.BodyMutation.Malformed.sgmodule
 tests/fixtures/Surge.BodyJsonMutation.Malformed.sgmodule
+tests/fixtures/Surge.BodyJqMutation.Malformed.sgmodule
 tests/fixtures/Surge.HeaderMutation.Malformed.sgmodule
 ```
 
@@ -102,6 +109,8 @@ Expected behavior:
 - an invalid response body regex rejects config load;
 - `ANIXOPS_COMPAT_SURGE_STRICT` rejects a malformed
   `response-body-json-replace` line without a JSON path and replacement value;
+- `ANIXOPS_COMPAT_SURGE_STRICT` rejects a malformed `http-response-jq` line
+  without a filter;
 - an invalid response header regex rejects config load;
 - the malformed script line records a rejected diagnostic with section `Script`
   and action `script`;
@@ -164,6 +173,10 @@ Required CI evidence:
   `config/surge_body_json_mutation_fixture_maps_response_body_json_replace`;
 - `tests/test_config.c` registers
   `config/surge_body_json_mutation_malformed_fixture_rejects_missing_json_path`;
+- `tests/test_config.c` registers
+  `config/surge_body_jq_mutation_fixture_maps_request_and_response_jq`;
+- `tests/test_config.c` registers
+  `config/surge_body_jq_mutation_malformed_fixture_rejects_missing_filter`;
 - `tests/test_config.c` registers
   `config/surge_header_mutation_fixture_maps_header_rewrites`;
 - `tests/test_config.c` registers

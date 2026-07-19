@@ -1,0 +1,3 @@
+[URL Rewrite]
+^https:\/\/jq\.surge\.test\/request http-request-jq '.enabled = true'
+^https:\/\/jq\.surge\.test\/response http-response-jq '.enabled = false'

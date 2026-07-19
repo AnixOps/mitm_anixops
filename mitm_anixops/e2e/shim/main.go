@@ -1058,6 +1058,11 @@ func (ps *proxyServer) applyRequestScript(
 	if err != nil {
 		return "", "", nil, nil, err
 	}
+	action, _, _, err := ps.engine.rewriteForPhase(rawURL, phaseRequest)
+	if err != nil {
+		return "", "", nil, nil, err
+	}
+	needsBody := match.requiresBody != 0 || rewriteActionIsBody(action)
 
 	var bodyBytes []byte
 	if body != nil {
@@ -1069,6 +1074,18 @@ func (ps *proxyServer) applyRequestScript(
 	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseRequest, header)
 	if err != nil {
 		return "", "", nil, nil, err
+	}
+	if needsBody {
+		decodedBody, decoded, decodeErr := decodeResponseBodyForScript(nextHeader.Get("Content-Encoding"), bodyBytes)
+		if decodeErr != nil {
+			ps.debugf("request_body_decode_fail_open url=%s encoding=%s err=%v", rawURL, nextHeader.Get("Content-Encoding"), decodeErr)
+			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+		}
+		if decoded {
+			bodyBytes = decodedBody
+			normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
+			ps.debugf("request_body_decoded url=%s bytes=%d", rawURL, len(bodyBytes))
+		}
 	}
 	rewrittenBody, bodyChanged, bodyMessage, err := ps.engine.applyBody(rawURL, phaseRequest, bodyBytes)
 	if err != nil {
@@ -1725,9 +1742,10 @@ func startOrigin(addr string, cache *certCache) error {
 			body, _ := io.ReadAll(r.Body)
 			w.Header().Set("Content-Type", "application/json")
 			payload, _ := json.Marshal(map[string]interface{}{
-				"code":          0,
-				"requestScript": r.Header.Get("X-AnixOps-Request-Script"),
-				"body":          string(body),
+				"code":            0,
+				"requestScript":   r.Header.Get("X-AnixOps-Request-Script"),
+				"requestEncoding": r.Header.Get("Content-Encoding"),
+				"body":            string(body),
 			})
 			payload = append(payload, '\n')
 			switch r.URL.Query().Get("compressed") {
