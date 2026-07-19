@@ -27,8 +27,9 @@ publishing.
   fail-open with `jq backend unavailable`, and `JQ=1` now fails open when input or output exceeds configurable byte
   budgets or output exceeds the caller buffer; the optional backend also
   bounds multi-output enumeration with a configurable output-value budget;
-  POSIX `JQ=1` builds can isolate a configured wall-clock timeout;
-  POSIX `JQ=1` builds can also apply a configured child memory ceiling;
+  nonzero execution-time or memory process limits are accepted by the ABI but
+  fail open with stable unavailable diagnostics until a host-owned exec worker
+  supplies a safe isolation boundary;
   the bounded per-engine compiled-filter cache has configurable capacity and
   explicit invalidation; already-buffered body mutations also have an optional
   max-body-bytes ceiling and an explicit-length bytes API; remaining work includes internal recursion/iteration limits, production cache

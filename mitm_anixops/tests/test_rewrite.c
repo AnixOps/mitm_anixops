@@ -2618,7 +2618,7 @@ static void jq_backend_handles_output_and_error_policy(void)
 			&result),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
-	ANIXOPS_EXPECT_STREQ(result.message, "jq execution time limit exceeded");
+	ANIXOPS_EXPECT_STREQ(result.message, "jq execution limit unavailable");
 	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
 	{
 		anixops_body_rewrite_chain_t chain;
@@ -2634,7 +2634,7 @@ static void jq_backend_handles_output_and_error_policy(void)
 			ANIXOPS_OK);
 		ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
 		ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
-		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq execution time limit exceeded");
+		ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "jq execution limit unavailable");
 		ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
 	}
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_execution_time_ms(engine, 0), ANIXOPS_OK);
@@ -2657,64 +2657,9 @@ static void jq_backend_handles_output_and_error_policy(void)
 			&result),
 		ANIXOPS_OK);
 	ANIXOPS_EXPECT_EQ_INT(result.action, ANIXOPS_REWRITE_RESPONSE_BODY_JQ);
-#if defined(__unix__) || defined(__APPLE__)
-	ANIXOPS_EXPECT_STREQ(result.message, "jq memory limit exceeded");
-#else
 	ANIXOPS_EXPECT_STREQ(result.message, "jq memory limit unavailable");
-#endif
 	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
 	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_jq_max_memory_bytes(engine, 0), ANIXOPS_OK);
-
-	anixops_engine_free(engine);
-}
-#endif
-
-#if defined(ANIXOPS_ENABLE_LIBJQ) && (defined(__unix__) || defined(__APPLE__))
-static void jq_bounded_execution_reuses_parent_cache(void)
-{
-	anixops_engine_t *engine = anixops_engine_new();
-	anixops_rewrite_result_t result;
-	char body[64];
-	ANIXOPS_EXPECT_TRUE(engine != NULL);
-
-	ANIXOPS_EXPECT_EQ_INT(
-		anixops_engine_add_rewrite_rule(
-			engine,
-			"^https://cache\\.test/bounded response-body-jq '.ok = true'"),
-		ANIXOPS_OK);
-	ANIXOPS_EXPECT_EQ_INT(
-		anixops_engine_set_jq_max_memory_bytes(engine, 256u * 1024u * 1024u),
-		ANIXOPS_OK);
-
-	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_apply_body(
-			engine,
-			"https://cache.test/bounded",
-			ANIXOPS_PHASE_RESPONSE,
-			"{\"ok\":false}",
-			body,
-			sizeof(body),
-			&result),
-		ANIXOPS_OK);
-	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
-	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 1);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 0);
-
-	ANIXOPS_EXPECT_EQ_INT(
-		anixops_rewrite_apply_body(
-			engine,
-			"https://cache.test/bounded",
-			ANIXOPS_PHASE_RESPONSE,
-			"{\"ok\":false}",
-			body,
-			sizeof(body),
-			&result),
-		ANIXOPS_OK);
-	ANIXOPS_EXPECT_STREQ(result.message, "jq body rewritten");
-	ANIXOPS_EXPECT_STREQ(body, "{\"ok\":true}");
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_count(engine), 1);
-	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_jq_filter_cache_hit_count(engine), 1);
 
 	anixops_engine_free(engine);
 }
@@ -3819,14 +3764,6 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/jq_backend_handles_output_and_error_policy",
 		jq_backend_handles_output_and_error_policy);
-#endif
-#if defined(ANIXOPS_ENABLE_LIBJQ) && (defined(__unix__) || defined(__APPLE__))
-	add_test(
-		tests,
-		count,
-		cap,
-		"rewrite/jq_bounded_execution_reuses_parent_cache",
-		jq_bounded_execution_reuses_parent_cache);
 #endif
 	add_test(
 		tests,

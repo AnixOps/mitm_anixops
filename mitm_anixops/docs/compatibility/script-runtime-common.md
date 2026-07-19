@@ -41,6 +41,10 @@ script rules.
   later attr-list segment tries to override that body requirement.
 - Local script assets supplied by `--script-map` or `--script-bundle` in the
   Alpha no-network replay runner.
+- The Alpha proxy shim dispatches a buffered body to the Node runner only when
+  it contains no NUL byte and is valid UTF-8. After static mutation,
+  NUL-containing or invalid-UTF-8 request and response bodies bypass every
+  script hook and retain byte-API passthrough semantics.
 
 ## Runtime Bindings
 
@@ -104,6 +108,12 @@ execution, body decoding, header map mutation, and HTTP writeback.
   script.
 - Script exceptions fail open and preserve the static-rewritten object.
 - Script timeout fails open and preserves the static-rewritten object.
+- NUL-containing or invalid-UTF-8 bodies bypass every request and response
+  script hook without entering the Node runner.
+- Runner process failure and malformed runner output fail open with fixed
+  redacted diagnostics; adapter errors and debug logs do not contain runner
+  stderr, raw runner output, body bytes, serialized header maps, or script
+  source content.
 - Double `$done` is first-wins; a later `$done` call must not replace the first
   accepted result.
 
@@ -131,6 +141,8 @@ Runtime traces must distinguish at least:
 - script digest mismatch;
 - body unavailable;
 - body exceeds script max-size;
+- non-text body bypassed before Node dispatch;
+- fixed redacted runner-failure and malformed-runner-output classifications;
 - script execution failed with structured `errorKind` and `errorMessage`
   fields for exception and timeout failures.
 
@@ -162,7 +174,9 @@ network APIs are exposed to JavaScript.
 - `make script-contract-e2e` covers the Alpha proxy path for request/response
   script mutation, static rewrite ordering, `$persistentStore`,
   rule-level timeout fail-open, exception fail-open, and gzip/deflate response
-  decode plus gzip/deflate request decode, each with identity writeback.
+  decode plus gzip/deflate request decode, each with identity writeback. It
+  also proves binary request/response bodies bypass Node script dispatch and
+  runner failure logs retain only a fixed redacted classification.
 - `scripts/script-runtime-security-gate.sh` requires this security boundary,
   the pending production runtime/redaction manual-intervention markers, the
   no-embedded-engine dependency decision, and matrix/source-contract evidence
@@ -187,6 +201,6 @@ The matrix row is `script runtime contract` in
 - Production script download, cache refresh, and signature policy.
 - Full platform Web API compatibility.
 - Streaming body runtime.
-- Binary body mutation.
+- Script-driven binary body mutation.
 - Production memory, CPU, and storage quotas.
 - Adapter-specific log redaction policy.

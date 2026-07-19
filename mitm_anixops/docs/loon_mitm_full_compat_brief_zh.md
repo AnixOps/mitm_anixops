@@ -114,7 +114,7 @@ anixops-mitm-runner proxy --plugin plugin.plugin --listen 127.0.0.1:19080
 - `select(...)`
 - `map(...)`
 - `with_entries(...)`
-- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、input-limit fail-open、output-buffer fail-open、output-value budget fail-open、POSIX timeout isolation fail-open
+- pipe、assignment、iterator、empty output、multi-output、compile error、runtime error、input-limit fail-open、output-buffer fail-open、output-value budget fail-open、非零 timeout/memory 进程限制的 unavailable fail-open；安全执行器由 host adapter 后续提供
 
 验收标准：Surge `http-request-jq` / `http-response-jq`、LOON JSON rewrite、真实插件 corpus 都能生成稳定 trace。
 
@@ -190,7 +190,7 @@ Quantumult X：
 
 - 接入 libjq 或兼容 engine。
 - 支持 request/response JQ body rewrite。
-- 增加输入/输出/多值预算、POSIX 超时与子进程内存上限、默认 4 且可配置 1–16 项并支持显式失效的 bounded 编译 filter cache、错误诊断和 trace；内部递归/迭代预算仍待 runtime 层补齐。
+- 增加输入/输出/多值预算、非零 timeout/memory 进程限制的 unavailable fail-open、默认 4 且可配置 1–16 项并支持显式失效的 bounded 编译 filter cache、错误诊断和 trace；安全 timeout/memory worker、内部递归/迭代预算仍待 host runtime 层补齐。
 
 ### Phase 4：JavaScript runtime
 

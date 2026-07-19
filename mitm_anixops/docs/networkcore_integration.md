@@ -221,8 +221,9 @@ by NetworkCore is a placement decision, not a deferral or non-goal.
   compatibility evidence before a tag.
 - Publish the header, `ci/abi_exports.txt`, changelog, fixtures, and semantic
   limits together. Do not ask NetworkCore to vendor a working-tree commit.
-- Treat explicit-length body APIs, binary fail-open behavior, JQ limits, and
-  rule diagnostics as plugin inputs that must retain stable adapter semantics.
+- Treat explicit-length body APIs, binary fail-open behavior, JQ byte/value
+  budgets and unavailable process-limit diagnostics, and rule diagnostics as
+  plugin inputs that must retain stable adapter semantics.
 
 Exit evidence: a tagged `mitm_anixops` release with green CI and a documented
 ABI delta; no change is claimed live in NetworkCore before its vendor update.
@@ -295,8 +296,10 @@ and upstream TLS invariants be verified before request mutation is enabled.
   only for dispatch metadata.
 - Add NetworkCore-owned script fetch/cache refresh, cancellation, quotas,
   persistent-store locking, and redacted trace behavior.
-- Complete the optional JQ runtime policy with host-side cache refresh and
-  recursion/iteration defense; retain the C-core byte/time/memory limits.
+- Complete the optional JQ runtime policy with host-side cache refresh,
+  recursion/iteration defense, and any timeout/memory exec worker. The policy
+  core retains byte/value budgets only; its nonzero time/memory process limits
+  fail open with unavailable diagnostics rather than creating a worker.
 
 Exit evidence: scripts and JQ run against real host traffic with timeout,
 exception, binary-body, compression, and persistence tests; raw payload trace

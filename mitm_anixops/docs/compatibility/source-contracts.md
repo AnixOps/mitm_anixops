@@ -1330,14 +1330,16 @@ Input form:
 - request and response body JSON replacement rules.
 - request and response body JQ action-token matching with optional libjq
   runtime execution or default fail-open behavior, with configurable input and
-  output byte budgets, output-value enumeration budget, and optional POSIX
-  wall-clock timeout isolation and child memory ceiling.
+  output byte budgets and output-value enumeration budget; nonzero
+  execution-time or memory process limits fail open with unavailable diagnostics
+  until a host-owned exec worker provides a safe isolation boundary.
 - already-buffered body mutation calls accept an independent optional
   max-body-bytes ceiling; `0` disables it and over-limit mutations fail open
   with the original body preserved.
 - the explicit-length body-bytes APIs report output length and preserve empty,
   NUL-containing, and invalid-UTF-8 bodies without C-string truncation,
-  including ordered body-chain application;
+  including ordered body-chain application; text mutations deliberately bypass
+  binary bodies, and adapters must consume the explicit output length;
 - libjq-enabled engines use a bounded configurable 1–16-entry compiled-filter
   LRU cache (default 4); explicit invalidation plus cache count and hit metrics
   are exposed for adapter diagnostics, while production cache refresh/reuse
@@ -1414,6 +1416,8 @@ Current CI evidence:
   `rewrite/body_size_limit_fails_open_for_single_and_chain`,
   `rewrite/body_bytes_api_preserves_binary_and_tracks_lengths`, and the ABI
   budget check `abi/jq_max_output_option_is_configurable`.
+- `e2e/scripts/script-contract-check.sh` verifies exact NUL-containing and
+  invalid-UTF-8 binary-body passthrough through the explicit-length shim bridge.
 
 Unimplemented items:
 
@@ -1422,6 +1426,8 @@ Unimplemented items:
 - charset matrix;
 - broader JSON/JQ corpus, internal recursion/iteration limits, and production
   cache refresh/reuse policy beyond the bounded per-engine cache;
+- a host-owned exec worker for safe optional JQ execution-time or memory
+  process-limit enforcement;
 - production adapter HTTP body serialization.
 
 ### Decision Trace Schema
@@ -1574,6 +1580,11 @@ Input form:
 - body trigger tokens such as `script-request-body` and
   `script-response-body` force `requires_body=1` in dispatch metadata; header
   trigger tokens keep body access optional by default.
+- the Alpha proxy shim sends a buffered body to the Node runner only when it
+  contains no NUL byte and is valid UTF-8. After static mutation,
+  NUL-containing or invalid-UTF-8 bodies bypass every request/response script
+  hook and retain byte-API passthrough semantics; runner stderr and raw output
+  do not enter adapter errors or debug logs.
 
 Current CI evidence:
 
@@ -1606,7 +1617,9 @@ Current CI evidence:
   `tests/fixtures/runner_double_done_script.js`;
 - structured replay error reporting for exceptions and timeouts, including
   timeout fixture `tests/fixtures/runner_timeout_script.js`;
-- timeout and exception fail-open coverage in `script-contract-e2e`;
+- timeout and exception fail-open coverage in `script-contract-e2e`, including
+  binary request/response script-bypass and fixed redacted runner-failure-log
+  regressions;
 - script bundle sha256 match fixture `tests/fixtures/ScriptBundle.json`;
 - script bundle digest mismatch fixture
   `tests/fixtures/ScriptBundleBadDigest.json`;
@@ -1625,7 +1638,7 @@ Unimplemented items:
   current v1 policy-core dependency decision is no embedded JavaScript engine;
 - production script download/cache refresh/signature policy;
 - full platform Web API compatibility;
-- streaming and binary body runtime behavior;
+- streaming and script-driven binary body mutation;
 - production memory, CPU, storage, and log-redaction policy.
 
 ### Cron And Task Trigger

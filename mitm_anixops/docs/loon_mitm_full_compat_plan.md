@@ -190,11 +190,11 @@ anixops-mitm-runner trace --plugin plugin.plugin --url https://example.com/api
 3. 资源限制：每次执行设置 max input bytes、max output bytes、output-value
    enumeration budget、timeout、recursion/iteration budget，防止插件卡死
    runner。当前 policy core 已实现输入/输出字节预算、output-value
-   enumeration budget、POSIX wall-clock timeout isolation，以及 POSIX 子进程
-   memory ceiling，以及默认 4、可配置 1–16 项且支持显式失效的 bounded
-   per-engine compiled-filter cache；内部
-   recursion/iteration budget 和 production cache refresh/reuse policy 仍属于
-   独立 runtime/adapter 隔离层。
+   enumeration budget，以及默认 4、可配置 1–16 项且支持显式失效的 bounded
+   per-engine compiled-filter cache；非零 timeout/memory 进程限制在 core 中
+   以 unavailable 诊断 fail-open。安全的 timeout/memory exec worker、内部
+   recursion/iteration budget 和 production cache refresh/reuse policy 属于
+   独立 host runtime/adapter 隔离层。
 
 验收：
 
@@ -409,7 +409,7 @@ int anixops_runtime_apply_plan(
 | P0 | Body pipeline | text/json body view、max body size、empty body、binary passthrough；policy core 已提供默认关闭且可配置的 already-buffered max-body-bytes fail-open ceiling，以及单次/chain 显式长度 bytes API | body matrix 覆盖空 body、invalid UTF-8、超限 body |
 | P1 | JS runtime | QuickJS backend，支持 `$request`、`$response`、`$argument`、`$persistentStore`、`$done` | BiliUniverse runtime fixture 不依赖测试专用 Node runner |
 | P1 | Script cache | Alpha runner 已支持 offline bundle、sha256 digest 校验、digest mismatch/cache miss 诊断；后续补 remote fetch/cache refresh policy | digest mismatch、cache miss、offline mode 均有 fixture |
-| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、max-input/max-output/output-value budget、POSIX wall-clock timeout isolation、POSIX child memory ceiling、默认 4 且可配置 1–16 项并支持显式失效的 bounded per-engine compiled-filter cache fail-open；后续补 internal recursion/iteration limit 和 production cache refresh/reuse policy | jq manual 常用 filter 子集和插件 corpus 均通过 |
+| P1 | JQ runtime | Alpha libjq backend 已支持 compile/run/error、first output、empty output、invalid JSON、max-input/max-output/output-value budget、非零 timeout/memory 进程限制的 unavailable fail-open、默认 4 且可配置 1–16 项并支持显式失效的 bounded per-engine compiled-filter cache；后续由 host runtime 补安全 exec worker、internal recursion/iteration limit 和 production cache refresh/reuse policy | jq manual 常用 filter 子集和插件 corpus 均通过 |
 | P1 | Compression | gzip/deflate/brotli/zstd decode/re-encode 或 remove encoding 策略 | Content-Encoding 和 Content-Length replay fixture 通过 |
 | P2 | Async script | async `$done`、timeout、promise、exception fail-open | timeout/throw/double `$done` fixture 通过 |
 | P2 | Persistent store | namespace、read/write、transaction 或 file backend | 多脚本共享状态 fixture 通过 |

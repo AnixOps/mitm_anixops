@@ -10,8 +10,11 @@ Status: `partial`.
 
 This contract fixes the v1.0.0 source of truth for the common body mutation
 subset. It covers parser and policy-core behavior for already-buffered plain
-text or JSON bodies. It does not claim streaming, compression, charset
-conversion, or production HTTP pipeline behavior.
+text or JSON bodies. Explicit-length APIs preserve arbitrary bytes, but text
+mutations intentionally bypass NUL-containing or invalid-UTF-8 binary bodies
+rather than reinterpreting them as C strings. It does not claim
+streaming, compression, charset conversion, or production HTTP pipeline
+behavior.
 
 ## Input Forms
 
@@ -46,7 +49,8 @@ The parser must produce:
   `anixops_rewrite_apply_body_chain_bytes` accept explicit body lengths and
   report explicit output lengths; empty bodies remain rewritable, while
   NUL-containing or invalid-UTF-8 bodies pass through without C-string
-  truncation;
+  truncation; host adapters must consume the explicit output length rather than
+  converting body buffers through text strings;
 
 ## Positive Case
 
@@ -93,19 +97,16 @@ Expected behavior:
   `0` disables each byte budget; it also applies a configurable output-value
   enumeration budget, where `0` disables the value budget; budget failures
   preserve the original body and report a fail-open diagnostic;
-- POSIX `JQ=1` builds can apply a wall-clock execution timeout through child
-  isolation; timeout failures preserve the original body, while `0` keeps the
-  default in-process path;
-- POSIX `JQ=1` builds can apply a configured child address-space memory ceiling;
-  memory-limit failures preserve the original body, while `0` disables the
-  ceiling; platforms without the isolation primitive fail open with a
-  diagnostic;
+- a nonzero optional-libjq execution-time or memory process limit preserves the
+  original body and reports `jq execution limit unavailable` or
+  `jq memory limit unavailable`; the reusable policy core does not fork a child
+  to execute libjq, and a future host-owned exec worker is required before such
+  limits can be enforced safely;
 - each libjq-enabled engine keeps a bounded configurable 1–16-entry
   compiled-filter LRU cache (default 4); the cache can be explicitly
   invalidated through `anixops_engine_clear_jq_filter_cache` or
   `anixops_engine_clear`, and count/hit metrics are observable through the
-  public ABI; bounded POSIX isolation prewarms that cache in the parent before
-  fork, so parent cache count and hit metrics remain reusable and observable;
+  public ABI for direct optional-libjq execution;
 - the generic already-buffered body ceiling is independently configurable
   through `anixops_engine_set_max_body_bytes`; it applies to single-body and
   body-chain mutation calls and preserves the original body when exceeded;
@@ -204,9 +205,9 @@ It does not implement:
 - gzip, deflate, brotli, or zstd handling;
 - charset conversion;
 - JQ internal recursion/iteration limits and production cache refresh/reuse
-  policy beyond the existing input/output byte, output-value, POSIX wall-clock
-  timeout, optional POSIX child memory budgets, and bounded compiled-filter
-  cache;
+  policy beyond the existing input/output byte, output-value, and bounded
+  compiled-filter cache budgets; a host-owned exec worker is required for safe
+  JQ execution-time or memory process limits;
 - production JavaScript execution;
 - TLS interception or certificate lifecycle.
 
@@ -291,13 +292,12 @@ Required CI evidence:
 - `tests/test_rewrite.c` registers
   `rewrite/jq_backend_handles_output_and_error_policy`, covering byte and
   output-value budget fail-open behavior for both single-body and body-chain
-  application, plus POSIX timeout and memory-limit fail-open behavior;
-- `tests/test_rewrite.c` registers
-  `rewrite/jq_bounded_execution_reuses_parent_cache` for POSIX bounded
-  isolation cache count and hit reuse;
+  application, plus unavailable execution-time and memory-limit fail-open
+  behavior;
 - `e2e/scripts/script-contract-check.sh` covers gzip/deflate request and
   response header rewrites, identity normalization, and decoded request
-  overflow raw-relay behavior;
+  overflow raw-relay behavior, plus exact binary request/response body
+  passthrough through the explicit-length shim bridge;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row

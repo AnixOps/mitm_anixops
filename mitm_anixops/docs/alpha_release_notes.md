@@ -65,9 +65,11 @@ Included:
   production script scheduling, cancellation, memory limits, network download, and cache refresh policy remain future
   work.
 - At the original Alpha baseline optional libjq execution only had a max-input-bytes guard. The current maintenance
-  track adds output-byte/output-value budgets, POSIX timeout and child-memory isolation, and a bounded per-engine
-  compiled-filter cache (default capacity 4, configurable 1–16 with explicit invalidation); production cache refresh/reuse policy, internal recursion/iteration limits, and broad jq
-  corpus coverage are still not complete.
+  track adds output-byte/output-value budgets and a bounded per-engine
+  compiled-filter cache (default capacity 4, configurable 1–16 with explicit invalidation). Nonzero execution-time
+  or memory process limits fail open with unavailable diagnostics until a host-owned exec worker is introduced;
+  production cache refresh/reuse policy, internal recursion/iteration limits, and broad jq corpus coverage are still
+  not complete.
 - No NSRegularExpression Darwin backend yet.
 - The Rust and Go bindings are Alpha wrappers, not versioned registry/module releases yet. The CMake package config is
   included and covered by a staged configure/build/run smoke in the Alpha verification environment.

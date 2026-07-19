@@ -82,10 +82,16 @@ Mode = input,contract
 ^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?request-compressed=deflate header-replace Content-Encoding gzip
 ^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?compressed=gzip response-header-del Content-Encoding
 ^https://google\\.com:${ORIGIN_PORT}/contract/request-response\\?compressed=deflate response-header-replace Content-Encoding gzip
+^https://google\\.com:${ORIGIN_PORT}/contract/binary-body request-body-replace-regex "__anixops_binary_no_match__" "replacement"
+^https://google\\.com:${ORIGIN_PORT}/contract/binary-body response-body-replace-regex "__anixops_binary_no_match__" "replacement"
+^https://google\\.com:${ORIGIN_PORT}/contract/binary-body request-body-replace-regex "^anixops$" "anixops"
+^https://google\\.com:${ORIGIN_PORT}/contract/binary-body response-body-replace-regex "^anixops$" "anixops"
 
 [Script]
 http-request ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.request, argument=[{Mode}]
 http-response ^https:\\/\\/google\\.com\\/contract\\/request-response\\? requires-body=1, script-path=${SCRIPT_URL}, tag=contract.response, argument=[{Mode}]
+http-request ^https:\\/\\/google\\.com\\/contract\\/binary-body requires-body=1, script-path=${SCRIPT_URL}, tag=contract.binary.request, argument=[{Mode}]
+http-response ^https:\\/\\/google\\.com\\/contract\\/binary-body requires-body=1, script-path=${SCRIPT_URL}, tag=contract.binary.response, argument=[{Mode}]
 
 [MITM]
 hostname = google.com
@@ -124,6 +130,7 @@ wait_port 127.0.0.1 "$MIHOMO_PORT" mihomo || {
 	--script-path-file "$SCRIPT_FILE" \
 	--script-store "$TMP/script-store.json" \
 	--script-timeout-ms 50 \
+	--debug \
 	--ca-cert "$TMP/ca.pem" \
 	--ca-key "$TMP/ca.key" >"$TMP/shim.log" 2>&1 &
 SHIM_PID=$!
@@ -232,6 +239,34 @@ const upstream = JSON.parse(body.body);
 if (upstream.from !== "static-request") throw new Error("request body rewrite did not survive response exception");
 if (upstream.requestScript !== true) throw new Error("request script body mutation did not survive response exception");
 JS
+
+curl --silent --show-error --max-time 12 --http1.1 \
+	--proxy "http://127.0.0.1:${SHIM_PORT}" \
+	--cacert "$TMP/ca.pem" \
+	--request POST \
+	--header "Content-Type: application/json" \
+	--header "X-AnixOps-Redaction-Secret: anixops-header-secret-task-2" \
+	--data '{"from":"redaction","secret":"anixops-body-secret-task-2"}' \
+	--dump-header "$TMP/redaction-headers.out" \
+	--output "$TMP/redaction-body.out" \
+	"https://google.com:${ORIGIN_PORT}/contract/request-response?redaction=1"
+
+grep -F "HTTP/1.1 200 OK" "$TMP/redaction-headers.out" >/dev/null
+grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/redaction-headers.out" >/dev/null
+node - "$TMP/redaction-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 7) throw new Error("redacted runner failure did not preserve static response body mutation");
+JS
+grep -F "script runner failed" "$TMP/shim.log" >/dev/null
+if grep -F "anixops-body-secret-task-2" "$TMP/shim.log" >/dev/null; then
+	echo "runner body secret leaked into shim log" >&2
+	exit 1
+fi
+if grep -F "anixops-header-secret-task-2" "$TMP/shim.log" >/dev/null; then
+	echo "runner header secret leaked into shim log" >&2
+	exit 1
+fi
 
 run_compressed_response_case() {
 	encoding=$1
@@ -374,11 +409,64 @@ if (!Number.isInteger(body.original.requestByteCount) || body.original.requestBy
 JS
 }
 
+run_binary_body_case() {
+	python3 - "$TMP/binary-body.raw" "$TMP/binary-body.gz" <<'PY'
+import gzip
+import pathlib
+import sys
+
+body = b"anixops\x00binary\xff\xc3\x28\nbody"
+pathlib.Path(sys.argv[1]).write_bytes(body)
+pathlib.Path(sys.argv[2]).write_bytes(gzip.compress(body))
+PY
+
+	curl --silent --show-error --max-time 12 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/octet-stream" \
+		--header "Content-Encoding: gzip" \
+		--data-binary "@${TMP}/binary-body.gz" \
+		--dump-header "$TMP/binary-body-headers.out" \
+		--output "$TMP/binary-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/binary-body"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/binary-body-headers.out" >/dev/null
+	if grep -i -F "Content-Encoding:" "$TMP/binary-body-headers.out" >/dev/null; then
+		echo "binary body response retained compressed representation" >&2
+		sed -n '1,120p' "$TMP/binary-body-headers.out" >&2
+		exit 1
+	fi
+
+	python3 - "$TMP/binary-body.raw" "$TMP/binary-body.out" "$TMP/binary-body-headers.out" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+expected = pathlib.Path(sys.argv[1]).read_bytes()
+actual = pathlib.Path(sys.argv[2]).read_bytes()
+headers = pathlib.Path(sys.argv[3]).read_text(encoding="iso-8859-1")
+metadata = {}
+for line in headers.splitlines():
+    if ":" not in line:
+        continue
+    key, value = line.split(":", 1)
+    metadata[key.strip().lower()] = value.strip()
+if metadata.get("x-origin-body-length") != str(len(expected)):
+    raise SystemExit("binary origin length metadata mismatch")
+if metadata.get("x-origin-body-sha256") != hashlib.sha256(expected).hexdigest():
+    raise SystemExit("binary origin digest metadata mismatch")
+if actual != expected:
+    raise SystemExit("binary body did not survive request/response policy dispatch")
+PY
+}
+
 run_compressed_response_case gzip
 run_compressed_response_case deflate
 run_compressed_request_case gzip
 run_compressed_request_case deflate
 run_compressed_request_overflow_case
+run_binary_body_case
 
 grep -F '"contract.argument": "Mode=contract"' "$TMP/script-store.json" >/dev/null
 
@@ -392,4 +480,7 @@ echo "script contract: gzip/deflate response bodies decoded and returned as iden
 echo "script contract: gzip/deflate request bodies decoded before body/script mutation and returned as identity"
 echo "script contract: content-encoding header rewrites preserve a matching body representation"
 echo "script contract: decoded request overflow relays the raw compressed body fail-open"
+echo "script contract: binary bodies retain exact bytes through request/response policy dispatch"
+echo "script contract: binary bodies bypass request and response script dispatch"
+echo "script contract: runner failure logs use a redacted fixed classification"
 echo "mitm_anixops script contract e2e passed"

@@ -8,7 +8,17 @@ function headerValue(headers, name) {
   return undefined;
 }
 
-if ($script.phase === "request") {
+if ($request.url.includes("/contract/binary-body")) {
+  const binaryHeaders =
+    $script.phase === "response" ? $response.headers : $request.headers;
+  $done({
+    headers: {
+      ...binaryHeaders,
+      "X-AnixOps-Binary-Script": "ran",
+    },
+    body: "anixops-binary-script-ran",
+  });
+} else if ($script.phase === "request") {
   const payload = $request.body ? JSON.parse($request.body) : {};
   const previousArgument = $persistentStore.read("contract.argument");
   $persistentStore.write($argument, "contract.argument");
@@ -25,6 +35,15 @@ if ($script.phase === "request") {
     },
     body: JSON.stringify(payload),
   });
+} else if ($request.url.includes("redaction=1")) {
+  const bodySecret = $response.body.includes("anixops-body-secret-task-2")
+    ? "anixops-body-secret-task-2"
+    : "body-secret-missing";
+  const headerSecret = headerValue(
+    $request.headers,
+    "X-AnixOps-Redaction-Secret",
+  );
+  throw new Error(`runner redaction body=${bodySecret} header=${headerSecret}`);
 } else if ($request.url.includes("throw=1")) {
   throw new Error("contract response script failed");
 } else if (!$request.url.includes("timeout=1")) {

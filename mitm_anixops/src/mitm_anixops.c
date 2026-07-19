@@ -26,17 +26,6 @@ typedef struct anixops_jq_filter_cache_entry {
 	uint64_t last_used;
 } anixops_jq_filter_cache_entry_t;
 static void anixops_jq_ignore_error(void *data, jv msg);
-#  if defined(__unix__) || defined(__APPLE__)
-#    define ANIXOPS_JQ_POSIX_ISOLATION 1
-#    include <fcntl.h>
-#    include <poll.h>
-#    include <signal.h>
-#    include <sys/resource.h>
-#    include <sys/types.h>
-#    include <sys/wait.h>
-#    include <time.h>
-#    include <unistd.h>
-#  endif
 #endif
 
 #define ANIXOPS_MATCH_CAP 10
@@ -3676,7 +3665,7 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 						memory_limit_unavailable ? "jq memory limit unavailable" : "jq memory limit exceeded");
 				}
 			}
-			else if (execution_limited) {
+			else if (execution_limited || execution_limit_unavailable) {
 				if (anixops_copy_text_checked(out_body, out_body_cap, body) != ANIXOPS_OK) {
 					anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
 				}
@@ -3992,7 +3981,7 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 						memory_limit_unavailable ? "jq memory limit unavailable" : "jq memory limit exceeded");
 				}
 			}
-			else if (execution_limited) {
+			else if (execution_limited || execution_limit_unavailable) {
 				if (anixops_copy_text_checked(next_body, out_body_cap, current_body) != ANIXOPS_OK) {
 					anixops_copy_text(result.message, sizeof(result.message), "body truncated");
 					out_chain->truncated = 1;
@@ -7290,367 +7279,6 @@ static int anixops_apply_body_jq_replacement_direct(
 #endif
 }
 
-#if defined(ANIXOPS_JQ_POSIX_ISOLATION)
-typedef struct anixops_jq_child_result {
-	int status;
-	int replaced;
-	int runtime_available;
-	int input_limited;
-	int output_limited;
-	int memory_limited;
-	int memory_limit_unavailable;
-	size_t payload_len;
-} anixops_jq_child_result_t;
-
-static int anixops_jq_write_all(int fd, const void *data, size_t len)
-{
-	const unsigned char *cursor = (const unsigned char *)data;
-	while (len != 0) {
-		ssize_t written = write(fd, cursor, len);
-		if (written < 0 && errno == EINTR) {
-			continue;
-		}
-		if (written <= 0) {
-			return -1;
-		}
-		cursor += (size_t)written;
-		len -= (size_t)written;
-	}
-	return 0;
-}
-
-static int anixops_jq_set_memory_limit(size_t max_memory_bytes)
-{
-	struct rlimit limit;
-
-	if (max_memory_bytes == 0) {
-		return 0;
-	}
-#if defined(RLIMIT_AS)
-	if ((uintmax_t)max_memory_bytes > (uintmax_t)RLIM_INFINITY) {
-		limit.rlim_cur = RLIM_INFINITY;
-		limit.rlim_max = RLIM_INFINITY;
-	}
-	else {
-		limit.rlim_cur = (rlim_t)max_memory_bytes;
-		limit.rlim_max = (rlim_t)max_memory_bytes;
-	}
-	return setrlimit(RLIMIT_AS, &limit);
-#elif defined(RLIMIT_DATA)
-	if ((uintmax_t)max_memory_bytes > (uintmax_t)RLIM_INFINITY) {
-		limit.rlim_cur = RLIM_INFINITY;
-		limit.rlim_max = RLIM_INFINITY;
-	}
-	else {
-		limit.rlim_cur = (rlim_t)max_memory_bytes;
-		limit.rlim_max = (rlim_t)max_memory_bytes;
-	}
-	return setrlimit(RLIMIT_DATA, &limit);
-#else
-	(void)limit;
-	return -1;
-#endif
-}
-
-static void anixops_jq_child_execute(
-	int fd,
-	anixops_engine_t *engine,
-	const char *body,
-	const char *filter,
-	size_t max_input_bytes,
-	size_t max_output_bytes,
-	size_t max_output_values,
-	size_t max_memory_bytes,
-	size_t out_cap)
-{
-	anixops_jq_child_result_t child_result = {0};
-	char *child_output = NULL;
-
-	memset(&child_result, 0, sizeof(child_result));
-	child_result.runtime_available = 1;
-	if (anixops_jq_set_memory_limit(max_memory_bytes) != 0) {
-		child_result.status = ANIXOPS_ERR_CAPACITY;
-		child_result.memory_limit_unavailable = 1;
-	}
-	else if (out_cap != 0) {
-		child_output = (char *)malloc(out_cap);
-	}
-	if (child_result.memory_limit_unavailable) {
-		/* Keep the result frame small and deterministic when the platform has no resource limit. */
-	}
-	else if (child_output == NULL) {
-		child_result.status = ANIXOPS_ERR_OUT_OF_MEMORY;
-		child_result.memory_limited = max_memory_bytes != 0;
-	}
-	else {
-		child_result.status = anixops_apply_body_jq_replacement_direct(
-			engine,
-			body,
-			filter,
-			max_input_bytes,
-			max_output_bytes,
-			max_output_values,
-			child_output,
-			out_cap,
-			&child_result.replaced,
-			&child_result.runtime_available,
-			&child_result.input_limited,
-			&child_result.output_limited);
-		if (child_result.status == ANIXOPS_ERR_OUT_OF_MEMORY && max_memory_bytes != 0) {
-			child_result.memory_limited = 1;
-		}
-		if (child_result.status == ANIXOPS_OK && child_result.replaced) {
-			child_result.payload_len = strlen(child_output);
-		}
-	}
-
-	(void)anixops_jq_write_all(fd, &child_result, sizeof(child_result));
-	if (child_result.payload_len != 0 && child_output != NULL) {
-		(void)anixops_jq_write_all(fd, child_output, child_result.payload_len);
-	}
-	free(child_output);
-	close(fd);
-	_exit(0);
-}
-
-static size_t anixops_jq_elapsed_ms(const struct timespec *start)
-{
-	struct timespec now;
-	int64_t seconds;
-	int64_t nanoseconds;
-
-	if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
-		return SIZE_MAX;
-	}
-	seconds = (int64_t)now.tv_sec - (int64_t)start->tv_sec;
-	nanoseconds = (int64_t)now.tv_nsec - (int64_t)start->tv_nsec;
-	if (nanoseconds < 0) {
-		seconds--;
-		nanoseconds += 1000000000;
-	}
-	if (seconds < 0) {
-		return 0;
-	}
-	if ((uint64_t)seconds > (uint64_t)(SIZE_MAX / 1000)) {
-		return SIZE_MAX;
-	}
-	return (size_t)seconds * 1000u + (size_t)nanoseconds / 1000000u;
-}
-
-static void anixops_jq_kill_and_reap(pid_t pid)
-{
-	int status;
-	(void)kill(pid, SIGKILL);
-	while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
-	}
-}
-
-static int anixops_apply_body_jq_replacement_isolated(
-	anixops_engine_t *engine,
-	const char *body,
-	const char *filter,
-	size_t max_input_bytes,
-	size_t max_output_bytes,
-	size_t max_output_values,
-	size_t max_execution_time_ms,
-	size_t max_memory_bytes,
-	char *out,
-	size_t out_cap,
-	int *out_replaced,
-	int *out_runtime_available,
-	int *out_input_limited,
-	int *out_output_limited,
-	int *out_execution_limited,
-	int *out_execution_limit_unavailable,
-	int *out_memory_limited,
-	int *out_memory_limit_unavailable)
-{
-	int pipe_fds[2];
-	pid_t pid;
-	int read_flags;
-	struct timespec start = {0};
-	unsigned char header_bytes[sizeof(anixops_jq_child_result_t)];
-	size_t header_read = 0;
-	size_t payload_read = 0;
-	anixops_jq_child_result_t child_result = {0};
-	int header_ready = 0;
-	int eof = 0;
-	int invalid_frame = 0;
-
-	*out_replaced = 0;
-	*out_runtime_available = 1;
-	*out_input_limited = 0;
-	*out_output_limited = 0;
-	*out_execution_limited = 0;
-	*out_execution_limit_unavailable = 0;
-	*out_memory_limited = 0;
-	*out_memory_limit_unavailable = 0;
-
-	if ((max_execution_time_ms != 0 && clock_gettime(CLOCK_MONOTONIC, &start) != 0) || pipe(pipe_fds) != 0) {
-		*out_execution_limit_unavailable = max_execution_time_ms != 0;
-		*out_memory_limit_unavailable = max_memory_bytes != 0;
-		return ANIXOPS_ERR_CAPACITY;
-	}
-
-	pid = fork();
-	if (pid < 0) {
-		close(pipe_fds[0]);
-		close(pipe_fds[1]);
-		*out_execution_limit_unavailable = max_execution_time_ms != 0;
-		*out_memory_limit_unavailable = max_memory_bytes != 0;
-		return ANIXOPS_ERR_CAPACITY;
-	}
-	if (pid == 0) {
-		close(pipe_fds[0]);
-		(void)signal(SIGPIPE, SIG_IGN);
-		anixops_jq_child_execute(
-			pipe_fds[1],
-			engine,
-			body,
-			filter,
-			max_input_bytes,
-			max_output_bytes,
-			max_output_values,
-			max_memory_bytes,
-			out_cap);
-	}
-
-	close(pipe_fds[1]);
-	read_flags = fcntl(pipe_fds[0], F_GETFL, 0);
-	if (read_flags < 0 || fcntl(pipe_fds[0], F_SETFL, read_flags | O_NONBLOCK) < 0) {
-		close(pipe_fds[0]);
-		anixops_jq_kill_and_reap(pid);
-		*out_execution_limit_unavailable = max_execution_time_ms != 0;
-		*out_memory_limit_unavailable = max_memory_bytes != 0;
-		return ANIXOPS_ERR_CAPACITY;
-	}
-
-	while (!eof) {
-		struct pollfd poll_fd;
-		size_t elapsed = 0;
-		int remaining;
-		int poll_result;
-
-		if (max_execution_time_ms != 0) {
-			elapsed = anixops_jq_elapsed_ms(&start);
-			if (elapsed == SIZE_MAX || elapsed >= max_execution_time_ms) {
-				close(pipe_fds[0]);
-				anixops_jq_kill_and_reap(pid);
-				*out_execution_limited = 1;
-				return ANIXOPS_ERR_CAPACITY;
-			}
-		}
-		remaining = max_execution_time_ms == 0
-			? -1
-			: (max_execution_time_ms - elapsed > (size_t)INT_MAX
-				? INT_MAX
-				: (int)(max_execution_time_ms - elapsed));
-		poll_fd.fd = pipe_fds[0];
-		poll_fd.events = POLLIN | POLLHUP | POLLERR;
-		poll_fd.revents = 0;
-		poll_result = poll(&poll_fd, 1, remaining);
-		if (poll_result == 0) {
-			close(pipe_fds[0]);
-			anixops_jq_kill_and_reap(pid);
-			*out_execution_limited = 1;
-			return ANIXOPS_ERR_CAPACITY;
-		}
-		if (poll_result < 0) {
-			if (errno == EINTR) {
-				continue;
-			}
-			close(pipe_fds[0]);
-			anixops_jq_kill_and_reap(pid);
-			*out_execution_limit_unavailable = max_execution_time_ms != 0;
-			*out_memory_limit_unavailable = max_memory_bytes != 0;
-			return ANIXOPS_ERR_CAPACITY;
-		}
-
-		for (;;) {
-			unsigned char chunk[4096];
-			ssize_t bytes_read = read(pipe_fds[0], chunk, sizeof(chunk));
-			size_t offset = 0;
-			if (bytes_read < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-				break;
-			}
-			if (bytes_read < 0 && errno == EINTR) {
-				continue;
-			}
-			if (bytes_read < 0) {
-				invalid_frame = 1;
-				eof = 1;
-				break;
-			}
-			if (bytes_read == 0) {
-				eof = 1;
-				break;
-			}
-
-			while (offset < (size_t)bytes_read) {
-				if (header_read < sizeof(header_bytes)) {
-					size_t take = sizeof(header_bytes) - header_read;
-					if (take > (size_t)bytes_read - offset) {
-						take = (size_t)bytes_read - offset;
-					}
-					memcpy(header_bytes + header_read, chunk + offset, take);
-					header_read += take;
-					offset += take;
-					if (header_read == sizeof(header_bytes)) {
-						memcpy(&child_result, header_bytes, sizeof(child_result));
-						header_ready = 1;
-						if (child_result.payload_len >= out_cap) {
-							invalid_frame = 1;
-						}
-					}
-					continue;
-				}
-				if (!header_ready || payload_read >= child_result.payload_len) {
-					invalid_frame = 1;
-					offset = (size_t)bytes_read;
-					continue;
-				}
-				{
-					size_t take = child_result.payload_len - payload_read;
-					if (take > (size_t)bytes_read - offset) {
-						take = (size_t)bytes_read - offset;
-					}
-					memcpy(out + payload_read, chunk + offset, take);
-					payload_read += take;
-					offset += take;
-				}
-			}
-		}
-	}
-
-	close(pipe_fds[0]);
-	{
-		int status;
-		while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {
-		}
-	}
-	if (invalid_frame || !header_ready || payload_read != child_result.payload_len) {
-		if (max_memory_bytes != 0) {
-			*out_memory_limited = 1;
-		}
-		else {
-			*out_execution_limited = 1;
-		}
-		return ANIXOPS_ERR_CAPACITY;
-	}
-
-	*out_replaced = child_result.replaced;
-	*out_runtime_available = child_result.runtime_available;
-	*out_input_limited = child_result.input_limited;
-	*out_output_limited = child_result.output_limited;
-	*out_memory_limited = child_result.memory_limited;
-	*out_memory_limit_unavailable = child_result.memory_limit_unavailable;
-	if (*out_replaced) {
-		out[payload_read] = '\0';
-	}
-	return child_result.status;
-}
-#endif
-
 static int anixops_apply_body_jq_replacement(
 	anixops_engine_t *engine,
 	const char *body,
@@ -7671,43 +7299,21 @@ static int anixops_apply_body_jq_replacement(
 	int *out_memory_limited,
 	int *out_memory_limit_unavailable)
 {
-	if (out_execution_limited == NULL || out_execution_limit_unavailable == NULL ||
+	if (out_replaced == NULL || out_runtime_available == NULL || out_input_limited == NULL ||
+		out_output_limited == NULL || out_execution_limited == NULL || out_execution_limit_unavailable == NULL ||
 		out_memory_limited == NULL || out_memory_limit_unavailable == NULL) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
+	*out_replaced = 0;
+	*out_runtime_available = 1;
+	*out_input_limited = 0;
+	*out_output_limited = 0;
 	*out_execution_limited = 0;
 	*out_execution_limit_unavailable = 0;
 	*out_memory_limited = 0;
 	*out_memory_limit_unavailable = 0;
-#if defined(ANIXOPS_JQ_POSIX_ISOLATION)
+#if defined(ANIXOPS_ENABLE_LIBJQ)
 	if (max_execution_time_ms != 0 || max_memory_bytes != 0) {
-		int compile_status;
-		if (anixops_jq_filter_cache_get(engine, filter, &compile_status) == NULL) {
-			return compile_status;
-		}
-		return anixops_apply_body_jq_replacement_isolated(
-			engine,
-			body,
-			filter,
-			max_input_bytes,
-			max_output_bytes,
-			max_output_values,
-			max_execution_time_ms,
-			max_memory_bytes,
-			out,
-			out_cap,
-			out_replaced,
-			out_runtime_available,
-			out_input_limited,
-			out_output_limited,
-			out_execution_limited,
-			out_execution_limit_unavailable,
-			out_memory_limited,
-			out_memory_limit_unavailable);
-	}
-#elif defined(ANIXOPS_ENABLE_LIBJQ)
-	if (max_execution_time_ms != 0 || max_memory_bytes != 0) {
-		*out_runtime_available = 1;
 		*out_execution_limit_unavailable = max_execution_time_ms != 0;
 		*out_memory_limit_unavailable = max_memory_bytes != 0;
 		return ANIXOPS_ERR_CAPACITY;

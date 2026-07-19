@@ -203,10 +203,10 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   C, Go, and Rust binding coverage.
 - [x] Add optional libjq output-value enumeration budgeting with fail-open
   runtime tests and C, Go, and Rust binding coverage.
-- [x] Add optional POSIX libjq wall-clock timeout isolation with fail-open
-  runtime tests and C, Go, and Rust binding coverage.
-- [x] Add optional POSIX libjq child memory ceilings with fail-open runtime
-  tests and C, Go, and Rust binding coverage.
+- [x] Reject nonzero optional-libjq execution-time and memory process limits in
+  the reusable policy core with stable fail-open unavailable diagnostics.
+- [ ] Add a host-owned exec-worker isolation boundary before enforcing optional
+  libjq execution-time or memory process limits.
 - [x] Add configurable bounded per-engine libjq compiled-filter cache reuse,
   explicit invalidation, and C, Go, and Rust binding observability tests.
 - [x] Add optional libjq advanced-filter fixtures and positive/negative tests

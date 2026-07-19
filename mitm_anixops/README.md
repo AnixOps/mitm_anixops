@@ -77,11 +77,11 @@ Implemented:
   `walk`, `test`, `capture`, assignment/iterator pipes, multi-output, empty
   output, malformed filters, invalid JSON, and Surge `[URL Rewrite]` request/response
   JQ phase mapping. A configurable max-output-values budget bounds multi-output
-  enumeration and preserves the original body on overflow; on POSIX `JQ=1`
-  builds, an optional wall-clock execution timeout isolates the libjq child and
-  preserves the original body on timeout. POSIX `JQ=1` builds can also apply an
-  optional child address-space memory ceiling; `0` disables it and unsupported
-  platforms fail open with the original body. Each engine keeps a bounded
+  enumeration and preserves the original body on overflow. The execution-time
+  and memory-limit setters remain ABI-compatible, but a nonzero process limit
+  fails open with a stable unavailable diagnostic rather than executing libjq
+  in a library child; a future host-owned exec worker is the required safe
+  isolation boundary. Each engine keeps a bounded
   configurable 1–16-entry LRU cache of compiled filters (default 4); cache
   state can be explicitly invalidated with `anixops_engine_clear_jq_filter_cache`
   or `anixops_engine_clear`, and hit/count metrics are observable through the ABI.
@@ -99,10 +99,9 @@ Not implemented yet:
   including internal recursion/iteration limits and broader corpus coverage. The current
   corpus includes advanced portable filters and a Surge request/response JQ
   fixture; the optional backend exposes input/output byte budgets, an
-  output-value enumeration budget, POSIX wall-clock timeout isolation, and a
-  POSIX child memory ceiling, plus a bounded compiled-filter cache, but does not
-  yet enforce internal recursion or iteration budgets or production cache
-  refresh/reuse policy.
+  output-value enumeration budget, and a bounded compiled-filter cache, but
+  does not yet provide a safe host-owned timeout/memory worker, internal
+  recursion or iteration budgets, or production cache refresh/reuse policy.
 - JavaScript script runtime. The library returns script dispatch metadata; the client must run the JS.
 - Full NSRegularExpression/PCRE syntax beyond POSIX ERE plus the tested leading `(?i)`/`(?m)`/`(?s)` prefixes,
   shorthand classes, absolute anchors, named capture groups, quoted literal matching, and empty-match replacement

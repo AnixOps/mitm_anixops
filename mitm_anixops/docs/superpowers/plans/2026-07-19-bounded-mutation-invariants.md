@@ -1,5 +1,10 @@
 # Bounded Mutation Invariants Implementation Plan
 
+> **Superseded:** The POSIX child-isolation portion of this plan was removed as
+> unsafe for a reusable, potentially multithreaded library host. See
+> [Multithreaded Body Mutation Safety](2026-07-19-multithreaded-body-mutation-safety.md)
+> for the replacement fail-open process-limit and explicit-length body policy.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Preserve body/header representation integrity and bounded execution when the MITM shim mutates managed HTTP traffic.

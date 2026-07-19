@@ -20,10 +20,9 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   strict malformed-filter coverage, and runner-corpus evidence.
 - Added an optional libjq output-value enumeration budget with fail-open
   behavior and C, Go, and Rust binding coverage.
-- Added optional POSIX libjq wall-clock timeout isolation with fail-open
-  behavior and C, Go, and Rust binding coverage.
-- Added optional POSIX libjq child memory ceilings with fail-open behavior and
-  C, Go, and Rust binding coverage.
+- Added optional-libjq execution-time and memory-limit setter coverage; nonzero
+  process limits fail open with stable unavailable diagnostics until a
+  host-owned exec worker provides a safe isolation boundary.
 - Added a configurable 1–16-entry per-engine libjq compiled-filter LRU cache
   (default 4), explicit invalidation, cache hit/count observability, and C, Go,
   and Rust binding coverage.
@@ -517,8 +516,13 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 ### Fixed
 
 - Hardened bounded body mutation representation handling: gzip/deflate decode
-  from inbound headers with raw fail-open overflow recovery, POSIX JQ isolation
-  reuses the parent cache, and Go/Rust capability helpers reject unknown V1 bits.
+  from inbound headers with raw fail-open overflow recovery, and Go/Rust
+  capability helpers reject unknown V1 bits.
+- Removed unsafe post-fork libjq execution from the reusable policy core and
+  switched the Alpha shim body bridge to explicit-length bytes, preserving
+  empty, NUL-containing, and invalid-UTF-8 bodies without C-string truncation.
+- Restricted Alpha Node script dispatch to NUL-free valid UTF-8 bodies and
+  redacted runner stderr and raw output behind fixed fail-open diagnostics.
 
 ### Changed
 

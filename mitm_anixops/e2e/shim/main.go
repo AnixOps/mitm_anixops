@@ -16,6 +16,7 @@ import (
 	"compress/zlib"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -40,6 +41,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 	"unsafe"
 )
 
@@ -719,18 +721,37 @@ func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) (
 	}
 	curl := C.CString(rawURL)
 	defer C.free(unsafe.Pointer(curl))
-	cbody := C.CString(string(body))
-	defer C.free(unsafe.Pointer(cbody))
-	out := (*C.char)(C.malloc(C.size_t(outCap)))
+	var cbody unsafe.Pointer
+	if len(body) != 0 {
+		cbody = C.CBytes(body)
+		if cbody == nil {
+			return nil, false, "", errors.New("body rewrite input allocation failed")
+		}
+		defer C.free(cbody)
+	}
+	out := (*C.uchar)(C.malloc(C.size_t(outCap)))
 	if out == nil {
 		return nil, false, "", errors.New("body rewrite output allocation failed")
 	}
 	defer C.free(unsafe.Pointer(out))
 
 	var chain C.anixops_body_rewrite_chain_t
-	rc := C.anixops_rewrite_apply_body_chain(e.ptr, curl, phase, cbody, out, C.size_t(outCap), &chain)
+	var outLen C.size_t
+	rc := C.anixops_rewrite_apply_body_chain_bytes(
+		e.ptr,
+		curl,
+		phase,
+		(*C.uchar)(cbody),
+		C.size_t(len(body)),
+		out,
+		C.size_t(outCap),
+		&outLen,
+		&chain)
 	if rc != C.ANIXOPS_OK {
 		return nil, false, "", fmt.Errorf("anixops_rewrite_apply_body_chain failed: %d", int(rc))
+	}
+	if outLen > C.size_t(outCap) {
+		return nil, false, "", errors.New("body rewrite returned an invalid output length")
 	}
 	message := "no body rewrite matched"
 	rewriteCount := int(chain.rewrite_count)
@@ -744,7 +765,7 @@ func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) (
 	if chain.truncated != 0 || strings.Contains(strings.ToLower(message), "truncated") {
 		return body, false, message, nil
 	}
-	rewritten := []byte(C.GoString(out))
+	rewritten := C.GoBytes(unsafe.Pointer(out), C.int(outLen))
 	return rewritten, !bytes.Equal(rewritten, body), message, nil
 }
 
@@ -1105,6 +1126,10 @@ func (ps *proxyServer) applyRequestScript(
 	if match.kind == scriptNone || ps.scriptRunner == "" {
 		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
 	}
+	if !isScriptTextBody(bodyBytes) {
+		ps.debugf("request_script_binary_bypass url=%s tag=%s bytes=%d", scriptURL, match.tag, len(bodyBytes))
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+	}
 
 	done, err := ps.runScript("request", match, scriptURL, method, nextHeader, 0, nil, bodyBytes)
 	if err != nil {
@@ -1214,6 +1239,11 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 		replaceResponseBody(resp, scriptBody)
 		return nil
 	}
+	if !isScriptTextBody(scriptBody) {
+		ps.debugf("response_script_binary_bypass url=%s tag=%s bytes=%d", scriptURL, match.tag, len(scriptBody))
+		replaceResponseBody(resp, scriptBody)
+		return nil
+	}
 	done, err := ps.runScript(
 		"response",
 		match,
@@ -1252,6 +1282,10 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 }
 
 var errDecodedBodyTooLarge = errors.New("decoded body exceeds rewrite buffer")
+
+func isScriptTextBody(body []byte) bool {
+	return bytes.IndexByte(body, 0) == -1 && utf8.Valid(body)
+}
 
 func contentEncodingForDecode(header http.Header) string {
 	return strings.Join(header.Values("Content-Encoding"), ",")
@@ -1356,34 +1390,34 @@ func (ps *proxyServer) runScript(
 		return scriptDone{}, fmt.Errorf("script body exceeds max-size %d", match.maxSize)
 	}
 	if ps.scriptRunner == "" {
-		return scriptDone{}, fmt.Errorf("no script runner configured for %s", match.scriptPath)
+		return scriptDone{}, errors.New("script runner unavailable")
 	}
 	scriptFile := ps.scriptPathFile
 	if match.scriptPath != ps.scriptPathURL {
-		return scriptDone{}, fmt.Errorf("no local script mapping for %s", match.scriptPath)
+		return scriptDone{}, errors.New("script runner mapping unavailable")
 	}
 	if scriptFile == "" {
-		return scriptDone{}, fmt.Errorf("empty local script mapping for %s", match.scriptPath)
+		return scriptDone{}, errors.New("script runner mapping unavailable")
 	}
 
 	bodyFile, err := os.CreateTemp(ps.tempDir, "anixops-script-body-*.json")
 	if err != nil {
-		return scriptDone{}, err
+		return scriptDone{}, errors.New("script runner body staging failed")
 	}
 	bodyPath := bodyFile.Name()
 	_, writeErr := bodyFile.Write(bodyBytes)
 	closeErr := bodyFile.Close()
 	defer os.Remove(bodyPath)
 	if writeErr != nil {
-		return scriptDone{}, writeErr
+		return scriptDone{}, errors.New("script runner body staging failed")
 	}
 	if closeErr != nil {
-		return scriptDone{}, closeErr
+		return scriptDone{}, errors.New("script runner body staging failed")
 	}
 
 	requestHeaderJSON, err := json.Marshal(flattenHeaders(requestHeader))
 	if err != nil {
-		return scriptDone{}, err
+		return scriptDone{}, errors.New("script runner header serialization failed")
 	}
 	timeoutMs := ps.scriptTimeoutMs
 	if match.timeoutMs > 0 {
@@ -1407,7 +1441,7 @@ func (ps *proxyServer) runScript(
 	if phase == "response" {
 		headerJSON, err := json.Marshal(flattenHeaders(responseHeader))
 		if err != nil {
-			return scriptDone{}, err
+			return scriptDone{}, errors.New("script runner header serialization failed")
 		}
 		args = append(args,
 			"--status", fmt.Sprintf("%d", responseStatus),
@@ -1416,14 +1450,14 @@ func (ps *proxyServer) runScript(
 	cmd := exec.Command("node", args...)
 	output, err := cmd.Output()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return scriptDone{}, fmt.Errorf("script runner failed: %s", strings.TrimSpace(string(exitErr.Stderr)))
+		if _, ok := err.(*exec.ExitError); ok {
+			return scriptDone{}, errors.New("script runner failed")
 		}
-		return scriptDone{}, err
+		return scriptDone{}, errors.New("script runner unavailable")
 	}
 	var done scriptDone
 	if err := json.Unmarshal(output, &done); err != nil {
-		return scriptDone{}, err
+		return scriptDone{}, errors.New("script runner returned malformed output")
 	}
 	return done, nil
 }
@@ -1792,6 +1826,25 @@ func startOrigin(addr string, cache *certCache) error {
 		if stripPort(r.Host) == "www.bilibili.com" && strings.HasPrefix(r.URL.Path, "/gentleman/polyfill.js") {
 			w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
 			io.WriteString(w, "console.log('polyfill');\n")
+			return
+		}
+		if r.URL.Path == "/contract/binary-body" {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "failed to read binary request body", http.StatusBadRequest)
+				return
+			}
+			digest := sha256.Sum256(body)
+			var compressed bytes.Buffer
+			gzipWriter := gzip.NewWriter(&compressed)
+			_, _ = gzipWriter.Write(body)
+			_ = gzipWriter.Close()
+			w.Header().Set("Content-Type", "application/octet-stream")
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Length", strconv.Itoa(compressed.Len()))
+			w.Header().Set("X-Origin-Body-Length", strconv.Itoa(len(body)))
+			w.Header().Set("X-Origin-Body-SHA256", fmt.Sprintf("%x", digest))
+			_, _ = w.Write(compressed.Bytes())
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/contract/request-response") {
