@@ -127,6 +127,7 @@ features it understands.
 | Stable opaque engine handle | Supported | `anixops_engine_t` opaque typedef |
 | Caller-owned result structs | Supported | no public internal pointers |
 | Status text | Supported | `anixops_status_message` |
+| Policy core capability query | Supported | `docs/compatibility/policy-capability-query.md`; `anixops_policy_capability_query_abi_version` and `anixops_policy_capability_flags` report only deterministic V1 policy-core metadata; `abi/policy_capability_query_is_stable`, `TestGoBindingEvaluatesPolicy`, and `rust_binding_evaluates_policy` provide positive evidence, while their bit-63 assertion rejects unknown capability bits; host TLS, trust, capture, socket, framing, HTTP/2, QUIC, JavaScript execution, storage, permissions, and consent remain unimplemented |
 | Last error status/line/message copy | Supported | `anixops_engine_copy_last_error` |
 | Compatibility profile selector | Supported foundation | `anixops_engine_set_compat_profile`, `anixops_engine_compat_profile`; portable mode ignores unsupported rule-shaped lines in supported sections, while strict profiles reject them with parse diagnostics. Rule-by-rule platform parity remains incremental |
 | Per-rule parse diagnostics | Supported foundation | `anixops_engine_rule_diagnostic_count`, `anixops_engine_copy_rule_diagnostic`, accepted/ignored/rejected config tests, strict-profile rejected-rule tests |

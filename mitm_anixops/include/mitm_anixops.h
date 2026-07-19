@@ -2,6 +2,7 @@
 #define ANIXOPS_MITM_LINK_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,6 +23,23 @@ extern "C" {
 #define ANIXOPS_VERSION_MAJOR 0
 #define ANIXOPS_VERSION_MINOR 45
 #define ANIXOPS_VERSION_PATCH 10
+
+#define ANIXOPS_POLICY_CAPABILITY_QUERY_ABI_VERSION 1u
+#define ANIXOPS_POLICY_CAPABILITY_MITM_DECISION (UINT64_C(1) << 0)
+#define ANIXOPS_POLICY_CAPABILITY_URL_REWRITE (UINT64_C(1) << 1)
+#define ANIXOPS_POLICY_CAPABILITY_HEADER_MUTATION (UINT64_C(1) << 2)
+#define ANIXOPS_POLICY_CAPABILITY_BODY_MUTATION_BYTES (UINT64_C(1) << 3)
+#define ANIXOPS_POLICY_CAPABILITY_SCRIPT_DISPATCH_METADATA (UINT64_C(1) << 4)
+#define ANIXOPS_POLICY_CAPABILITY_RULE_DIAGNOSTICS (UINT64_C(1) << 5)
+#define ANIXOPS_POLICY_CAPABILITY_TASK_DESCRIPTOR_METADATA (UINT64_C(1) << 6)
+#define ANIXOPS_POLICY_CAPABILITY_ALL_V1 ( \
+	ANIXOPS_POLICY_CAPABILITY_MITM_DECISION | \
+	ANIXOPS_POLICY_CAPABILITY_URL_REWRITE | \
+	ANIXOPS_POLICY_CAPABILITY_HEADER_MUTATION | \
+	ANIXOPS_POLICY_CAPABILITY_BODY_MUTATION_BYTES | \
+	ANIXOPS_POLICY_CAPABILITY_SCRIPT_DISPATCH_METADATA | \
+	ANIXOPS_POLICY_CAPABILITY_RULE_DIAGNOSTICS | \
+	ANIXOPS_POLICY_CAPABILITY_TASK_DESCRIPTOR_METADATA)
 
 #define ANIXOPS_PATTERN_CAP 256
 #define ANIXOPS_VALUE_CAP 2048
@@ -253,6 +271,8 @@ typedef struct anixops_plugin_metadata_descriptor {
 
 ANIXOPS_API const char *anixops_version(void);
 ANIXOPS_API const char *anixops_status_message(int status);
+ANIXOPS_API unsigned int anixops_policy_capability_query_abi_version(void);
+ANIXOPS_API uint64_t anixops_policy_capability_flags(void);
 ANIXOPS_API anixops_engine_t *anixops_engine_new(void);
 ANIXOPS_API void anixops_engine_free(anixops_engine_t *engine);
 ANIXOPS_API void anixops_engine_clear(anixops_engine_t *engine);

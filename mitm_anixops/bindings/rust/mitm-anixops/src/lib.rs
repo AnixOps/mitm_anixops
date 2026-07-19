@@ -18,6 +18,21 @@ pub const JQ_MAX_MEMORY_BYTES_DEFAULT: usize = 0;
 pub const MAX_BODY_BYTES_DEFAULT: usize = 0;
 pub const JQ_FILTER_CACHE_CAPACITY_DEFAULT: usize = 4;
 pub const JQ_FILTER_CACHE_CAPACITY_MAX: usize = 16;
+pub const POLICY_CAPABILITY_QUERY_ABI_VERSION: u32 = 1;
+pub const POLICY_CAPABILITY_MITM_DECISION: u64 = 1 << 0;
+pub const POLICY_CAPABILITY_URL_REWRITE: u64 = 1 << 1;
+pub const POLICY_CAPABILITY_HEADER_MUTATION: u64 = 1 << 2;
+pub const POLICY_CAPABILITY_BODY_MUTATION_BYTES: u64 = 1 << 3;
+pub const POLICY_CAPABILITY_SCRIPT_DISPATCH_METADATA: u64 = 1 << 4;
+pub const POLICY_CAPABILITY_RULE_DIAGNOSTICS: u64 = 1 << 5;
+pub const POLICY_CAPABILITY_TASK_DESCRIPTOR_METADATA: u64 = 1 << 6;
+pub const POLICY_CAPABILITY_ALL_V1: u64 = POLICY_CAPABILITY_MITM_DECISION
+    | POLICY_CAPABILITY_URL_REWRITE
+    | POLICY_CAPABILITY_HEADER_MUTATION
+    | POLICY_CAPABILITY_BODY_MUTATION_BYTES
+    | POLICY_CAPABILITY_SCRIPT_DISPATCH_METADATA
+    | POLICY_CAPABILITY_RULE_DIAGNOSTICS
+    | POLICY_CAPABILITY_TASK_DESCRIPTOR_METADATA;
 
 #[repr(C)]
 struct AnixopsEngine {
@@ -103,6 +118,8 @@ struct AnixopsRewritePlan {
 extern "C" {
     fn anixops_version() -> *const c_char;
     fn anixops_status_message(status: c_int) -> *const c_char;
+    fn anixops_policy_capability_query_abi_version() -> u32;
+    fn anixops_policy_capability_flags() -> u64;
     fn anixops_engine_new() -> *mut AnixopsEngine;
     fn anixops_engine_free(engine: *mut AnixopsEngine);
     fn anixops_engine_load_config(engine: *mut AnixopsEngine, config_text: *const c_char) -> c_int;
@@ -231,6 +248,15 @@ extern "C" {
 pub enum Phase {
     Request,
     Response,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PolicyCapabilitySet(u64);
+
+impl PolicyCapabilitySet {
+    pub fn supports(self, required: u64) -> bool {
+        required == 0 || (self.0 & required) == required
+    }
 }
 
 impl Phase {
@@ -790,6 +816,14 @@ pub fn version() -> String {
     unsafe { CStr::from_ptr(anixops_version()).to_string_lossy().into_owned() }
 }
 
+pub fn policy_capability_query_abi_version() -> u32 {
+    unsafe { anixops_policy_capability_query_abi_version() }
+}
+
+pub fn policy_capabilities() -> PolicyCapabilitySet {
+    PolicyCapabilitySet(unsafe { anixops_policy_capability_flags() })
+}
+
 fn check_status(operation: &'static str, status: c_int) -> Result<(), Error> {
     if status == ANIXOPS_OK {
         return Ok(());
@@ -1045,6 +1079,21 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
     #[test]
     fn rust_binding_evaluates_policy() {
         assert_eq!(version(), "0.45.10");
+        assert_eq!(
+            policy_capability_query_abi_version(),
+            POLICY_CAPABILITY_QUERY_ABI_VERSION
+        );
+        let capabilities = policy_capabilities();
+        assert!(capabilities.supports(POLICY_CAPABILITY_MITM_DECISION));
+        assert!(capabilities.supports(POLICY_CAPABILITY_URL_REWRITE));
+        assert!(capabilities.supports(POLICY_CAPABILITY_HEADER_MUTATION));
+        assert!(capabilities.supports(POLICY_CAPABILITY_BODY_MUTATION_BYTES));
+        assert!(capabilities.supports(POLICY_CAPABILITY_SCRIPT_DISPATCH_METADATA));
+        assert!(capabilities.supports(POLICY_CAPABILITY_RULE_DIAGNOSTICS));
+        assert!(capabilities.supports(POLICY_CAPABILITY_TASK_DESCRIPTOR_METADATA));
+        assert!(capabilities.supports(POLICY_CAPABILITY_ALL_V1));
+        assert!(capabilities.supports(0));
+        assert!(!capabilities.supports(1_u64 << 63));
         let mut engine = Engine::new().unwrap();
         assert_eq!(engine.jq_max_input_bytes(), JQ_MAX_INPUT_BYTES_DEFAULT);
         assert_eq!(engine.jq_max_output_bytes(), JQ_MAX_OUTPUT_BYTES_DEFAULT);

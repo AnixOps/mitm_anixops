@@ -9,6 +9,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a fixed V1 policy-core capability query for host-side ABI and
+  required-flag gating without advertising data-plane or trust capabilities.
 - Added Alpha proxy-shim gzip/deflate request-body decoding before static
   body/script mutation, with identity upstream writeback and E2E coverage.
 - Added optional-libjq advanced-filter fixture coverage for predicates, slices,

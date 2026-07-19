@@ -17,9 +17,30 @@ type Status int
 
 type Phase int
 
+type PolicyCapability uint64
+
 const (
 	PhaseRequest  Phase = C.ANIXOPS_PHASE_REQUEST
 	PhaseResponse Phase = C.ANIXOPS_PHASE_RESPONSE
+)
+
+const PolicyCapabilityQueryABIVersion uint = 1
+
+const (
+	PolicyCapabilityMITMDecision              PolicyCapability = 1 << 0
+	PolicyCapabilityURLRewrite                PolicyCapability = 1 << 1
+	PolicyCapabilityHeaderMutation            PolicyCapability = 1 << 2
+	PolicyCapabilityBodyMutationBytes         PolicyCapability = 1 << 3
+	PolicyCapabilityScriptDispatchMetadata    PolicyCapability = 1 << 4
+	PolicyCapabilityRuleDiagnostics           PolicyCapability = 1 << 5
+	PolicyCapabilityTaskDescriptorMetadata    PolicyCapability = 1 << 6
+	PolicyCapabilityAllV1 = PolicyCapabilityMITMDecision |
+		PolicyCapabilityURLRewrite |
+		PolicyCapabilityHeaderMutation |
+		PolicyCapabilityBodyMutationBytes |
+		PolicyCapabilityScriptDispatchMetadata |
+		PolicyCapabilityRuleDiagnostics |
+		PolicyCapabilityTaskDescriptorMetadata
 )
 
 const JQMaxInputBytesDefault uint = C.ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT
@@ -122,6 +143,18 @@ type RewritePlan struct {
 
 func Version() string {
 	return C.GoString(C.anixops_version())
+}
+
+func PolicyCapabilityABIVersion() uint {
+	return uint(C.anixops_policy_capability_query_abi_version())
+}
+
+func PolicyCapabilities() PolicyCapability {
+	return PolicyCapability(C.anixops_policy_capability_flags())
+}
+
+func (available PolicyCapability) Supports(required PolicyCapability) bool {
+	return required == 0 || (available&required) == required
 }
 
 func NewEngine() (*Engine, error) {

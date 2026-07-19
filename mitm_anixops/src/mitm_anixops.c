@@ -671,6 +671,16 @@ ANIXOPS_API const char *anixops_version(void)
 	return "0.45.10";
 }
 
+ANIXOPS_API unsigned int anixops_policy_capability_query_abi_version(void)
+{
+	return ANIXOPS_POLICY_CAPABILITY_QUERY_ABI_VERSION;
+}
+
+ANIXOPS_API uint64_t anixops_policy_capability_flags(void)
+{
+	return ANIXOPS_POLICY_CAPABILITY_ALL_V1;
+}
+
 ANIXOPS_API const char *anixops_status_message(int status)
 {
 	switch (status) {

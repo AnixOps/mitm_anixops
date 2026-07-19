@@ -126,6 +126,20 @@ mitm_anixops = policy-core + C ABI + diagnostics + mutation plans
 NetworkCore = adapter + data plane + platform trust + runtime execution
 ```
 
+## Policy Capability Query Gate
+
+Before NetworkCore or another host consumes an AnixOps MITM decision, rewrite
+result, plan, dispatch metadata, diagnostic, or task descriptor, it must verify
+the signed managed profile, require the supported policy capability query ABI
+version and required flags, reject unknown returned capability bits, enforce
+the managed hostname allowlist, and verify host-owned consent and trust state.
+If any check fails, the host must reject or bypass the policy result according
+to its fail-closed policy.
+
+This gate validates policy-core metadata only. It does not enable or provide
+TLS termination, certificate lifecycle, capture, socket IO, HTTP framing,
+HTTP/2, QUIC, JavaScript execution, storage, permissions, or consent.
+
 ## Current NetworkCore Gaps
 
 NetworkCore now has a partial command surface, certificate artifact lifecycle,

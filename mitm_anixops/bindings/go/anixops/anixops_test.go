@@ -22,6 +22,32 @@ func TestGoBindingEvaluatesPolicy(t *testing.T) {
 	if Version() != "0.45.10" {
 		t.Fatalf("Version() = %q", Version())
 	}
+	if PolicyCapabilityABIVersion() != PolicyCapabilityQueryABIVersion {
+		t.Fatalf("PolicyCapabilityABIVersion() = %d", PolicyCapabilityABIVersion())
+	}
+	capabilities := PolicyCapabilities()
+	for _, capability := range []PolicyCapability{
+		PolicyCapabilityMITMDecision,
+		PolicyCapabilityURLRewrite,
+		PolicyCapabilityHeaderMutation,
+		PolicyCapabilityBodyMutationBytes,
+		PolicyCapabilityScriptDispatchMetadata,
+		PolicyCapabilityRuleDiagnostics,
+		PolicyCapabilityTaskDescriptorMetadata,
+	} {
+		if !capabilities.Supports(capability) {
+			t.Fatalf("PolicyCapabilities() does not support %#x", capability)
+		}
+	}
+	if !capabilities.Supports(PolicyCapabilityAllV1) {
+		t.Fatal("PolicyCapabilities() does not support all V1 policy capabilities")
+	}
+	if !capabilities.Supports(0) {
+		t.Fatal("PolicyCapabilities() does not support an empty requirement")
+	}
+	if capabilities.Supports(PolicyCapability(1) << 63) {
+		t.Fatal("PolicyCapabilities() unexpectedly supports bit 63")
+	}
 	engine, err := NewEngine()
 	if err != nil {
 		t.Fatal(err)

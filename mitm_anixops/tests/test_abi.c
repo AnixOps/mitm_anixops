@@ -24,6 +24,17 @@ static void version_is_stable(void)
 	ANIXOPS_EXPECT_EQ_SIZE(ANIXOPS_JQ_MAX_INPUT_BYTES_DEFAULT, 1048576u);
 }
 
+static void policy_capability_query_is_stable(void)
+{
+	uint64_t flags = anixops_policy_capability_flags();
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_policy_capability_query_abi_version(),
+		ANIXOPS_POLICY_CAPABILITY_QUERY_ABI_VERSION);
+	ANIXOPS_EXPECT_TRUE((flags & ANIXOPS_POLICY_CAPABILITY_ALL_V1) == ANIXOPS_POLICY_CAPABILITY_ALL_V1);
+	ANIXOPS_EXPECT_TRUE((flags & ~ANIXOPS_POLICY_CAPABILITY_ALL_V1) == 0);
+	ANIXOPS_EXPECT_TRUE((flags & (UINT64_C(1) << 63)) == 0);
+}
+
 static void null_arguments_are_rejected(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -564,6 +575,7 @@ static void clear_resets_and_engine_remains_usable(void)
 void anixops_register_abi_tests(anixops_test_case_t *tests, size_t *count, size_t cap)
 {
 	add_test(tests, count, cap, "abi/version_is_stable", version_is_stable);
+	add_test(tests, count, cap, "abi/policy_capability_query_is_stable", policy_capability_query_is_stable);
 	add_test(tests, count, cap, "abi/null_arguments_are_rejected", null_arguments_are_rejected);
 	add_test(tests, count, cap, "abi/jq_max_input_option_is_configurable", jq_max_input_option_is_configurable);
 	add_test(tests, count, cap, "abi/jq_max_output_option_is_configurable", jq_max_output_option_is_configurable);
