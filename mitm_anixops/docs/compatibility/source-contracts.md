@@ -1417,7 +1417,8 @@ Current CI evidence:
   `rewrite/body_bytes_api_preserves_binary_and_tracks_lengths`, and the ABI
   budget check `abi/jq_max_output_option_is_configurable`.
 - `e2e/scripts/script-contract-check.sh` verifies exact NUL-containing and
-  invalid-UTF-8 binary-body passthrough through the explicit-length shim bridge.
+  invalid-UTF-8 binary-body passthrough through the explicit-length shim bridge,
+  plus raw request/response overflow relay without adapter mutation.
 
 Unimplemented items:
 
@@ -1581,10 +1582,14 @@ Input form:
   `script-response-body` force `requires_body=1` in dispatch metadata; header
   trigger tokens keep body access optional by default.
 - the Alpha proxy shim sends a buffered body to the Node runner only when it
-  contains no NUL byte and is valid UTF-8. After static mutation,
-  NUL-containing or invalid-UTF-8 bodies bypass every request/response script
-  hook and retain byte-API passthrough semantics; runner stderr and raw output
-  do not enter adapter errors or debug logs.
+  contains no NUL byte, is valid UTF-8, and is within the `32 MiB` raw-body
+  buffer ceiling. Raw-body overflow relays the original message unchanged and
+  bypasses every request/response header, body, and script hook while retaining
+  client `Accept-Encoding` negotiation and HTTP/1.1 content-length/chunked
+  framing plus trailers. After static mutation, NUL-containing or invalid-UTF-8
+  bodies bypass every request/response script hook and retain byte-API
+  passthrough semantics; runner stderr and raw output do not enter adapter
+  errors or debug logs.
 
 Current CI evidence:
 

@@ -154,13 +154,14 @@ fi
 curl --silent --show-error --max-time 12 --http1.1 \
 	--proxy "http://127.0.0.1:${SHIM_PORT}" \
 	--cacert "$TMP/ca.pem" \
+	--header "Accept-Encoding: gzip" \
 	--dump-header "$TMP/headers.out" \
 	--output "$TMP/body.out" \
 	"https://www.bilibili.com:${ORIGIN_PORT}/"
 
 assert_contains "$TMP/headers.out" "HTTP/1.1 200 OK"
 assert_header_contains_ci "$TMP/headers.out" "X-AnixOps-Bilibili-Demo: applied"
-assert_header_contains_ci "$TMP/headers.out" "X-Origin-Accept-Encoding: identity"
+assert_header_contains_ci "$TMP/headers.out" "X-Origin-Accept-Encoding: gzip"
 assert_contains "$TMP/body.out" "anixops-bilibili-homepage-demo"
 assert_contains "$TMP/body.out" "document.title = \"test\""
 assert_contains "$TMP/body.out" "content: \"test\""

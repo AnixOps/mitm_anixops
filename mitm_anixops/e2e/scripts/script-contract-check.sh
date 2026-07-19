@@ -409,6 +409,206 @@ if (!Number.isInteger(body.original.requestByteCount) || body.original.requestBy
 JS
 }
 
+run_raw_request_overflow_case() {
+	python3 - "$TMP/raw-request-overflow.bin" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.write_bytes(b"q" * (32 * 1024 * 1024 + 2))
+PY
+
+	curl --silent --show-error --max-time 30 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--request POST \
+		--header "Content-Type: application/octet-stream" \
+		--data-binary "@${TMP}/raw-request-overflow.bin" \
+		--dump-header "$TMP/raw-request-overflow-headers.out" \
+		--output "$TMP/raw-request-overflow-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/request-response?raw-request-overflow=1&summary=1"
+
+	grep -F "HTTP/1.1 201 Created" "$TMP/raw-request-overflow-headers.out" >/dev/null
+	grep -i -F "X-AnixOps-Script: applied" "$TMP/raw-request-overflow-headers.out" >/dev/null
+
+	node - "$TMP/raw-request-overflow-body.out" <<'JS'
+const fs = require("node:fs");
+const maxBodyRewriteBuffer = 32 * 1024 * 1024;
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.ok !== true || !body.original) {
+  throw new Error("raw overflow request did not reach the origin through the response contract");
+}
+if (body.original.requestEncoding !== "") {
+  throw new Error(`raw overflow request changed Content-Encoding: ${body.original.requestEncoding}`);
+}
+if (body.original.requestByteCount !== maxBodyRewriteBuffer + 2) {
+  throw new Error(`raw overflow request byte count mismatch: ${body.original.requestByteCount}`);
+}
+if (body.original.requestContentLength !== maxBodyRewriteBuffer + 2) {
+  throw new Error(`raw overflow request Content-Length mismatch: ${body.original.requestContentLength}`);
+}
+if (body.original.requestStaticHeader !== "") {
+  throw new Error("raw overflow request did not preserve its original headers");
+}
+if (body.original.requestAcceptEncoding !== "") {
+  throw new Error(`raw overflow request changed implicit Accept-Encoding: ${body.original.requestAcceptEncoding}`);
+}
+JS
+}
+
+run_chunked_raw_request_overflow_case() {
+	python3 - "$TMP/ca.pem" "$SHIM_PORT" "$ORIGIN_PORT" "$TMP/chunked-raw-request-overflow-body.out" <<'PY'
+import socket
+import ssl
+import sys
+
+ca_path, shim_port, origin_port, output_path = sys.argv[1:]
+timeout = 30
+target = f"google.com:{origin_port}"
+
+sock = socket.create_connection(("127.0.0.1", int(shim_port)), timeout=timeout)
+sock.settimeout(timeout)
+sock.sendall(
+    f"CONNECT {target} HTTP/1.1\r\nHost: {target}\r\nProxy-Connection: keep-alive\r\n\r\n".encode("ascii")
+)
+connect_response = bytearray()
+while b"\r\n\r\n" not in connect_response:
+    chunk = sock.recv(4096)
+    if not chunk:
+        raise SystemExit("proxy closed CONNECT before response")
+    connect_response.extend(chunk)
+if not connect_response.startswith(b"HTTP/1.1 200"):
+    raise SystemExit(f"unexpected CONNECT response: {connect_response!r}")
+
+context = ssl.create_default_context(cafile=ca_path)
+tls = context.wrap_socket(sock, server_hostname="google.com")
+tls.settimeout(timeout)
+tls.sendall(
+    (
+        "POST /contract/request-response?chunked-raw-request-overflow=1&summary=1 HTTP/1.1\r\n"
+        f"Host: {target}\r\n"
+        "Content-Type: application/octet-stream\r\n"
+        "Accept-Encoding: gzip\r\n"
+        "Transfer-Encoding: chunked\r\n"
+        "Trailer: X-AnixOps-Request-Trailer\r\n"
+        "\r\n"
+    ).encode("ascii")
+)
+
+remaining = 32 * 1024 * 1024 + 2
+chunk = b"q" * (64 * 1024)
+while remaining:
+    payload = chunk[:min(len(chunk), remaining)]
+    tls.sendall(f"{len(payload):x}\r\n".encode("ascii"))
+    tls.sendall(payload)
+    tls.sendall(b"\r\n")
+    remaining -= len(payload)
+tls.sendall(b"0\r\nX-AnixOps-Request-Trailer: preserved\r\n\r\n")
+
+reader = tls.makefile("rb")
+status = reader.readline()
+if not status.startswith(b"HTTP/1.1 201"):
+    raise SystemExit(f"unexpected raw relay response status: {status!r}")
+headers = {}
+while True:
+    line = reader.readline()
+    if line in (b"\r\n", b"\n", b""):
+        break
+    name, value = line.decode("iso-8859-1").split(":", 1)
+    headers[name.lower()] = value.strip()
+
+if "content-length" in headers:
+    body = reader.read(int(headers["content-length"]))
+elif headers.get("transfer-encoding", "").lower() == "chunked":
+    chunks = []
+    while True:
+        line = reader.readline()
+        size = int(line.split(b";", 1)[0], 16)
+        if size == 0:
+            while reader.readline() not in (b"\r\n", b"\n", b""):
+                pass
+            break
+        chunks.append(reader.read(size))
+        if reader.read(2) != b"\r\n":
+            raise SystemExit("malformed chunked response")
+    body = b"".join(chunks)
+else:
+    body = reader.read()
+
+with open(output_path, "wb") as output:
+    output.write(body)
+reader.close()
+tls.close()
+PY
+
+	node - "$TMP/chunked-raw-request-overflow-body.out" <<'JS'
+const fs = require("node:fs");
+const maxBodyRewriteBuffer = 32 * 1024 * 1024;
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.ok !== true || !body.original) {
+  throw new Error("chunked raw overflow request did not reach the origin through the response contract");
+}
+if (body.original.requestByteCount !== maxBodyRewriteBuffer + 2) {
+  throw new Error(`chunked raw overflow request byte count mismatch: ${body.original.requestByteCount}`);
+}
+if (body.original.requestContentLength !== -1) {
+  throw new Error(`chunked raw overflow Content-Length mismatch: ${body.original.requestContentLength}`);
+}
+if (body.original.requestTransferEncoding !== "chunked") {
+  throw new Error(`chunked raw overflow transfer encoding mismatch: ${body.original.requestTransferEncoding}`);
+}
+if (body.original.requestTrailer !== "preserved") {
+  throw new Error(`chunked raw overflow trailer mismatch: ${body.original.requestTrailer}`);
+}
+if (body.original.requestStaticHeader !== "") {
+  throw new Error("chunked raw overflow request did not preserve its original headers");
+}
+if (body.original.requestAcceptEncoding !== "gzip") {
+  throw new Error(`chunked raw overflow changed upstream Accept-Encoding: ${body.original.requestAcceptEncoding}`);
+}
+JS
+}
+
+run_raw_response_overflow_case() {
+	curl --silent --show-error --max-time 30 --http1.1 \
+		--proxy "http://127.0.0.1:${SHIM_PORT}" \
+		--cacert "$TMP/ca.pem" \
+		--header "Accept-Encoding: gzip" \
+		--dump-header "$TMP/raw-response-overflow-headers.out" \
+		--output "$TMP/raw-response-overflow-body.out" \
+		"https://google.com:${ORIGIN_PORT}/contract/request-response?raw-response-overflow=1&raw-response-trailer=1"
+
+	grep -F "HTTP/1.1 200 OK" "$TMP/raw-response-overflow-headers.out" >/dev/null
+	if grep -i -F "X-AnixOps-Static-Response:" "$TMP/raw-response-overflow-headers.out" >/dev/null; then
+		echo "raw overflow response unexpectedly applied static header mutation" >&2
+		exit 1
+	fi
+	if grep -i -F "X-AnixOps-Script:" "$TMP/raw-response-overflow-headers.out" >/dev/null; then
+		echo "raw overflow response unexpectedly dispatched response script" >&2
+		exit 1
+	fi
+
+	python3 - "$TMP/raw-response-overflow-body.out" "$TMP/raw-response-overflow-headers.out" <<'PY'
+import pathlib
+import sys
+
+max_body_rewrite_buffer = 32 * 1024 * 1024
+body = pathlib.Path(sys.argv[1]).read_bytes()
+headers = pathlib.Path(sys.argv[2]).read_text(encoding="iso-8859-1").lower()
+expected_size = max_body_rewrite_buffer + 2
+if len(body) != expected_size:
+    raise SystemExit(f"raw overflow response size mismatch: {len(body)}")
+if body != b"r" * expected_size:
+    raise SystemExit("raw overflow response bytes changed")
+if f"x-origin-body-length: {expected_size}" not in headers:
+    raise SystemExit("raw overflow response metadata missing")
+if "x-origin-accept-encoding: gzip" not in headers:
+    raise SystemExit("raw overflow response changed upstream Accept-Encoding negotiation")
+if "x-origin-relay-trailer: preserved" not in headers:
+    raise SystemExit("raw overflow response trailer was not relayed")
+PY
+}
+
 run_binary_body_case() {
 	python3 - "$TMP/binary-body.raw" "$TMP/binary-body.gz" <<'PY'
 import gzip
@@ -466,6 +666,9 @@ run_compressed_response_case deflate
 run_compressed_request_case gzip
 run_compressed_request_case deflate
 run_compressed_request_overflow_case
+run_raw_request_overflow_case
+run_chunked_raw_request_overflow_case
+run_raw_response_overflow_case
 run_binary_body_case
 
 grep -F '"contract.argument": "Mode=contract"' "$TMP/script-store.json" >/dev/null
@@ -480,6 +683,8 @@ echo "script contract: gzip/deflate response bodies decoded and returned as iden
 echo "script contract: gzip/deflate request bodies decoded before body/script mutation and returned as identity"
 echo "script contract: content-encoding header rewrites preserve a matching body representation"
 echo "script contract: decoded request overflow relays the raw compressed body fail-open"
+echo "script contract: raw request and response overflow relay original bytes and headers fail-open"
+echo "script contract: raw chunked request overflow relays transfer framing and trailers"
 echo "script contract: binary bodies retain exact bytes through request/response policy dispatch"
 echo "script contract: binary bodies bypass request and response script dispatch"
 echo "script contract: runner failure logs use a redacted fixed classification"

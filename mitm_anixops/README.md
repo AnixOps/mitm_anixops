@@ -162,8 +162,10 @@ The proxy shim is a demo/Alpha integration artifact around the C ABI. It support
 test CA material, upstream proxy forwarding, URL rewrite, buffered request/response header and body rewrite, script
 runner integration with file-backed `$persistentStore`, and gzip/deflate request/response decoding for body/script
 mutation with identity writeback. Request bodies are decoded before static body/script mutation and sent upstream as
-identity. Script runner timeout/errors fail open after static rewrites. It is not a production HTTP/2,
-brotli/zstd, or streaming body pipeline.
+identity. Client `Accept-Encoding` negotiation is forwarded unchanged and the transport does not synthesize or
+transparently decode a representation. The adapter buffers at most `32 MiB` of raw body data for mutation; larger
+bodies relay unchanged with their original headers, bytes, and HTTP/1.1 transfer framing/trailers. Script runner
+timeout/errors fail open after static rewrites. It is not a production HTTP/2, brotli/zstd, or streaming body pipeline.
 
 For a local Alpha package:
 

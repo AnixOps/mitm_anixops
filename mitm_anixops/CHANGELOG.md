@@ -515,6 +515,12 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Fixed
 
+- Bounded Alpha shim raw request and response buffering before body/script
+  mutation; over-limit data now relays through the proxy without a second full
+  request copy or representation-changing header/body/script handling.
+- Preserved client encoding negotiation and HTTP/1.1 transfer trailers for
+  Alpha raw-overflow relay; the upstream transport no longer synthesizes
+  compression, and CI exercises chunked request and response trailer relay.
 - Serialized every Alpha proxy-shim call into a shared policy-core engine so
   concurrent HTTP handlers cannot race optional-libjq cache/interpreter state
   or engine diagnostics; the shim check now exercises that lock under Go race

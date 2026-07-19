@@ -122,6 +122,15 @@ type proxyServer struct {
 	mutex           sync.Mutex
 }
 
+// forwardRelayMetadata is retained only when a raw body exceeded the bounded
+// mutation buffer. Trailer is intentionally shared with the inbound request:
+// net/http populates its values only after the streaming relay reaches EOF.
+type forwardRelayMetadata struct {
+	contentLength     int64
+	transferEncoding []string
+	trailer           http.Header
+}
+
 type scriptMatch struct {
 	kind         C.anixops_script_kind_t
 	requiresBody int
@@ -234,13 +243,7 @@ func main() {
 		scriptTimeoutMs: *scriptTimeoutMs,
 		tempDir:         os.TempDir(),
 		debug:           *debug,
-		httpClient: &http.Client{Transport: &http.Transport{
-			Proxy: http.ProxyURL(upstreamProxy),
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-				NextProtos:         []string{"http/1.1"},
-			},
-		}},
+		httpClient: newUpstreamHTTPClient(upstreamProxy),
 	}
 
 	server := &http.Server{
@@ -259,6 +262,17 @@ func main() {
 	if err := server.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+func newUpstreamHTTPClient(upstreamProxy *url.URL) *http.Client {
+	return &http.Client{Transport: &http.Transport{
+		Proxy:              http.ProxyURL(upstreamProxy),
+		DisableCompression: true,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+			NextProtos:         []string{"http/1.1"},
+		},
+	}}
 }
 
 type shadowsocksLink struct {
@@ -971,14 +985,21 @@ func (ps *proxyServer) handlePlainHTTP(w http.ResponseWriter, r *http.Request) {
 		ps.debugf("#%d rewrite action=%d status=%d value=%s", id, int(action), status, value)
 		return
 	}
-	rawURL, host, header, body, err := ps.applyRequestScript(rawURL, r.Method, r.Host, r.Header, r.Body)
+	rawURL, host, header, body, rawBodyOverflow, err := ps.applyRequestScript(rawURL, r.Method, r.Host, r.Header, r.Body)
 	if err != nil {
 		ps.debugf("#%d request_script_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	header = ps.prepareUpstreamHeader(rawURL, header)
-	resp, err := ps.forward(r.Context().Done(), r.Method, rawURL, host, header, body)
+	var relayMetadata *forwardRelayMetadata
+	if rawBodyOverflow {
+		relayMetadata = &forwardRelayMetadata{
+			contentLength:     r.ContentLength,
+			transferEncoding: append([]string(nil), r.TransferEncoding...),
+			trailer:           r.Trailer,
+		}
+	}
+	resp, err := ps.forward(r.Context().Done(), r.Method, rawURL, host, header, body, relayMetadata)
 	if err != nil {
 		ps.debugf("#%d upstream_error=%v", id, err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
@@ -1070,14 +1091,21 @@ func (ps *proxyServer) handleMITMRequest(conn net.Conn, connectHost string, req 
 		return
 	}
 
-	rawURL, host, header, body, err := ps.applyRequestScript(rawURL, req.Method, host, req.Header, req.Body)
+	rawURL, host, header, body, rawBodyOverflow, err := ps.applyRequestScript(rawURL, req.Method, host, req.Header, req.Body)
 	if err != nil {
 		ps.debugf("#%d request_script_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
 		return
 	}
-	header = ps.prepareUpstreamHeader(rawURL, header)
-	resp, err := ps.forward(nil, req.Method, rawURL, host, header, body)
+	var relayMetadata *forwardRelayMetadata
+	if rawBodyOverflow {
+		relayMetadata = &forwardRelayMetadata{
+			contentLength:     req.ContentLength,
+			transferEncoding: append([]string(nil), req.TransferEncoding...),
+			trailer:           req.Trailer,
+		}
+	}
+	resp, err := ps.forward(nil, req.Method, rawURL, host, header, body, relayMetadata)
 	if err != nil {
 		ps.debugf("#%d upstream_error=%v", id, err)
 		writeRawError(conn, http.StatusBadGateway, err.Error())
@@ -1102,30 +1130,35 @@ func (ps *proxyServer) applyRequestScript(
 	host string,
 	header http.Header,
 	body io.Reader,
-) (string, string, http.Header, io.Reader, error) {
+) (string, string, http.Header, io.Reader, bool, error) {
 	scriptURL := scriptDispatchURL(rawURL)
 	match, err := ps.engine.script(scriptURL, phaseRequest)
 	if err != nil {
-		return "", "", nil, nil, err
+		return "", "", nil, nil, false, err
 	}
 	action, _, _, err := ps.engine.rewriteForPhase(rawURL, phaseRequest)
 	if err != nil {
-		return "", "", nil, nil, err
+		return "", "", nil, nil, false, err
 	}
 	needsBody := match.requiresBody != 0 || rewriteActionIsBody(action)
-
-	var bodyBytes []byte
-	if body != nil {
-		bodyBytes, err = io.ReadAll(body)
-		if err != nil {
-			return "", "", nil, nil, err
-		}
-	}
 	originalHeader := cloneHeader(header)
 	originalEncoding := contentEncodingForDecode(originalHeader)
 	nextHeader, err := ps.applyHeaderRewrites(rawURL, phaseRequest, originalHeader)
 	if err != nil {
-		return "", "", nil, nil, err
+		return "", "", nil, nil, false, err
+	}
+	needsBufferedBody := needsBody || contentEncodingChanged(originalHeader, nextHeader) ||
+		(match.kind != scriptNone && ps.scriptRunner != "")
+	if !needsBufferedBody {
+		return rawURL, host, nextHeader, body, false, nil
+	}
+	bodyBytes, rawRelay, rawOverflow, err := readBodyForMutation(body, maxBodyRewriteBuffer)
+	if err != nil {
+		return "", "", nil, nil, false, err
+	}
+	if rawOverflow {
+		ps.debugf("request_body_raw_overflow_fail_open url=%s limit=%d", rawURL, maxBodyRewriteBuffer)
+		return rawURL, host, originalHeader, rawRelay, true, nil
 	}
 	bodyIsIdentity := false
 	if needsBody || contentEncodingChanged(originalHeader, nextHeader) {
@@ -1133,7 +1166,7 @@ func (ps *proxyServer) applyRequestScript(
 		if decodeErr != nil {
 			restoreRawBodyHeader(nextHeader, originalHeader, len(bodyBytes))
 			ps.debugf("request_body_decode_fail_open url=%s", rawURL)
-			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
 		}
 		bodyBytes = decodedBody
 		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
@@ -1144,7 +1177,7 @@ func (ps *proxyServer) applyRequestScript(
 	}
 	rewrittenBody, bodyChanged, bodyMessage, err := ps.engine.applyBody(rawURL, phaseRequest, bodyBytes)
 	if err != nil {
-		return "", "", nil, nil, err
+		return "", "", nil, nil, false, err
 	}
 	if bodyChanged {
 		bodyBytes = rewrittenBody
@@ -1153,17 +1186,17 @@ func (ps *proxyServer) applyRequestScript(
 		ps.debugf("request_body_rewrite url=%s message=%s bytes=%d", rawURL, bodyMessage, len(bodyBytes))
 	}
 	if match.kind == scriptNone || ps.scriptRunner == "" {
-		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
 	}
 	if !isScriptTextBody(bodyBytes) {
 		ps.debugf("request_script_binary_bypass url=%s tag=%s bytes=%d", scriptURL, match.tag, len(bodyBytes))
-		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
 	}
 
 	done, err := ps.runScript("request", match, scriptURL, method, nextHeader, 0, nil, bodyBytes)
 	if err != nil {
 		ps.debugf("request_script_fail_open url=%s tag=%s err=%v", scriptURL, match.tag, err)
-		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+		return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
 	}
 	if done.URL != "" {
 		rawURL = done.URL
@@ -1186,7 +1219,7 @@ func (ps *proxyServer) applyRequestScript(
 		if decodeErr != nil {
 			restoreRawBodyHeader(nextHeader, originalHeader, len(bodyBytes))
 			ps.debugf("request_body_decode_fail_open url=%s", rawURL)
-			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
+			return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
 		}
 		bodyBytes = decodedBody
 		bodyIsIdentity = true
@@ -1194,25 +1227,7 @@ func (ps *proxyServer) applyRequestScript(
 	if bodyIsIdentity {
 		normalizeRequestBodyHeader(nextHeader, len(bodyBytes))
 	}
-	return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), nil
-}
-
-func (ps *proxyServer) prepareUpstreamHeader(rawURL string, header http.Header) http.Header {
-	nextHeader := cloneHeader(header)
-	needsPlainText := false
-	match, err := ps.engine.script(scriptDispatchURL(rawURL), phaseResponse)
-	if err == nil && match.kind != scriptNone && match.requiresBody != 0 {
-		needsPlainText = true
-	}
-	action, _, _, err := ps.engine.rewriteForPhase(rawURL, phaseResponse)
-	if err == nil && rewriteActionIsBody(action) {
-		needsPlainText = true
-	}
-	if needsPlainText {
-		nextHeader.Set("Accept-Encoding", "identity")
-		ps.debugf("identity_encoding url=%s tag=%s script=%s bodyRewrite=%v", rawURL, match.tag, match.scriptPath, rewriteActionIsBody(action))
-	}
-	return nextHeader
+	return rawURL, host, nextHeader, bytes.NewReader(bodyBytes), false, nil
 }
 
 func (ps *proxyServer) applyResponseScript(rawURL string, method string, requestHeader http.Header, resp *http.Response) error {
@@ -1222,7 +1237,6 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 	if err != nil {
 		return err
 	}
-	resp.Header = nextHeader
 	scriptURL := scriptDispatchURL(rawURL)
 	match, err := ps.engine.script(scriptURL, phaseResponse)
 	if err != nil {
@@ -1235,14 +1249,22 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 	hasBodyRewrite := rewriteActionIsBody(action)
 	encodingChanged := contentEncodingChanged(originalHeader, nextHeader)
 	if match.kind == scriptNone && !hasBodyRewrite && !encodingChanged {
+		resp.Header = nextHeader
 		return nil
 	}
 
-	rawBody, err := io.ReadAll(resp.Body)
+	rawBody, rawRelay, rawOverflow, err := readBodyForMutation(resp.Body, maxBodyRewriteBuffer)
 	if err != nil {
 		return err
 	}
+	if rawOverflow {
+		resp.Header = originalHeader
+		resp.Body = asReadCloser(rawRelay)
+		ps.debugf("response_body_raw_overflow_fail_open url=%s limit=%d", rawURL, maxBodyRewriteBuffer)
+		return nil
+	}
 	_ = resp.Body.Close()
+	resp.Header = nextHeader
 	scriptBody, decoded, decodeErr := decodeBodyForScript(originalEncoding, rawBody)
 	if decodeErr != nil {
 		replaceRawResponseBody(resp, rawBody, originalHeader)
@@ -1311,6 +1333,42 @@ func (ps *proxyServer) applyResponseScript(rawURL string, method string, request
 }
 
 var errDecodedBodyTooLarge = errors.New("decoded body exceeds rewrite buffer")
+
+type prefixedReadCloser struct {
+	io.Reader
+	closer io.Closer
+}
+
+func (r *prefixedReadCloser) Close() error {
+	return r.closer.Close()
+}
+
+func asReadCloser(reader io.Reader) io.ReadCloser {
+	if readCloser, ok := reader.(io.ReadCloser); ok {
+		return readCloser
+	}
+	return io.NopCloser(reader)
+}
+
+func readBodyForMutation(body io.Reader, maxBytes int) ([]byte, io.Reader, bool, error) {
+	if body == nil {
+		return nil, nil, false, nil
+	}
+
+	limited := io.LimitReader(body, int64(maxBytes)+1)
+	buffered, err := io.ReadAll(limited)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	if len(buffered) > maxBytes {
+		relay := io.MultiReader(bytes.NewReader(buffered), body)
+		if closer, ok := body.(io.Closer); ok {
+			return nil, &prefixedReadCloser{Reader: relay, closer: closer}, true, nil
+		}
+		return nil, relay, true, nil
+	}
+	return buffered, nil, false, nil
+}
 
 func isScriptTextBody(body []byte) bool {
 	return bytes.IndexByte(body, 0) == -1 && utf8.Valid(body)
@@ -1663,18 +1721,17 @@ func scriptDispatchURL(rawURL string) string {
 	return parsed.String()
 }
 
-func (ps *proxyServer) forward(done <-chan struct{}, method, rawURL, host string, header http.Header, body io.Reader) (*http.Response, error) {
-	var payload []byte
-	var err error
-	if body != nil {
-		payload, err = io.ReadAll(body)
-		if err != nil {
-			return nil, err
-		}
-	}
-	req, err := http.NewRequest(method, rawURL, bytes.NewReader(payload))
+func (ps *proxyServer) forward(done <-chan struct{}, method, rawURL, host string, header http.Header, body io.Reader, relayMetadata *forwardRelayMetadata) (*http.Response, error) {
+	req, err := http.NewRequest(method, rawURL, body)
 	if err != nil {
 		return nil, err
+	}
+	if relayMetadata != nil {
+		req.ContentLength = relayMetadata.contentLength
+		req.TransferEncoding = append([]string(nil), relayMetadata.transferEncoding...)
+		// Trailer must remain the inbound map so EOF from the relay publishes
+		// the parsed values before the outbound transport emits them.
+		req.Trailer = relayMetadata.trailer
 	}
 	req.Host = host
 	req.Header = cloneHeader(header)
@@ -1756,8 +1813,16 @@ func copyResponse(w http.ResponseWriter, resp *http.Response) {
 			w.Header().Add(key, value)
 		}
 	}
+	for key := range resp.Trailer {
+		w.Header().Add("Trailer", key)
+	}
 	w.WriteHeader(resp.StatusCode)
 	_, _ = io.Copy(w, resp.Body)
+	for key, values := range resp.Trailer {
+		for _, value := range values {
+			w.Header().Add(http.TrailerPrefix+key, value)
+		}
+	}
 }
 
 func cloneHeader(in http.Header) http.Header {
@@ -1877,14 +1942,48 @@ func startOrigin(addr string, cache *certCache) error {
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/contract/request-response") {
+			if r.URL.Query().Get("raw-response-overflow") == "1" {
+				const rawResponseBytes = maxBodyRewriteBuffer + 2
+				rawResponseTrailer := r.URL.Query().Get("raw-response-trailer") == "1"
+				chunk := bytes.Repeat([]byte("r"), 64*1024)
+				remaining := rawResponseBytes
+				w.Header().Set("Content-Type", "application/octet-stream")
+				w.Header().Set("X-Origin-Body-Length", strconv.Itoa(rawResponseBytes))
+				w.Header().Set("X-Origin-Accept-Encoding", r.Header.Get("Accept-Encoding"))
+				if rawResponseTrailer {
+					w.Header().Add("Trailer", "X-Origin-Relay-Trailer")
+				} else {
+					w.Header().Set("Content-Length", strconv.Itoa(rawResponseBytes))
+				}
+				for remaining > 0 {
+					size := len(chunk)
+					if remaining < size {
+						size = remaining
+					}
+					written, writeErr := w.Write(chunk[:size])
+					if writeErr != nil || written != size {
+						return
+					}
+					remaining -= written
+				}
+				if rawResponseTrailer {
+					w.Header().Set(http.TrailerPrefix+"X-Origin-Relay-Trailer", "preserved")
+				}
+				return
+			}
 			body, _ := io.ReadAll(r.Body)
 			w.Header().Set("Content-Type", "application/json")
 			var payloadFields map[string]interface{}
 			if r.URL.Query().Get("summary") == "1" {
 				payloadFields = map[string]interface{}{
-					"code":             0,
-					"requestEncoding":  r.Header.Get("Content-Encoding"),
-					"requestByteCount": len(body),
+					"code":                    0,
+					"requestEncoding":         r.Header.Get("Content-Encoding"),
+					"requestByteCount":        len(body),
+					"requestStaticHeader":     r.Header.Get("X-AnixOps-Static-Request"),
+					"requestAcceptEncoding":   r.Header.Get("Accept-Encoding"),
+					"requestContentLength":    r.ContentLength,
+					"requestTransferEncoding": strings.Join(r.TransferEncoding, ","),
+					"requestTrailer":          r.Trailer.Get("X-AnixOps-Request-Trailer"),
 				}
 			} else {
 				payloadFields = map[string]interface{}{

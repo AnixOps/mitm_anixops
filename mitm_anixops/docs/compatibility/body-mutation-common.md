@@ -194,11 +194,21 @@ managed gzip and deflate traffic. It decodes only from the original inbound
 header cannot select a different decoder. A successful decode writes an
 identity body, removes `Content-Encoding` and transfer encoding, and sets the
 matching content length. The decoder reads at most `32 MiB + 1` decoded bytes;
-unsupported encoding, decode failure, stacked encoding, or decoded-byte
-overflow relays the raw body with its original encoding and a correct content
-length. A later response-script failure after a compressed decode also restores
-that raw representation. This adapter behavior is bounded fail-open handling,
-not policy-core compression ownership.
+before any body, script, or representation mutation, the shim also reads at
+most `32 MiB + 1` raw bytes. Raw-source overflow relays the captured prefix and
+unread source unchanged, restores the original headers, preserves client
+`Accept-Encoding` negotiation, and skips every request/response header, body,
+and script mutation for that message. For raw request overflow it also retains
+the original content length or chunked transfer framing and streams the same
+trailer map through the upstream transport; for plain HTTP raw response overflow
+the adapter predeclares and publishes the received trailers after the relay
+reaches EOF. The transport disables implicit compression so it cannot invent a
+different upstream representation. Unsupported encoding, decode failure,
+stacked encoding, or decoded-byte overflow likewise relays the raw body with
+its original encoding and a correct content length. A later response-script
+failure after a compressed decode also restores that raw representation. This
+adapter behavior is bounded fail-open handling, not policy-core compression
+ownership.
 
 It does not implement:
 
@@ -301,7 +311,9 @@ Required CI evidence:
   under the Go race detector;
 - `e2e/scripts/script-contract-check.sh` covers gzip/deflate request and
   response header rewrites, identity normalization, and decoded request
-  overflow raw-relay behavior, plus exact binary request/response body
+  overflow raw-relay behavior, raw request/response overflow relay without
+  header/body/script mutation, preserved client encoding negotiation, chunked
+  request trailers, response trailers, plus exact binary request/response body
   passthrough through the explicit-length shim bridge;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
