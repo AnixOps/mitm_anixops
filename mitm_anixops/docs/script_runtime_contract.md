@@ -142,6 +142,13 @@ replay` exposes this as `--timeout-ms`, and the Alpha proxy shim exposes it as `
 rule returns `timeout_ms`, the Alpha runner and proxy shim use it instead of the global default. When a matched rule
 returns `max_size` and the buffered body is larger, they fail open without executing the script.
 
+The Alpha proxy shim validates global and rule-level runner timeouts as positive values no greater than 30 seconds. It
+passes that value to Node and independently supervises the direct Node child with the same deadline plus one second of
+startup/reap grace, so synchronous JavaScript cannot bypass the runner's timer. Runner stdout is capped at 32 MiB,
+stderr is discarded and capped at 64 KiB, and accepted `$done` payloads are limited to a 32 MiB body, 128 headers, and
+64 KiB of serialized header names and values. Any budget breach has a fixed redacted failure classification and fails
+open. This is an Alpha process boundary, not a production JavaScript sandbox or process-tree containment guarantee.
+
 Recommended production behavior:
 
 - Script timeout, max-size overflow, or exception: log the rule tag and continue with the original HTTP object unless
@@ -151,9 +158,9 @@ Recommended production behavior:
 
 ## Current E2E Proof
 
-The Alpha proxy shim follows this policy for script runner failures. `make script-contract-e2e` includes a response
-script timeout case and a throwing response script case, and asserts that the client receives the static-rewritten
-response instead of a proxy 502.
+The Alpha proxy shim follows this policy for script runner failures. `make script-contract-e2e` includes asynchronous
+and synchronous response timeout cases plus a throwing response script case, and asserts that the client receives the
+static-rewritten response instead of a proxy 502.
 
 `make script-contract-e2e` starts `mihomo`, the Go MITM shim, a local HTTPS origin, and `curl`.
 

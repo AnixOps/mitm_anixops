@@ -46,6 +46,8 @@ if ($request.url.includes("/contract/binary-body")) {
   throw new Error(`runner redaction body=${bodySecret} header=${headerSecret}`);
 } else if ($request.url.includes("throw=1")) {
   throw new Error("contract response script failed");
+} else if ($request.url.includes("sync-loop=1")) {
+  while (true) {}
 } else if (!$request.url.includes("timeout=1")) {
   $done({
     status: 201,

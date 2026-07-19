@@ -217,6 +217,34 @@ curl --silent --show-error --max-time 12 --http1.1 \
 	--cacert "$TMP/ca.pem" \
 	--request POST \
 	--header "Content-Type: application/json" \
+	--data '{"from":"sync-loop"}' \
+	--dump-header "$TMP/sync-loop-headers.out" \
+	--output "$TMP/sync-loop-body.out" \
+	"https://google.com:${ORIGIN_PORT}/contract/request-response?sync-loop=1"
+
+grep -F "HTTP/1.1 200 OK" "$TMP/sync-loop-headers.out" >/dev/null
+grep -i -F "X-AnixOps-Static-Response: static-response" "$TMP/sync-loop-headers.out" >/dev/null
+if grep -i -F "X-AnixOps-Script:" "$TMP/sync-loop-headers.out" >/dev/null; then
+	echo "host-timed-out response script unexpectedly applied response headers" >&2
+	sed -n '1,120p' "$TMP/sync-loop-headers.out" >&2
+	exit 1
+fi
+
+node - "$TMP/sync-loop-body.out" <<'JS'
+const fs = require("node:fs");
+const body = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+if (body.code !== 7) throw new Error(`response body rewrite did not survive host timeout: ${body.code}`);
+if (body.requestScript !== "applied") throw new Error("request script header did not survive host timeout");
+const upstream = JSON.parse(body.body);
+if (upstream.from !== "static-request") throw new Error("request body rewrite did not survive host timeout");
+if (upstream.requestScript !== true) throw new Error("request script body mutation did not survive host timeout");
+JS
+
+curl --silent --show-error --max-time 12 --http1.1 \
+	--proxy "http://127.0.0.1:${SHIM_PORT}" \
+	--cacert "$TMP/ca.pem" \
+	--request POST \
+	--header "Content-Type: application/json" \
 	--data '{"from":"throw"}' \
 	--dump-header "$TMP/throw-headers.out" \
 	--output "$TMP/throw-body.out" \
@@ -678,6 +706,7 @@ echo "script contract: static request/response header rewrites run before script
 echo "script contract: static request/response body rewrites run before script dispatch"
 echo "script contract: persistentStore read/write shared across request and response scripts"
 echo "script contract: response script timeout fails open after static rewrites"
+echo "script contract: synchronous response script loop is stopped by the host deadline"
 echo "script contract: response script exception fails open after static rewrites"
 echo "script contract: gzip/deflate response bodies decoded and returned as identity after script mutation"
 echo "script contract: gzip/deflate request bodies decoded before body/script mutation and returned as identity"

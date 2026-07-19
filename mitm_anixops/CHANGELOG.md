@@ -515,6 +515,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Fixed
 
+- Bound Alpha shim Node script execution with a 30-second policy timeout plus
+  bounded host grace, bounded runner stdout/stderr and `$done` output, and
+  fixed redacted fail-open diagnostics for synchronous loops and output
+  overflow.
 - Bounded Alpha shim raw request and response buffering before body/script
   mutation; over-limit data now relays through the proxy without a second full
   request copy or representation-changing header/body/script handling.

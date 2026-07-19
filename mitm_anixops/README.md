@@ -389,7 +389,8 @@ For iOS:
   `$argument`, `$persistentStore`, `$done`, and the returned `timeout_ms` / `max_size` scheduling metadata.
 - Treat `ANIXOPS_MITM_REJECT_QUIC` as a signal to reject/drop QUIC for a matched host so the client can retry over TCP/TLS.
 - Follow `docs/script_runtime_contract.md` for request/response script globals, `$done` writeback, timeout behavior, and
-  body-framing ownership. The packaged Node contract runner supports file-backed `$persistentStore` through `--store`.
+  body-framing ownership. The Alpha shim independently bounds Node runner execution and output; the packaged Node
+  contract runner supports file-backed `$persistentStore` through `--store`.
 
 For Rust:
 

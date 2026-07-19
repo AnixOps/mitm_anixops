@@ -14,6 +14,7 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"compress/zlib"
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -86,7 +87,15 @@ const (
 	defaultListen             = "127.0.0.1:19080"
 	defaultExternalUpstream   = "http://127.0.0.1:7890"
 	maxBodyRewriteBuffer      = 32 * 1024 * 1024
+	maxScriptRunnerTimeout     = 30 * time.Second
+	scriptRunnerStartupGrace   = time.Second
+	scriptRunnerWaitDelay      = time.Second
+	maxScriptRunnerStderrBytes = 64 * 1024
+	maxScriptRunnerHeaderCount = 128
+	maxScriptRunnerHeaderBytes = 64 * 1024
 )
+
+const maxScriptRunnerOutputBytes = maxBodyRewriteBuffer
 
 type engine struct {
 	ptr *C.anixops_engine_t
@@ -116,10 +125,13 @@ type proxyServer struct {
 	scriptPathFile  string
 	scriptStore     string
 	scriptTimeoutMs string
-	tempDir         string
-	debug           bool
-	requestSeq      uint64
-	mutex           sync.Mutex
+	// Test-only lower limits exercise cancellation without allocating production-sized output.
+	scriptOutputLimit int
+	scriptStderrLimit int
+	tempDir            string
+	debug              bool
+	requestSeq         uint64
+	mutex              sync.Mutex
 }
 
 // forwardRelayMetadata is retained only when a raw body exceeded the bounded
@@ -148,6 +160,52 @@ type scriptDone struct {
 	Body    *string           `json:"body"`
 }
 
+var errScriptDoneOutputLimit = errors.New("script done output exceeds limit")
+
+type scriptOutputWriter struct {
+	buffer   bytes.Buffer
+	limit    int
+	cancel   context.CancelFunc
+	exceeded bool
+}
+
+func (w *scriptOutputWriter) Write(data []byte) (int, error) {
+	remaining := w.limit - w.buffer.Len()
+	if remaining <= 0 {
+		w.exceeded = true
+		w.cancel()
+		return len(data), nil
+	}
+	if len(data) > remaining {
+		_, _ = w.buffer.Write(data[:remaining])
+		w.exceeded = true
+		w.cancel()
+		return len(data), nil
+	}
+	return w.buffer.Write(data)
+}
+
+type scriptDiscardWriter struct {
+	limit    int
+	written  int
+	cancel   context.CancelFunc
+	exceeded bool
+}
+
+func (w *scriptDiscardWriter) Write(data []byte) (int, error) {
+	remaining := w.limit - w.written
+	if remaining <= 0 || len(data) > remaining {
+		if remaining > 0 {
+			w.written += remaining
+		}
+		w.exceeded = true
+		w.cancel()
+		return len(data), nil
+	}
+	w.written += len(data)
+	return len(data), nil
+}
+
 func main() {
 	defaultCACert, defaultCAKey := defaultCAPaths()
 	listen := flag.String("listen", defaultListen, "local HTTP/HTTPS proxy listen address")
@@ -170,6 +228,9 @@ func main() {
 	scriptStore := flag.String("script-store", "", "optional JSON file backing $persistentStore for the script runner")
 	scriptTimeoutMs := flag.String("script-timeout-ms", "5000", "script runner $done timeout in milliseconds")
 	flag.Parse()
+	if _, _, err := scriptRunnerTimeout(*scriptTimeoutMs, 0); err != nil {
+		log.Fatalf("invalid --script-timeout-ms: %v", err)
+	}
 
 	if *mihomoProxyRaw != "" && *upstreamRaw == "" {
 		*upstreamRaw = *mihomoProxyRaw
@@ -1506,9 +1567,9 @@ func (ps *proxyServer) runScript(
 	if err != nil {
 		return scriptDone{}, errors.New("script runner header serialization failed")
 	}
-	timeoutMs := ps.scriptTimeoutMs
-	if match.timeoutMs > 0 {
-		timeoutMs = strconv.FormatUint(match.timeoutMs, 10)
+	timeout, timeoutMs, err := scriptRunnerTimeout(ps.scriptTimeoutMs, match.timeoutMs)
+	if err != nil {
+		return scriptDone{}, errors.New("script runner timeout invalid")
 	}
 
 	args := []string{
@@ -1534,19 +1595,293 @@ func (ps *proxyServer) runScript(
 			"--status", fmt.Sprintf("%d", responseStatus),
 			"--responseHeaders", string(headerJSON))
 	}
-	cmd := exec.Command("node", args...)
-	output, err := cmd.Output()
+	ctx, cancel := context.WithTimeout(context.Background(), timeout+scriptRunnerStartupGrace)
+	defer cancel()
+	stdout := &scriptOutputWriter{limit: ps.scriptRunnerOutputLimit(), cancel: cancel}
+	stderr := &scriptDiscardWriter{limit: ps.scriptRunnerStderrLimit(), cancel: cancel}
+	cmd := exec.CommandContext(ctx, "node", args...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.WaitDelay = scriptRunnerWaitDelay
+	err = cmd.Run()
+	if stdout.exceeded || stderr.exceeded {
+		return scriptDone{}, errors.New("script runner output exceeds limit")
+	}
 	if err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return scriptDone{}, errors.New("script runner timed out")
+		}
 		if _, ok := err.(*exec.ExitError); ok {
 			return scriptDone{}, errors.New("script runner failed")
 		}
 		return scriptDone{}, errors.New("script runner unavailable")
 	}
-	var done scriptDone
-	if err := json.Unmarshal(output, &done); err != nil {
+	done, err := decodeScriptDone(stdout.buffer.Bytes())
+	if errors.Is(err, errScriptDoneOutputLimit) {
+		return scriptDone{}, errors.New("script runner output exceeds limit")
+	}
+	if err != nil {
 		return scriptDone{}, errors.New("script runner returned malformed output")
 	}
 	return done, nil
+}
+
+func scriptRunnerTimeout(configured string, override uint64) (time.Duration, string, error) {
+	value := strings.TrimSpace(configured)
+	if override > 0 {
+		value = strconv.FormatUint(override, 10)
+	}
+	milliseconds, err := strconv.ParseUint(value, 10, 64)
+	if err != nil || milliseconds == 0 {
+		return 0, "", errors.New("timeout must be a positive millisecond value")
+	}
+	if milliseconds > uint64(maxScriptRunnerTimeout/time.Millisecond) {
+		return 0, "", fmt.Errorf("timeout exceeds %s", maxScriptRunnerTimeout)
+	}
+	return time.Duration(milliseconds) * time.Millisecond, strconv.FormatUint(milliseconds, 10), nil
+}
+
+func (ps *proxyServer) scriptRunnerOutputLimit() int {
+	if ps.scriptOutputLimit > 0 {
+		return ps.scriptOutputLimit
+	}
+	return maxScriptRunnerOutputBytes
+}
+
+func (ps *proxyServer) scriptRunnerStderrLimit() int {
+	if ps.scriptStderrLimit > 0 {
+		return ps.scriptStderrLimit
+	}
+	return maxScriptRunnerStderrBytes
+}
+
+func decodeScriptDone(output []byte) (scriptDone, error) {
+	decoder := json.NewDecoder(bytes.NewReader(output))
+	decoder.UseNumber()
+	opening, err := decoder.Token()
+	if err != nil {
+		return scriptDone{}, err
+	}
+	if opening != json.Delim('{') {
+		return scriptDone{}, errors.New("script output must be an object")
+	}
+
+	var done scriptDone
+	for decoder.More() {
+		field, err := decoder.Token()
+		if err != nil {
+			return scriptDone{}, err
+		}
+		name, ok := field.(string)
+		if !ok {
+			return scriptDone{}, errors.New("script output field must be a string")
+		}
+		switch name {
+		case "url":
+			value, isNull, err := decodeScriptString(decoder)
+			if err != nil {
+				return scriptDone{}, err
+			}
+			if !isNull {
+				done.URL = value
+			}
+		case "status":
+			status, err := decodeScriptStatus(decoder)
+			if err != nil {
+				return scriptDone{}, err
+			}
+			done.Status = status
+		case "headers":
+			headers, err := decodeScriptHeaders(decoder)
+			if err != nil {
+				return scriptDone{}, err
+			}
+			done.Headers = headers
+		case "body":
+			value, isNull, err := decodeScriptString(decoder)
+			if err != nil {
+				return scriptDone{}, err
+			}
+			if isNull {
+				done.Body = nil
+				continue
+			}
+			if len(value) > maxBodyRewriteBuffer {
+				return scriptDone{}, errScriptDoneOutputLimit
+			}
+			done.Body = &value
+		default:
+			if err := skipScriptJSONValue(decoder); err != nil {
+				return scriptDone{}, err
+			}
+		}
+	}
+	closing, err := decoder.Token()
+	if err != nil {
+		return scriptDone{}, err
+	}
+	if closing != json.Delim('}') {
+		return scriptDone{}, errors.New("script output object was not closed")
+	}
+	if _, err := decoder.Token(); err != io.EOF {
+		if err == nil {
+			return scriptDone{}, errors.New("script output has trailing data")
+		}
+		return scriptDone{}, err
+	}
+	if err := validateScriptDone(done); err != nil {
+		return scriptDone{}, err
+	}
+	return done, nil
+}
+
+func decodeScriptString(decoder *json.Decoder) (string, bool, error) {
+	value, err := decoder.Token()
+	if err != nil {
+		return "", false, err
+	}
+	if value == nil {
+		return "", true, nil
+	}
+	text, ok := value.(string)
+	if !ok {
+		return "", false, errors.New("script output string field has an invalid value")
+	}
+	return text, false, nil
+}
+
+func decodeScriptStatus(decoder *json.Decoder) (interface{}, error) {
+	value, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	switch typed := value.(type) {
+	case string:
+		return typed, nil
+	case json.Number:
+		status, err := typed.Float64()
+		if err != nil {
+			return nil, err
+		}
+		return status, nil
+	case json.Delim:
+		if typed != json.Delim('{') && typed != json.Delim('[') {
+			return nil, errors.New("script output status has an invalid delimiter")
+		}
+		if err := skipScriptJSONContainer(decoder, typed); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
+}
+
+func decodeScriptHeaders(decoder *json.Decoder) (map[string]string, error) {
+	opening, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	if opening == nil {
+		return nil, nil
+	}
+	if opening != json.Delim('{') {
+		return nil, errors.New("script output headers must be an object")
+	}
+
+	headers := make(map[string]string, maxScriptRunnerHeaderCount)
+	headerBytes := 0
+	headerCount := 0
+	for decoder.More() {
+		field, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+		name, ok := field.(string)
+		if !ok {
+			return nil, errors.New("script output header name must be a string")
+		}
+		value, isNull, err := decodeScriptString(decoder)
+		if err != nil {
+			return nil, err
+		}
+		if isNull {
+			value = ""
+		}
+		headerCount++
+		headerBytes += len(name) + len(value)
+		if headerCount > maxScriptRunnerHeaderCount || headerBytes > maxScriptRunnerHeaderBytes {
+			return nil, errScriptDoneOutputLimit
+		}
+		headers[name] = value
+	}
+	closing, err := decoder.Token()
+	if err != nil {
+		return nil, err
+	}
+	if closing != json.Delim('}') {
+		return nil, errors.New("script output headers object was not closed")
+	}
+	return headers, nil
+}
+
+func skipScriptJSONValue(decoder *json.Decoder) error {
+	value, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	opening, ok := value.(json.Delim)
+	if !ok {
+		return nil
+	}
+	if opening != json.Delim('{') && opening != json.Delim('[') {
+		return errors.New("script output has an invalid delimiter")
+	}
+	return skipScriptJSONContainer(decoder, opening)
+}
+
+func skipScriptJSONContainer(decoder *json.Decoder, opening json.Delim) error {
+	for decoder.More() {
+		if opening == json.Delim('{') {
+			field, err := decoder.Token()
+			if err != nil {
+				return err
+			}
+			if _, ok := field.(string); !ok {
+				return errors.New("script output object field must be a string")
+			}
+		}
+		if err := skipScriptJSONValue(decoder); err != nil {
+			return err
+		}
+	}
+	closing, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	want := json.Delim('}')
+	if opening == json.Delim('[') {
+		want = json.Delim(']')
+	}
+	if closing != want {
+		return errors.New("script output container was not closed")
+	}
+	return nil
+}
+
+func validateScriptDone(done scriptDone) error {
+	if done.Body != nil && len(*done.Body) > maxBodyRewriteBuffer {
+		return errScriptDoneOutputLimit
+	}
+	if len(done.Headers) > maxScriptRunnerHeaderCount {
+		return errScriptDoneOutputLimit
+	}
+	headerBytes := 0
+	for name, value := range done.Headers {
+		headerBytes += len(name) + len(value)
+		if headerBytes > maxScriptRunnerHeaderBytes {
+			return errScriptDoneOutputLimit
+		}
+	}
+	return nil
 }
 
 func (ps *proxyServer) tunnelConnect(clientConn net.Conn, target string) {

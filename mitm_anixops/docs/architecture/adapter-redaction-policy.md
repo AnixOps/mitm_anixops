@@ -52,10 +52,11 @@ The runner golden traces are therefore release evidence for policy decisions,
 not a production logging format.
 
 The Alpha proxy shim treats script-runner failure as a fixed redacted
-classification. Node runner stderr, raw runner output, buffered body bytes,
-serialized header maps, and script source content are not included in adapter
-errors or debug logs. NUL-containing or invalid-UTF-8 bodies bypass Node script
-dispatch before the runner is invoked.
+classification. Node runner stderr is discarded with a 64 KiB budget and raw
+runner stdout is capped at 32 MiB; neither, buffered body bytes, serialized
+header maps, nor script source content are included in adapter errors or debug
+logs. NUL-containing or invalid-UTF-8 bodies bypass Node script dispatch before
+the runner is invoked.
 
 ## Adapter Requirements
 

@@ -2,10 +2,14 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -296,5 +300,142 @@ func TestCopyResponseForwardsRawRelayTrailers(t *testing.T) {
 	}
 	if got := result.Trailer.Get("X-AnixOps-Relay-Trailer"); got != "preserved" {
 		t.Fatalf("copied trailer = %q, want preserved", got)
+	}
+}
+
+func TestRunScriptEnforcesHostDeadline(t *testing.T) {
+	server := newTestScriptRunnerProxy(t, "while (true) {}", "25")
+	started := time.Now()
+
+	_, err := server.runScript(
+		"response",
+		scriptMatch{scriptPath: testScriptRunnerURL, tag: "sync-loop"},
+		testScriptRunnerURL,
+		http.MethodGet,
+		make(http.Header),
+		http.StatusOK,
+		make(http.Header),
+		[]byte("{}"),
+	)
+	if err == nil || !strings.Contains(err.Error(), "timed out") {
+		t.Fatalf("runScript error = %v, want fixed timeout classification", err)
+	}
+	if elapsed := time.Since(started); elapsed > 2*time.Second {
+		t.Fatalf("host deadline elapsed = %s, want under 2s", elapsed)
+	}
+}
+
+func TestRunScriptBoundsRunnerOutput(t *testing.T) {
+	secret := "anixops-runner-stdout-secret"
+	server := newTestScriptRunnerProxy(t, fmt.Sprintf("process.stdout.write('%s'.repeat(%d));", secret, 3), "2000")
+	server.scriptOutputLimit = 64
+
+	_, err := server.runScript(
+		"response",
+		scriptMatch{scriptPath: testScriptRunnerURL, tag: "stdout-overflow"},
+		testScriptRunnerURL,
+		http.MethodGet,
+		make(http.Header),
+		http.StatusOK,
+		make(http.Header),
+		[]byte("{}"),
+	)
+	if err == nil || err.Error() != "script runner output exceeds limit" {
+		t.Fatalf("runScript error = %v, want fixed output-limit classification", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("runner error leaked stdout secret: %q", err)
+	}
+}
+
+func TestRunScriptBoundsRunnerStderrWithoutLeakingIt(t *testing.T) {
+	secret := "anixops-runner-stderr-secret"
+	server := newTestScriptRunnerProxy(t, fmt.Sprintf("process.stderr.write('%s'.repeat(%d));", secret, 4), "2000")
+	server.scriptStderrLimit = len(secret) * 2
+
+	_, err := server.runScript(
+		"response",
+		scriptMatch{scriptPath: testScriptRunnerURL, tag: "stderr-overflow"},
+		testScriptRunnerURL,
+		http.MethodGet,
+		make(http.Header),
+		http.StatusOK,
+		make(http.Header),
+		[]byte("{}"),
+	)
+	if err == nil || err.Error() != "script runner output exceeds limit" {
+		t.Fatalf("runScript error = %v, want fixed output-limit classification", err)
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("runner error leaked stderr secret: %q", err)
+	}
+}
+
+func TestRunScriptRejectsOverBudgetDoneHeaders(t *testing.T) {
+	runnerSource := "const headers = {}; for (let index = 0; index < 129; index += 1) { headers['X-Test-' + index] = 'v'; } process.stdout.write(JSON.stringify({ headers }));"
+	server := newTestScriptRunnerProxy(t, runnerSource, "2000")
+
+	_, err := server.runScript(
+		"response",
+		scriptMatch{scriptPath: testScriptRunnerURL, tag: "header-overflow"},
+		testScriptRunnerURL,
+		http.MethodGet,
+		make(http.Header),
+		http.StatusOK,
+		make(http.Header),
+		[]byte("{}"),
+	)
+	if err == nil || err.Error() != "script runner output exceeds limit" {
+		t.Fatalf("runScript error = %v, want fixed header-limit classification", err)
+	}
+}
+
+func TestDecodeScriptDoneAcceptsNodeContractEnvelope(t *testing.T) {
+	done, err := decodeScriptDone([]byte(`{
+  "status": 201,
+  "url": "https://scripts.example.test/next",
+  "headers": {"X-AnixOps-Script": "applied"},
+  "body": "rewritten",
+  "unknown": {"nested": ["ignored"]}
+}`))
+	if err != nil {
+		t.Fatalf("decodeScriptDone: %v", err)
+	}
+	if done.URL != "https://scripts.example.test/next" {
+		t.Fatalf("url = %q", done.URL)
+	}
+	if status, ok := numericStatus(done.Status); !ok || status != http.StatusCreated {
+		t.Fatalf("status = %#v, want %d", done.Status, http.StatusCreated)
+	}
+	if got := done.Headers["X-AnixOps-Script"]; got != "applied" {
+		t.Fatalf("header = %q", got)
+	}
+	if done.Body == nil || *done.Body != "rewritten" {
+		t.Fatalf("body = %v", done.Body)
+	}
+}
+
+const testScriptRunnerURL = "https://scripts.example.test/test.js"
+
+func newTestScriptRunnerProxy(t *testing.T, runnerSource, timeoutMs string) *proxyServer {
+	t.Helper()
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required for script-runner process tests")
+	}
+	dir := t.TempDir()
+	runnerPath := filepath.Join(dir, "runner.js")
+	if err := os.WriteFile(runnerPath, []byte(runnerSource), 0o600); err != nil {
+		t.Fatalf("write test runner: %v", err)
+	}
+	scriptPath := filepath.Join(dir, "script.js")
+	if err := os.WriteFile(scriptPath, []byte("// mapped test script\n"), 0o600); err != nil {
+		t.Fatalf("write mapped script: %v", err)
+	}
+	return &proxyServer{
+		scriptRunner:    runnerPath,
+		scriptPathURL:   testScriptRunnerURL,
+		scriptPathFile:  scriptPath,
+		scriptTimeoutMs: timeoutMs,
+		tempDir:         dir,
 	}
 }

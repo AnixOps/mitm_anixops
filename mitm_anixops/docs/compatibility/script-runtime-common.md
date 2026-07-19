@@ -108,6 +108,9 @@ execution, body decoding, header map mutation, and HTTP writeback.
   script.
 - Script exceptions fail open and preserve the static-rewritten object.
 - Script timeout fails open and preserves the static-rewritten object.
+- The Alpha proxy shim independently stops synchronous Node script loops at the
+  bounded host deadline; runner stdout, stderr, and `$done` payloads have
+  fixed budgets and overages fail open with a redacted classification.
 - NUL-containing or invalid-UTF-8 bodies bypass every request and response
   script hook without entering the Node runner.
 - Runner process failure and malformed runner output fail open with fixed
@@ -173,10 +176,11 @@ network APIs are exposed to JavaScript.
   and double `$done` first-wins replay evidence.
 - `make script-contract-e2e` covers the Alpha proxy path for request/response
   script mutation, static rewrite ordering, `$persistentStore`,
-  rule-level timeout fail-open, exception fail-open, and gzip/deflate response
-  decode plus gzip/deflate request decode, each with identity writeback. It
-  also proves binary request/response bodies bypass Node script dispatch and
-  runner failure logs retain only a fixed redacted classification.
+  rule-level and host-enforced synchronous timeout fail-open, exception
+  fail-open, and gzip/deflate response decode plus gzip/deflate request decode,
+  each with identity writeback. It also proves binary request/response bodies
+  bypass Node script dispatch and runner failure logs retain only a fixed
+  redacted classification.
 - `scripts/script-runtime-security-gate.sh` requires this security boundary,
   the pending production runtime/redaction manual-intervention markers, the
   no-embedded-engine dependency decision, and matrix/source-contract evidence
