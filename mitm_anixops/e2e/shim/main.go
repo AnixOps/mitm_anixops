@@ -90,6 +90,8 @@ const (
 
 type engine struct {
 	ptr *C.anixops_engine_t
+	// The policy core is not internally thread-safe; all C calls share this lock.
+	mu sync.Mutex
 }
 
 type caMaterial struct {
@@ -105,7 +107,7 @@ type certCache struct {
 }
 
 type proxyServer struct {
-	engine          engine
+	engine          *engine
 	certs           *certCache
 	httpClient      *http.Client
 	upstreamProxy   *url.URL
@@ -660,29 +662,41 @@ func installSignalCleanup(cmd *exec.Cmd) {
 	}()
 }
 
-func newEngine(configPath string) (engine, error) {
+func newEngine(configPath string) (*engine, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return engine{}, err
+		return nil, err
 	}
 	ptr := C.anixops_engine_new()
 	if ptr == nil {
-		return engine{}, errors.New("anixops_engine_new returned nil")
+		return nil, errors.New("anixops_engine_new returned nil")
 	}
 	cconf := C.CString(string(data))
 	defer C.free(unsafe.Pointer(cconf))
 	if rc := C.anixops_engine_load_config(ptr, cconf); rc != C.ANIXOPS_OK {
 		C.anixops_engine_free(ptr)
-		return engine{}, fmt.Errorf("anixops_engine_load_config failed: %d", int(rc))
+		return nil, fmt.Errorf("anixops_engine_load_config failed: %d", int(rc))
 	}
 	C.anixops_engine_set_mitm_enabled(ptr, 1)
 	C.anixops_engine_set_cert_state(ptr, C.ANIXOPS_CERT_TRUSTED)
-	return engine{ptr: ptr}, nil
+	return &engine{ptr: ptr}, nil
 }
 
-func (e engine) close() {
+func (e *engine) withCore(call func()) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	call()
+}
+
+func (e *engine) close() {
+	if e == nil {
+		return
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
 	if e.ptr != nil {
 		C.anixops_engine_free(e.ptr)
+		e.ptr = nil
 	}
 }
 
@@ -699,22 +713,25 @@ func (ps *proxyServer) debugf(format string, args ...interface{}) {
 	}
 }
 
-func (e engine) rewrite(rawURL string) (action C.anixops_rewrite_action_t, status int, value string, err error) {
+func (e *engine) rewrite(rawURL string) (action C.anixops_rewrite_action_t, status int, value string, err error) {
 	return e.rewriteForPhase(rawURL, phaseRequest)
 }
 
-func (e engine) rewriteForPhase(rawURL string, phase C.anixops_phase_t) (action C.anixops_rewrite_action_t, status int, value string, err error) {
+func (e *engine) rewriteForPhase(rawURL string, phase C.anixops_phase_t) (action C.anixops_rewrite_action_t, status int, value string, err error) {
 	curl := C.CString(rawURL)
 	defer C.free(unsafe.Pointer(curl))
 	var result C.anixops_rewrite_result_t
-	rc := C.anixops_rewrite_evaluate_url(e.ptr, curl, phase, &result)
+	var rc C.int
+	e.withCore(func() {
+		rc = C.anixops_rewrite_evaluate_url(e.ptr, curl, phase, &result)
+	})
 	if rc != C.ANIXOPS_OK {
 		return rewriteNone, 0, "", fmt.Errorf("anixops_rewrite_evaluate_url failed: %d", int(rc))
 	}
 	return result.action, int(result.status_code), cStringFromArray(unsafe.Pointer(&result.value[0])), nil
 }
 
-func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) ([]byte, bool, string, error) {
+func (e *engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) ([]byte, bool, string, error) {
 	outCap, ok := bodyRewriteBufferCap(len(body))
 	if !ok {
 		return body, false, "body rewrite skipped: body too large", nil
@@ -737,16 +754,19 @@ func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) (
 
 	var chain C.anixops_body_rewrite_chain_t
 	var outLen C.size_t
-	rc := C.anixops_rewrite_apply_body_chain_bytes(
-		e.ptr,
-		curl,
-		phase,
-		(*C.uchar)(cbody),
-		C.size_t(len(body)),
-		out,
-		C.size_t(outCap),
-		&outLen,
-		&chain)
+	var rc C.int
+	e.withCore(func() {
+		rc = C.anixops_rewrite_apply_body_chain_bytes(
+			e.ptr,
+			curl,
+			phase,
+			(*C.uchar)(cbody),
+			C.size_t(len(body)),
+			out,
+			C.size_t(outCap),
+			&outLen,
+			&chain)
+	})
 	if rc != C.ANIXOPS_OK {
 		return nil, false, "", fmt.Errorf("anixops_rewrite_apply_body_chain failed: %d", int(rc))
 	}
@@ -769,7 +789,7 @@ func (e engine) applyBody(rawURL string, phase C.anixops_phase_t, body []byte) (
 	return rewritten, !bytes.Equal(rewritten, body), message, nil
 }
 
-func (e engine) evaluateHeader(rawURL string, phase C.anixops_phase_t, startIndex int, currentValue *string) (C.anixops_header_rewrite_result_t, error) {
+func (e *engine) evaluateHeader(rawURL string, phase C.anixops_phase_t, startIndex int, currentValue *string) (C.anixops_header_rewrite_result_t, error) {
 	curl := C.CString(rawURL)
 	defer C.free(unsafe.Pointer(curl))
 	var ccurrent *C.char
@@ -778,18 +798,24 @@ func (e engine) evaluateHeader(rawURL string, phase C.anixops_phase_t, startInde
 		defer C.free(unsafe.Pointer(ccurrent))
 	}
 	var result C.anixops_header_rewrite_result_t
-	rc := C.anixops_rewrite_evaluate_header(e.ptr, curl, phase, C.size_t(startIndex), ccurrent, &result)
+	var rc C.int
+	e.withCore(func() {
+		rc = C.anixops_rewrite_evaluate_header(e.ptr, curl, phase, C.size_t(startIndex), ccurrent, &result)
+	})
 	if rc != C.ANIXOPS_OK {
 		return result, fmt.Errorf("anixops_rewrite_evaluate_header failed: %d", int(rc))
 	}
 	return result, nil
 }
 
-func (e engine) script(rawURL string, phase C.anixops_phase_t) (scriptMatch, error) {
+func (e *engine) script(rawURL string, phase C.anixops_phase_t) (scriptMatch, error) {
 	curl := C.CString(rawURL)
 	defer C.free(unsafe.Pointer(curl))
 	var result C.anixops_script_result_t
-	rc := C.anixops_script_evaluate_url(e.ptr, curl, phase, &result)
+	var rc C.int
+	e.withCore(func() {
+		rc = C.anixops_script_evaluate_url(e.ptr, curl, phase, &result)
+	})
 	if rc != C.ANIXOPS_OK {
 		return scriptMatch{}, fmt.Errorf("anixops_script_evaluate_url failed: %d", int(rc))
 	}
@@ -804,11 +830,14 @@ func (e engine) script(rawURL string, phase C.anixops_phase_t) (scriptMatch, err
 	}, nil
 }
 
-func (e engine) shouldMITM(host string) (bool, error) {
+func (e *engine) shouldMITM(host string) (bool, error) {
 	chost := C.CString(host)
 	defer C.free(unsafe.Pointer(chost))
 	var decision C.anixops_mitm_decision_t
-	rc := C.anixops_mitm_evaluate(e.ptr, chost, 0, &decision)
+	var rc C.int
+	e.withCore(func() {
+		rc = C.anixops_mitm_evaluate(e.ptr, chost, 0, &decision)
+	})
 	if rc != C.ANIXOPS_OK {
 		return false, fmt.Errorf("anixops_mitm_evaluate failed: %d", int(rc))
 	}

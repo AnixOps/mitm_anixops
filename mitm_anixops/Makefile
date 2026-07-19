@@ -201,6 +201,7 @@ proxy-shim: $(PROXY_SHIM_BIN)
 
 proxy-shim-check: $(PROXY_SHIM_BIN)
 	test -x $(PROXY_SHIM_BIN)
+	cd e2e/shim && GO111MODULE=off CGO_ENABLED=1 go test -count=1 -race .
 
 pkg-config-check: all $(PKG_CONFIG_FILE)
 	rm -rf $(BUILD_DIR)/pkgconfig-check

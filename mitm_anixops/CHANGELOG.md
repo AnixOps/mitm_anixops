@@ -515,6 +515,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Fixed
 
+- Serialized every Alpha proxy-shim call into a shared policy-core engine so
+  concurrent HTTP handlers cannot race optional-libjq cache/interpreter state
+  or engine diagnostics; the shim check now exercises that lock under Go race
+  detection.
 - Hardened bounded body mutation representation handling: gzip/deflate decode
   from inbound headers with raw fail-open overflow recovery, and Go/Rust
   capability helpers reject unknown V1 bits.

@@ -106,7 +106,9 @@ Expected behavior:
   compiled-filter LRU cache (default 4); the cache can be explicitly
   invalidated through `anixops_engine_clear_jq_filter_cache` or
   `anixops_engine_clear`, and count/hit metrics are observable through the
-  public ABI for direct optional-libjq execution;
+  public ABI for direct optional-libjq execution; the C engine remains
+  externally synchronized, and the Alpha shim serializes every call on its
+  shared engine handle before optional-libjq body-chain execution;
 - the generic already-buffered body ceiling is independently configurable
   through `anixops_engine_set_max_body_bytes`; it applies to single-body and
   body-chain mutation calls and preserves the original body when exceeded;
@@ -294,6 +296,9 @@ Required CI evidence:
   output-value budget fail-open behavior for both single-body and body-chain
   application, plus unavailable execution-time and memory-limit fail-open
   behavior;
+- `e2e/shim/main_test.go` asserts the Alpha shim keeps its per-engine policy
+  core mutex held for an entire call; `make proxy-shim-check` runs that test
+  under the Go race detector;
 - `e2e/scripts/script-contract-check.sh` covers gzip/deflate request and
   response header rewrites, identity normalization, and decoded request
   overflow raw-relay behavior, plus exact binary request/response body

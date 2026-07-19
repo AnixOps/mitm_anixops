@@ -141,7 +141,7 @@ features it understands.
 | CMake package config | Supported Alpha packaging | `make cmake-package-check`, relocatable `lib/cmake/mitm_anixops`; configure/build smoke runs when `cmake` is installed |
 | Go cgo binding | Supported Alpha wrapper | `make go-binding-check`, package `bindings/go/anixops`, pkg-config backed cgo link, includes plan, body-chain, named-header, and header-list helper coverage |
 | Rust FFI binding | Supported Alpha wrapper | `make rust-binding-check`, crate `bindings/rust/mitm-anixops`, pkg-config backed build script, includes plan, body-chain, named-header, and header-list helper coverage |
-| Thread-safe mutation | Not provided | external synchronization required |
+| Thread-safe mutation | Core: external synchronization required; Alpha shim: serialized per engine | the reusable C core remains internally unlocked; the Alpha proxy shim serializes every policy-core call for its one engine handle, including optional-libjq body-chain execution; other hosts must provide equivalent synchronization or use per-worker engines |
 
 ## Current End-To-End Evidence
 
