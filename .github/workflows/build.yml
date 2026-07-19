@@ -691,9 +691,9 @@ jobs:
           grep -q "^- \\[x\\] Add CI checks preventing accidental claims of automatic root trust" mitm_anixops/TODO.md
           grep -q "^- \\[x\\] Add adapter redaction policy contract and CI checks" mitm_anixops/TODO.md
           grep -q "networkcore-integration-alpha-baseline=v0.45.10-alpha" mitm_anixops/docs/networkcore_integration.md
-          grep -q "networkcore-integration-current-mode=vendored-policy-core-adapter" mitm_anixops/docs/networkcore_integration.md
+          grep -q "networkcore-integration-current-mode=vendored-policy-core-plus-plain-http-adapter" mitm_anixops/docs/networkcore_integration.md
           grep -q "networkcore-integration-v1-boundary=adapter-owned-data-plane" mitm_anixops/docs/networkcore_integration.md
-          grep -q "networkcore-integration-live-mutation-status=deferred" mitm_anixops/docs/networkcore_integration.md
+          grep -q "networkcore-integration-live-mutation-status=partial-live-http-deferred-https" mitm_anixops/docs/networkcore_integration.md
           grep -q "networkcore-v1-adapter-boundary-status=pending" mitm_anixops/docs/manual-intervention.md
           grep -q "^- \\[x\\] Update NetworkCore integration notes for the latest" mitm_anixops/TODO.md
           grep -q "Stash HTTP MITM hosts" mitm_anixops/docs/compatibility/matrix.md
