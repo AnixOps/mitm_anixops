@@ -7,6 +7,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ## Unreleased
 
+### Changed
+
+- Rolled the release evidence index forward to the published `v1.4.6`
+  release so `v1.4.7` can pass the release evidence freshness gate.
+
 ### Fixed
 
 - The Node script runner retries replacing its persistent store when Windows
