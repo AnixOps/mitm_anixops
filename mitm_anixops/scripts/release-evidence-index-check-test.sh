@@ -14,16 +14,16 @@ evidence_field_index=$(mktemp "${TMPDIR:-/tmp}/mitm-release-evidence-index-evide
 evidence_field_output=$(mktemp "${TMPDIR:-/tmp}/mitm-release-evidence-index-evidence-field-fail.XXXXXX")
 trap 'rm -f "$pass_output" "$fail_output" "$prerelease_output" "$unsorted_index" "$unsorted_output" "$gap_index" "$gap_output" "$evidence_field_index" "$evidence_field_output"' EXIT HUP INT TERM
 
-sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.6 > "$pass_output"
+sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.7 > "$pass_output"
 grep -q "release evidence index check passed" "$pass_output"
 
-if sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.7 > "$fail_output" 2>&1; then
+if sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.8 > "$fail_output" 2>&1; then
 	printf '%s\n' "release evidence index check should fail when latestStable is not the previous patch" >&2
 	exit 1
 fi
-grep -q "latestStable must be v1.4.6 for release v1.4.7" "$fail_output"
+grep -q "latestStable must be v1.4.7 for release v1.4.8" "$fail_output"
 
-sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.6-rc.1 > "$prerelease_output"
+sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.7-rc.1 > "$prerelease_output"
 grep -q "release evidence index check passed" "$prerelease_output"
 
 node - "$ROOT/docs/release_evidence_index.json" "$unsorted_index" <<'NODE'
@@ -39,13 +39,13 @@ if (!Array.isArray(index.entries) || index.entries.length < 3) {
 
 index.entries[2] = {
   ...index.entries[2],
-  version: "v1.4.6",
-  releaseUrl: "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.4.6",
+  version: "v1.4.7",
+  releaseUrl: "https://github.com/AnixOps/mitm_anixops/releases/tag/v1.4.7",
 };
 fs.writeFileSync(outputPath, `${JSON.stringify(index, null, 2)}\n`);
 NODE
 
-if RELEASE_EVIDENCE_INDEX_PATH="$unsorted_index" sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.6 > "$unsorted_output" 2>&1; then
+if RELEASE_EVIDENCE_INDEX_PATH="$unsorted_index" sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.7 > "$unsorted_output" 2>&1; then
 	printf '%s\n' "release evidence index check should fail when entries are not newest-to-oldest" >&2
 	exit 1
 fi
@@ -75,7 +75,7 @@ index.entries[2] = {
 fs.writeFileSync(outputPath, `${JSON.stringify(index, null, 2)}\n`);
 NODE
 
-if RELEASE_EVIDENCE_INDEX_PATH="$gap_index" sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.6 > "$gap_output" 2>&1; then
+if RELEASE_EVIDENCE_INDEX_PATH="$gap_index" sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.7 > "$gap_output" 2>&1; then
 	printf '%s\n' "release evidence index check should fail when retained patch entries skip a version" >&2
 	exit 1
 fi
@@ -96,7 +96,7 @@ delete index.entries[1].publicationEvidenceArtifact;
 fs.writeFileSync(outputPath, `${JSON.stringify(index, null, 2)}\n`);
 NODE
 
-if RELEASE_EVIDENCE_INDEX_PATH="$evidence_field_index" sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.6 > "$evidence_field_output" 2>&1; then
+if RELEASE_EVIDENCE_INDEX_PATH="$evidence_field_index" sh "$ROOT/scripts/release-evidence-index-check.sh" v1.4.7 > "$evidence_field_output" 2>&1; then
 	printf '%s\n' "release evidence index check should fail when retained entries omit publication evidence artifact fields" >&2
 	exit 1
 fi
