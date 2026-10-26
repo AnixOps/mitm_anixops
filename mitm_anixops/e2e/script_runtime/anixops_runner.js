@@ -23,6 +23,24 @@ function readArgs(argv) {
   return args;
 }
 
+// Windows refuses to replace a file another process still has open (an
+// earlier runner, or a virus scanner reading the store it just wrote) with
+// EPERM, EACCES or EBUSY; those clear within moments, so retry briefly.
+function renameWithRetry(from, to) {
+  const transient = new Set(["EPERM", "EACCES", "EBUSY"]);
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      fs.renameSync(from, to);
+      return;
+    } catch (error) {
+      if (!transient.has(error.code) || attempt >= 20) {
+        throw error;
+      }
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+}
+
 function loadStore(storePath) {
   if (!storePath) {
     return { data: {}, save() {} };
@@ -47,7 +65,7 @@ function loadStore(storePath) {
       fs.mkdirSync(path.dirname(storePath), { recursive: true });
       const tmp = `${storePath}.${process.pid}.tmp`;
       fs.writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
-      fs.renameSync(tmp, storePath);
+      renameWithRetry(tmp, storePath);
     },
   };
 }
