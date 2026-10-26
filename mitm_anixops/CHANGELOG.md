@@ -7,6 +7,12 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ## Unreleased
 
+### Fixed
+
+- The Node script runner retries replacing its persistent store when Windows
+  reports `EPERM`, `EACCES` or `EBUSY` because another process still has the
+  file open, instead of failing the script run.
+
 ### Added
 
 - Added a fixed V1 policy-core capability query for host-side ABI and
