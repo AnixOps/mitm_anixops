@@ -427,3 +427,7 @@ For `networkcore_anixops` compatibility and integration staging, see `docs/netwo
 For release blockers, compatibility gaps, and stage non-goals, see `docs/TODO.md`.
 
 For publishing source or binary artifacts, see `docs/release_checklist.md`.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](../LICENSE) at the repository root.

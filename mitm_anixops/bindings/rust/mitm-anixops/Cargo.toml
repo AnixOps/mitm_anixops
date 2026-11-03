@@ -2,7 +2,7 @@
 name = "mitm-anixops"
 version = "0.45.10"
 edition = "2021"
-license = "MIT"
+license = "Apache-2.0"
 description = "Rust FFI wrapper for the mitm_anixops C ABI"
 
 [lib]
