@@ -254,6 +254,68 @@ static void malformed_runtime_hosts_do_not_intercept_even_with_wildcard(void)
 	anixops_engine_free(engine);
 }
 
+static void glob_patterns_match_inside_labels(void)
+{
+	anixops_engine_t *engine = trusted_mitm_engine();
+	anixops_mitm_decision_t decision;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_mitm_hostname(engine, "*spclient.spotify.com, ad?.example.com, *.xima*.*"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "gew1-spclient.spotify.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_STREQ(decision.matched_pattern, "*spclient.spotify.com");
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "SPCLIENT.spotify.com:443", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "ad1.example.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "a.ximalaya.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "ad12.example.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_NO_HOST_MATCH);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "ximalaya.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "spclient.spotify.com.evil.test", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+
+	anixops_engine_free(engine);
+}
+
+static void glob_deny_pattern_wins_over_wildcard_allow(void)
+{
+	anixops_engine_t *engine = trusted_mitm_engine();
+	anixops_mitm_decision_t decision;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_mitm_hostname(engine, "*.googlevideo.com, -redirector*.googlevideo.com"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "redirector.googlevideo.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_BYPASS);
+	ANIXOPS_EXPECT_EQ_INT(decision.reason, ANIXOPS_MITM_REASON_DENY_HOST);
+	ANIXOPS_EXPECT_EQ_INT(anixops_mitm_evaluate(engine, "rr1---sn-a.googlevideo.com", 0, &decision), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(decision.decision, ANIXOPS_MITM_INTERCEPT);
+
+	anixops_engine_free(engine);
+}
+
+static void malformed_glob_patterns_are_rejected(void)
+{
+	const char *patterns[] = {"*?", "**", "*..example.com", "ad?.example.com.", "ad*.exa mple.com", "ad*.example.com/x"};
+	size_t i;
+
+	for (i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {
+		anixops_engine_t *engine = trusted_mitm_engine();
+		ANIXOPS_EXPECT_TRUE(engine != NULL);
+		ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_mitm_hostname(engine, patterns[i]), ANIXOPS_ERR_PARSE);
+		ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_mitm_pattern_count(engine), 0);
+		anixops_engine_free(engine);
+	}
+}
+
 void anixops_register_mitm_tests(anixops_test_case_t *tests, size_t *count, size_t cap)
 {
 	add_test(tests, count, cap, "mitm/disabled_mitm_bypasses_before_matching", disabled_mitm_bypasses_before_matching);
@@ -281,6 +343,9 @@ void anixops_register_mitm_tests(anixops_test_case_t *tests, size_t *count, size
 		"mitm/module_patch_markers_are_ignored_in_mitm_hostname",
 		module_patch_markers_are_ignored_in_mitm_hostname);
 	add_test(tests, count, cap, "mitm/quic_match_returns_reject_decision_by_default", quic_match_returns_reject_decision_by_default);
+	add_test(tests, count, cap, "mitm/glob_patterns_match_inside_labels", glob_patterns_match_inside_labels);
+	add_test(tests, count, cap, "mitm/glob_deny_pattern_wins_over_wildcard_allow", glob_deny_pattern_wins_over_wildcard_allow);
+	add_test(tests, count, cap, "mitm/malformed_glob_patterns_are_rejected", malformed_glob_patterns_are_rejected);
 	add_test(
 		tests,
 		count,

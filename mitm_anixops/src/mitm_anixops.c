@@ -629,6 +629,8 @@ static void anixops_normalize_host(const char *input, char *out, size_t out_cap)
 static int anixops_normalized_host_is_valid(const char *host, int allow_wildcard);
 static int anixops_host_label_range_is_valid(const char *start, size_t len);
 static int anixops_host_pattern_matches(const char *pattern, const char *host);
+static int anixops_host_glob_is_valid(const char *pattern);
+static int anixops_host_glob_matches(const char *pattern, const char *host);
 static void anixops_set_mitm_result(
 	anixops_mitm_decision_t *out,
 	anixops_mitm_decision_type_t decision,
@@ -8436,6 +8438,9 @@ static int anixops_normalized_host_is_valid(const char *host, int allow_wildcard
 	if (*cursor == '\0') {
 		return 0;
 	}
+	if (allow_wildcard && strpbrk(cursor, "*?") != NULL) {
+		return anixops_host_glob_is_valid(host);
+	}
 	if (strchr(cursor, ':') != NULL) {
 		const char *p;
 		for (p = cursor; *p != '\0'; p++) {
@@ -8502,8 +8507,8 @@ static int anixops_host_pattern_matches(const char *pattern, const char *host)
 	if (strcmp(pattern, host) == 0) {
 		return 1;
 	}
-	if (!anixops_starts_with_ci(pattern, "*.")) {
-		return 0;
+	if (!anixops_starts_with_ci(pattern, "*.") || strpbrk(pattern + 2, "*?") != NULL) {
+		return strpbrk(pattern, "*?") != NULL && anixops_host_glob_matches(pattern, host);
 	}
 	suffix = pattern + 2;
 	pattern_len = strlen(suffix);
@@ -8515,6 +8520,71 @@ static int anixops_host_pattern_matches(const char *pattern, const char *host)
 		return 0;
 	}
 	return host[host_len - pattern_len - 1] == '.';
+}
+
+/*
+ * Loon, Surge and Quantumult X hostname lists accept `*` (any run of
+ * characters, dots included) and `?` (one character) anywhere in a pattern:
+ * `*spclient.spotify.com`, `ad?.example.com`, `*.xima*.*`. A glob pattern may
+ * only hold host characters and wildcards, has no empty label, and names at
+ * least one literal letter or digit, so it can never be just wildcards.
+ */
+static int anixops_host_glob_is_valid(const char *pattern)
+{
+	const char *p;
+	int saw_literal = 0;
+	size_t len;
+
+	if (pattern == NULL) {
+		return 0;
+	}
+	len = strlen(pattern);
+	if (len == 0 || len > 253 || pattern[0] == '.' || pattern[len - 1] == '.') {
+		return 0;
+	}
+	for (p = pattern; *p != '\0'; p++) {
+		unsigned char ch = (unsigned char)*p;
+		if (*p == '.' && p[1] == '.') {
+			return 0;
+		}
+		if (isalnum(ch)) {
+			saw_literal = 1;
+			continue;
+		}
+		if (ch == '-' || ch == '_' || ch == '.' || ch == '*' || ch == '?') {
+			continue;
+		}
+		return 0;
+	}
+	return saw_literal;
+}
+
+static int anixops_host_glob_matches(const char *pattern, const char *host)
+{
+	const char *star = NULL;
+	const char *resume = NULL;
+
+	while (*host != '\0') {
+		if (*pattern == '?' || (*pattern != '*' && *pattern == *host)) {
+			pattern++;
+			host++;
+			continue;
+		}
+		if (*pattern == '*') {
+			star = pattern++;
+			resume = host;
+			continue;
+		}
+		if (star == NULL) {
+			return 0;
+		}
+		pattern = star + 1;
+		host = ++resume;
+	}
+	while (*pattern == '*') {
+		pattern++;
+	}
+	return *pattern == '\0';
 }
 
 static void anixops_set_mitm_result(

@@ -7,6 +7,15 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ## Unreleased
 
+### Added
+
+- MITM hostname globs: `*` (any run of characters, dots included) and `?`
+  (one character) anywhere in a hostname pattern, as Loon, Surge and
+  Quantumult X accept them (`*spclient.spotify.com`, `ad?.example.com`,
+  `*.xima*.*`, deny `-redirector*.googlevideo.com`). Plain `*` and
+  `*.suffix` keep their existing meaning. Glob patterns that are only
+  wildcards, have an empty label or carry non-host characters are rejected.
+
 ### Changed
 
 - Licensed under Apache-2.0 (`LICENSE` at the repository root); the Rust
