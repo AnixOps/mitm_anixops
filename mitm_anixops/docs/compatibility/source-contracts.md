@@ -1063,7 +1063,12 @@ Input form:
 
 - exact hostnames;
 - wildcard/suffix hostnames;
-- deny host entries;
+- glob hostnames with `*` (any run of characters, dots included) and `?`
+  (one character) anywhere in the pattern, as Loon, Surge and Quantumult X
+  accept them (`*spclient.spotify.com`, `ad?.example.com`, `*.xima*.*`); a
+  glob holds only host characters and wildcards, has no empty label and at
+  least one letter or digit;
+- deny host entries, including deny globs (`-redirector*.googlevideo.com`);
 - host with port;
 - IPv6 literal;
 - malformed host parser fixture `tests/fixtures/MITM.Hostname.Malformed.conf`;
@@ -1074,6 +1079,9 @@ Current CI evidence:
 - `tests/test_mitm.c`;
 - `config/mitm_hostname_malformed_fixture_rejects_invalid_host`;
 - `mitm/malformed_runtime_hosts_do_not_intercept_even_with_wildcard`;
+- `mitm/glob_patterns_match_inside_labels`;
+- `mitm/glob_deny_pattern_wins_over_wildcard_allow`;
+- `mitm/malformed_glob_patterns_are_rejected`;
 - strategy-chain demo;
 - runner and proxy E2E paths.
 
