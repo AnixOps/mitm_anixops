@@ -22,6 +22,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   binding's `license` field now says Apache-2.0 instead of MIT.
 - Rolled the release evidence index forward to the published `v1.4.6`
   release so `v1.4.7` can pass the release evidence freshness gate.
+- Rolled the release evidence index forward to the published `v1.4.7`
+  release so `v1.4.8` can pass the release evidence freshness gate.
 
 ### Fixed
 
