@@ -304,7 +304,7 @@ static void glob_deny_pattern_wins_over_wildcard_allow(void)
 
 static void malformed_glob_patterns_are_rejected(void)
 {
-	const char *patterns[] = {"*?", "**", "*..example.com", "ad?.example.com.", "ad*.exa mple.com", "ad*.example.com/x"};
+	const char *patterns[] = {"*?", "**", "*..example.com", ".ad?.example.com", "ad*.exa mple.com", "ad*.example.com/x"};
 	size_t i;
 
 	for (i = 0; i < sizeof(patterns) / sizeof(patterns[0]); i++) {
