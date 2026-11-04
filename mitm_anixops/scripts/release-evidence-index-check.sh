@@ -68,12 +68,12 @@ function assert(condition, message) {
 }
 
 const expectedLatestStable = {
-  version: "v1.4.6",
-  targetCommit: "6382f0147e02a8653343571791ef61b8cc885cb1",
-  ciRunId: "29688639235",
-  releaseWorkflowRunId: "29688801002",
+  version: "v1.4.7",
+  targetCommit: "ee952234c35ddf36f2c63f8aa20f28ad744bd054",
+  ciRunId: "40328918200",
+  releaseWorkflowRunId: "40331935160",
   freshnessStatus: "enforced-for-stable-patch-and-declared-boundary-releases",
-  nextStableRelease: "v1.4.7",
+  nextStableRelease: "v1.4.8",
   releaseNotesFeatureAdditionsSection: "Feature additions:",
   releaseNotesBugFixesSection: "BUG fixes:",
   releaseNotesVerifiedSince: "v1.3.4",
