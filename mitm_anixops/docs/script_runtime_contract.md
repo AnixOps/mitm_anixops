@@ -120,6 +120,7 @@ with an empty body. When a body is replaced, the adapter must remove stale trans
 The platform adapter, not this library, is responsible for:
 
 - buffering request/response bodies when `requires_body` is true
+- handing the script raw bytes instead of UTF-8 text when `binary_body_mode` is true
 - calling `anixops_rewrite_apply_body_chain` for mock, regex, JSON path, and optional JQ body rewrite rules after a
   plain-text body is available; `anixops_rewrite_apply_body` remains available for legacy single-rule evaluation
 - calling `anixops_rewrite_apply_headers` for the bounded Alpha header-list helper, or calling

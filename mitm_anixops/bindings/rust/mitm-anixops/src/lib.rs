@@ -100,6 +100,7 @@ struct AnixopsScriptResult {
     tag: [c_char; ANIXOPS_VALUE_CAP],
     argument: [c_char; ANIXOPS_ARGUMENT_CAP],
     message: [c_char; ANIXOPS_MESSAGE_CAP],
+    binary_body_mode: c_int,
 }
 
 #[repr(C)]
@@ -404,6 +405,7 @@ pub struct ScriptResult {
     pub tag: String,
     pub argument: String,
     pub message: String,
+    pub binary_body_mode: bool,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -907,6 +909,7 @@ fn script_result_from_c(result: &AnixopsScriptResult) -> ScriptResult {
         tag: cstr_from_buf(&result.tag),
         argument: cstr_from_buf(&result.argument),
         message: cstr_from_buf(&result.message),
+        binary_body_mode: result.binary_body_mode != 0,
     }
 }
 
@@ -1061,6 +1064,7 @@ fn empty_script_result() -> AnixopsScriptResult {
         tag: [0; ANIXOPS_VALUE_CAP],
         argument: [0; ANIXOPS_ARGUMENT_CAP],
         message: [0; ANIXOPS_MESSAGE_CAP],
+        binary_body_mode: 0,
     }
 }
 
@@ -1081,7 +1085,7 @@ Mode = select,rust
 ^https:\/\/api\.rust\.example\/v1 response-body-replace-regex from to
 
 [Script]
-http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-size=2048, script-path=https://scripts.example/rust-response.js, tag=rust.response, argument=[{Mode}]
+http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, binary-body-mode=true, timeout=4, max-size=2048, script-path=https://scripts.example/rust-response.js, tag=rust.response, argument=[{Mode}]
 "#;
 
     #[test]
@@ -1189,6 +1193,7 @@ http-response ^https:\/\/api\.rust\.example\/v1 requires-body=1, timeout=4, max-
             .unwrap();
         assert_eq!(script.kind, ScriptKind::HttpResponse);
         assert!(script.requires_body);
+        assert!(script.binary_body_mode);
         assert_eq!(script.script_path, "https://scripts.example/rust-response.js");
         assert_eq!(script.tag, "rust.response");
         assert_eq!(script.argument, "Mode=rust");

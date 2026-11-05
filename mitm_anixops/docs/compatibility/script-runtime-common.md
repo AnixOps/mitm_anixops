@@ -71,6 +71,8 @@ The policy core returns `anixops_script_result_t` with:
 - tag;
 - resolved argument string;
 - `requires_body`;
+- `binary_body_mode` (`binary-body-mode` / `binary_body_mode`): the host
+  passes the body to the script as raw bytes instead of UTF-8 text;
 - `timeout_ms`;
 - `max_size`;
 - dispatch disabled/enabled state.

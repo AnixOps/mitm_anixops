@@ -91,6 +91,7 @@ typedef struct anixops_script_rule {
 	anixops_script_kind_t kind;
 	anixops_phase_t phase;
 	int requires_body;
+	int binary_body_mode;
 	size_t timeout_ms;
 	size_t max_size;
 	int enabled;
@@ -2963,6 +2964,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	char tag[2048];
 	char argument_template[4096];
 	char requires_body[128];
+	char binary_body_mode[128];
 	char timeout[128];
 	char timeout_ms[128];
 	char max_size[128];
@@ -3004,6 +3006,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	tag[0] = '\0';
 	argument_template[0] = '\0';
 	requires_body[0] = '\0';
+	binary_body_mode[0] = '\0';
 	timeout[0] = '\0';
 	timeout_ms[0] = '\0';
 	max_size[0] = '\0';
@@ -3160,6 +3163,10 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	if (requires_body[0] == '\0') {
 		(void)anixops_extract_attr(attrs, "requires_body", requires_body, sizeof(requires_body));
 	}
+	(void)anixops_extract_attr(attrs, "binary-body-mode", binary_body_mode, sizeof(binary_body_mode));
+	if (binary_body_mode[0] == '\0') {
+		(void)anixops_extract_attr(attrs, "binary_body_mode", binary_body_mode, sizeof(binary_body_mode));
+	}
 	(void)anixops_extract_attr(attrs, "timeout-ms", timeout_ms, sizeof(timeout_ms));
 	if (timeout_ms[0] == '\0') {
 		(void)anixops_extract_attr(attrs, "timeout_ms", timeout_ms, sizeof(timeout_ms));
@@ -3178,6 +3185,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	anixops_unquote_inplace(tag);
 	anixops_unquote_inplace(argument_template);
 	anixops_unquote_inplace(requires_body);
+	anixops_unquote_inplace(binary_body_mode);
 	anixops_unquote_inplace(timeout_ms);
 	anixops_unquote_inplace(timeout);
 	anixops_unquote_inplace(max_size);
@@ -3236,6 +3244,7 @@ ANIXOPS_API int anixops_engine_add_script_rule(anixops_engine_t *engine, const c
 	rule->kind = kind;
 	rule->phase = phase;
 	rule->requires_body = anixops_parse_bool(requires_body);
+	rule->binary_body_mode = anixops_parse_bool(binary_body_mode);
 	rule->timeout_ms = parsed_timeout_ms;
 	rule->max_size = parsed_max_size;
 	rule->enabled = parsed_enabled;
@@ -4422,6 +4431,7 @@ ANIXOPS_API int anixops_script_evaluate_url(
 		out_result->kind = rule->kind;
 		out_result->phase = rule->phase;
 		out_result->requires_body = rule->requires_body;
+		out_result->binary_body_mode = rule->binary_body_mode;
 		out_result->timeout_ms = rule->timeout_ms;
 		out_result->max_size = rule->max_size;
 		out_result->rule_index = (int)i;

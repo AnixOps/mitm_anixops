@@ -15,6 +15,11 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   `*.xima*.*`, deny `-redirector*.googlevideo.com`). Plain `*` and
   `*.suffix` keep their existing meaning. Glob patterns that are only
   wildcards, have an empty label or carry non-host characters are rejected.
+- Script dispatches report `binary_body_mode` (Loon/Surge `binary-body-mode`,
+  alias `binary_body_mode`) in `anixops_script_result_t`, so the host can hand
+  such scripts the body as raw bytes. The field is appended at the end of the
+  struct; the Go and Rust bindings expose it as `BinaryBodyMode` /
+  `binary_body_mode`.
 
 ### Changed
 
