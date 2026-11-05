@@ -1615,6 +1615,7 @@ Current CI evidence:
 - `script/quantumultx_url_prefixed_response_header_scripts_are_supported`;
 - runner replay with the Alpha Node contract runner;
 - `script/body_script_trigger_tokens_force_requires_body`;
+- `script/binary_body_mode_is_reported_per_dispatch`;
 - `script/direct_script_attribute_boundaries_accept_commas_quotes_and_aliases`;
 - `script/script_scheduling_attributes_are_exposed`;
 - `script/sgmodule_inline_arguments_are_supported`;

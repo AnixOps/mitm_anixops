@@ -30,6 +30,7 @@ Supported fields:
 - `tag`;
 - `argument`;
 - `requires-body` and `requires_body`;
+- `binary-body-mode` and `binary_body_mode`;
 - `timeout` seconds and `timeout-ms`/`timeout_ms` milliseconds;
 - `max-size` and `max_size`;
 - `enable` and `enabled` dispatch flags.
@@ -42,7 +43,7 @@ For valid script lines, the parser must:
 - emit an accepted diagnostic with section `Script`, action `script`, and
   message `script rule accepted`;
 - expose phase, script path, tag, resolved argument, `requires_body`,
-  `timeout_ms`, and `max_size` through `anixops_script_evaluate_url`;
+  `binary_body_mode`, `timeout_ms`, and `max_size` through `anixops_script_evaluate_url`;
 - skip disabled script rules during dispatch without deleting the rule.
 
 Malformed non-empty script lines without a valid `script-path` are rejected by

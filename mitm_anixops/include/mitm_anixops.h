@@ -221,6 +221,9 @@ typedef struct anixops_script_result {
 	char tag[ANIXOPS_VALUE_CAP];
 	char argument[ANIXOPS_ARGUMENT_CAP];
 	char message[ANIXOPS_MESSAGE_CAP];
+	/* 1 when the rule sets binary-body-mode=true: the host hands the script
+	 * the body as raw bytes instead of UTF-8 text. */
+	int binary_body_mode;
 } anixops_script_result_t;
 
 typedef struct anixops_task_descriptor {

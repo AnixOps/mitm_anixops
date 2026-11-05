@@ -103,6 +103,7 @@ features it understands.
 | --- | --- | --- |
 | `http-request` / `http-response` plugin lines | Supported subset | `anixops_script_evaluate_url` |
 | `requires-body` / `requires_body` | Supported | response/request script tests |
+| `binary-body-mode` / `binary_body_mode` | Supported metadata | `script/binary_body_mode_is_reported_per_dispatch`; the core reports `binary_body_mode` per dispatch and the host runtime decides how to hand raw bytes to the script |
 | `script-path` / `script_path` | Supported | plugin and Surge tests |
 | `tag` | Supported | plugin and Surge tests |
 | `argument=[{Name},...]` | Supported | BiliBili fixture tests |

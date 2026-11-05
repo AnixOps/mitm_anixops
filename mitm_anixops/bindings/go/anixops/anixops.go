@@ -129,6 +129,7 @@ type ScriptResult struct {
 	Tag            string
 	Argument       string
 	Message        string
+	BinaryBodyMode bool
 }
 
 type RewritePlan struct {
@@ -656,6 +657,7 @@ func scriptResultFromC(result *C.anixops_script_result_t) ScriptResult {
 		Tag:            cArrayString(unsafe.Pointer(&result.tag[0])),
 		Argument:       cArrayString(unsafe.Pointer(&result.argument[0])),
 		Message:        cArrayString(unsafe.Pointer(&result.message[0])),
+		BinaryBodyMode: result.binary_body_mode != 0,
 	}
 }
 

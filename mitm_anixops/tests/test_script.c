@@ -510,6 +510,61 @@ static void body_script_trigger_tokens_force_requires_body(void)
 	anixops_engine_free(engine);
 }
 
+static void binary_body_mode_is_reported_per_dispatch(void)
+{
+	const char *config =
+		"[Script]\n"
+		"http-response ^https://api\\.example\\.test/proto script-path=https://scripts.example.test/proto.js, "
+		"requires-body=true, binary-body-mode=true, tag=proto\n"
+		"http-request ^https://api\\.example\\.test/upload script-path=https://scripts.example.test/upload.js, "
+		"requires-body=1, binary_body_mode=\"1\", tag=upload\n"
+		"http-response ^https://api\\.example\\.test/text script-path=https://scripts.example.test/text.js, "
+		"requires-body=true, binary-body-mode=false, tag=text\n"
+		"http-response ^https://api\\.example\\.test/plain script-path=https://scripts.example.test/plain.js, "
+		"requires-body=true, tag=plain\n";
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_script_result_t script;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_load_config(engine, config), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(anixops_engine_script_rule_count(engine), 4);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/proto", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.requires_body, 1);
+	ANIXOPS_EXPECT_EQ_INT(script.binary_body_mode, 1);
+	ANIXOPS_EXPECT_STREQ(script.tag, "proto");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/upload", ANIXOPS_PHASE_REQUEST, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_REQUEST);
+	ANIXOPS_EXPECT_EQ_INT(script.binary_body_mode, 1);
+	ANIXOPS_EXPECT_STREQ(script.tag, "upload");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/text", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.binary_body_mode, 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/plain", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_HTTP_RESPONSE);
+	ANIXOPS_EXPECT_EQ_INT(script.binary_body_mode, 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_script_evaluate_url(engine, "https://api.example.test/none", ANIXOPS_PHASE_RESPONSE, &script),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(script.kind, ANIXOPS_SCRIPT_NONE);
+	ANIXOPS_EXPECT_EQ_INT(script.binary_body_mode, 0);
+
+	anixops_engine_free(engine);
+}
+
 static void direct_script_attribute_boundaries_accept_commas_quotes_and_aliases(void)
 {
 	const char *config =
@@ -764,6 +819,7 @@ void anixops_register_script_tests(anixops_test_case_t *tests, size_t *count, si
 		cap,
 		"script/body_script_trigger_tokens_force_requires_body",
 		body_script_trigger_tokens_force_requires_body);
+	add_test(tests, count, cap, "script/binary_body_mode_is_reported_per_dispatch", binary_body_mode_is_reported_per_dispatch);
 	add_test(
 		tests,
 		count,
