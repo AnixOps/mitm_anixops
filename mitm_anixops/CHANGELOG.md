@@ -29,6 +29,8 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   release so `v1.4.7` can pass the release evidence freshness gate.
 - Rolled the release evidence index forward to the published `v1.4.7`
   release so `v1.4.8` can pass the release evidence freshness gate.
+- Rolled the release evidence index forward to the published `v1.4.8`
+  release so `v1.4.9` can pass the release evidence freshness gate.
 
 ### Fixed
 
