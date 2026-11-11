@@ -2,8 +2,20 @@ name: build
 
 on:
   pull_request:
+  # Branch pushes are covered by their pull request; main and release tags
+  # still get a run of their own (the release workflow looks for the main run).
   push:
+    branches:
+      - main
+    tags:
+      - "v*"
   workflow_dispatch:
+
+# A newer push to a pull request replaces the run in progress. Runs on main,
+# tags and manual dispatch always finish.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   governance:
@@ -956,6 +968,7 @@ jobs:
         with:
           name: anixops-mitm-alpha-linux
           path: mitm_anixops/build/anixops-mitm-alpha-*.tar.gz
+          retention-days: 7
 
   windows-binary:
     runs-on: windows-latest
@@ -997,3 +1010,4 @@ jobs:
         with:
           name: anixops-mitm-windows-x64
           path: dist/anixops-mitm-windows-x64.zip
+          retention-days: 7
