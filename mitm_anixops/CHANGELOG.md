@@ -23,6 +23,10 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Changed
 
+- CI: the build workflow runs once per pull request (branch pushes other
+  than `main` and `v*` tags no longer start a second run), a newer push
+  cancels the superseded pull-request run, and CI and dry-run artifacts are
+  kept for 7 days. Release artifacts and the release workflow are unchanged.
 - Licensed under Apache-2.0 (`LICENSE` at the repository root); the Rust
   binding's `license` field now says Apache-2.0 instead of MIT.
 - Rolled the release evidence index forward to the published `v1.4.6`

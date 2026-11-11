@@ -18,6 +18,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: release-dry-run-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   release-policy:
     runs-on: ubuntu-latest
@@ -476,6 +480,7 @@ jobs:
             mitm_anixops/${{ steps.metadata.outputs.manifest_path }}
             mitm_anixops/${{ steps.metadata.outputs.manifest_sha256_file }}
             mitm_anixops/${{ steps.metadata.outputs.release_notes_path }}
+          retention-days: 7
 
   package-windows:
     runs-on: windows-latest
@@ -531,3 +536,4 @@ jobs:
           path: |
             dist/anixops-mitm-release-dry-run-windows-x64-*.zip
             dist/anixops-mitm-release-dry-run-windows-x64-*.zip.sha256
+          retention-days: 7
