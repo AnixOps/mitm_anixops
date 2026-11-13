@@ -9,6 +9,12 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a documentation-only `docs/recipes/` layer: the v1 declarative recipe
+  module format (`#!recipe.*` metadata plus standard sections), the
+  `game-rewrite/v1` recipe family with an authority model, a nine-pattern
+  catalog, a new-title procedure and review checklist, and a worked example.
+  Recipes reuse only already-supported grammar and change no parser behavior,
+  ABI symbol, fixture, or compatibility matrix row.
 - MITM hostname globs: `*` (any run of characters, dots included) and `?`
   (one character) anywhere in a hostname pattern, as Loon, Surge and
   Quantumult X accept them (`*spclient.spotify.com`, `ad?.example.com`,
