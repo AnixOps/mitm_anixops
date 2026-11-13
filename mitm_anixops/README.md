@@ -436,3 +436,6 @@ For publishing source or binary artifacts, see `docs/release_checklist.md`.
 ## License
 
 Apache License 2.0. See [`LICENSE`](../LICENSE) at the repository root.
+
+Use is subject to [`TERMS.md`](TERMS.md) (user agreement, prohibited uses and disclaimer, in Chinese):
+only intercept traffic you own or are authorized to intercept.
