@@ -9,6 +9,13 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Added a documentation-only plugin development guide for third-party authors
+  in `docs/plugin-development/` (Chinese `README.md`, English `README.en.md`):
+  terms and prohibited uses, the supported Loon / Surge / Quantumult X subset,
+  https-only remote scripts, the script `$` API and budgets, the recipe format,
+  how to add fixtures / contracts / matrix rows, local runner debugging, a
+  complete ipleak.net example, and the submission and review flow. No parser
+  behavior, fixture, or matrix row changed.
 - Recipe module v1 metadata: the nine `#!recipe*` keys (`#!recipe`,
   `#!recipe.id`, `.version`, `.scope`, `.authority`, `.strategy`, `.guard`,
   `.evidence`, `.reviewed`) are now tolerated as ignored `Plugin` diagnostics,
