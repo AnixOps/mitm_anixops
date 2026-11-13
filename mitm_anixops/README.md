@@ -413,8 +413,8 @@ For the BiliUniverse Enhanced fixture, see `docs/bili_enhanced_plugin_support.md
 
 For user-authored recipe modules that compose supported primitives into one
 reproducible outcome, see `docs/recipes/README.md`, the v1 module format in
-`docs/recipes/recipe-spec-v1.md`, and the `game-rewrite/v1` worked example in
-`docs/recipes/game-rewrite/wangzhe-dalong.md`.
+`docs/recipes/recipe-spec-v1.md`, and the external module registry in
+`docs/recipes/external-examples.md`.
 
 For the script runtime adapter boundary, see `docs/script_runtime_contract.md`.
 

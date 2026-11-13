@@ -1,8 +1,7 @@
 # Rewrite Recipes
 
 This directory documents *recipes*: user-authored policy modules that combine
-already-supported `mitm_anixops` primitives into one reproducible end-to-end
-outcome.
+already-supported `mitm_anixops` primitives into one reproducible outcome.
 
 A recipe is data, not code. It is expressed in the plugin grammar the policy
 core already parses (Surge `.sgmodule`, Loon `.plugin`, Quantumult X `.snippet`,
@@ -13,50 +12,63 @@ in [../compatibility/matrix.md](../compatibility/matrix.md).
 
 ## Why Recipes Are A Separate Layer
 
-The repository has three distinct documentation layers and they must stay
+The repository has four distinct documentation layers and they must stay
 separate:
 
 | Layer | Answers | Lives in |
 | --- | --- | --- |
 | Compatibility contract | What does the parser and policy core accept, and what proves it? | [`../compatibility/`](../compatibility/README.md) |
 | Architecture contract | Who owns TLS, HTTP, framing, script execution, trust? | [`../architecture/`](../architecture/overview.md) |
-| Recipe | How do I combine supported primitives to reach one concrete outcome? | this directory |
+| Recipe format | How is a composed module written, read, verified, and versioned? | this directory |
+| Recipe examples | What does one concrete module for one concrete target look like? | outside this repository, see [external-examples.md](external-examples.md) |
 
 A recipe never claims capability. It cites the contract for every primitive it
-uses. If a recipe needs something the policy core does not accept, the recipe
-is incomplete, and the correct follow-up is a compatibility contract, not a
+uses. If a recipe needs something the policy core does not accept, the recipe is
+incomplete, and the correct follow-up is a compatibility contract, not a
 recipe-local workaround.
 
-## Recipe Index
+## Scope Of This Directory
 
-- [recipe-spec-v1.md](recipe-spec-v1.md): the declarative recipe module format
-  (`game-rewrite/v1` and future families), its metadata keys, its composition
-  and ordering rules, and its verification contract.
-- [game-rewrite/README.md](game-rewrite/README.md): the game-rewrite recipe
-  family. Authority model, recon loop, strategy selection, and guard policy.
-- [game-rewrite/patterns.md](game-rewrite/patterns.md): the reusable mutation
-  pattern catalog that most mini-game and mobile-game titles share.
-- [game-rewrite/adding-a-game.md](game-rewrite/adding-a-game.md): the standard
-  operating procedure for adding a new title, including the review checklist.
-- [game-rewrite/wangzhe-dalong.md](game-rewrite/wangzhe-dalong.md): the worked
-  example for a WeChat mini-game (`王者来打龙`), end to end.
-- [game-rewrite/brief_zh.md](game-rewrite/brief_zh.md): Chinese presentation
-  brief for the same material, following the
-  [loon_mitm_full_compat_brief_zh.md](../loon_mitm_full_compat_brief_zh.md)
-  precedent.
+This directory defines the *format* and the *procedure*. It intentionally
+carries no target-specific module, no target hostname, and no target parameter
+set. Those live in per-author repositories, listed in
+[external-examples.md](external-examples.md).
+
+Keeping examples outside this repository is deliberate:
+
+- a concrete module tracks one service's payload shape, which changes far
+  faster than a format does;
+- a concrete module is its author's artifact, with the author's own review,
+  licensing, and maintenance obligations;
+- a format change is reviewable by this repository's maintainers, while a
+  target change is reviewable by the module's author;
+- the format stays useful for every target, not only the ones with a bundled
+  example.
+
+## Files
+
+- [recipe-spec-v1.md](recipe-spec-v1.md): the declarative recipe module format.
+  Metadata keys, primitive mapping, composition order, strategies, versioning,
+  and the conformance checklist.
+- [adding-a-recipe.md](adding-a-recipe.md): the procedure for writing one
+  recipe, the verification commands, the review checklist, and the path that
+  promotes a grammar shape into a compatibility contract.
+- [external-examples.md](external-examples.md): where concrete modules live,
+  the requirements an external repository must meet to be listed, and how to
+  reference one from a deployment document.
 
 ## Recipe Requirements
 
-Every recipe document must state:
+Every recipe must state:
 
-1. **Family and version**: for example `game-rewrite/v1`.
-2. **Target scope**: the exact hostnames the recipe may observe, and the exact
+1. **Format version**: for example `recipe/v1`.
+2. **Scope**: the exact hostnames the module may observe, and the exact
    hostnames it must never observe.
-3. **Authority model**: whether the observed values are client-authoritative,
-   server-authoritative, or dual-write, and how that was determined.
+3. **Authority model**: whether the observed value is decided by the client,
+   the server, or both, and how that was determined.
 4. **Primitive mapping**: which supported grammar line implements each step,
    with the contract file that proves the line is accepted.
-5. **Budgets**: `max-size`, `timeout`, clamp ratio, cooldown, and replay pacing.
+5. **Budgets**: `max-size`, `timeout`, step ratio, cooldown, and replay pacing.
 6. **Evidence**: the `anixops-mitm-runner` command that reproduces the outcome,
    and the expected stable output fields.
 7. **Known gaps**: every step that depends on adapter-owned behavior (script
@@ -66,14 +78,16 @@ Every recipe document must state:
 
 Recipes are designed to grow by data, not by branching:
 
-- A new title adds one document plus one module file. It adds no source change.
+- A new target adds one module in its author's repository. It adds no source
+  change here.
 - A new mutation shape that existing grammar already expresses adds one entry to
-  [game-rewrite/patterns.md](game-rewrite/patterns.md).
+  the module author's pattern catalog and, once a second module needs it, to
+  [recipe-spec-v1.md](recipe-spec-v1.md#primitive-mapping).
 - A new mutation shape that existing grammar does not express requires a
   compatibility contract under `docs/compatibility/` first, with parser
   fixtures, positive and negative tests, and a matrix row. Only after that does
-  the recipe gain a new step.
-- Reserved `#!recipe.*` keys are frozen per family version. New keys are
+  the format gain a new mapping row.
+- Reserved `#!recipe.*` keys are frozen per format version. New keys are
   additive within a major version and must be ignorable by older readers.
 
 ## Documentation Only
@@ -84,7 +98,8 @@ therefore answers the compatibility questions in
 [CONTRIBUTING.md](../../CONTRIBUTING.md) with "documentation only, no matrix row
 changed" and points at the contract for every primitive it references.
 
-Promoting a recipe snippet into `tests/fixtures/` is a separate, later pull
-request that adds the fixture, the `config/...` test IDs, the compatibility
-note paragraph, and the matrix row update together. See
-[game-rewrite/adding-a-game.md](game-rewrite/adding-a-game.md) for that path.
+Promoting a grammar shape into `tests/fixtures/` is a separate, later pull
+request that adds the fixture, the `config/...` test IDs, the compatibility note
+paragraph, and the matrix row update together. See
+[adding-a-recipe.md](adding-a-recipe.md#promotion-to-compatibility-fixtures) for
+that path.
