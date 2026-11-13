@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 
 #define SCRIPT_MAP_CAP 8
@@ -747,6 +748,291 @@ static int load_engine(const char *path, anixops_engine_t **out_engine, int *out
 	return 1;
 }
 
+/*
+ * Recipe module v1 lint (docs/compatibility/recipe-metadata.md).
+ * Warnings only: they never change the scan exit status or the engine result.
+ */
+#define RECIPE_KEY_COUNT 9
+#define RECIPE_HOST_CAP 64
+#define RECIPE_TEXT_CAP 256
+
+static const char *const recipe_keys[RECIPE_KEY_COUNT] = {
+	"recipe",
+	"recipe.id",
+	"recipe.version",
+	"recipe.scope",
+	"recipe.authority",
+	"recipe.strategy",
+	"recipe.guard",
+	"recipe.evidence",
+	"recipe.reviewed",
+};
+
+enum {
+	RECIPE_KEY_FAMILY = 0,
+	RECIPE_KEY_ID,
+	RECIPE_KEY_VERSION,
+	RECIPE_KEY_SCOPE,
+	RECIPE_KEY_AUTHORITY,
+	RECIPE_KEY_STRATEGY,
+	RECIPE_KEY_GUARD,
+	RECIPE_KEY_EVIDENCE,
+	RECIPE_KEY_REVIEWED
+};
+
+typedef struct recipe_host {
+	char value[RECIPE_TEXT_CAP];
+	size_t line;
+} recipe_host_t;
+
+typedef struct recipe_lint {
+	int present;
+	size_t key_line[RECIPE_KEY_COUNT];
+	char key_value[RECIPE_KEY_COUNT][RECIPE_TEXT_CAP];
+	recipe_host_t scope[RECIPE_HOST_CAP];
+	size_t scope_count;
+	recipe_host_t mitm[RECIPE_HOST_CAP];
+	size_t mitm_count;
+} recipe_lint_t;
+
+static void recipe_copy_trimmed(char *out, size_t out_cap, const char *start, size_t len)
+{
+	size_t i;
+	while (len > 0 && (*start == ' ' || *start == '\t')) {
+		start++;
+		len--;
+	}
+	while (len > 0 && (start[len - 1] == ' ' || start[len - 1] == '\t' || start[len - 1] == '\r')) {
+		len--;
+	}
+	if (len >= out_cap) {
+		len = out_cap - 1;
+	}
+	for (i = 0; i < len; i++) {
+		out[i] = start[i];
+	}
+	out[len] = '\0';
+}
+
+static void recipe_lowercase(char *value)
+{
+	for (; *value != '\0'; value++) {
+		if (*value >= 'A' && *value <= 'Z') {
+			*value = (char)(*value - 'A' + 'a');
+		}
+	}
+}
+
+static void recipe_add_hosts(recipe_host_t *hosts, size_t *count, const char *value, size_t line, int mitm)
+{
+	const char *cursor = value;
+	while (*cursor != '\0') {
+		const char *comma = strchr(cursor, ',');
+		size_t len = comma == NULL ? strlen(cursor) : (size_t)(comma - cursor);
+		char token[RECIPE_TEXT_CAP];
+		const char *host;
+		recipe_copy_trimmed(token, sizeof(token), cursor, len);
+		host = token;
+		if (mitm && host[0] == '%') {
+			const char *end = strchr(host + 1, '%');
+			host = end == NULL ? host : end + 1;
+			while (*host == ' ' || *host == '\t') {
+				host++;
+			}
+		}
+		if (host[0] != '\0' && !(mitm && host[0] == '-') && *count < RECIPE_HOST_CAP) {
+			snprintf(hosts[*count].value, sizeof(hosts[*count].value), "%s", host);
+			recipe_lowercase(hosts[*count].value);
+			hosts[*count].line = line;
+			(*count)++;
+		}
+		if (comma == NULL) {
+			break;
+		}
+		cursor = comma + 1;
+	}
+}
+
+static void recipe_lint_collect(recipe_lint_t *lint, const char *text)
+{
+	const char *cursor = text;
+	size_t line_no = 1;
+	int in_mitm = 0;
+	memset(lint, 0, sizeof(*lint));
+	while (cursor != NULL && *cursor != '\0') {
+		const char *end = strchr(cursor, '\n');
+		size_t len = end == NULL ? strlen(cursor) : (size_t)(end - cursor);
+		char line[1024];
+		recipe_copy_trimmed(line, sizeof(line), cursor, len);
+		if (line[0] == '[') {
+			char *bracket = strchr(line, ']');
+			if (bracket != NULL) {
+				*bracket = '\0';
+			}
+			in_mitm = strcasecmp(line + 1, "MITM") == 0;
+		}
+		else if (line[0] == '#' && line[1] == '!') {
+			char key[RECIPE_TEXT_CAP];
+			const char *p = line + 2;
+			size_t key_len = 0;
+			size_t k;
+			while (p[key_len] != '\0' && p[key_len] != '=' && p[key_len] != ' ' && p[key_len] != '\t') {
+				key_len++;
+			}
+			recipe_copy_trimmed(key, sizeof(key), p, key_len);
+			for (k = 0; k < RECIPE_KEY_COUNT; k++) {
+				if (strcasecmp(key, recipe_keys[k]) == 0) {
+					const char *eq = strchr(p, '=');
+					char value[RECIPE_TEXT_CAP];
+					value[0] = '\0';
+					if (eq != NULL) {
+						recipe_copy_trimmed(value, sizeof(value), eq + 1, strlen(eq + 1));
+					}
+					lint->present = 1;
+					if (lint->key_line[k] == 0) {
+						lint->key_line[k] = line_no;
+						snprintf(lint->key_value[k], sizeof(lint->key_value[k]), "%s", value);
+					}
+					if (k == RECIPE_KEY_SCOPE) {
+						recipe_add_hosts(lint->scope, &lint->scope_count, value, line_no, 0);
+					}
+					break;
+				}
+			}
+		}
+		else if (in_mitm) {
+			const char *eq = strchr(line, '=');
+			if (eq != NULL) {
+				char key[RECIPE_TEXT_CAP];
+				recipe_copy_trimmed(key, sizeof(key), line, (size_t)(eq - line));
+				if (strcasecmp(key, "hostname") == 0) {
+					recipe_add_hosts(lint->mitm, &lint->mitm_count, eq + 1, line_no, 1);
+				}
+			}
+		}
+		if (end == NULL) {
+			break;
+		}
+		cursor = end + 1;
+		line_no++;
+	}
+}
+
+static int recipe_value_in(const char *value, const char *const *allowed, size_t count)
+{
+	size_t i;
+	for (i = 0; i < count; i++) {
+		if (strcmp(value, allowed[i]) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int recipe_host_listed(const recipe_host_t *hosts, size_t count, const char *value)
+{
+	size_t i;
+	for (i = 0; i < count; i++) {
+		if (strcmp(hosts[i].value, value) == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static void recipe_print_warning(int *first, size_t line, const char *key, const char *code, const char *value)
+{
+	if (!*first) {
+		putchar(',');
+	}
+	*first = 0;
+	printf("{\"line\":%zu,\"key\":", line);
+	json_string(key);
+	printf(",\"code\":");
+	json_string(code);
+	printf(",\"value\":");
+	json_string(value);
+	putchar('}');
+}
+
+static int recipe_family_is_valid(const char *value)
+{
+	const char *slash = strchr(value, '/');
+	const char *p;
+	if (slash == NULL || slash == value || slash[1] == '\0') {
+		return 0;
+	}
+	for (p = slash + 1; *p != '\0'; p++) {
+		if (*p < '0' || *p > '9') {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static void print_recipe_warnings(const recipe_lint_t *lint)
+{
+	static const char *const authorities[] = {"local", "server", "dual"};
+	static const char *const strategies[] = {"observe", "clamp", "max", "replay"};
+	static const char *const evidences[] = {"runner-scan", "runner-trace", "runner-replay", "manual-trace"};
+	static const int required[] = {
+		RECIPE_KEY_FAMILY,
+		RECIPE_KEY_ID,
+		RECIPE_KEY_VERSION,
+		RECIPE_KEY_SCOPE,
+		RECIPE_KEY_AUTHORITY,
+		RECIPE_KEY_STRATEGY,
+		RECIPE_KEY_EVIDENCE,
+	};
+	int first = 1;
+	size_t i;
+
+	printf(",\"recipeWarnings\":[");
+	for (i = 0; i < sizeof(required) / sizeof(required[0]); i++) {
+		if (lint->key_line[required[i]] == 0) {
+			recipe_print_warning(&first, 0, recipe_keys[required[i]], "missing-key", "");
+		}
+	}
+	if (lint->key_line[RECIPE_KEY_FAMILY] != 0 && !recipe_family_is_valid(lint->key_value[RECIPE_KEY_FAMILY])) {
+		recipe_print_warning(&first, lint->key_line[RECIPE_KEY_FAMILY], recipe_keys[RECIPE_KEY_FAMILY],
+			"invalid-value", lint->key_value[RECIPE_KEY_FAMILY]);
+	}
+	if (lint->key_line[RECIPE_KEY_AUTHORITY] != 0 &&
+		!recipe_value_in(lint->key_value[RECIPE_KEY_AUTHORITY], authorities, sizeof(authorities) / sizeof(authorities[0]))) {
+		recipe_print_warning(&first, lint->key_line[RECIPE_KEY_AUTHORITY], recipe_keys[RECIPE_KEY_AUTHORITY],
+			"invalid-value", lint->key_value[RECIPE_KEY_AUTHORITY]);
+	}
+	if (lint->key_line[RECIPE_KEY_STRATEGY] != 0 &&
+		!recipe_value_in(lint->key_value[RECIPE_KEY_STRATEGY], strategies, sizeof(strategies) / sizeof(strategies[0]))) {
+		recipe_print_warning(&first, lint->key_line[RECIPE_KEY_STRATEGY], recipe_keys[RECIPE_KEY_STRATEGY],
+			"invalid-value", lint->key_value[RECIPE_KEY_STRATEGY]);
+	}
+	if (lint->key_line[RECIPE_KEY_EVIDENCE] != 0 &&
+		!recipe_value_in(lint->key_value[RECIPE_KEY_EVIDENCE], evidences, sizeof(evidences) / sizeof(evidences[0]))) {
+		recipe_print_warning(&first, lint->key_line[RECIPE_KEY_EVIDENCE], recipe_keys[RECIPE_KEY_EVIDENCE],
+			"invalid-value", lint->key_value[RECIPE_KEY_EVIDENCE]);
+	}
+	if (lint->key_line[RECIPE_KEY_GUARD] == 0 &&
+		(strcmp(lint->key_value[RECIPE_KEY_STRATEGY], "clamp") == 0 ||
+			strcmp(lint->key_value[RECIPE_KEY_STRATEGY], "replay") == 0)) {
+		recipe_print_warning(&first, 0, recipe_keys[RECIPE_KEY_GUARD], "missing-guard",
+			lint->key_value[RECIPE_KEY_STRATEGY]);
+	}
+	for (i = 0; i < lint->scope_count; i++) {
+		if (!recipe_host_listed(lint->mitm, lint->mitm_count, lint->scope[i].value)) {
+			recipe_print_warning(&first, lint->scope[i].line, recipe_keys[RECIPE_KEY_SCOPE],
+				"scope-not-in-hostname", lint->scope[i].value);
+		}
+	}
+	for (i = 0; i < lint->mitm_count; i++) {
+		if (!recipe_host_listed(lint->scope, lint->scope_count, lint->mitm[i].value)) {
+			recipe_print_warning(&first, lint->mitm[i].line, "hostname", "hostname-not-in-scope",
+				lint->mitm[i].value);
+		}
+	}
+	putchar(']');
+}
+
 static int cmd_scan(const char *path)
 {
 	anixops_engine_t *engine = NULL;
@@ -771,6 +1057,18 @@ static int cmd_scan(const char *path)
 		anixops_engine_script_rule_count(engine),
 		anixops_engine_argument_count(engine));
 	print_diagnostics(engine);
+	{
+		char *text = read_file(path);
+		recipe_lint_t *lint = (recipe_lint_t *)malloc(sizeof(*lint));
+		if (text != NULL && lint != NULL) {
+			recipe_lint_collect(lint, text);
+			if (lint->present) {
+				print_recipe_warnings(lint);
+			}
+		}
+		free(lint);
+		free(text);
+	}
 	printf("}\n");
 	anixops_engine_free(engine);
 	return status == ANIXOPS_OK ? 0 : 2;

@@ -207,6 +207,8 @@ A v1 recipe is accepted for review when all of these hold:
 
 - [ ] `#!recipe` is `recipe/v1`.
 - [ ] `#!recipe.scope` and `[MITM] hostname` are identical sets.
+- [ ] `runner scan` reports an empty `recipeWarnings` array
+      ([recipe-metadata](../compatibility/recipe-metadata.md#runner-scan-warnings)).
 - [ ] `#!recipe.id` is unique among the modules its author publishes.
 - [ ] Every step appears in the primitive mapping table, or is labeled
       `adapter-required`.

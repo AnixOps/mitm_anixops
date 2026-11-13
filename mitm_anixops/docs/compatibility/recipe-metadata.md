@@ -43,9 +43,9 @@ For each tolerated recipe key the parser must emit an ignored diagnostic with:
 - action equal to the metadata key, for example `recipe.scope`;
 - message `#! metadata ignored`.
 
-Recipe keys never populate `anixops_plugin_metadata_descriptor_t`. The values
-are not validated: the parser does not check the family, the enums, the guard
-attributes, or that `#!recipe.scope` equals `[MITM] hostname`.
+Recipe keys never populate `anixops_plugin_metadata_descriptor_t`. The policy
+core does not validate the values; value checks are warnings emitted by
+`anixops-mitm-runner scan` only, described below.
 
 ## Positive Case
 
@@ -79,6 +79,45 @@ Expected behavior under the Loon strict profile:
 - near-miss spellings are not claimed as tolerated metadata diagnostics;
 - only the `[MITM]` rule is recorded as accepted parser evidence.
 
+## Runner Scan Warnings
+
+When a file carries at least one tolerated recipe key, `anixops-mitm-runner
+scan` appends a `recipeWarnings` array to its JSON output. Files without recipe
+keys produce byte-identical output to earlier builds. Warnings never change the
+scan exit status, the engine load status, or any loaded rule.
+
+Each warning is `{"line":N,"key":"...","code":"...","value":"..."}`, where
+`line` is `0` for a missing key. Warnings are emitted in this order:
+
+| Code | Raised when |
+| --- | --- |
+| `missing-key` | one of `#!recipe`, `.id`, `.version`, `.scope`, `.authority`, `.strategy`, `.evidence` is absent |
+| `invalid-value` | `#!recipe` is not `family/<digits>`, or `.authority`, `.strategy`, `.evidence` is outside its v1 enum |
+| `missing-guard` | `.strategy` is `clamp` or `replay` and `#!recipe.guard` is absent |
+| `scope-not-in-hostname` | a `#!recipe.scope` host is not listed in `[MITM] hostname` |
+| `hostname-not-in-scope` | a `[MITM] hostname` host is not listed in `#!recipe.scope` |
+
+Host comparison is case-insensitive and exact: globs are compared as text, `-`
+deny entries and `%APPEND%` / `%INSERT%` markers are skipped, and
+comma-separated lists are split on both sides.
+
+Runner case:
+
+```text
+tests/fixtures/Loon.RecipeMetadata.Mismatch.plugin
+```
+
+Expected behavior, checked by `make runner-check`:
+
+- scan exits with status `0`;
+- `recipeWarnings` lists, in order, `invalid-value` for `recipe.authority`
+  (`remote`), `missing-guard` for `clamp`, `scope-not-in-hostname` for
+  `scope-only.recipe.loon.test`, and `hostname-not-in-scope` for
+  `hostname-only.recipe.loon.test`;
+- the positive fixture `Loon.RecipeMetadata.plugin` yields an empty
+  `recipeWarnings` array, and a file without recipe keys has no
+  `recipeWarnings` field.
+
 ## Runtime And Security Boundary
 
 Recipe metadata must not:
@@ -99,6 +138,7 @@ Required CI evidence:
   `config/loon_recipe_metadata_fixture_records_tolerated_keys`;
 - `tests/test_config.c` registers
   `config/loon_recipe_metadata_unsupported_keys_are_not_claimed`;
+- `make runner-check` asserts the runner scan warnings above;
 - GitHub Actions `linux-test` runs `sh scripts/check.sh` and must pass.
 
 ## Compatibility Matrix Row
@@ -109,6 +149,6 @@ Row:
 Recipe module metadata
 ```
 
-The row is `partial` because the policy core only tolerates the keys; value
-validation, scope/hostname equality checks, and guard enforcement are not
-claimed.
+The row is `partial` because the policy core only tolerates the keys and the
+runner only warns; load-time rejection, glob-aware scope comparison, and guard
+enforcement are not claimed.

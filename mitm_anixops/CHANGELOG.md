@@ -18,6 +18,12 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
   `docs/compatibility/recipe-metadata.md`, fixtures
   `Loon.RecipeMetadata.plugin` / `Loon.RecipeMetadata.Unsupported.plugin`,
   new matrix row "Recipe module metadata".
+- `anixops-mitm-runner scan` adds a `recipeWarnings` array for files with
+  recipe metadata: missing required keys, invalid `authority` / `strategy` /
+  `evidence` / family values, a missing guard for `clamp` / `replay`, and
+  hosts present in only one of `#!recipe.scope` and `[MITM] hostname`.
+  Warnings only: exit status and loaded rules are unchanged, and files without
+  recipe keys keep their previous output.
 - Added a documentation-only `docs/recipes/` layer: the v1 declarative recipe
   module format (`#!recipe.*` metadata plus standard sections), a domain-neutral
   procedure with a review checklist and the promotion path to compatibility
