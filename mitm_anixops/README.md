@@ -411,6 +411,11 @@ For the supported configuration grammar and public-API evidence, see
 
 For the BiliUniverse Enhanced fixture, see `docs/bili_enhanced_plugin_support.md`.
 
+For third-party plugin and script authors (supported Loon / Surge / Quantumult X
+subset, script `$` API, local debugging, a complete example, and the
+contribution flow), see `docs/plugin-development/README.md` (Chinese) and
+`docs/plugin-development/README.en.md` (English).
+
 For user-authored recipe modules that compose supported primitives into one
 reproducible outcome, see `docs/recipes/README.md`, the v1 module format in
 `docs/recipes/recipe-spec-v1.md`, and the external module registry in

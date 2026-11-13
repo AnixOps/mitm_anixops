@@ -3,6 +3,10 @@
 `mitm_anixops` is moving toward a v1.0.0 MITM plugin compatibility layer. Changes
 must be small, testable, documented, and verified by GitHub Actions.
 
+Writing a plugin or script rather than changing this library? Start with the
+plugin development guide in `docs/plugin-development/README.md` (Chinese) or
+`docs/plugin-development/README.en.md` (English).
+
 ## Local vs CI Responsibilities
 
 Local machines may be used for:
