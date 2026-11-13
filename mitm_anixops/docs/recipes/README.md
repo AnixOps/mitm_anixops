@@ -93,7 +93,9 @@ Recipes are designed to grow by data, not by branching:
 ## Documentation Only
 
 This directory is documentation. It changes no parser behavior, no ABI symbol,
-no fixture, and no compatibility status. The pull request that introduces it
+no fixture, and no compatibility status. Parser tolerance for the `#!recipe*`
+keys themselves is a separate capability with its own contract, fixtures, and
+matrix row: [recipe-metadata](../compatibility/recipe-metadata.md). The pull request that introduces it
 therefore answers the compatibility questions in
 [CONTRIBUTING.md](../../CONTRIBUTING.md) with "documentation only, no matrix row
 changed" and points at the contract for every primitive it references.

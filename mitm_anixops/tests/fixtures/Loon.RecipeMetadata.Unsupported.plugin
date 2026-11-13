@@ -1,0 +1,7 @@
+#!recipes = recipe/v1
+#!recipe-id = test.anixops.recipe.unsupported
+#!recipe.unknown-key = value
+#!recipe.scope.extra = unsupported.recipe.loon.test
+
+[MITM]
+hostname = unsupported.recipe.loon.test

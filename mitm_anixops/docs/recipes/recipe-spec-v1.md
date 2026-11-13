@@ -73,12 +73,15 @@ http-request  <pattern> requires-body=1, max-size=..., timeout=..., script-path=
 http-response <pattern> requires-body=1, max-size=..., timeout=..., script-path=..., tag=..., argument=[{Key}]
 ```
 
-Metadata lines are tolerated `#!` metadata. The policy core records them as
-diagnostics and gives them zero policy behavior, exactly as documented for Loon
-`#!` metadata tolerance
+Metadata lines are tolerated `#!` metadata. The policy core records the nine
+v1 keys in the table below as ignored `Plugin` diagnostics and gives them zero
+policy behavior, per the
+[recipe-metadata](../compatibility/recipe-metadata.md) contract, which follows
+Loon `#!` metadata tolerance
 ([loon-hashbang-metadata](../compatibility/loon-hashbang-metadata.md)) and
 Surge `#!requirement` tolerance
 ([surge-requirement-metadata](../compatibility/surge-requirement-metadata.md)).
+Any other `#!recipe...` spelling is a comment and produces no diagnostic.
 A reader that ignores every `#!recipe.*` line still gets a working module,
 because the behavior lives only in the standard sections. That is the
 compatibility guarantee of this format.

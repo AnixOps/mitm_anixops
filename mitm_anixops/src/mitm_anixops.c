@@ -5227,6 +5227,21 @@ static int anixops_parse_metadata_key_value(
 	return 1;
 }
 
+static int anixops_recipe_metadata_key_is_tolerated(const char *key)
+{
+	/* Recipe module format v1 (docs/compatibility/recipe-metadata.md). */
+	return key != NULL &&
+		(strcasecmp(key, "recipe") == 0 ||
+			strcasecmp(key, "recipe.id") == 0 ||
+			strcasecmp(key, "recipe.version") == 0 ||
+			strcasecmp(key, "recipe.scope") == 0 ||
+			strcasecmp(key, "recipe.authority") == 0 ||
+			strcasecmp(key, "recipe.strategy") == 0 ||
+			strcasecmp(key, "recipe.guard") == 0 ||
+			strcasecmp(key, "recipe.evidence") == 0 ||
+			strcasecmp(key, "recipe.reviewed") == 0);
+}
+
 static int anixops_hashbang_metadata_key_is_tolerated(const char *key)
 {
 	return key != NULL &&
@@ -5240,7 +5255,8 @@ static int anixops_hashbang_metadata_key_is_tolerated(const char *key)
 			strcasecmp(key, "date") == 0 ||
 			strcasecmp(key, "system") == 0 ||
 			strcasecmp(key, "requirement") == 0 ||
-			strcasecmp(key, "arguments-desc") == 0);
+			strcasecmp(key, "arguments-desc") == 0 ||
+			anixops_recipe_metadata_key_is_tolerated(key));
 }
 
 static int anixops_plugin_metadata_key_is_descriptor_field(const char *key)

@@ -1,0 +1,17 @@
+#!name = Loon Recipe Metadata Fixture
+#!desc = Recipe module v1 metadata is tolerated as parser diagnostics.
+#!recipe = recipe/v1
+#!recipe.id = test.anixops.recipe.metadata
+#!recipe.version = 0.1.0
+#!recipe.scope = recipe.loon.test
+#!recipe.authority = local
+#!recipe.strategy = observe
+#!recipe.guard = host-allowlist=1, max-size=65536
+#!recipe.evidence = runner-scan
+#!recipe.reviewed = 2026-11-13
+
+[Argument]
+Enable = switch,true
+
+[MITM]
+hostname = recipe.loon.test

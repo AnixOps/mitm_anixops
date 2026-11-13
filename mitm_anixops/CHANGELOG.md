@@ -9,6 +9,15 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Added
 
+- Recipe module v1 metadata: the nine `#!recipe*` keys (`#!recipe`,
+  `#!recipe.id`, `.version`, `.scope`, `.authority`, `.strategy`, `.guard`,
+  `.evidence`, `.reviewed`) are now tolerated as ignored `Plugin` diagnostics,
+  so `anixops-mitm-runner scan` reports one line per key as the recipe spec
+  says. They create no policy behavior and never reach the plugin metadata
+  descriptor; other `#!recipe...` spellings stay comments. Contract
+  `docs/compatibility/recipe-metadata.md`, fixtures
+  `Loon.RecipeMetadata.plugin` / `Loon.RecipeMetadata.Unsupported.plugin`,
+  new matrix row "Recipe module metadata".
 - Added a documentation-only `docs/recipes/` layer: the v1 declarative recipe
   module format (`#!recipe.*` metadata plus standard sections), a domain-neutral
   procedure with a review checklist and the promotion path to compatibility
