@@ -962,7 +962,14 @@ static int recipe_family_is_valid(const char *value)
 	if (slash == NULL || slash == value || slash[1] == '\0') {
 		return 0;
 	}
-	for (p = slash + 1; *p != '\0'; p++) {
+	p = slash + 1;
+	if (*p == 'v' || *p == 'V') {
+		p++;
+	}
+	if (*p == '\0') {
+		return 0;
+	}
+	for (; *p != '\0'; p++) {
 		if (*p < '0' || *p > '9') {
 			return 0;
 		}

@@ -92,7 +92,7 @@ Each warning is `{"line":N,"key":"...","code":"...","value":"..."}`, where
 | Code | Raised when |
 | --- | --- |
 | `missing-key` | one of `#!recipe`, `.id`, `.version`, `.scope`, `.authority`, `.strategy`, `.evidence` is absent |
-| `invalid-value` | `#!recipe` is not `family/<digits>`, or `.authority`, `.strategy`, `.evidence` is outside its v1 enum |
+| `invalid-value` | `#!recipe` is not `family/v<digits>` (the `v` is optional), or `.authority`, `.strategy`, `.evidence` is outside its v1 enum |
 | `missing-guard` | `.strategy` is `clamp` or `replay` and `#!recipe.guard` is absent |
 | `scope-not-in-hostname` | a `#!recipe.scope` host is not listed in `[MITM] hostname` |
 | `hostname-not-in-scope` | a `[MITM] hostname` host is not listed in `#!recipe.scope` |
