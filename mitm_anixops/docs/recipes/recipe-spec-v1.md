@@ -14,11 +14,10 @@ This document fixes the v1 format for a *recipe module*: one file that a user
 loads through any host that already accepts `mitm_anixops` grammar, and that
 describes a complete, reproducible rewrite outcome for one target.
 
-The format exists so that adding the tenth game, the tenth service, or the
-tenth streaming site costs one file and one document, rather than a new code
-path. It is deliberately expressible in grammar the policy core already parses,
-so a recipe can be validated by `anixops-mitm-runner scan`, `trace`, and
-`replay` without any new build flag.
+The format exists so that adding a target costs one file and one document,
+rather than a new code path. It is deliberately expressible in grammar the
+policy core already parses, so a recipe can be validated by
+`anixops-mitm-runner scan`, `trace`, and `replay` without any new build flag.
 
 ## Non-Goals
 
@@ -45,10 +44,10 @@ followed by standard sections. Nothing below requires a new section name.
 ```text
 #!name = <display name>
 #!desc = <one line description>
-#!recipe = <family>/<major>            # for example game-rewrite/v1
+#!recipe = recipe/v1
 #!recipe.id = <reverse-dns id>
 #!recipe.version = <semver of this recipe file>
-#!recipe.scope = <host list, repeated per host>
+#!recipe.scope = <host, repeated per host>
 #!recipe.authority = local | server | dual
 #!recipe.strategy = clamp | max | replay | observe
 #!recipe.guard = key=value, key=value
@@ -75,8 +74,8 @@ http-response <pattern> requires-body=1, max-size=..., timeout=..., script-path=
 ```
 
 Metadata lines are tolerated `#!` metadata. The policy core records them as
-diagnostics and gives them zero policy behavior, exactly as documented for
-Loon `#!` metadata tolerance
+diagnostics and gives them zero policy behavior, exactly as documented for Loon
+`#!` metadata tolerance
 ([loon-hashbang-metadata](../compatibility/loon-hashbang-metadata.md)) and
 Surge `#!requirement` tolerance
 ([surge-requirement-metadata](../compatibility/surge-requirement-metadata.md)).
@@ -92,7 +91,7 @@ compatibility guarantee of this format.
 | `#!recipe.id` | yes | string | Stable identity, reverse-DNS, lowercase, dots and hyphens only. |
 | `#!recipe.version` | yes | semver | Version of this recipe file, independent of the target's version. |
 | `#!recipe.scope` | yes | host | One line per host. Union must equal the `[MITM] hostname` list. |
-| `#!recipe.authority` | yes | enum | `local`, `server`, or `dual`. Determined by the authority probe in [game-rewrite/README.md](game-rewrite/README.md). |
+| `#!recipe.authority` | yes | enum | `local`, `server`, or `dual`. Determined by the probe procedure in [adding-a-recipe.md](adding-a-recipe.md#step-2-authority). |
 | `#!recipe.strategy` | yes | enum | `observe`, `clamp`, `max`, or `replay`. See strategy selection. |
 | `#!recipe.guard` | conditional | attrs | Required for `clamp` and `replay`. Keys below. |
 | `#!recipe.evidence` | yes | enum | `runner-scan`, `runner-trace`, `runner-replay`, or `manual-trace`. |
@@ -102,8 +101,8 @@ Guard keys:
 
 | Key | Type | Default | Meaning |
 | --- | --- | --- | --- |
-| `clamp-ratio` | float 0..1 | `0.25` | Maximum relative step per mutation. Prevents a single spike from looking synthetic. |
-| `cooldown` | seconds | `60` | Minimum spacing between two mutations on the same target key. |
+| `clamp-ratio` | float 0..1 | `0.25` | Maximum relative change per mutation. Prevents a single step from becoming an outlier. |
+| `cooldown` | seconds | `60` | Minimum spacing between two mutations on the same key. |
 | `monotonic` | bool | `1` | Forbid decreasing a previously increased counter. |
 | `host-allowlist` | bool | `1` | Refuse to apply when the evaluated host is outside `#!recipe.scope`. |
 | `max-size` | bytes | `262144` | Per-rule body ceiling. Mirrors the adapter ceiling in [body-mutation-common](../compatibility/body-mutation-common.md). |
@@ -124,11 +123,11 @@ proven by a fixture. The mapping table is the contract for reviewers.
 | Request JSON field replacement | `request-body-json-replace $.path literal` in `[Body Rewrite]` | [body-mutation-common](../compatibility/body-mutation-common.md) |
 | Response regex replacement | `response-body-replace-regex pattern replacement` | [body-mutation-common](../compatibility/body-mutation-common.md) |
 | Computed body mutation | `http-response-jq '<filter>'`, `response-body-jq '<filter>'` | [body-mutation-common](../compatibility/body-mutation-common.md) |
-| Request header tagging | `header-add`, `header-replace`, `header-delete`, `header-replace-regex` in `[Header Rewrite]` | [header-mutation-common](../compatibility/header-mutation-common.md) |
+| Request header mutation | `header-add`, `header-replace`, `header-delete`, `header-replace-regex` in `[Header Rewrite]` | [header-mutation-common](../compatibility/header-mutation-common.md) |
 | Host selection | `[MITM] hostname =` with exact hosts, globs, and `-deny` entries | [loon-mitm-options](../compatibility/loon-mitm-options.md) |
 | Parameterization | `[Argument]` defaults, `#!arguments`, `argument=[{Key}]` | [loon-argument-section](../compatibility/loon-argument-section.md) |
 | Deferred logic | `[Script]` `http-request` / `http-response` dispatch with `requires-body`, `timeout`, `max-size`, `tag`, `argument` | [loon-script-metadata](../compatibility/loon-script-metadata.md) |
-| Quoting a fixed response | `echo-response` (Quantumult X `url` form) | [response-rewrite-common](../compatibility/response-rewrite-common.md) |
+| Fixed response | `echo-response` (Quantumult X `url` form) | [response-rewrite-common](../compatibility/response-rewrite-common.md) |
 
 Anything outside this table is `adapter-required` and must be labeled as such
 in the recipe.
@@ -154,11 +153,11 @@ rather than on the recipe.
 | Strategy | Use when | Primitive shape |
 | --- | --- | --- |
 | `observe` | Reconnaissance only. Record traffic, change nothing. | `[MITM]` plus `max-size`-bounded `[Script]` that logs and passes through. |
-| `clamp` | The target is server-authoritative and only a bounded step is plausible. | JQ or script that multiplies by a guarded factor. |
-| `max` | The target is client-authoritative and the value is display-only. | Static `response-body-json-replace`. |
-| `replay` | A single legitimate transaction can be repeated with paced timing. | Runner `replay` first, then a paced loop outside this library. |
+| `clamp` | The value is decided remotely and only a bounded step is plausible. | JQ or script that applies a guarded factor. |
+| `max` | The value is client-decided and presentation-only. | Static `response-body-json-replace`. |
+| `replay` | A single legitimate transaction is idempotent and can be repeated with paced timing. | Runner `replay` first, then a paced loop outside this library. |
 
-`max` is the cheapest and the most detectable. `clamp` is the least detectable
+`max` is the cheapest and the most visible. `clamp` produces the smallest step
 and needs a script runtime. `replay` is the most fragile and must always be
 paced.
 
@@ -188,8 +187,8 @@ Expected stable output fields:
   output byte for byte.
 
 A recipe whose replay output changes between two runs on the same input is a
-recipe defect. Non-determinism almost always means an unordered multi-rule
-body chain or a script with hidden state.
+recipe defect. Non-determinism almost always means an unordered multi-rule body
+chain or a script with hidden state.
 
 ## Versioning
 
@@ -203,9 +202,9 @@ body chain or a script with hidden state.
 
 A v1 recipe is accepted for review when all of these hold:
 
-- [ ] `#!recipe` is `game-rewrite/v1` or another declared family.
+- [ ] `#!recipe` is `recipe/v1`.
 - [ ] `#!recipe.scope` and `[MITM] hostname` are identical sets.
-- [ ] `#!recipe.id` is unique in this repository and in the recipe index.
+- [ ] `#!recipe.id` is unique among the modules its author publishes.
 - [ ] Every step appears in the primitive mapping table, or is labeled
       `adapter-required`.
 - [ ] Guard keys required by the strategy are present.
