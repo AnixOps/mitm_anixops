@@ -83,6 +83,13 @@ runner-check: $(RUNNER_BIN)
 	$(RUNNER_BIN) scan tests/fixtures/Representative.Loon.plugin > $(BUILD_DIR)/runner-scan.out
 	grep -F '"status":0' $(BUILD_DIR)/runner-scan.out >/dev/null
 	grep -F '"counts":{"mitm":2,"rewrite":2,"script":2,"argument":1}' $(BUILD_DIR)/runner-scan.out >/dev/null
+	$(RUNNER_BIN) scan tests/fixtures/Loon.RecipeMetadata.plugin > $(BUILD_DIR)/runner-recipe-scan.out
+	grep -F '"status":0' $(BUILD_DIR)/runner-recipe-scan.out >/dev/null
+	grep -F '"recipeWarnings":[]' $(BUILD_DIR)/runner-recipe-scan.out >/dev/null
+	$(RUNNER_BIN) scan tests/fixtures/Loon.RecipeMetadata.Mismatch.plugin > $(BUILD_DIR)/runner-recipe-mismatch-scan.out
+	grep -F '"status":0' $(BUILD_DIR)/runner-recipe-mismatch-scan.out >/dev/null
+	grep -F '"recipeWarnings":[{"line":7,"key":"recipe.authority","code":"invalid-value","value":"remote"},{"line":0,"key":"recipe.guard","code":"missing-guard","value":"clamp"},{"line":5,"key":"recipe.scope","code":"scope-not-in-hostname","value":"scope-only.recipe.loon.test"},{"line":12,"key":"hostname","code":"hostname-not-in-scope","value":"hostname-only.recipe.loon.test"}]' $(BUILD_DIR)/runner-recipe-mismatch-scan.out >/dev/null
+	! grep -F 'recipeWarnings' $(BUILD_DIR)/runner-scan.out >/dev/null
 	$(RUNNER_BIN) scan --corpus tests/fixtures/corpus/manifest.json > $(BUILD_DIR)/runner-corpus.out
 	node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" $(BUILD_DIR)/runner-corpus.out
 	grep -F '"fixtureCount":6' $(BUILD_DIR)/runner-corpus.out >/dev/null

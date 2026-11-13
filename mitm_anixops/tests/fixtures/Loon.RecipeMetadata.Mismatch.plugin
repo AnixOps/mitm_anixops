@@ -1,0 +1,12 @@
+#!name = Loon Recipe Metadata Mismatch Fixture
+#!recipe = recipe/v1
+#!recipe.id = test.anixops.recipe.mismatch
+#!recipe.version = 0.1.0
+#!recipe.scope = scope-only.recipe.loon.test
+#!recipe.scope = shared.recipe.loon.test
+#!recipe.authority = remote
+#!recipe.strategy = clamp
+#!recipe.evidence = runner-scan
+
+[MITM]
+hostname = shared.recipe.loon.test, Hostname-Only.recipe.loon.test, -deny.recipe.loon.test

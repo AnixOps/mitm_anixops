@@ -64,6 +64,13 @@ Unimplemented items:
 - cron/task trigger contract;
 - platform JS runtime beyond Alpha Node runner.
 
+### Recipe Module Metadata
+
+Detailed contract: [Recipe Metadata Source Contract](recipe-metadata.md).
+
+Capability: tolerate the nine recipe module v1 `#!recipe*` keys as ignored
+`Plugin` diagnostics without any policy behavior or descriptor field.
+
 ### Loon Hashbang Metadata
 
 Detailed contract: [Loon Hashbang Metadata Source Contract](loon-hashbang-metadata.md).

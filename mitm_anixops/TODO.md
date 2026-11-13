@@ -49,6 +49,8 @@ Long-term direction is in [ROADMAP.md](ROADMAP.md). Compatibility scope is in
   and rewrite subsets.
 - [x] Add Loon plugin metadata parser fixtures and positive/negative tests.
 - [x] Add Loon hashbang metadata parser fixture and positive/negative tests.
+- [x] Add recipe module v1 `#!recipe*` metadata parser fixture and positive/negative tests.
+- [x] Add runner scan recipe warnings (scope/hostname mismatch, enums, guard) with a mismatch fixture.
 - [x] Add Loon metadata descriptor ABI, fixture, and positive/negative tests
       for `#!` and `[Plugin]` common display fields.
 - [x] Add Loon argument section parser fixtures and positive/negative tests.

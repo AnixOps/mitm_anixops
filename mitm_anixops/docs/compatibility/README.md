@@ -52,6 +52,8 @@ matrix and source-contract evidence.
   metadata tolerance contract.
 - [loon-hashbang-metadata.md](loon-hashbang-metadata.md): Loon `#!`
   metadata tolerance contract.
+- [recipe-metadata.md](recipe-metadata.md): recipe module v1 `#!recipe*`
+  metadata tolerance contract.
 - [loon-argument-section.md](loon-argument-section.md): Loon `[Argument]`
   section default parser contract.
 - [loon-inline-arguments.md](loon-inline-arguments.md): Loon `#!arguments`
