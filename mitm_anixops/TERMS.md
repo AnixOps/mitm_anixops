@@ -1,9 +1,7 @@
 # mitm_anixops 用户协议与免责声明
 
 适用于 mitm_anixops（AnixOps MITM / 重写策略组件）的源代码、官方构建、runner 工具和文档。
-基准版本 2.1.0，来源：AnixOps Design `legal/terms.zh-CN.md`。软件许可见仓库根目录的 [`LICENSE`](../LICENSE)（Apache-2.0）。
-
-> 本文件不构成法律意见。正式发布或商用之前，建议请执业律师审阅。
+基准版本 2.1.1，来源：AnixOps Design `legal/terms.zh-CN.md`。软件许可见仓库根目录的 [`LICENSE`](../LICENSE)（Apache-2.0）。
 
 ## 产品补充条款
 
@@ -163,10 +161,5 @@
 - 本协议任何条款被认定无效或不可执行的，不影响其余条款的效力。
 - 我们未行使或延迟行使任何权利，不构成放弃该权利。
 - 本协议以简体中文为准；其他语言版本仅供参考。
-
----
-
-本协议是 AnixOps 起草的通用文本，**不构成法律意见**。正式发布、上架应用商店或商用之前，
-建议请执业律师结合你的业务和所在地法律审阅。
 
 <!-- END COMMON TERMS -->
