@@ -504,7 +504,7 @@ build/anixops-mitm-runner replay --plugin ipleak-script.plugin --fixture cases.t
   已知缺口、怎样关闭或卸载，以及你自己的许可证。
 - 想登记到 [`../recipes/external-examples.md`](../recipes/external-examples.md)：
   满足该页的登记要求，然后提一个只改该页的文档 PR，加一行登记。
-  登记只是索引，不代表我们审查或认可其内容。
+  登记只是索引，不代表我们核查或认可其内容。
 
 ### 10.2 报告兼容性问题
 
