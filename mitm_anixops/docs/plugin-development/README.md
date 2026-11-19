@@ -341,7 +341,7 @@ case<TAB>名称<TAB>request|response<TAB>url<TAB>正文或 -
 1. 把插件和脚本放到 https 地址（例如 GitHub 仓库里带 commit SHA 的 raw 链接）。
 2. 在客户端里按地址导入插件，查看支持报告：每行的等级和原因。
 3. 自己生成并手动信任根证书，打开 HTTPS 解密，启用插件，并允许它引用的脚本。
-4. 访问目标页面，确认效果。iOS 客户端的开发者模式（在设置里解锁）
+4. 访问目标页面，确认效果。iOS 客户端的开发者模式（在设置里开启）
    可以查看诊断信息和事件。
 5. 改了脚本以后，换一个新的 commit 地址重新导入，不要依赖缓存刷新。
 
@@ -504,7 +504,7 @@ build/anixops-mitm-runner replay --plugin ipleak-script.plugin --fixture cases.t
   已知缺口、怎样关闭或卸载，以及你自己的许可证。
 - 想登记到 [`../recipes/external-examples.md`](../recipes/external-examples.md)：
   满足该页的登记要求，然后提一个只改该页的文档 PR，加一行登记。
-  登记只是索引，不代表我们审查或认可其内容。
+  登记只是索引，不代表我们核查或认可其内容。
 
 ### 10.2 报告兼容性问题
 
