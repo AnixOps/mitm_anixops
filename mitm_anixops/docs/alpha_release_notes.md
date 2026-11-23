@@ -3,7 +3,7 @@
 ## Scope
 
 This Alpha package is a no-UI, embeddable MITM policy/runtime foundation. It is not a full GUI client and does not
-claim complete LOON parity.
+claim complete compatibility with any third-party plugin format.
 
 Included:
 

@@ -163,7 +163,7 @@ execution or source text scans.
 - Runner and proxy shim prove no-UI diagnostics and selected integration paths.
 - Optional PCRE2 and libjq backends are gated from the default build.
 - Go/Rust/CMake/pkg-config integration has existing coverage.
-- Release notes and compatibility docs already avoid claiming full Loon parity.
+- Release notes and compatibility docs already avoid claiming full compatibility with any third-party plugin format.
 
 ## Current Gaps
 

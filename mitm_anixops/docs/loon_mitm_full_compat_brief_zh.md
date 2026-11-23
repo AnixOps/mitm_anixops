@@ -1,8 +1,8 @@
-# LOON MITM 插件全平台兼容方案
+# MITM 插件全平台兼容方案
 
 ## 一句话目标
 
-把现有 `mitm_anixops` 扩展为一个无 UI、可嵌入、跨平台的 LOON MITM 插件兼容工具链，让 LOON/AnixOps 插件能力可以在 Windows、Linux、macOS、iOS/macOS Network Extension，以及 Rust/Go/C/C++ 宿主中复用。
+把现有 `mitm_anixops` 扩展为一个无 UI、可嵌入、跨平台的 MITM 插件兼容工具链（兼容常见插件与规则语法），让常见格式的插件能力可以在 Windows、Linux、macOS、iOS/macOS Network Extension，以及 Rust/Go/C/C++ 宿主中复用。
 
 当前 v1.0.0 policy-core 依赖决策以
 `docs/architecture/script-runtime-dependency.md` 为准：C policy core 不嵌入
@@ -15,7 +15,7 @@ QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/J
 | --- | --- |
 | 产品形态 | 无 UI runner + 可嵌入库优先 |
 | 平台优先级 | Windows/Linux/macOS 桌面先行，iOS/macOS Network Extension 后置 |
-| 兼容声明口径 | 高兼容 LOON MITM 运行时，以真实插件 corpus 验证覆盖率 |
+| 兼容声明口径 | 兼容常见插件与规则语法的 MITM 运行时，以真实插件 corpus 验证覆盖率 |
 | JavaScript runtime | 桌面默认 QuickJS，Apple 平台可选 JavaScriptCore |
 | JQ 实现 | 直接接 libjq 或 jq-compatible backend |
 | Regex backend | 保留 POSIX fallback，桌面默认 PCRE2，Darwin 做 NSRegularExpression/ICU 对照 |
@@ -30,7 +30,7 @@ QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/J
 
 现有 `mitm_anixops` 已经具备规则解析和策略决策基础：支持 MITM host 判断、URL rewrite、header rewrite、body rewrite、script dispatch、Argument 解析，并已用 BiliUniverse Enhanced、Representative LOON、Surge、Quantumult X fixtures 做过验证。
 
-当前短板主要不在 “是否能识别几条规则”，而在是否能完整复刻 LOON MITM 插件运行环境：
+当前短板主要不在 “是否能识别几条规则”，而在是否能完整提供常见 MITM 插件所需的运行环境：
 
 - JQ rewrite 已有可选 libjq Alpha 基础，但完整资源限制、语料覆盖和边界行为还没补齐。
 - 正则能力仍是 POSIX ERE 加部分 PCRE/ICU 语法归一化，不等于完整 PCRE2 或 NSRegularExpression。
@@ -238,7 +238,7 @@ Quantumult X：
 
 ## 主要风险
 
-- “所有 LOON MITM 插件” 实际包含规则解析、正则、JQ、JS、HTTP、TLS、证书、存储、平台代理权限多个问题，不能只靠一个 C 库解决。
+- “所有常见格式的 MITM 插件” 实际包含规则解析、正则、JQ、JS、HTTP、TLS、证书、存储、平台代理权限多个问题，不能只靠一个 C 库解决。
 - QX 公开资料不稳定，必须语料驱动。
 - PCRE2 与 NSRegularExpression 行为无法完全等价，需要 backend 标识和严格模式。
 - JQ 和 JS runtime 会引入依赖、资源限制和安全边界。
@@ -248,4 +248,4 @@ Quantumult X：
 
 推荐路线是：保留 `mitm_anixops` 作为稳定策略核心，新增 optional runtime 承接 JQ/JS/body pipeline，再提供无 UI runner 作为跨平台验证和使用入口，最后由各平台代理适配网络、TLS、证书和系统权限。
 
-这样可以避免把所有复杂度塞进核心库，同时让 LOON MITM 插件能力逐步变成可测试、可追踪、可跨平台交付的工程体系。
+这样可以避免把所有复杂度塞进核心库，同时让 MITM 插件能力逐步变成可测试、可追踪、可跨平台交付的工程体系。

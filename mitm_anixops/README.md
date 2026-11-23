@@ -21,7 +21,7 @@ The v1.0.0 maintenance track is governed by `ROADMAP.md`, `TODO.md`, `CHANGELOG.
 acceptance model: local machines are used for source and documentation edits, while build, test, package, release
 dry-run, and release publication evidence must come from GitHub Actions.
 
-The full LOON MITM plugin compatibility and no-UI runtime plan is tracked in
+The MITM plugin compatibility (common plugin and rule syntax) and no-UI runtime plan is tracked in
 `docs/loon_mitm_full_compat_plan.md`, with a shorter Chinese presentation draft in
 `docs/loon_mitm_full_compat_brief_zh.md`.
 
