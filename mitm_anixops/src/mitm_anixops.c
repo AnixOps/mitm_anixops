@@ -32,11 +32,32 @@ static void anixops_jq_ignore_error(void *data, jv msg);
 #define ANIXOPS_CAPTURE_UNMAPPED ((size_t)-1)
 #define ANIXOPS_CAPTURE_NAME_CAP 64
 
+/* JSON path lookups skip unrelated values recursively. A value (in the body or
+ * in a raw JSON replacement) whose objects and arrays nest more than this many
+ * levels is not walked any further: the lookup stops with
+ * ANIXOPS_JSON_PATH_TOO_DEEP and the body is left unchanged, so
+ * attacker-controlled nesting cannot exhaust the caller's stack. */
+#define ANIXOPS_JSON_MAX_DEPTH 512
+#define ANIXOPS_JSON_PATH_UNSUPPORTED (-1)
+#define ANIXOPS_JSON_PATH_TOO_DEEP (-2)
+
+#if defined(ANIXOPS_ENABLE_PCRE2)
+/* Per pcre2_match() call budgets for every regex the engine runs. Hitting one
+ * of them makes the rewrite fail closed (the input is left unchanged) instead
+ * of stalling the caller's thread or allocating without bound. The heap limit
+ * is in KiB, as pcre2_set_heap_limit() expects. */
+#define ANIXOPS_PCRE2_MATCH_LIMIT 5000000u
+#define ANIXOPS_PCRE2_DEPTH_LIMIT 250000u
+#define ANIXOPS_PCRE2_HEAP_LIMIT_KIB 16384u
+#endif
+
 typedef struct anixops_compiled_regex {
 	regex_t posix;
 	int posix_ready;
 #if defined(ANIXOPS_ENABLE_PCRE2)
 	pcre2_code *pcre2;
+	/* Read-only after compile, so it is safe to share between threads. */
+	pcre2_match_context *pcre2_match_context;
 #endif
 	anixops_regex_backend_t backend;
 } anixops_compiled_regex_t;
@@ -416,7 +437,8 @@ static int anixops_apply_body_json_replacement(
 	char *out,
 	size_t out_cap,
 	int *out_replaced,
-	int *out_path_supported);
+	int *out_path_supported,
+	int *out_depth_limited);
 #if defined(ANIXOPS_ENABLE_LIBJQ)
 static uint64_t anixops_jq_filter_cache_next_tick(anixops_engine_t *engine)
 {
@@ -585,7 +607,12 @@ static int anixops_append_expanded_replacement(
 	char *out,
 	size_t out_cap,
 	size_t *pos);
-static int anixops_append_json_replacement(char *out, size_t out_cap, size_t *pos, const char *replacement);
+static int anixops_append_json_replacement(
+	char *out,
+	size_t out_cap,
+	size_t *pos,
+	const char *replacement,
+	int *too_deep);
 static int anixops_append_json_string(char *out, size_t out_cap, size_t *pos, const char *value);
 static int anixops_json_find_path_value(
 	const char *body,
@@ -598,13 +625,15 @@ static int anixops_json_find_member_value(
 	const char *key,
 	size_t key_len,
 	const char **out_value_start,
-	const char **out_value_end);
+	const char **out_value_end,
+	int *too_deep);
 static int anixops_json_find_array_element_value(
 	const char *array_start,
 	const char *array_end,
 	long index,
 	const char **out_value_start,
-	const char **out_value_end);
+	const char **out_value_end,
+	int *too_deep);
 static int anixops_json_key_matches(const char *string_start, const char *string_end, const char *key, size_t key_len);
 static int anixops_json_parse_path_segment(const char **cursor, const char **out_key, size_t *out_key_len);
 static int anixops_json_parse_bracket_key(
@@ -618,12 +647,17 @@ static int anixops_json_read_hex4(const char **cursor, const char *end, unsigned
 static int anixops_json_append_utf8(char *out, size_t out_cap, size_t *pos, unsigned long codepoint);
 static int anixops_hex_digit(unsigned char ch);
 static int anixops_json_parse_array_index(const char **cursor, long *out_index);
-static int anixops_json_array_length(const char *array_start, const char *array_end, size_t *out_len);
-static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end);
+static int anixops_json_array_length(const char *array_start, const char *array_end, size_t *out_len, int *too_deep);
+static int anixops_json_replacement_is_raw_value(
+	const char *value,
+	const char **out_start,
+	const char **out_end,
+	int *too_deep);
 static const char *anixops_json_skip_ws(const char *cursor, const char *end);
 static const char *anixops_json_skip_string(const char *cursor, const char *end);
 static const char *anixops_json_skip_number(const char *cursor, const char *end);
-static const char *anixops_json_skip_value(const char *cursor, const char *end);
+static const char *anixops_json_skip_value(const char *cursor, const char *end, int *too_deep);
+static const char *anixops_json_skip_value_at(const char *cursor, const char *end, size_t depth, int *too_deep);
 static int anixops_append_range(char *out, size_t out_cap, size_t *pos, const char *start, size_t len);
 static int anixops_append_char(char *out, size_t out_cap, size_t *pos, char value);
 static void anixops_normalize_host(const char *input, char *out, size_t out_cap);
@@ -3577,8 +3611,15 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 		}
 		rule = &engine->rules[out_result->rule_index];
 		if (anixops_rewrite_action_replaces_body_regex(out_result->action)) {
-			if (!rule->body_regex_ready ||
-				anixops_apply_body_regex_replacement(body, rule, out_body, out_body_cap, &replaced) != ANIXOPS_OK) {
+			int regex_rc = rule->body_regex_ready
+				? anixops_apply_body_regex_replacement(body, rule, out_body, out_body_cap, &replaced)
+				: ANIXOPS_ERR_INVALID_ARGUMENT;
+			if (regex_rc == ANIXOPS_ERR_REGEX) {
+				/* out_body already holds the unchanged body. */
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "body regex limit exceeded");
+				return ANIXOPS_OK;
+			}
+			if (regex_rc != ANIXOPS_OK) {
 				anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
 				return ANIXOPS_OK;
 			}
@@ -3592,17 +3633,22 @@ ANIXOPS_API int anixops_rewrite_apply_body(
 		}
 		if (anixops_rewrite_action_replaces_body_json(out_result->action)) {
 			int path_supported = 1;
+			int depth_limited = 0;
 			if (anixops_apply_body_json_replacement(
 					body,
 					rule,
 					out_body,
 					out_body_cap,
 					&replaced,
-					&path_supported) != ANIXOPS_OK) {
+					&path_supported,
+					&depth_limited) != ANIXOPS_OK) {
 				anixops_copy_text(out_result->message, sizeof(out_result->message), "body truncated");
 				return ANIXOPS_OK;
 			}
-			if (!path_supported) {
+			if (depth_limited) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "json nesting exceeds limit");
+			}
+			else if (!path_supported) {
 				anixops_copy_text(out_result->message, sizeof(out_result->message), "json path unsupported");
 			}
 			else if (replaced) {
@@ -3897,8 +3943,15 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 			replaced = 1;
 		}
 		else if (anixops_rewrite_action_replaces_body_regex(rule->action)) {
-			if (!rule->body_regex_ready ||
-				anixops_apply_body_regex_replacement(current_body, rule, next_body, out_body_cap, &replaced) != ANIXOPS_OK) {
+			int regex_rc = rule->body_regex_ready
+				? anixops_apply_body_regex_replacement(current_body, rule, next_body, out_body_cap, &replaced)
+				: ANIXOPS_ERR_INVALID_ARGUMENT;
+			if (regex_rc == ANIXOPS_ERR_REGEX) {
+				/* The rule is skipped; the body continues down the chain unchanged. */
+				replaced = 0;
+				anixops_copy_text(result.message, sizeof(result.message), "body regex limit exceeded");
+			}
+			else if (regex_rc != ANIXOPS_OK) {
 				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
 				out_chain->truncated = 1;
 			}
@@ -3908,15 +3961,20 @@ ANIXOPS_API int anixops_rewrite_apply_body_chain(
 		}
 		else if (anixops_rewrite_action_replaces_body_json(rule->action)) {
 			int path_supported = 1;
+			int depth_limited = 0;
 			if (anixops_apply_body_json_replacement(
 					current_body,
 					rule,
 					next_body,
 					out_body_cap,
 					&replaced,
-					&path_supported) != ANIXOPS_OK) {
+					&path_supported,
+					&depth_limited) != ANIXOPS_OK) {
 				anixops_copy_text(result.message, sizeof(result.message), "body truncated");
 				out_chain->truncated = 1;
+			}
+			else if (depth_limited) {
+				anixops_copy_text(result.message, sizeof(result.message), "json nesting exceeds limit");
 			}
 			else if (!path_supported) {
 				anixops_copy_text(result.message, sizeof(result.message), "json path unsupported");
@@ -4219,18 +4277,24 @@ static int anixops_rewrite_evaluate_header_internal(
 				anixops_copy_text(out_result->message, sizeof(out_result->message), "header regex value required");
 				return ANIXOPS_OK;
 			}
-			if (!rule->header_regex_ready ||
-				anixops_apply_regex_replacement(
-					current_header_value,
-					&rule->header_regex,
-					rule->header_regex_ready,
-					rule->replacement,
-					rule->header_capture_map,
-					ANIXOPS_MATCH_CAP,
-					&rule->header_capture_names,
-					out_result->value,
-					sizeof(out_result->value),
-					&replaced) != ANIXOPS_OK) {
+			int regex_rc = rule->header_regex_ready
+				? anixops_apply_regex_replacement(
+					  current_header_value,
+					  &rule->header_regex,
+					  rule->header_regex_ready,
+					  rule->replacement,
+					  rule->header_capture_map,
+					  ANIXOPS_MATCH_CAP,
+					  &rule->header_capture_names,
+					  out_result->value,
+					  sizeof(out_result->value),
+					  &replaced)
+				: ANIXOPS_ERR_INVALID_ARGUMENT;
+			if (regex_rc == ANIXOPS_ERR_REGEX) {
+				anixops_copy_text(out_result->message, sizeof(out_result->message), "header regex limit exceeded");
+				return ANIXOPS_OK;
+			}
+			if (regex_rc != ANIXOPS_OK) {
 				anixops_copy_text(out_result->message, sizeof(out_result->message), "header value truncated");
 				return ANIXOPS_OK;
 			}
@@ -4315,25 +4379,33 @@ ANIXOPS_API int anixops_rewrite_apply_headers(
 			int saw_header = 0;
 			int saw_replacement = 0;
 			int saw_truncation = 0;
+			int saw_regex_limit = 0;
 			for (h = 0; h < working.count; h++) {
 				char replaced_value[ANIXOPS_VALUE_CAP];
 				int replaced = 0;
+				int regex_rc;
 				if (!anixops_header_list_name_matches(working.fields[h].name, rule->header_name)) {
 					continue;
 				}
 				saw_header = 1;
-				if (!rule->header_regex_ready ||
-					anixops_apply_regex_replacement(
-						working.fields[h].value,
-						&rule->header_regex,
-						rule->header_regex_ready,
-						rule->replacement,
-						rule->header_capture_map,
-						ANIXOPS_MATCH_CAP,
-						&rule->header_capture_names,
-						replaced_value,
-						sizeof(replaced_value),
-						&replaced) != ANIXOPS_OK) {
+				regex_rc = rule->header_regex_ready
+					? anixops_apply_regex_replacement(
+						  working.fields[h].value,
+						  &rule->header_regex,
+						  rule->header_regex_ready,
+						  rule->replacement,
+						  rule->header_capture_map,
+						  ANIXOPS_MATCH_CAP,
+						  &rule->header_capture_names,
+						  replaced_value,
+						  sizeof(replaced_value),
+						  &replaced)
+					: ANIXOPS_ERR_INVALID_ARGUMENT;
+				if (regex_rc == ANIXOPS_ERR_REGEX) {
+					saw_regex_limit = 1;
+					continue;
+				}
+				if (regex_rc != ANIXOPS_OK) {
 					saw_truncation = 1;
 					continue;
 				}
@@ -4348,6 +4420,9 @@ ANIXOPS_API int anixops_rewrite_apply_headers(
 			}
 			if (saw_truncation) {
 				anixops_copy_text(result.message, sizeof(result.message), "header value truncated");
+			}
+			else if (saw_regex_limit) {
+				anixops_copy_text(result.message, sizeof(result.message), "header regex limit exceeded");
 			}
 			else if (saw_replacement) {
 				anixops_copy_text(result.message, sizeof(result.message), "header list rewritten");
@@ -5454,7 +5529,19 @@ static int anixops_compile_regex(
 			&error_code,
 			&error_offset,
 			NULL);
-		return regex->pcre2 == NULL ? REG_BADPAT : 0;
+		if (regex->pcre2 == NULL) {
+			return REG_BADPAT;
+		}
+		regex->pcre2_match_context = pcre2_match_context_create(NULL);
+		if (regex->pcre2_match_context == NULL) {
+			pcre2_code_free(regex->pcre2);
+			regex->pcre2 = NULL;
+			return REG_ESPACE;
+		}
+		(void)pcre2_set_match_limit(regex->pcre2_match_context, ANIXOPS_PCRE2_MATCH_LIMIT);
+		(void)pcre2_set_depth_limit(regex->pcre2_match_context, ANIXOPS_PCRE2_DEPTH_LIMIT);
+		(void)pcre2_set_heap_limit(regex->pcre2_match_context, ANIXOPS_PCRE2_HEAP_LIMIT_KIB);
+		return 0;
 	}
 #else
 	(void)backend;
@@ -5516,6 +5603,9 @@ static void anixops_free_compiled_regex(anixops_compiled_regex_t *regex)
 		regfree(&regex->posix);
 	}
 #if defined(ANIXOPS_ENABLE_PCRE2)
+	if (regex->pcre2_match_context != NULL) {
+		pcre2_match_context_free(regex->pcre2_match_context);
+	}
 	if (regex->pcre2 != NULL) {
 		pcre2_code_free(regex->pcre2);
 	}
@@ -5558,7 +5648,7 @@ static int anixops_regex_exec_with_flags(
 			0,
 			not_bol ? PCRE2_NOTBOL : 0,
 			match_data,
-			NULL);
+			regex->pcre2_match_context);
 		if (rc < 0) {
 			pcre2_match_data_free(match_data);
 			return REG_NOMATCH;
@@ -7153,22 +7243,29 @@ static int anixops_apply_body_json_replacement(
 	char *out,
 	size_t out_cap,
 	int *out_replaced,
-	int *out_path_supported)
+	int *out_path_supported,
+	int *out_depth_limited)
 {
 	const char *value_start;
 	const char *value_end;
 	size_t pos = 0;
 	int found;
 	int truncated = 0;
+	int replacement_too_deep = 0;
 
 	if (body == NULL || rule == NULL || out == NULL || out_cap == 0 || out_replaced == NULL ||
-		out_path_supported == NULL) {
+		out_path_supported == NULL || out_depth_limited == NULL) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
 	*out_replaced = 0;
 	*out_path_supported = 1;
+	*out_depth_limited = 0;
 
 	found = anixops_json_find_path_value(body, rule->body_pattern, &value_start, &value_end);
+	if (found == ANIXOPS_JSON_PATH_TOO_DEEP) {
+		*out_depth_limited = 1;
+		return anixops_copy_text_checked(out, out_cap, body);
+	}
 	if (found < 0) {
 		*out_path_supported = 0;
 		return anixops_copy_text_checked(out, out_cap, body);
@@ -7181,8 +7278,14 @@ static int anixops_apply_body_json_replacement(
 	if (anixops_append_range(out, out_cap, &pos, body, (size_t)(value_start - body)) != ANIXOPS_OK) {
 		truncated = 1;
 	}
-	if (anixops_append_json_replacement(out, out_cap, &pos, rule->replacement) != ANIXOPS_OK) {
+	if (anixops_append_json_replacement(out, out_cap, &pos, rule->replacement, &replacement_too_deep) != ANIXOPS_OK) {
 		truncated = 1;
+	}
+	if (replacement_too_deep) {
+		/* The replacement itself nests past the limit; leave the body as it was
+		 * rather than guessing whether it was meant as raw JSON or a string. */
+		*out_depth_limited = 1;
+		return anixops_copy_text_checked(out, out_cap, body);
 	}
 	if (anixops_append_range(out, out_cap, &pos, value_end, strlen(value_end)) != ANIXOPS_OK) {
 		truncated = 1;
@@ -7373,6 +7476,157 @@ static void anixops_jq_ignore_error(void *data, jv msg)
 }
 #endif
 
+#if defined(ANIXOPS_ENABLE_PCRE2)
+/* Byte length of the UTF-8 character that starts at text[offset], at least one
+ * byte and never running past len. */
+static size_t anixops_utf8_char_len(const char *text, size_t offset, size_t len)
+{
+	size_t next = offset + 1;
+	while (next < len && (((unsigned char)text[next]) & 0xC0u) == 0x80u) {
+		next++;
+	}
+	return next - offset;
+}
+
+/* Global replace with PCRE2. The whole input stays the subject and the search
+ * moves forward with start_offset, so lookbehind, \b and multiline ^ see the
+ * text before each continuation point. The subject length is computed once,
+ * UTF-8 is validated once (on the first call only) and one match_data is
+ * reused for every match, keeping the overhead linear in the input size. Each
+ * pcre2_match() call runs under the regex's match, depth and heap limits; when
+ * one is hit the output is the unchanged input and ANIXOPS_ERR_REGEX is
+ * returned, never a partially rewritten text. Empty matches keep the existing
+ * semantics: the next whole character is copied and the search resumes after
+ * it, and no empty match is tried at the end right after a non-empty one. */
+static int anixops_apply_pcre2_replacement(
+	const char *input,
+	const anixops_compiled_regex_t *regex,
+	const char *replacement,
+	const size_t *capture_map,
+	size_t capture_map_cap,
+	const anixops_capture_names_t *capture_names,
+	char *out,
+	size_t out_cap,
+	int *out_replaced)
+{
+	pcre2_match_data *match_data;
+	const size_t subject_len = strlen(input);
+	size_t ovector_count;
+	size_t copied = 0;
+	size_t offset = 0;
+	size_t pos = 0;
+	uint32_t options = 0;
+	int truncated = 0;
+	int replaced = 0;
+	int failed = 0;
+	regmatch_t matches[ANIXOPS_MATCH_CAP];
+
+	match_data = pcre2_match_data_create_from_pattern(regex->pcre2, NULL);
+	if (match_data == NULL) {
+		return ANIXOPS_ERR_OUT_OF_MEMORY;
+	}
+	ovector_count = (size_t)pcre2_get_ovector_count(match_data);
+	out[0] = '\0';
+
+	for (;;) {
+		PCRE2_SIZE *ovector;
+		size_t match_start;
+		size_t match_end;
+		size_t i;
+		int rc = pcre2_match(
+			regex->pcre2,
+			(PCRE2_SPTR)input,
+			subject_len,
+			offset,
+			options,
+			match_data,
+			regex->pcre2_match_context);
+		if (rc == PCRE2_ERROR_NOMATCH) {
+			break;
+		}
+		if (rc < 0) {
+			/* Invalid UTF-8 (checked on the first call only) or a resume offset
+			 * inside a character (after a \C match) leaves nothing more to
+			 * rewrite, as before. Anything else is a match, depth or heap limit
+			 * or a resource error and fails the whole replacement. */
+			if ((rc <= PCRE2_ERROR_UTF8_ERR1 && rc >= PCRE2_ERROR_UTF8_ERR21) || rc == PCRE2_ERROR_BADUTFOFFSET) {
+				break;
+			}
+			failed = 1;
+			break;
+		}
+		ovector = pcre2_get_ovector_pointer(match_data);
+		match_start = (size_t)ovector[0];
+		match_end = (size_t)ovector[1];
+		if (match_start < copied || match_end < match_start || match_end > subject_len) {
+			break;
+		}
+		for (i = 0; i < ANIXOPS_MATCH_CAP; i++) {
+			if ((rc == 0 || i < (size_t)rc) && i < ovector_count && ovector[2 * i] != PCRE2_UNSET &&
+				ovector[2 * i + 1] != PCRE2_UNSET) {
+				matches[i].rm_so = (regoff_t)ovector[2 * i];
+				matches[i].rm_eo = (regoff_t)ovector[2 * i + 1];
+			}
+			else {
+				matches[i].rm_so = -1;
+				matches[i].rm_eo = -1;
+			}
+		}
+		if (anixops_append_range(out, out_cap, &pos, input + copied, match_start - copied) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		if (anixops_append_expanded_replacement(
+				input,
+				replacement,
+				matches,
+				sizeof(matches) / sizeof(matches[0]),
+				capture_map,
+				capture_map_cap,
+				capture_names,
+				out,
+				out_cap,
+				&pos) != ANIXOPS_OK) {
+			truncated = 1;
+		}
+		replaced = 1;
+		copied = match_end;
+		if (truncated || match_end >= subject_len) {
+			/* A full output buffer cannot take anything more. */
+			break;
+		}
+		if (match_end == match_start) {
+			/* Empty match: keep the next whole character, search after it. */
+			size_t step = anixops_utf8_char_len(input, match_end, subject_len);
+			if (anixops_append_range(out, out_cap, &pos, input + match_end, step) != ANIXOPS_OK) {
+				truncated = 1;
+				break;
+			}
+			copied = match_end + step;
+		}
+		offset = copied;
+		/* The subject was validated on the first call; only an offset left
+		 * inside a character needs PCRE2 to look at it again. */
+		options = (((unsigned char)input[offset]) & 0xC0u) == 0x80u ? 0u : PCRE2_NO_UTF_CHECK;
+	}
+	pcre2_match_data_free(match_data);
+
+	if (failed) {
+		*out_replaced = 0;
+		if (anixops_copy_text_checked(out, out_cap, input) != ANIXOPS_OK) {
+			return ANIXOPS_ERR_CAPACITY;
+		}
+		return ANIXOPS_ERR_REGEX;
+	}
+	if (!truncated &&
+		anixops_append_range(out, out_cap, &pos, input + copied, subject_len - copied) != ANIXOPS_OK) {
+		truncated = 1;
+	}
+	out[pos < out_cap ? pos : out_cap - 1] = '\0';
+	*out_replaced = replaced;
+	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
+}
+#endif
+
 static int anixops_apply_regex_replacement(
 	const char *input,
 	const anixops_compiled_regex_t *regex,
@@ -7394,6 +7648,20 @@ static int anixops_apply_regex_replacement(
 	if (input == NULL || regex == NULL || out == NULL || out_cap == 0 || out_replaced == NULL || !regex_ready) {
 		return ANIXOPS_ERR_INVALID_ARGUMENT;
 	}
+#if defined(ANIXOPS_ENABLE_PCRE2)
+	if (regex->backend == ANIXOPS_REGEX_BACKEND_PCRE2 && regex->pcre2 != NULL) {
+		return anixops_apply_pcre2_replacement(
+			input,
+			regex,
+			replacement,
+			capture_map,
+			capture_map_cap,
+			capture_names,
+			out,
+			out_cap,
+			out_replaced);
+	}
+#endif
 	out[0] = '\0';
 
 	while (anixops_regex_exec_with_flags(
@@ -7550,12 +7818,20 @@ static int anixops_append_expanded_replacement(
 	return truncated ? ANIXOPS_ERR_CAPACITY : ANIXOPS_OK;
 }
 
-static int anixops_append_json_replacement(char *out, size_t out_cap, size_t *pos, const char *replacement)
+static int anixops_append_json_replacement(
+	char *out,
+	size_t out_cap,
+	size_t *pos,
+	const char *replacement,
+	int *too_deep)
 {
 	const char *raw_start;
 	const char *raw_end;
-	if (anixops_json_replacement_is_raw_value(replacement, &raw_start, &raw_end)) {
+	if (anixops_json_replacement_is_raw_value(replacement, &raw_start, &raw_end, too_deep)) {
 		return anixops_append_range(out, out_cap, pos, raw_start, (size_t)(raw_end - raw_start));
+	}
+	if (too_deep != NULL && *too_deep) {
+		return ANIXOPS_OK;
 	}
 	return anixops_append_json_string(out, out_cap, pos, replacement == NULL ? "" : replacement);
 }
@@ -7635,6 +7911,7 @@ static int anixops_json_find_path_value(
 	const char *value_end;
 	char bracket_key[ANIXOPS_VALUE_CAP];
 	int parsed_segment = 0;
+	int too_deep = 0;
 	if (body == NULL || path == NULL || out_value_start == NULL || out_value_end == NULL) {
 		return 0;
 	}
@@ -7652,11 +7929,11 @@ static int anixops_json_find_path_value(
 		if (*cursor == '.') {
 			cursor++;
 			if (!anixops_json_parse_path_segment(&cursor, &key, &key_len)) {
-				return -1;
+				return ANIXOPS_JSON_PATH_UNSUPPORTED;
 			}
-			found = anixops_json_find_member_value(value_start, value_end, key, key_len, &value_start, &value_end);
+			found = anixops_json_find_member_value(value_start, value_end, key, key_len, &value_start, &value_end, &too_deep);
 			if (!found) {
-				return 0;
+				return too_deep ? ANIXOPS_JSON_PATH_TOO_DEEP : 0;
 			}
 			parsed_segment = 1;
 			continue;
@@ -7664,30 +7941,30 @@ static int anixops_json_find_path_value(
 		if (*cursor == '[') {
 			if (cursor[1] == '\'' || cursor[1] == '"') {
 				if (!anixops_json_parse_bracket_key(&cursor, bracket_key, sizeof(bracket_key), &key, &key_len)) {
-					return -1;
+					return ANIXOPS_JSON_PATH_UNSUPPORTED;
 				}
-				found = anixops_json_find_member_value(value_start, value_end, key, key_len, &value_start, &value_end);
+				found = anixops_json_find_member_value(value_start, value_end, key, key_len, &value_start, &value_end, &too_deep);
 				if (!found) {
-					return 0;
+					return too_deep ? ANIXOPS_JSON_PATH_TOO_DEEP : 0;
 				}
 				parsed_segment = 1;
 				continue;
 			}
 			long index;
 			if (!anixops_json_parse_array_index(&cursor, &index)) {
-				return -1;
+				return ANIXOPS_JSON_PATH_UNSUPPORTED;
 			}
-			found = anixops_json_find_array_element_value(value_start, value_end, index, &value_start, &value_end);
+			found = anixops_json_find_array_element_value(value_start, value_end, index, &value_start, &value_end, &too_deep);
 			if (!found) {
-				return 0;
+				return too_deep ? ANIXOPS_JSON_PATH_TOO_DEEP : 0;
 			}
 			parsed_segment = 1;
 			continue;
 		}
-		return -1;
+		return ANIXOPS_JSON_PATH_UNSUPPORTED;
 	}
 	if (!parsed_segment) {
-		return -1;
+		return ANIXOPS_JSON_PATH_UNSUPPORTED;
 	}
 	*out_value_start = value_start;
 	*out_value_end = value_end;
@@ -7700,7 +7977,8 @@ static int anixops_json_find_member_value(
 	const char *key,
 	size_t key_len,
 	const char **out_value_start,
-	const char **out_value_end)
+	const char **out_value_end,
+	int *too_deep)
 {
 	const char *cursor;
 	if (object_start == NULL || object_end == NULL || key == NULL || out_value_start == NULL || out_value_end == NULL) {
@@ -7735,7 +8013,7 @@ static int anixops_json_find_member_value(
 		}
 		cursor = anixops_json_skip_ws(cursor + 1, object_end);
 		value_start = cursor;
-		value_end = anixops_json_skip_value(value_start, object_end);
+		value_end = anixops_json_skip_value(value_start, object_end, too_deep);
 		if (value_end == NULL) {
 			return 0;
 		}
@@ -7765,7 +8043,8 @@ static int anixops_json_find_array_element_value(
 	const char *array_end,
 	long index,
 	const char **out_value_start,
-	const char **out_value_end)
+	const char **out_value_end,
+	int *too_deep)
 {
 	const char *cursor;
 	size_t current = 0;
@@ -7776,7 +8055,7 @@ static int anixops_json_find_array_element_value(
 	if (index < 0) {
 		size_t length;
 		size_t reverse_index = (size_t)(-index);
-		if (!anixops_json_array_length(array_start, array_end, &length)) {
+		if (!anixops_json_array_length(array_start, array_end, &length, too_deep)) {
 			return 0;
 		}
 		if (reverse_index == 0 || reverse_index > length) {
@@ -7797,7 +8076,7 @@ static int anixops_json_find_array_element_value(
 	}
 	while (cursor < array_end) {
 		const char *value_start = cursor;
-		const char *value_end = anixops_json_skip_value(value_start, array_end);
+		const char *value_end = anixops_json_skip_value(value_start, array_end, too_deep);
 		const char *after;
 		if (value_end == NULL) {
 			return 0;
@@ -8126,7 +8405,7 @@ static int anixops_json_parse_array_index(const char **cursor, long *out_index)
 	return 1;
 }
 
-static int anixops_json_array_length(const char *array_start, const char *array_end, size_t *out_len)
+static int anixops_json_array_length(const char *array_start, const char *array_end, size_t *out_len, int *too_deep)
 {
 	const char *cursor;
 	size_t count = 0;
@@ -8143,7 +8422,7 @@ static int anixops_json_array_length(const char *array_start, const char *array_
 		return 1;
 	}
 	while (cursor < array_end) {
-		const char *value_end = anixops_json_skip_value(cursor, array_end);
+		const char *value_end = anixops_json_skip_value(cursor, array_end, too_deep);
 		const char *after;
 		if (value_end == NULL) {
 			return 0;
@@ -8163,7 +8442,11 @@ static int anixops_json_array_length(const char *array_start, const char *array_
 	return 0;
 }
 
-static int anixops_json_replacement_is_raw_value(const char *value, const char **out_start, const char **out_end)
+static int anixops_json_replacement_is_raw_value(
+	const char *value,
+	const char **out_start,
+	const char **out_end,
+	int *too_deep)
 {
 	const char *start;
 	const char *end;
@@ -8176,7 +8459,7 @@ static int anixops_json_replacement_is_raw_value(const char *value, const char *
 	if (start == end) {
 		return 0;
 	}
-	value_end = anixops_json_skip_value(start, end);
+	value_end = anixops_json_skip_value(start, end, too_deep);
 	if (value_end == NULL) {
 		return 0;
 	}
@@ -8277,7 +8560,15 @@ static const char *anixops_json_skip_number(const char *cursor, const char *end)
 	return cursor;
 }
 
-static const char *anixops_json_skip_value(const char *cursor, const char *end)
+static const char *anixops_json_skip_value(const char *cursor, const char *end, int *too_deep)
+{
+	return anixops_json_skip_value_at(cursor, end, 0, too_deep);
+}
+
+/* depth counts the objects and arrays already open around cursor. Entering one
+ * more past ANIXOPS_JSON_MAX_DEPTH fails the skip (NULL) and sets *too_deep, so
+ * the recursion below never exceeds ANIXOPS_JSON_MAX_DEPTH frames. */
+static const char *anixops_json_skip_value_at(const char *cursor, const char *end, size_t depth, int *too_deep)
 {
 	cursor = anixops_json_skip_ws(cursor, end);
 	if (cursor >= end) {
@@ -8285,6 +8576,12 @@ static const char *anixops_json_skip_value(const char *cursor, const char *end)
 	}
 	if (*cursor == '"') {
 		return anixops_json_skip_string(cursor, end);
+	}
+	if ((*cursor == '{' || *cursor == '[') && depth >= ANIXOPS_JSON_MAX_DEPTH) {
+		if (too_deep != NULL) {
+			*too_deep = 1;
+		}
+		return NULL;
 	}
 	if (*cursor == '{') {
 		cursor++;
@@ -8304,7 +8601,7 @@ static const char *anixops_json_skip_value(const char *cursor, const char *end)
 			if (cursor >= end || *cursor != ':') {
 				return NULL;
 			}
-			cursor = anixops_json_skip_value(cursor + 1, end);
+			cursor = anixops_json_skip_value_at(cursor + 1, end, depth + 1, too_deep);
 			if (cursor == NULL) {
 				return NULL;
 			}
@@ -8327,7 +8624,7 @@ static const char *anixops_json_skip_value(const char *cursor, const char *end)
 			return cursor + 1;
 		}
 		while (cursor < end) {
-			cursor = anixops_json_skip_value(cursor, end);
+			cursor = anixops_json_skip_value_at(cursor, end, depth + 1, too_deep);
 			if (cursor == NULL) {
 				return NULL;
 			}
