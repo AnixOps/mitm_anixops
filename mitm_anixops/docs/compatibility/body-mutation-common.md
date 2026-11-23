@@ -130,7 +130,26 @@ Expected behavior:
 - Shadowrocket `[URL Rewrite]` `response-body-replace-regex` response body
   mutation is observable through `anixops_rewrite_apply_body`;
 - phase separation prevents request body rules from matching response phase
-  evaluation.
+  evaluation;
+- JSON path lookups (`*-body-json-replace`) walk at most 512 nested objects or
+  arrays below the value being searched, and a raw JSON replacement value is
+  held to the same limit. Deeper nesting stops the lookup without recursing
+  further, so an attacker-supplied body cannot exhaust the calling thread's
+  stack; the rule fails closed with the original body and the
+  `json nesting exceeds limit` diagnostic, in single-body, body-chain and
+  rewrite-plan calls alike;
+- with the PCRE2 backend, global regex replacement (`*-body-replace-regex` and
+  `*-header-replace-regex`) searches the whole input with a start offset
+  instead of restarting on the remaining text, so lookbehind, `\b` and
+  multiline `^` see the text before each continuation point. The input length
+  is computed once, UTF-8 is validated once and the match data is reused, so
+  the overhead stays linear in the body size even for empty-matching patterns;
+  an empty match steps over one whole UTF-8 character. Every PCRE2 match runs
+  under a match limit of 5,000,000, a depth limit of 250,000 and a heap limit
+  of 16 MiB; hitting one fails the rule closed with the unchanged input and the
+  `body regex limit exceeded` (or `header regex limit exceeded`) diagnostic,
+  never a partially rewritten body. The same limits apply to URL, header and
+  script regex matching, where a limit hit counts as no match.
 
 ## Negative Case
 
@@ -300,6 +319,19 @@ Required CI evidence:
 - `tests/test_abi.c` registers `abi/max_body_option_is_configurable`;
 - `tests/test_rewrite.c` registers
   `rewrite/body_size_limit_fails_open_for_single_and_chain`;
+- `tests/test_rewrite.c` registers
+  `rewrite/json_body_replace_stops_at_nesting_limit` and
+  `rewrite/json_body_replace_rejects_too_deep_raw_replacement`, covering
+  about a million nested arrays and 200,000 nested objects in request and
+  response bodies, the negative-index array walk, single-body, body-chain and
+  rewrite-plan calls, and nesting exactly at the limit still being rewritten;
+- `tests/test_rewrite.c` registers
+  `rewrite/pcre2_body_regex_resumes_on_whole_subject_with_budgets`, covering
+  `\b`, lookbehind and multiline `^` across continuation points, empty
+  matches over multi-byte text, a catastrophic-backtracking pattern failing
+  closed for single-body, body-chain and header rewrites, and 1 MiB bodies
+  with one search per character or 10,000 matches finishing within a loose
+  time bound;
 - `tests/test_rewrite.c` registers
   `rewrite/body_bytes_api_preserves_binary_and_tracks_lengths`;
 - `tests/test_config.c` registers

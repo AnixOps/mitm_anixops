@@ -1,7 +1,9 @@
 #include "test_harness.h"
 #include "mitm_anixops.h"
 
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 static void add_test(anixops_test_case_t *tests, size_t *count, size_t cap, const char *name, anixops_test_fn fn)
 {
@@ -2665,6 +2667,386 @@ static void jq_backend_handles_output_and_error_policy(void)
 }
 #endif
 
+/* Builds prefix + count copies of unit + suffix in a fresh heap buffer. */
+static char *build_repeated_text(const char *prefix, const char *unit, size_t count, const char *suffix)
+{
+	size_t prefix_len = strlen(prefix);
+	size_t unit_len = strlen(unit);
+	size_t suffix_len = strlen(suffix);
+	size_t total = prefix_len + unit_len * count + suffix_len;
+	char *text = (char *)malloc(total + 1);
+	size_t pos = 0;
+	size_t i;
+	if (text == NULL) {
+		return NULL;
+	}
+	memcpy(text + pos, prefix, prefix_len);
+	pos += prefix_len;
+	for (i = 0; i < count; i++) {
+		memcpy(text + pos, unit, unit_len);
+		pos += unit_len;
+	}
+	memcpy(text + pos, suffix, suffix_len);
+	pos += suffix_len;
+	text[pos] = '\0';
+	return text;
+}
+
+/* Builds {"x":<depth arrays around 0>,"data":{"ad":1}} or, with closed == 0,
+ * the same object cut off inside the arrays. */
+static char *build_nested_array_body(size_t depth, int closed)
+{
+	const char *prefix = "{\"x\":";
+	const char *suffix = ",\"data\":{\"ad\":1}}";
+	size_t prefix_len = strlen(prefix);
+	size_t suffix_len = strlen(suffix);
+	size_t total = prefix_len + depth * 2 + 1 + suffix_len;
+	char *text = (char *)malloc(total + 1);
+	size_t pos = 0;
+	if (text == NULL) {
+		return NULL;
+	}
+	memcpy(text + pos, prefix, prefix_len);
+	pos += prefix_len;
+	memset(text + pos, '[', depth);
+	pos += depth;
+	if (closed) {
+		text[pos++] = '0';
+		memset(text + pos, ']', depth);
+		pos += depth;
+		memcpy(text + pos, suffix, suffix_len);
+		pos += suffix_len;
+	}
+	text[pos] = '\0';
+	return text;
+}
+
+static void expect_json_depth_limited_single(
+	anixops_engine_t *engine,
+	const char *url,
+	anixops_phase_t phase,
+	const char *input,
+	char *out,
+	size_t out_cap)
+{
+	anixops_rewrite_result_t result;
+	ANIXOPS_EXPECT_TRUE(input != NULL);
+	ANIXOPS_EXPECT_EQ_INT(anixops_rewrite_apply_body(engine, url, phase, input, out, out_cap, &result), ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "json nesting exceeds limit");
+	ANIXOPS_EXPECT_TRUE(strcmp(out, input) == 0);
+}
+
+static void json_body_replace_nesting_cases(char *out, size_t out_cap, char *deep_open, char *deep_objects, char *at_limit, char *over_limit, char *deep_array_items)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	anixops_body_rewrite_chain_t chain;
+	anixops_rewrite_plan_t plan;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+	ANIXOPS_EXPECT_TRUE(deep_open != NULL && deep_objects != NULL && at_limit != NULL && over_limit != NULL &&
+		deep_array_items != NULL);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/deep response-body-json-replace $.data.ad null"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/deep request-body-json-replace $.data.ad null"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://api\\.test/items response-body-json-replace $[-1] null"),
+		ANIXOPS_OK);
+
+	/* About a million unclosed arrays: walking them recursively would overflow
+	 * any thread stack; the lookup must stop at the nesting limit instead. */
+	expect_json_depth_limited_single(engine, "https://api.test/deep", ANIXOPS_PHASE_RESPONSE, deep_open, out, out_cap);
+	expect_json_depth_limited_single(engine, "https://api.test/deep", ANIXOPS_PHASE_REQUEST, deep_open, out, out_cap);
+	expect_json_depth_limited_single(engine, "https://api.test/deep", ANIXOPS_PHASE_REQUEST, deep_objects, out, out_cap);
+	expect_json_depth_limited_single(engine, "https://api.test/deep", ANIXOPS_PHASE_RESPONSE, over_limit, out, out_cap);
+	/* A negative index on the root array counts its elements first, which
+	 * walks the deep element too. */
+	expect_json_depth_limited_single(
+		engine,
+		"https://api.test/items",
+		ANIXOPS_PHASE_RESPONSE,
+		deep_array_items,
+		out,
+		out_cap);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(
+			engine,
+			"https://api.test/deep",
+			ANIXOPS_PHASE_RESPONSE,
+			deep_open,
+			out,
+			out_cap,
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 1);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "json nesting exceeds limit");
+	ANIXOPS_EXPECT_TRUE(strcmp(out, deep_open) == 0);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_build_plan(
+			engine,
+			"https://api.test/deep",
+			ANIXOPS_PHASE_REQUEST,
+			deep_objects,
+			out,
+			out_cap,
+			NULL,
+			&plan),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(plan.rewrite.action, ANIXOPS_REWRITE_REQUEST_BODY_JSON_REPLACE);
+	ANIXOPS_EXPECT_STREQ(plan.rewrite.message, "json nesting exceeds limit");
+	ANIXOPS_EXPECT_TRUE(strcmp(out, deep_objects) == 0);
+
+	/* Nesting right at the limit is still walked and the rule applies. */
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/deep",
+			ANIXOPS_PHASE_RESPONSE,
+			at_limit,
+			out,
+			out_cap,
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "json body rewritten");
+	ANIXOPS_EXPECT_TRUE(strlen(out) == strlen(at_limit) + 3);
+	ANIXOPS_EXPECT_TRUE(strcmp(out + strlen(out) - strlen("\"data\":{\"ad\":null}}"), "\"data\":{\"ad\":null}}") == 0);
+
+	anixops_engine_free(engine);
+}
+
+static void json_body_replace_stops_at_nesting_limit(void)
+{
+	size_t out_cap = 1100000;
+	char *out = (char *)malloc(out_cap);
+	char *deep_open = build_nested_array_body(1000000, 0);
+	char *deep_objects = build_repeated_text("{\"x\":", "{\"a\":", 200000, "1");
+	char *at_limit = build_nested_array_body(512, 1);
+	char *over_limit = build_nested_array_body(513, 1);
+	char *deep_array_items = build_repeated_text("[1,", "[", 600, "");
+
+	ANIXOPS_EXPECT_TRUE(out != NULL);
+	json_body_replace_nesting_cases(out, out_cap, deep_open, deep_objects, at_limit, over_limit, deep_array_items);
+	free(out);
+	free(deep_open);
+	free(deep_objects);
+	free(at_limit);
+	free(over_limit);
+	free(deep_array_items);
+}
+
+static void json_body_replace_rejects_too_deep_raw_replacement(void)
+{
+	anixops_engine_t *engine = anixops_engine_new();
+	anixops_rewrite_result_t result;
+	char rule[1400];
+	char body[64];
+	size_t pos;
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+
+	pos = (size_t)snprintf(rule, sizeof(rule), "^https://api\\.test/raw response-body-json-replace $.ad ");
+	memset(rule + pos, '[', 600);
+	pos += 600;
+	memset(rule + pos, ']', 600);
+	pos += 600;
+	rule[pos] = '\0';
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_add_rewrite_rule(engine, rule), ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://api.test/raw",
+			ANIXOPS_PHASE_RESPONSE,
+			"{\"ad\":1}",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "json nesting exceeds limit");
+	ANIXOPS_EXPECT_STREQ(body, "{\"ad\":1}");
+
+	anixops_engine_free(engine);
+}
+
+static void pcre2_body_regex_continuation_cases(anixops_engine_t *engine)
+{
+	anixops_rewrite_result_t result;
+	anixops_body_rewrite_chain_t chain;
+	char body[128];
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://word\\.test request-body-replace-regex \"\\b\\w\" X"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://behind\\.test request-body-replace-regex \"(?<=\\d)\\d\" X"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://lines\\.test request-body-replace-regex \"(?m)^x\\n\" y"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://empty\\.test request-body-replace-regex \"x*\" -"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://budget\\.test request-body-replace-regex \"(a+)+$\" X"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://budget\\.test request-body-replace-regex \"a\" b"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://header\\.test response-header-replace-regex X-Name \"(a+)+$\" X"),
+		ANIXOPS_OK);
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine, "https://word.test", ANIXOPS_PHASE_REQUEST, "hello world", body, sizeof(body), &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(body, "Xello Xorld");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(engine, "https://behind.test", ANIXOPS_PHASE_REQUEST, "123", body, sizeof(body), &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(body, "1XX");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine, "https://lines.test", ANIXOPS_PHASE_REQUEST, "x\nx\nz", body, sizeof(body), &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(body, "yyz");
+
+	/* Empty matches step over whole UTF-8 characters, so the replacement keeps
+	 * going past multi-byte text instead of stopping inside a character. */
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine, "https://empty.test", ANIXOPS_PHASE_REQUEST, "a\xc3\xa9" "b", body, sizeof(body), &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "-a-\xc3\xa9-b-");
+
+	/* Catastrophic backtracking hits the match limit: the body is left as it
+	 * was and the diagnostic says so, instead of a stall or a partial rewrite. */
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(
+			engine,
+			"https://budget.test",
+			ANIXOPS_PHASE_REQUEST,
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+			body,
+			sizeof(body),
+			&result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "body regex limit exceeded");
+	ANIXOPS_EXPECT_STREQ(body, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab");
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body_chain(
+			engine,
+			"https://budget.test",
+			ANIXOPS_PHASE_REQUEST,
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+			body,
+			sizeof(body),
+			&chain),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_SIZE(chain.rewrite_count, 2);
+	ANIXOPS_EXPECT_EQ_INT(chain.truncated, 0);
+	ANIXOPS_EXPECT_EQ_INT(chain.rewritten, 1);
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[0].message, "body regex limit exceeded");
+	ANIXOPS_EXPECT_STREQ(chain.rewrites[1].message, "body rewritten");
+	ANIXOPS_EXPECT_STREQ(body, "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+
+	{
+		anixops_header_rewrite_result_t header;
+		ANIXOPS_EXPECT_EQ_INT(
+			anixops_rewrite_evaluate_header(
+				engine,
+				"https://header.test",
+				ANIXOPS_PHASE_RESPONSE,
+				0,
+				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
+				&header),
+			ANIXOPS_OK);
+		ANIXOPS_EXPECT_STREQ(header.message, "header regex limit exceeded");
+		ANIXOPS_EXPECT_STREQ(header.value, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab");
+	}
+}
+
+static void pcre2_body_regex_large_body_cases(anixops_engine_t *engine, const char *flat, const char *flags, char *out, size_t out_cap)
+{
+	anixops_rewrite_result_t result;
+	size_t flat_len;
+	size_t count = 0;
+	const char *cursor;
+	clock_t started;
+
+	ANIXOPS_EXPECT_TRUE(flat != NULL && flags != NULL && out != NULL);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(engine, "^https://flat\\.test request-body-replace-regex \"x*\" -"),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_engine_add_rewrite_rule(
+			engine,
+			"^https://flags\\.test response-body-replace-regex \"\\\"is_ad\\\":true\" \"\\\"is_ad\\\":false\""),
+		ANIXOPS_OK);
+
+	/* An empty-matching pattern over 1 MiB runs one search per character. Each
+	 * search must not rescan the rest of the body (length, UTF-8 check), or
+	 * this takes hours instead of well under the bound below. */
+	flat_len = strlen(flat);
+	started = clock();
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(engine, "https://flat.test", ANIXOPS_PHASE_REQUEST, flat, out, out_cap, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "body rewritten");
+	ANIXOPS_EXPECT_EQ_SIZE(strlen(out), flat_len * 2 + 1);
+	ANIXOPS_EXPECT_TRUE(out[0] == '-' && out[1] == 'a' && out[flat_len * 2] == '-');
+
+	ANIXOPS_EXPECT_EQ_INT(
+		anixops_rewrite_apply_body(engine, "https://flags.test", ANIXOPS_PHASE_RESPONSE, flags, out, out_cap, &result),
+		ANIXOPS_OK);
+	ANIXOPS_EXPECT_STREQ(result.message, "body rewritten");
+	for (cursor = strstr(out, "\"is_ad\":false"); cursor != NULL; cursor = strstr(cursor + 1, "\"is_ad\":false")) {
+		count++;
+	}
+	ANIXOPS_EXPECT_EQ_SIZE(count, 10000);
+	ANIXOPS_EXPECT_TRUE(strstr(out, "\"is_ad\":true") == NULL);
+	ANIXOPS_EXPECT_TRUE((double)(clock() - started) / CLOCKS_PER_SEC < 20.0);
+}
+
+static void pcre2_body_regex_resumes_on_whole_subject_with_budgets(void)
+{
+	anixops_engine_t *engine;
+	size_t out_cap = 2 * 1024 * 1024 + 2;
+	char *out;
+	char *flat;
+	char *flags;
+
+	if (!anixops_regex_backend_available(ANIXOPS_REGEX_BACKEND_PCRE2)) {
+		return;
+	}
+	engine = anixops_engine_new();
+	ANIXOPS_EXPECT_TRUE(engine != NULL);
+	ANIXOPS_EXPECT_EQ_INT(anixops_engine_set_regex_backend(engine, ANIXOPS_REGEX_BACKEND_PCRE2), ANIXOPS_OK);
+
+	pcre2_body_regex_continuation_cases(engine);
+
+	out = (char *)malloc(out_cap);
+	flat = build_repeated_text("", "a", 1024 * 1024, "");
+	/* 10,000 matches spread over roughly 1 MiB. */
+	flags = build_repeated_text("[", "{\"is_ad\":true,\"pad\":\"................................................................................................\"},", 10000, "{}]");
+	pcre2_body_regex_large_body_cases(engine, flat, flags, out, out_cap);
+	free(out);
+	free(flat);
+	free(flags);
+	anixops_engine_free(engine);
+}
+
 static void response_body_json_replace_supports_nested_path_and_missing_path(void)
 {
 	anixops_engine_t *engine = anixops_engine_new();
@@ -3771,6 +4153,24 @@ void anixops_register_rewrite_tests(anixops_test_case_t *tests, size_t *count, s
 		cap,
 		"rewrite/response_body_json_replace_supports_nested_path_and_missing_path",
 		response_body_json_replace_supports_nested_path_and_missing_path);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/json_body_replace_stops_at_nesting_limit",
+		json_body_replace_stops_at_nesting_limit);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/json_body_replace_rejects_too_deep_raw_replacement",
+		json_body_replace_rejects_too_deep_raw_replacement);
+	add_test(
+		tests,
+		count,
+		cap,
+		"rewrite/pcre2_body_regex_resumes_on_whole_subject_with_budgets",
+		pcre2_body_regex_resumes_on_whole_subject_with_budgets);
 	add_test(
 		tests,
 		count,

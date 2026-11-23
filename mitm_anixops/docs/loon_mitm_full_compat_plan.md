@@ -421,9 +421,9 @@ int anixops_runtime_apply_plan(
 | P0 | Abstraction | `anixops_regex_backend_t`，统一 URL/body/header/script regex | POSIX backend 现有测试全通过 |
 | P1 | PCRE2 | Alpha 可选 PCRE2 backend 已覆盖 lookaround/lookbehind、backreference、Unicode property、word boundary、atomic/possessive、named backreference fixture；后续补更大 PCRE2/ICU 差异矩阵 | PCRE2 feature matrix 通过 |
 | P1 | Replacement | Alpha 已统一 `$1`、`${1}`、`\1`、`${name}`、`$<name>` replacement 行为 | URL redirect、body regex、header regex 三类 golden test |
-| P1 | Empty match | Alpha 已固定 body/header global replace 对 `^`、`$`、`.*?` 空匹配的行为；`\b` 当前在 PCRE2 word-boundary fixture 覆盖 | `^`、`$`、`\b`、`.*?` fixture 通过 |
+| P1 | Empty match | Alpha 已固定 body/header global replace 对 `^`、`$`、`.*?` 空匹配的行为；PCRE2 backend 在整段输入上用 start offset 续搜，`\b`、后向断言和多行 `^` 在续搜处能看到前文，空匹配按完整 UTF-8 字符前进 | `^`、`$`、`\b`、`.*?` fixture 通过；`rewrite/pcre2_body_regex_resumes_on_whole_subject_with_budgets` |
 | P2 | Darwin parity | NSRegularExpression/ICU 对照 runner | macOS/iOS adapter 声明支持前必须跑通 |
-| P2 | Safety | match timeout 或 backtracking budget | catastrophic regex fixture 不阻塞 runner |
+| P2 | Safety | 已交付 PCRE2 backtracking budget：每次匹配的 match limit 5,000,000、depth limit 250,000、heap limit 16 MiB，超限时规则按原文放行并给出诊断；墙钟超时仍需宿主在独立线程执行 | `rewrite/pcre2_body_regex_resumes_on_whole_subject_with_budgets` 中 catastrophic regex fixture 不阻塞 runner |
 
 ### Platform Backlog
 

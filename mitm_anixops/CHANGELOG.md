@@ -67,6 +67,22 @@ The format follows a simple Keep-a-Changelog style. Releases use tags such as
 
 ### Fixed
 
+- JSON path body rewrites (`request-body-json-replace`,
+  `response-body-json-replace`) no longer recurse without bound while skipping
+  unrelated values: lookups stop after 512 nested objects or arrays (also for
+  a raw JSON replacement value), leave the body unchanged and report
+  `json nesting exceeds limit`. A deeply nested body could previously overflow
+  the calling thread's stack and abort the host process.
+- PCRE2 global regex replacement in body and header rewrites now searches the
+  whole input with a start offset: the length is computed once, UTF-8 is
+  validated once and the match data is reused, so each further match no longer
+  rescans the rest of a large body. Lookbehind, `\b` and multiline `^` now see
+  the text before a continuation point, and empty matches step over whole
+  UTF-8 characters instead of stopping inside one. Every PCRE2 match runs
+  under match (5,000,000), depth (250,000) and heap (16 MiB) limits; a limit
+  hit leaves the body or header unchanged with `body regex limit exceeded` /
+  `header regex limit exceeded` instead of a partial rewrite, and counts as no
+  match for URL, header and script matching.
 - The Node script runner retries replacing its persistent store when Windows
   reports `EPERM`, `EACCES` or `EBUSY` because another process still has the
   file open, instead of failing the script run.
