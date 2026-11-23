@@ -1,6 +1,6 @@
-# LOON MITM Plugin Full Compatibility Plan
+# MITM Plugin Full Compatibility Plan
 
-本文档用于排版前的方案草稿。目标不是把 `mitm_anixops` 变成 GUI 客户端，而是把它扩展成一个可嵌入、无 UI、跨平台的 LOON/AnixOps MITM 插件兼容工具链。
+本文档用于排版前的方案草稿。目标不是把 `mitm_anixops` 变成 GUI 客户端，而是把它扩展成一个可嵌入、无 UI、跨平台、兼容常见插件与规则语法的 MITM 插件兼容工具链。
 
 当前 v1.0.0 policy-core 依赖决策以
 `docs/architecture/script-runtime-dependency.md` 为准：C policy core 不嵌入
@@ -10,7 +10,7 @@ QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/J
 ## 目标
 
 1. 补齐兼容性缺口：更完整的 JQ body rewrite、PCRE/NSRegularExpression 行为覆盖、Quantumult X / Surge / LOON 语法覆盖、边界行为一致性。
-2. 让常见 LOON MITM 插件能在没有 LOON 客户端的环境中运行：Windows、Linux、macOS、iOS/macOS Network Extension、Rust/Go/C/C++ 宿主都能通过库或无 UI 工具接入。
+2. 让常见格式的 MITM 插件能在各类宿主中运行：Windows、Linux、macOS、iOS/macOS Network Extension、Rust/Go/C/C++ 宿主都能通过库或无 UI 工具接入。
 3. 保持清晰边界：核心库做规则解析、匹配、改写计划和脚本调度；运行时层做 JS/JQ/HTTP body 处理；平台代理层做网络、TLS、证书、HTTP/2、系统权限。
 
 ## 已拍板决策
@@ -21,7 +21,7 @@ QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/J
 | --- | --- |
 | 产品形态 | 无 UI runner + 可嵌入库优先 |
 | 平台优先级 | Windows/Linux/macOS 桌面先行，iOS/macOS Network Extension 后置 |
-| 兼容声明口径 | 高兼容 LOON MITM 运行时，以真实插件 corpus 验证覆盖率 |
+| 兼容声明口径 | 兼容常见插件与规则语法的 MITM 运行时，以真实插件 corpus 验证覆盖率 |
 | JavaScript runtime | 桌面默认 QuickJS，Apple 平台可选 JavaScriptCore |
 | JQ 实现 | 直接接 libjq 或 jq-compatible backend |
 | Regex backend | 保留 POSIX fallback，桌面默认 PCRE2，Darwin 做 NSRegularExpression/ICU 对照 |
@@ -31,7 +31,7 @@ QuickJS、JavaScriptCore 或其他生产 JavaScript 引擎。本文中 QuickJS/J
 执行口径：
 
 - 第一阶段不做 GUI，不优先做完整平台代理客户端，先把库、runner、corpus、trace、runtime 行为跑稳。
-- 对外避免使用未经验证的 “支持所有 LOON 插件” 绝对表述，改用 corpus 覆盖率、兼容矩阵和 E2E trace 证明兼容范围。
+- 对外避免使用未经验证的 “支持所有插件” 绝对表述，改用 corpus 覆盖率、兼容矩阵和 E2E trace 证明兼容范围。
 - QuickJS、libjq、PCRE2 是桌面增强 runtime 的默认组合；POSIX regex fallback 继续保留给无依赖嵌入场景。
 - iOS/macOS Network Extension、JavaScriptCore、NSRegularExpression 对照属于后续 adapter 阶段，不能阻塞桌面 runner 和核心库推进。
 
@@ -462,7 +462,7 @@ int anixops_runtime_apply_plan(
 
 ## 风险和取舍
 
-- “所有 LOON MITM 插件” 实际上包含网络、TLS、JS、JQ、存储、平台权限的组合问题，不能只靠 C 规则库完成。
+- “所有常见格式的 MITM 插件” 实际上包含网络、TLS、JS、JQ、存储、平台权限的组合问题，不能只靠 C 规则库完成。
 - QX 公开语法资料不稳定，必须语料驱动，逐条 fixture 固化。
 - 完整 PCRE2 和 NSRegularExpression 行为不完全等价，跨平台需要 backend 标识和严格模式。
 - JQ 嵌入会引入依赖和资源限制问题，建议保持 optional runtime。
@@ -472,4 +472,4 @@ int anixops_runtime_apply_plan(
 
 推荐把最终产品定义为 “policy core + optional runtime + no-UI runner + platform adapters”。
 
-`mitm_anixops` 继续作为稳定、可嵌入的 C ABI 规则核心；新增 runtime 和 runner 承担真正的 LOON MITM 插件执行。这样既能保持当前库的可移植性，也能逐步把 JQ、PCRE/NSRegularExpression、QX/Surge/LOON 语法和 HTTP/TLS/JS 执行补齐到可验证状态。
+`mitm_anixops` 继续作为稳定、可嵌入的 C ABI 规则核心；新增 runtime 和 runner 承担真正的 MITM 插件执行。这样既能保持当前库的可移植性，也能逐步把 JQ、PCRE/NSRegularExpression、QX/Surge/LOON 语法和 HTTP/TLS/JS 执行补齐到可验证状态。
